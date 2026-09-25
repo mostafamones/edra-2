@@ -1,0 +1,8 @@
+.onboarding-art-space {
+  background: radial-gradient(
+      circle at 100% 100%,
+      color-mix(in oklch, var(--primary) 11%, transparent),
+      transparent 56%
+    ),
+    var(--background);
+}

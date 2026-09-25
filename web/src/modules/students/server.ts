@@ -1,0 +1,1 @@
+export { getStudentProfile } from "./queries";
