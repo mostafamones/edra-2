@@ -14,7 +14,6 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import {
   requestPasswordRecovery,
   resendSignupCode,
-  signOutEverywhere,
   verifyPhoneCode,
 } from "@/modules/auth/client";
 import { getAuthErrorMessage } from "@/modules/auth/errors";
@@ -72,21 +71,17 @@ export function VerifyForm({ mode }: { mode: PendingAuthKind }) {
       return;
     }
     const parsed = result.data;
-    const verification = await verifyPhoneCode(parsed);
-    if (verification.error) {
-      setFormError(getAuthErrorMessage(verification.error));
+
+    if (mode === "recovery") {
+      // The code is verified by the server together with the new password; no session is created here.
+      savePendingAuthFlow({ kind: "recovery", phone: parsed.phone, code: parsed.code });
+      router.replace("/auth/reset-password");
       return;
     }
 
-    if (mode === "recovery") {
-      const recoverySession = await fetch("/auth/recovery-session", { method: "POST" });
-      if (!recoverySession.ok) {
-        await signOutEverywhere();
-        setFormError("We could not prepare password recovery. Request a new code and try again.");
-        return;
-      }
-      savePendingAuthFlow({ kind: "recovery", phone: parsed.phone });
-      router.replace("/auth/reset-password");
+    const verification = await verifyPhoneCode(parsed);
+    if (verification.error) {
+      setFormError(getAuthErrorMessage(verification.error));
       return;
     }
 

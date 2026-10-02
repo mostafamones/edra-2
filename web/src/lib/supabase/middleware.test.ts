@@ -25,20 +25,17 @@ describe("session proxy", () => {
     expect(response.headers.get("location")).toBe("https://edra.test/auth/login?next=%2Fapp%3Ftab%3Dhome");
   });
 
+  it("redirects anonymous requests to nested student pages", async () => {
+    getClaims.mockResolvedValue({ data: { claims: null } });
+    const response = await updateSession(new NextRequest("https://edra.test/learn/calendar?week=next"));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://edra.test/auth/login?next=%2Flearn%2Fcalendar%3Fweek%3Dnext");
+  });
+
   it("redirects authenticated users away from login", async () => {
     getClaims.mockResolvedValue({ data: { claims: { sub: "user-1" } } });
     const response = await updateSession(new NextRequest("https://edra.test/auth/login"));
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe("https://edra.test/app");
-  });
-
-  it("keeps a recovery OTP session on the password reset route", async () => {
-    getClaims.mockResolvedValue({ data: { claims: { sub: "user-1" } } });
-    const request = new NextRequest("https://edra.test/app", {
-      headers: { cookie: "edra_recovery_pending=1" },
-    });
-    const response = await updateSession(request);
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://edra.test/auth/reset-password");
   });
 });

@@ -1,11 +1,13 @@
 export {
   forgotPasswordSchema,
+  recoverPasswordSchema,
   resetPasswordSchema,
   signInSchema,
   signUpSchema,
   verificationSchema,
 } from "./validation";
 export type {
+  RecoverPasswordInput,
   ForgotPasswordInput,
   ResetPasswordInput,
   SignInInput,

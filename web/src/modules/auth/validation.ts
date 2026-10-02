@@ -2,14 +2,17 @@ import { z } from "zod";
 
 import { phoneSchema } from "../../lib/phone";
 
-const credentialsSchema = z.object({
-  phone: phoneSchema,
-  password: z.string().min(8, "Password must contain at least 8 characters"),
-});
+export const newPasswordSchema = z.string().min(8, "Password must contain at least 8 characters");
 
-export const signInSchema = credentialsSchema;
-export const signUpSchema = credentialsSchema
-  .extend({
+// Sign-in accepts any existing password; the new-password policy applies only to signup and reset.
+export const signInSchema = z.object({
+  phone: phoneSchema,
+  password: z.string().min(1, "Enter your password"),
+});
+export const signUpSchema = z
+  .object({
+    phone: phoneSchema,
+    password: newPasswordSchema,
     firstName: z.string().trim().min(1, "First name is required").max(50),
     lastName: z.string().trim().min(1, "Last name is required").max(50),
   })
@@ -28,7 +31,7 @@ export const forgotPasswordSchema = z.object({ phone: phoneSchema });
 
 export const resetPasswordSchema = z
   .object({
-    password: z.string().min(8, "Password must contain at least 8 characters"),
+    password: newPasswordSchema,
     confirmPassword: z.string(),
   })
   .refine((value) => value.password === value.confirmPassword, {
@@ -36,6 +39,13 @@ export const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
+export const recoverPasswordSchema = z.object({
+  phone: phoneSchema,
+  code: verificationSchema.shape.code,
+  password: newPasswordSchema,
+});
+
+export type RecoverPasswordInput = z.infer<typeof recoverPasswordSchema>;
 export type SignInInput = z.infer<typeof signInSchema>;
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type VerificationInput = z.infer<typeof verificationSchema>;

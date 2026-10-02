@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 
 import type {
-  ResetPasswordInput,
+  RecoverPasswordInput,
   SignInInput,
   SignUpInput,
   VerificationInput,
@@ -41,10 +41,18 @@ export async function requestPasswordRecovery(phone: string) {
   });
 }
 
-export async function updateRecoveredPassword(input: ResetPasswordInput) {
-  return createClient().auth.updateUser({ password: input.password });
-}
-
-export async function signOutEverywhere() {
-  return createClient().auth.signOut({ scope: "global" });
+/** Recovery is completed by the server; the browser never receives a recovery session. */
+export async function recoverPassword(input: RecoverPasswordInput): Promise<{ error: string | null }> {
+  try {
+    const response = await fetch("/auth/recover", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (response.ok) return { error: null };
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    return { error: body?.error ?? "We could not complete password recovery. Please try again." };
+  } catch {
+    return { error: "We could not reach the server. Check your connection and try again." };
+  }
 }

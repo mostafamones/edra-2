@@ -7,8 +7,7 @@ import { useForm } from "react-hook-form";
 import type { z } from "zod";
 
 import { TextInput } from "@/components/shared/app-input";
-import { signOutEverywhere, updateRecoveredPassword } from "@/modules/auth/client";
-import { getAuthErrorMessage } from "@/modules/auth/errors";
+import { recoverPassword } from "@/modules/auth/client";
 import { clearPendingAuthFlow, readPendingAuthFlow } from "@/modules/auth/pending-flow";
 import { resetPasswordSchema } from "@/modules/auth/validation";
 
@@ -28,20 +27,15 @@ export function ResetPasswordForm() {
 
   async function onSubmit(values: ResetPasswordFields) {
     setFormError(null);
-    if (!readPendingAuthFlow("recovery")) {
+    const flow = readPendingAuthFlow("recovery");
+    if (!flow?.code) {
       setFormError("Start password recovery again before choosing a new password.");
       return;
     }
     const parsed = resetPasswordSchema.parse(values);
-    const { error } = await updateRecoveredPassword(parsed);
+    const { error } = await recoverPassword({ phone: flow.phone, code: flow.code, password: parsed.password });
     if (error) {
-      setFormError(getAuthErrorMessage(error));
-      return;
-    }
-    await fetch("/auth/recovery-session", { method: "DELETE" });
-    const { error: signOutError } = await signOutEverywhere();
-    if (signOutError) {
-      setFormError(getAuthErrorMessage(signOutError));
+      setFormError(error);
       return;
     }
     clearPendingAuthFlow();

@@ -16,9 +16,8 @@ import {
   requestPasswordRecovery,
   resendSignupCode,
   signIn,
-  signOutEverywhere,
   signUp,
-  updateRecoveredPassword,
+  recoverPassword,
   verifyPhoneCode,
 } from "./client";
 
@@ -62,14 +61,15 @@ describe("phone authentication client", () => {
     });
   });
 
-  it("updates recovered passwords and signs out globally", async () => {
-    auth.updateUser.mockResolvedValue({ data: {}, error: null });
-    auth.signOut.mockResolvedValue({ error: null });
+  it("completes recovery through the server without touching browser auth", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: "Bad code" }), { status: 400 }));
+    vi.stubGlobal("fetch", fetchMock);
 
-    await updateRecoveredPassword({ password: "secret123", confirmPassword: "secret123" });
-    await signOutEverywhere();
-
-    expect(auth.updateUser).toHaveBeenCalledWith({ password: "secret123" });
-    expect(auth.signOut).toHaveBeenCalledWith({ scope: "global" });
+    await expect(recoverPassword({ phone: "+201001234567", code: "123456", password: "secret123" }))
+      .resolves.toEqual({ error: "Bad code" });
+    expect(fetchMock).toHaveBeenCalledWith("/auth/recover", expect.objectContaining({ method: "POST" }));
+    expect(auth.verifyOtp).not.toHaveBeenCalled();
+    expect(auth.updateUser).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });

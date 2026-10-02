@@ -39,24 +39,8 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims()
   const user = data?.claims
   const pathname = request.nextUrl.pathname
-  const recoveryPending = request.cookies.get('edra_recovery_pending')?.value === '1'
 
-  if (
-    user &&
-    recoveryPending &&
-    pathname !== '/auth/reset-password' &&
-    pathname !== '/auth/recovery-session' &&
-    pathname !== '/auth/signout'
-  ) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/reset-password'
-    url.search = ''
-    const redirectResponse = NextResponse.redirect(url)
-    supabaseResponse.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie))
-    return redirectResponse
-  }
-
-  if (!user && (pathname.startsWith('/app') || pathname === '/learn' || pathname.startsWith('/onboarding'))) {
+  if (!user && (pathname.startsWith('/app') || pathname === '/learn' || pathname.startsWith('/learn/') || pathname.startsWith('/onboarding'))) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     url.search = ''

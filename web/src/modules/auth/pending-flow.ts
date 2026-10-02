@@ -3,6 +3,8 @@ export type PendingAuthKind = "signup" | "recovery";
 type PendingAuthFlow = {
   kind: PendingAuthKind;
   phone: string;
+  /** Recovery OTP held only until the reset form submits it to the server. */
+  code?: string;
   nextPath?: string;
 };
 
