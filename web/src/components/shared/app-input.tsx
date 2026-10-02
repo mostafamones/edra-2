@@ -45,6 +45,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, AppInputProps>(
   ({ label, error, className, containerClassName, required, asterisk, variant, type, ...props }, ref) => {
     const generatedId = React.useId();
     const inputId = props.id ?? generatedId;
+    const errorId = `${inputId}-error`;
     const [passwordVisible, setPasswordVisible] = React.useState(false);
     const isPassword = type === "password";
     return (
@@ -56,7 +57,9 @@ export const TextInput = React.forwardRef<HTMLInputElement, AppInputProps>(
               id={inputId}
               ref={ref}
               type={passwordVisible ? "text" : "password"}
+              required={required}
               aria-invalid={Boolean(error)}
+              aria-describedby={error ? errorId : undefined}
               className={className}
               {...props}
             />
@@ -76,12 +79,14 @@ export const TextInput = React.forwardRef<HTMLInputElement, AppInputProps>(
             id={inputId}
             ref={ref}
             type={type}
+            required={required}
             aria-invalid={Boolean(error)}
+            aria-describedby={error ? errorId : undefined}
             className={cn(inputVariants({ variant }), error && "border-destructive", className)}
             {...props}
           />
         )}
-        {error && <span className="text-xs text-destructive">{error}</span>}
+        {error && <span id={errorId} role="alert" className="text-xs text-destructive">{error}</span>}
       </div>
     );
   }
@@ -92,6 +97,7 @@ export const PhoneInput = React.forwardRef<HTMLInputElement, AppInputProps & { c
   ({ label, country = "+20", error, className, containerClassName, required, asterisk, variant, onChange, value, defaultValue, ...props }, ref) => {
     const generatedId = React.useId();
     const inputId = props.id ?? generatedId;
+    const errorId = `${inputId}-error`;
     const toNationalValue = (input: string | number | readonly string[] | undefined) => {
       if (typeof input !== "string" || country !== "+20") return input;
       return input.trim().replace(/^0020/, "").replace(/^\+20/, "").replace(/^20/, "").replace(/^0/, "");
@@ -115,12 +121,14 @@ export const PhoneInput = React.forwardRef<HTMLInputElement, AppInputProps & { c
               if (typeof nationalValue === "string") event.currentTarget.value = nationalValue;
               onChange?.(event);
             }}
+            required={required}
             aria-invalid={Boolean(error)}
+            aria-describedby={error ? errorId : undefined}
             className={cn(error && "border-destructive", className)}
             {...props}
           />
         </InputGroup>
-        {error && <span className="text-xs text-destructive">{error}</span>}
+        {error && <span id={errorId} role="alert" className="text-xs text-destructive">{error}</span>}
       </div>
     );
   }
@@ -148,6 +156,9 @@ export const NumberInput = React.forwardRef<HTMLInputElement, AppInputProps & { 
     },
     ref
   ) => {
+    const generatedId = React.useId();
+    const inputId = props.id ?? generatedId;
+    const errorId = `${inputId}-error`;
     const innerRef = React.useRef<HTMLInputElement>(null);
     React.useImperativeHandle(ref, () => innerRef.current as HTMLInputElement);
 
@@ -199,7 +210,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, AppInputProps & { 
     return (
       <div className={cn("flex flex-col gap-2 w-full", containerClassName)}>
         {label && (
-          <Label className={cn(error && "text-destructive")}>
+          <Label htmlFor={inputId} className={cn(error && "text-destructive")}>
             {label}
             {asterisk && <span className="text-destructive -ml-1.5">*</span>}
           </Label>
@@ -220,7 +231,9 @@ export const NumberInput = React.forwardRef<HTMLInputElement, AppInputProps & { 
             defaultValue={defaultValue}
             onChange={onChange}
             disabled={disabled}
+            required={required}
             aria-invalid={!!error}
+            aria-describedby={error ? errorId : undefined}
             className={cn(
               "h-full",
               "[-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
@@ -228,6 +241,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, AppInputProps & { 
               className
             )}
             {...props}
+            id={inputId}
           />
           <Button
             type="button"
@@ -258,7 +272,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, AppInputProps & { 
             <IconPlus className="size-3.5" />
           </Button>
         </ButtonGroup>
-        {error && <span className="text-xs text-destructive">{error}</span>}
+        {error && <span id={errorId} role="alert" className="text-xs text-destructive">{error}</span>}
       </div>
     );
   }
@@ -303,6 +317,9 @@ export const DateInput = React.forwardRef<HTMLButtonElement, DateInputProps>(
     },
     ref
   ) => {
+    const generatedId = React.useId();
+    const triggerId = buttonProps.id ?? generatedId;
+    const errorId = `${triggerId}-error`;
     const dateValue = value ? new Date(value) : undefined;
 
     const handleSelect = (date: Date | undefined) => {
@@ -313,7 +330,7 @@ export const DateInput = React.forwardRef<HTMLButtonElement, DateInputProps>(
     return (
       <div className={cn("flex flex-col gap-2 w-full", containerClassName)}>
         {label && (
-          <Label className={cn(error && "text-destructive")}>
+          <Label htmlFor={triggerId} className={cn(error && "text-destructive")}>
             {label}
             {asterisk && <span className="text-destructive -ml-1.5">*</span>}
           </Label>
@@ -333,7 +350,11 @@ export const DateInput = React.forwardRef<HTMLButtonElement, DateInputProps>(
                 error && "border-destructive text-destructive",
                 className
               )}
+              aria-required={required}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? errorId : undefined}
               {...buttonProps}
+              id={triggerId}
             >
               <IconCalendar stroke={dateValue ? 2 : 1.5} className={variant === "sm" ? "size-3" : variant === "md" ? "size-3.5" : variant === "lg" ? "size-4" : "size-4.5"} />
               {dateValue ? format(dateValue, "MMM d, yyyy") : placeholder}
@@ -348,7 +369,7 @@ export const DateInput = React.forwardRef<HTMLButtonElement, DateInputProps>(
             />
           </PopoverContent>
         </Popover>
-        {error && <span className="text-xs text-destructive">{error}</span>}
+        {error && <span id={errorId} role="alert" className="text-xs text-destructive">{error}</span>}
       </div>
     );
   }
@@ -378,19 +399,25 @@ export function DateRangeInput({
   asterisk,
   ...props
 }: DateRangeInputProps) {
+  const triggerId = React.useId();
+  const errorId = `${triggerId}-error`;
   return (
     <div className={cn("flex flex-col gap-2 w-full", className)} {...props}>
-      {label && <Label className={cn(error && "text-destructive")}>{label}{asterisk && <span className="text-destructive -ml-1.5">*</span>}</Label>}
+      {label && <Label htmlFor={triggerId} className={cn(error && "text-destructive")}>{label}{asterisk && <span className="text-destructive -ml-1.5">*</span>}</Label>}
       <Popover>
         <PopoverTrigger asChild>
           <Button
+            type="button"
             variant="outline"
             className={cn(
               "w-full justify-start text-left font-normal px-3",
               !value && "text-muted-foreground",
               error && "border-destructive text-destructive"
             )}
-            id="date_range"
+            id={triggerId}
+            aria-required={required}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? errorId : undefined}
           >
             <IconCalendar className="mr-2 size-4" />
             {value?.from ? (
@@ -417,7 +444,7 @@ export function DateRangeInput({
           />
         </PopoverContent>
       </Popover>
-      {error && <span className="text-xs text-destructive">{error}</span>}
+      {error && <span id={errorId} role="alert" className="text-xs text-destructive">{error}</span>}
     </div>
   );
 }

@@ -184,6 +184,12 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
                   </p>
                 </div>
 
+                {notice && !error && (
+                  <p role="status" className="mb-5 rounded-lg border border-primary/35 bg-primary/5 px-4 py-3 text-sm">
+                    {notice}
+                  </p>
+                )}
+
                 {error && (
                   <p role="alert" className="mb-5 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
                     {error}
