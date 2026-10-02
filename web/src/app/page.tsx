@@ -1,6 +1,5 @@
 import {
   ArrowDownRight,
-  ArrowRight,
   BookOpenText,
   CalendarDays,
   Check,
@@ -8,6 +7,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { IconArrowRight, IconSchool } from "@tabler/icons-react";
+import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -77,10 +77,10 @@ export default async function Home() {
           <div className="flex items-center gap-3">
             {isSignedIn ? (
               <Button asChild size="default" className="rounded-full px-4">
-                <a href="/app">
+                <Link href="/app">
                   Go to app
                   <IconArrowRight />
-                </a>
+                </Link>
               </Button>
             ) : (
               <>
