@@ -15,3 +15,5 @@ export type {
   VerificationInput,
 } from "./validation";
 export { AuthProvider, useAuth } from "./components/provider";
+export { AcademyGate } from "./components/academy-gate";
+export { useAcademyScope } from "./use-academy-scope";

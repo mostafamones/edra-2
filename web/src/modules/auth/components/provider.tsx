@@ -10,6 +10,7 @@ import { academyQueryKeys, listUserAcademies, type AcademyEntry } from "@/module
 import { clearBrowserQueryCache } from "@/lib/query-client";
 import { createClient } from "@/lib/supabase/client";
 
+import { AuthLoadError } from "./load-error";
 import { AuthLoadingOverlay } from "./loading-overlay";
 
 type AuthContextValue = {
@@ -20,6 +21,7 @@ type AuthContextValue = {
   academies: AcademyEntry[];
   academiesLoading: boolean;
   academiesError: Error | null;
+  retryAcademies: () => void;
   activeAcademy: AcademyEntry | null;
   setActiveAcademy: (academy: AcademyEntry) => void;
 };
@@ -116,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const authLoading = loading || academiesLoading;
   const isAppRoute = pathname === "/app" || pathname.startsWith("/app/");
   const waiting = authLoading && isAppRoute;
+  const loadError = authError;
 
   return (
     <AuthContext.Provider value={{
@@ -126,10 +129,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       academies,
       academiesLoading,
       academiesError: academiesQuery.error,
+      retryAcademies: () => { void academiesQuery.refetch(); },
       activeAcademy,
       setActiveAcademy,
     }}>
-      {isAppRoute && authLoading ? null : children}
+      {isAppRoute && authLoading ? null : isAppRoute && loadError ? (
+        <AuthLoadError message={loadError} onRetry={() => window.location.reload()} retrying={false} />
+      ) : isAppRoute && academiesQuery.isError ? (
+        <AuthLoadError message="Your academies could not be loaded." onRetry={() => { void academiesQuery.refetch(); }} retrying={academiesQuery.isFetching} />
+      ) : children}
       <AnimatePresence>
         {waiting && <AuthLoadingOverlay key="auth-loader" />}
       </AnimatePresence>
