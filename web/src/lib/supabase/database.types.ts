@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      academic_years: {
+        Row: {
+          academy_id: string
+          closed_at: string | null
+          created_at: string
+          ends_on: string | null
+          id: string
+          start_year: number
+          starts_on: string | null
+        }
+        Insert: {
+          academy_id: string
+          closed_at?: string | null
+          created_at?: string
+          ends_on?: string | null
+          id?: string
+          start_year: number
+          starts_on?: string | null
+        }
+        Update: {
+          academy_id?: string
+          closed_at?: string | null
+          created_at?: string
+          ends_on?: string | null
+          id?: string
+          start_year?: number
+          starts_on?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_years_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academies: {
         Row: {
           created_at: string
@@ -187,6 +225,70 @@ export type Database = {
         }
         Relationships: []
       }
+      groups: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          archived_at: string | null
+          capacity: number | null
+          created_at: string
+          id: string
+          level_id: string
+          name: string
+          notes: string | null
+          track_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          archived_at?: string | null
+          capacity?: number | null
+          created_at?: string
+          id?: string
+          level_id: string
+          name: string
+          notes?: string | null
+          track_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          archived_at?: string | null
+          capacity?: number | null
+          created_at?: string
+          id?: string
+          level_id?: string
+          name?: string
+          notes?: string | null
+          track_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_academy_id_academic_year_id_fkey"
+            columns: ["academy_id", "academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "groups_academy_id_level_id_fkey"
+            columns: ["academy_id", "level_id"]
+            isOneToOne: false
+            referencedRelation: "academy_levels"
+            referencedColumns: ["academy_id", "level_id"]
+          },
+          {
+            foreignKeyName: "groups_academy_id_level_id_track_id_fkey"
+            columns: ["academy_id", "level_id", "track_id"]
+            isOneToOne: false
+            referencedRelation: "academy_tracks"
+            referencedColumns: ["academy_id", "level_id", "id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -210,6 +312,172 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      schedule_sessions: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          ends_at: string
+          id: string
+          occurs_on: string
+          schedule_id: string
+          starts_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          ends_at: string
+          id?: string
+          occurs_on: string
+          schedule_id: string
+          starts_at: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          ends_at?: string
+          id?: string
+          occurs_on?: string
+          schedule_id?: string
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_sessions_academy_id_academic_year_id_schedule_id_fkey"
+            columns: ["academy_id", "academic_year_id", "schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+        ]
+      }
+      schedule_slots: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          ends_at: string
+          id: string
+          schedule_id: string
+          starts_at: string
+          weekday: number
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          ends_at: string
+          id?: string
+          schedule_id: string
+          starts_at: string
+          weekday: number
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          ends_at?: string
+          id?: string
+          schedule_id?: string
+          starts_at?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_slots_academy_id_academic_year_id_schedule_id_fkey"
+            columns: ["academy_id", "academic_year_id", "schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+        ]
+      }
+      schedules: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          archived_at: string | null
+          audience: Database["public"]["Enums"]["schedule_audience"]
+          created_at: string
+          created_by: string
+          group_id: string | null
+          id: string
+          kind: Database["public"]["Enums"]["schedule_kind"]
+          level_id: string | null
+          location: string | null
+          mandatory: boolean
+          title: string
+          track_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          archived_at?: string | null
+          audience: Database["public"]["Enums"]["schedule_audience"]
+          created_at?: string
+          created_by?: string
+          group_id?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["schedule_kind"]
+          level_id?: string | null
+          location?: string | null
+          mandatory?: boolean
+          title: string
+          track_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          archived_at?: string | null
+          audience?: Database["public"]["Enums"]["schedule_audience"]
+          created_at?: string
+          created_by?: string
+          group_id?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["schedule_kind"]
+          level_id?: string | null
+          location?: string | null
+          mandatory?: boolean
+          title?: string
+          track_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedules_academy_id_academic_year_id_fkey"
+            columns: ["academy_id", "academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "schedules_academy_id_academic_year_id_group_id_fkey"
+            columns: ["academy_id", "academic_year_id", "group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "schedules_academy_id_level_id_fkey"
+            columns: ["academy_id", "level_id"]
+            isOneToOne: false
+            referencedRelation: "academy_levels"
+            referencedColumns: ["academy_id", "level_id"]
+          },
+          {
+            foreignKeyName: "schedules_academy_id_level_id_track_id_fkey"
+            columns: ["academy_id", "level_id", "track_id"]
+            isOneToOne: false
+            referencedRelation: "academy_tracks"
+            referencedColumns: ["academy_id", "level_id", "id"]
+          },
+          {
+            foreignKeyName: "schedules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_phone_challenges: {
         Row: {
@@ -325,6 +593,23 @@ export type Database = {
         }
         Returns: string
       }
+      create_schedule: {
+        Args: {
+          p_academic_year_id: string
+          p_academy_id: string
+          p_audience: Database["public"]["Enums"]["schedule_audience"]
+          p_group_id: string
+          p_kind: Database["public"]["Enums"]["schedule_kind"]
+          p_level_id: string
+          p_location: string
+          p_mandatory: boolean
+          p_sessions: Json
+          p_slots: Json
+          p_title: string
+          p_track_id: string
+        }
+        Returns: string
+      }
       finish_student_profile: {
         Args: { p_level_id: string; p_user_id: string }
         Returns: boolean
@@ -346,6 +631,22 @@ export type Database = {
         }
         Returns: string
       }
+      update_schedule: {
+        Args: {
+          p_academy_id: string
+          p_audience: Database["public"]["Enums"]["schedule_audience"]
+          p_group_id: string
+          p_level_id: string
+          p_location: string
+          p_mandatory: boolean
+          p_schedule_id: string
+          p_sessions: Json
+          p_slots: Json
+          p_title: string
+          p_track_id: string
+        }
+        Returns: boolean
+      }
       verify_student_parent_challenge: {
         Args: { p_challenge_id: string; p_code_hash: string; p_user_id: string }
         Returns: string
@@ -353,6 +654,8 @@ export type Database = {
     }
     Enums: {
       academy_role: "owner" | "admin" | "instructor"
+      schedule_audience: "group" | "level" | "program"
+      schedule_kind: "recurring" | "one_off"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -481,6 +784,8 @@ export const Constants = {
   public: {
     Enums: {
       academy_role: ["owner", "admin", "instructor"],
+      schedule_audience: ["group", "level", "program"],
+      schedule_kind: ["recurring", "one_off"],
     },
   },
 } as const
