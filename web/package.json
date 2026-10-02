@@ -9,6 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:db": "bash scripts/db-test.sh",
+    "test:edge": "deno check supabase/functions/*/index.ts",
     "audit:auth": "node --env-file=.env.local scripts/audit-auth-users.mjs"
   },
   "dependencies": {
