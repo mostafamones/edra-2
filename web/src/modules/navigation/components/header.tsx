@@ -13,11 +13,13 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useBreadcrumbOverride } from "@/components/shared/breadcrumb-title";
 
 import { findStaffItem, findStudentItem, parentHref } from "../manifest";
 
 export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
   const pathname = usePathname();
+  const override = useBreadcrumbOverride();
   const homeHref = portal === "staff" ? "/app" : "/learn";
   const homeLabel = portal === "staff" ? "Overview" : "Home";
   const item = portal === "staff" ? findStaffItem(pathname) : findStudentItem(pathname);
@@ -25,7 +27,7 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
   const parentItem = parent && parent !== homeHref ? findStaffItem(parent) : undefined;
   const inManagement = portal === "staff" && pathname.startsWith("/app/manage/");
   const managementItem = inManagement ? findStaffItem("/app/manage") : undefined;
-  const title = item?.label ?? (portal === "staff" && /^\/app\/schedules\/[^/]+\/edit$/.test(pathname) ? "Edit schedule" : homeLabel);
+  const title = override ?? item?.label ?? (portal === "staff" && pathname === "/app/students/import" ? "Review Import" : portal === "staff" && pathname === "/app/students/imports" ? "Import logs" : portal === "staff" && /^\/app\/schedules\/[^/]+\/edit$/.test(pathname) ? "Edit schedule" : homeLabel);
 
   return (
     <header className="sticky top-0 z-20 flex h-[var(--header-height,4rem)] shrink-0 items-center gap-2 border-b border-border bg-background px-4">
@@ -61,7 +63,7 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
               <BreadcrumbSeparator />
             </>
           ) : null}
-          <BreadcrumbItem><BreadcrumbPage>{title}</BreadcrumbPage></BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbPage className="font-semibold">{title}</BreadcrumbPage></BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
     </header>

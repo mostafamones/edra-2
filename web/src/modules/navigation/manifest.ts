@@ -185,16 +185,6 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         label: "Students",
         href: "/app/students",
         icon: "students",
-        preview: {
-          title: "Students",
-          purpose: "Find and follow every student record in the active academy.",
-          sections: [
-            "Directory search and filters by program, level, group, status, and in-person or online-only mode.",
-            "Student contact, placement, account-link status, and returning-student indicator.",
-            "Each student's overview with attendance, assessments, results, content access, notes, and their parent report in dedicated sections.",
-          ],
-          actions: ["Open a record or add a student; sensitive account-link and placement actions follow role permissions."],
-        },
       },
       {
         label: "Groups",
@@ -513,18 +503,9 @@ export const STAFF_CREATE_ITEMS: readonly NavItem[] = [
     roles: ["owner", "admin"],
   },
   {
-    label: "Student",
+    label: "Add student",
     href: "/app/students/new",
     icon: "students",
-    preview: {
-      title: "Add student",
-      purpose: "Create an annual student record for this academy.",
-      sections: [
-        "Student and parent contact details with required validation.",
-        "Program, level, track, and primary-group placement.",
-        "In-person or online-only classification and optional account-link status.",
-      ],
-    },
   },
   {
     label: "Session",
