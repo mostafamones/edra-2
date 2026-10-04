@@ -28,7 +28,7 @@ import {
   scheduleFormDefaults, scheduleFormSchema, type ScheduleFormValues, type ScheduleInput, type ScheduleKind,
 } from "../validation";
 import { AudienceFields } from "./audience-fields";
-import { ChoiceCards } from "./choice-cards";
+import { ChoiceCards } from "@/components/shared/choice-cards";
 import { Segmented } from "./segmented";
 import { SessionFields } from "./session-fields";
 import { SlotFields } from "./slot-fields";
