@@ -15,4 +15,7 @@ supabase db reset --local
 export DB_URL="${DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
 
 psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/groups_schedules.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_records.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_imports.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_import_logs.sql
 bash supabase/tests/concurrency.sh
