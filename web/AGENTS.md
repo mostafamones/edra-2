@@ -10,6 +10,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Edra engineering rules
 
+## Workspace planning rules
+
+- Follow the repository-root `../AGENTS.md`: threads with `Master` in their title, or declared Master threads by the owner, are planning-only. Application implementation must happen in a separate implementation thread.
+- The repository-root `../plans.md` is restricted deferred context. Do not read, search, or use it unless the owner directs you. `After v1:` authorizes recording the supplied item only; it does not authorize implementation or broader backlog review.
+
 ## Source of truth
 
 - Read `docs/MVP-BUILD-CONTRACT.md` before building a feature. Use the relevant detailed files in `docs/` for domain terms, scope, invariants, data relationships, and permissions.
@@ -20,6 +25,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Architecture and repository
 
 - This is a single-repository modular monolith, not a monorepo or a collection of microservices. `web/` is the deployable Next.js application; Supabase provides Postgres, Auth, Row Level Security (RLS), Storage where appropriate, and Realtime where useful.
+- The database is cloud-hosted Supabase. Use the configured cloud project and available Supabase connection or tools; do not look for a running local database, start a local Supabase/Docker stack, or require local database setup unless the owner explicitly requests it. Local migration files and Supabase configuration are not evidence of a local database.
 - Keep related business logic in `src/modules/<domain>/` (for example, `academies`, `students`, `attendance`, and `content`). A module owns its validation, authorization rules, queries, mutations, domain services, and feature-specific components.
 - Keep `src/app/` focused on routes, layouts, page composition, and Next.js boundary files. Do not place substantial business rules in pages or route handlers.
 - Keep `src/components/ui/` for CLI-added shadcn primitives. Put reusable Edra components in `src/components/shared/`; put feature-specific components inside their owning module.
@@ -50,10 +56,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Never make an undocumented dashboard-only schema change. Never apply a migration to staging or production without the owner's explicit approval.
 - Destructive or hard-to-reverse migrations require the owner's approval and a data-preservation or rollback plan.
 - Regenerate and commit Supabase TypeScript database types when the schema changes. Keep application types aligned with the actual schema.
-- Verify database changes by replaying migrations on a clean local database and testing relevant constraints, policies, and transactions. If local infrastructure is unavailable, report that clearly; do not claim the migration was verified.
+- Verify database changes against an authorized cloud development or isolated test database, including relevant constraints, policies, and transactions. Replay migrations only on an explicitly authorized clean test target; never reset a shared cloud database for verification. Use a local database only if the owner explicitly requests it. If a suitable cloud connection or test target is unavailable, report what could not be verified; do not claim verification or default to local setup. Existing approval requirements for cloud migrations still apply.
 
 ## shadcn and components
 
+- Use `@tabler/icons-react` for all application UI icons. Use Tabler component types instead of `LucideIcon`; do not introduce Lucide, `react-icons`, or another icon library. `components.json` already selects Tabler; preserve that setting and follow the protected-file rules below.
 - For every new or migrated UI component, first identify the applicable shadcn primitives. If shadcn provides a suitable foundation, agents must use it—either an existing primitive or one added with `npx shadcn@latest add <component>`. Agents must not hand-build an equivalent primitive. If no suitable shadcn primitive exists, explain the gap and ask the owner before creating a custom foundation.
 - Agents must not manually create, edit, delete, rename, or overwrite files in `src/components/ui/`. Do not use CLI overwrite flags. If the CLI proposes changing an existing primitive or protected design-system file, stop and ask the owner.
 - `components.json` and the shadcn theme tokens in `src/app/globals.css` are owner-only. Agents may edit unrelated application CSS without altering those tokens.
@@ -62,6 +69,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Keep filenames as short as the containing path allows. Let folders carry the context: use `src/modules/onboarding/components/footer.tsx` and `src/modules/auth/components/forms/login.tsx`, not `onboarding-footer.tsx` or `login-form.tsx`. Avoid repeating a parent folder name or adding generic filename suffixes such as `-component` or `-form`; add a qualifier only when needed to distinguish sibling files. Keep exported component names descriptive, such as `LoginForm` inside `forms/login.tsx`.
 - Before creating another similar component, check whether one reusable component with explicit variants or props can serve the cases cleanly. Do not force unrelated behaviors into a giant configurable component.
 - Keep accessibility, loading, empty, error, and responsive states consistent with the chosen primitives.
+- All tables must have an empty state that replaces the table and does not sit inside it. For both no records and no matching search/filter results, conditionally render a composed shadcn empty state instead of the entire table, including its headers, body, and table scroll container. Never put the empty state inside a table row or cell. Keep relevant surrounding controls available, including clear filters and permitted create actions.
 
 ## Migrating older UI components into Edra
 
