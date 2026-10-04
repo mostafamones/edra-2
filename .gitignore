@@ -1,0 +1,5 @@
+# Keep repository-root workspace files local; version the app and CI.
+/*
+!/.gitignore
+!/web/
+!/.github/
