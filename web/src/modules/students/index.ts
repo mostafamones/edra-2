@@ -9,6 +9,13 @@ export type { ParentChallenge } from "./client";
 export {
   createStudentRecord, previewStudentGroupChange, setStudentRecordsArchived, setStudentRecordsGroup, updateStudentRecord,
 } from "./records/actions";
+export {
+  cancelStudentImport, confirmStudentImport, correctStudentImportRow, finalizeStudentImportPreview,
+  processStudentImportBatch, setStudentImportRowExcluded, stageStudentImportRows, startStudentImport,
+} from "./records/imports/actions";
 export { studentsRootKey } from "./records/queries";
 export type { GroupChangePreview, StudentListResult, StudentRecord, StudentRecordRow } from "./records/types";
+export type {
+  ImportFormat, ImportIssue, ImportRow, ImportSession, ImportSummary,
+} from "./records/imports/types";
 export type { StudentRecordInput } from "./records/validation";
