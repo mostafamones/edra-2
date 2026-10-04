@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Nunito_Sans } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_Arabic, Nunito_Sans } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/modules/auth";
@@ -16,6 +16,12 @@ const nunitoSansHeading = Nunito_Sans({
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  adjustFontFallback: false,
+});
+
+const notoSansArabic = Noto_Sans_Arabic({
+  variable: "--font-noto-sans-arabic",
+  subsets: ["arabic"],
 });
 
 const geistMono = Geist_Mono({
@@ -36,7 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, nunitoSansHeading.variable)}
+      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, notoSansArabic.variable, nunitoSansHeading.variable)}
     >
       <body suppressHydrationWarning className="flex min-h-full flex-col">
         <ThemeProvider>
