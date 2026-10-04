@@ -106,7 +106,7 @@ function SchedulesContent({ academy }: { academy: AcademyEntry }) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="page-shell">
       <h1 className="font-heading text-2xl font-bold tracking-tight">Schedules</h1>
 
       <SchedulesToolbar

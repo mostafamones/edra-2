@@ -38,7 +38,7 @@ export function ScheduleRow({ schedule, startsAt, date, slotCount, sessionCount,
   return (
     <Card
       size="sm"
-      className={`border-l-3 border-l-primary bg-card/40 shadow-sm transition-colors hover:bg-muted/30 ${archived ? "opacity-60" : ""}`}
+      className={`border-l-3 border-l-primary ring-0 bg-card/40 shadow-sm transition-colors hover:bg-muted/30 ${archived ? "opacity-60" : ""}`}
     >
       <CardContent className="flex flex-row items-center gap-2 py-1">
         <div className="flex flex-col items-center gap-0 px-2 pr-4">

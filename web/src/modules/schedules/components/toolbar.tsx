@@ -33,9 +33,10 @@ export function SchedulesToolbar({ filters, onFiltersChange, archived, onArchive
         />
         <InputGroupAddon><SearchIcon /></InputGroupAddon>
       </InputGroup>
-      <FilterPopover fields={[
+      <div className="flex gap-2 sm:ml-auto">
+      <FilterPopover iconOnly fields={[
           {
-            id: "status", label: "Status", value: archived ? "archived" : "active", defaultValue: "active",
+            id: "status", label: "Status", value: archived ? "archived" : "active", defaultValue: "active", toggleLabel: "Show archived",
             options: [{ value: "active", label: "Active" }, { value: "archived", label: "Archived" }],
             onChange: (value) => onArchivedChange(value === "archived"),
           },
@@ -49,9 +50,9 @@ export function SchedulesToolbar({ filters, onFiltersChange, archived, onArchive
             options: [{ value: ALL, label: "All attendance" }, { value: "mandatory", label: "Mandatory" }, { value: "optional", label: "Optional" }],
             onChange: (attendance) => set({ attendance: attendance as ScheduleFilters["attendance"] }),
           },
-        ]}>
+        ]}/>
         <Button asChild className="flex-1 sm:flex-none"><Link href="/app/schedules/new"><Plus />Create schedule</Link></Button>
-      </FilterPopover>
+      </div>
     </div>
   );
 }

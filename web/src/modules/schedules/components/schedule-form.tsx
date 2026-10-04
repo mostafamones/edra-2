@@ -228,7 +228,7 @@ function ScheduleFields({
                     </TooltipTrigger>
                     <TooltipContent side="top" align="start" className="max-w-xs">
                       <p><strong>Mandatory:</strong> matching students are expected to attend, and absences are recorded.</p>
-                      <p className="mt-1.5"><strong>Optional:</strong> matching students may attend. Missing it has no consequence and sends no notification.</p>
+                      <p><strong>Optional:</strong> matching students may attend. Missing it has no absence consequences.</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
