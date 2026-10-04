@@ -25,7 +25,7 @@ export const structureQueryKey = (academyId: string) => [...groupsRootKey(academ
 export const groupListQueryKey = (academyId: string, archived: boolean) =>
   [...groupsRootKey(academyId), "list", archived ? "archived" : "active"] as const;
 export const groupQueryKey = (academyId: string, groupId: string) => [...groupsRootKey(academyId), "detail", groupId] as const;
-/** Which groups have schedules. Schedule mutations invalidate this key. */
+/** What references each group. Schedule and student-record mutations invalidate this key. */
 export const groupDependencyQueryKey = (academyId: string) => [...groupsRootKey(academyId), "dependencies"] as const;
 
 /** The academy's active academic year, or null when none is open. */
@@ -79,10 +79,37 @@ export async function loadGroup(academyId: string, groupId: string): Promise<Gro
   return data;
 }
 
-/** Ids of groups referenced by any schedule; these groups cannot be archived or change program. */
-export async function loadScheduledGroupIds(academyId: string): Promise<string[]> {
-  const rows = await fetchAllPages<{ group_id: string | null; id: string }>((from, to) =>
-    createClient().from("schedules").select("id,group_id").eq("academy_id", academyId)
-      .not("group_id", "is", null).order("id").range(from, to));
-  return [...new Set(rows.map((row) => row.group_id).filter((id): id is string => Boolean(id)))];
+export type GroupDependencies = {
+  /** Groups referenced by a schedule. */
+  scheduledGroupIds: Set<string>;
+  /** Groups referenced by any annual student record, active or archived. */
+  studentGroupIds: Set<string>;
+  /** Active student records placed in each group. */
+  activeStudentCounts: Map<string, number>;
+};
+
+/**
+ * What references each group. A group with schedules or student records cannot be archived or
+ * change level/track; the database enforces the same rule.
+ */
+export async function loadGroupDependencies(academyId: string): Promise<GroupDependencies> {
+  const db = createClient();
+  const [schedules, students] = await Promise.all([
+    fetchAllPages<{ group_id: string | null; id: string }>((from, to) =>
+      db.from("schedules").select("id,group_id").eq("academy_id", academyId)
+        .not("group_id", "is", null).order("id").range(from, to)),
+    fetchAllPages<{ id: string; primary_group_id: string | null; archived_at: string | null }>((from, to) =>
+      db.from("annual_student_records").select("id,primary_group_id,archived_at").eq("academy_id", academyId)
+        .not("primary_group_id", "is", null).order("id").range(from, to)),
+  ]);
+  const activeStudentCounts = new Map<string, number>();
+  for (const record of students) {
+    if (record.primary_group_id && !record.archived_at)
+      activeStudentCounts.set(record.primary_group_id, (activeStudentCounts.get(record.primary_group_id) ?? 0) + 1);
+  }
+  return {
+    scheduledGroupIds: new Set(schedules.flatMap((row) => (row.group_id ? [row.group_id] : []))),
+    studentGroupIds: new Set(students.flatMap((row) => (row.primary_group_id ? [row.primary_group_id] : []))),
+    activeStudentCounts,
+  };
 }

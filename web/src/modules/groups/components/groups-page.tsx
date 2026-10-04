@@ -18,10 +18,12 @@ import { AcademyGate } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
 import { archiveGroup, restoreGroup } from "../actions";
 import {
-  groupDependencyQueryKey, groupListQueryKey, groupsRootKey, loadGroups, loadScheduledGroupIds,
+  groupDependencyQueryKey, groupListQueryKey, groupsRootKey, loadGroupDependencies, loadGroups,
   loadStructure, structureQueryKey, type Group, type Level, type Track,
 } from "../queries";
+import { patchGroupLists } from "../optimistic";
 import { GroupCard } from "./card";
+import type { GroupDependencies } from "../queries";
 import { GroupForm } from "./group-form";
 
 const ALL_LEVELS = "all";
@@ -39,47 +41,50 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
   const [levelFilter, setLevelFilter] = useState(ALL_LEVELS);
   const [editing, setEditing] = useState<Group | null>(null);
   const [archiving, setArchiving] = useState<Group | null>(null);
-  const [actionError, setActionError] = useState("");
-  const [archivingBusy, setArchivingBusy] = useState(false);
   const canManage = academy.role === "owner" || academy.role === "admin";
   const groupsQuery = useQuery({ queryKey: groupListQueryKey(academyId, showArchived), queryFn: () => loadGroups(academyId, { archived: showArchived }) });
   const structureQuery = useQuery({ queryKey: structureQueryKey(academyId), queryFn: () => loadStructure(academyId) });
-  const dependencyQuery = useQuery({ queryKey: groupDependencyQueryKey(academyId), queryFn: () => loadScheduledGroupIds(academyId) });
+  const dependencyQuery = useQuery({ queryKey: groupDependencyQueryKey(academyId), queryFn: () => loadGroupDependencies(academyId) });
   const isPending = groupsQuery.isPending || structureQuery.isPending || dependencyQuery.isPending;
   const isError = groupsQuery.isError || structureQuery.isError || dependencyQuery.isError;
   const refetch = () => { void groupsQuery.refetch(); void structureQuery.refetch(); void dependencyQuery.refetch(); };
   const data = groupsQuery.data && structureQuery.data && dependencyQuery.data
-    ? { year: groupsQuery.data.year, groups: groupsQuery.data.groups, ...structureQuery.data, scheduledGroupIds: new Set(dependencyQuery.data) }
+    ? { year: groupsQuery.data.year, groups: groupsQuery.data.groups, ...structureQuery.data, dependencies: dependencyQuery.data }
     : undefined;
   const visibleGroups = data ? filterAndSort(data, search, levelFilter) : [];
   const filtering = search.trim() !== "" || levelFilter !== ALL_LEVELS;
   const usedLevels = data?.levels.filter((level) => data.groups.some((group) => group.level_id === level.level_id)) ?? [];
 
-  async function archive() {
-    if (!archiving) return;
-    setActionError(""); setArchivingBusy(true);
+  /** Moves a group between the cached lists immediately; the server result confirms or rolls it back. */
+  async function move(group: Group, toArchived: boolean, run: () => ReturnType<typeof archiveGroup>, failure: string, success?: string) {
+    const archivedAt = new Date().toISOString();
+    const rollback = await patchGroupLists(queryClient, academyId, (groups, archivedList) =>
+      archivedList === toArchived
+        ? [...groups, { ...group, archived_at: toArchived ? archivedAt : null }]
+        : groups.filter((item) => item.id !== group.id));
     try {
-      const result = await archiveGroup(academyId, archiving.id);
-      if (!result.ok) { setActionError(result.message); return; }
-      setArchiving(null);
-      await queryClient.invalidateQueries({ queryKey: groupsRootKey(academyId) });
-    } catch { setActionError("Could not archive the group."); }
-    finally { setArchivingBusy(false); }
+      const result = await run();
+      if (!result.ok) { rollback(); toast.error(result.message); return; }
+      if (success) toast.success(success);
+    } catch { rollback(); toast.error(failure); }
+    finally { void queryClient.invalidateQueries({ queryKey: groupsRootKey(academyId) }); }
   }
 
-  async function restore(group: Group) {
-    try {
-      const result = await restoreGroup(academyId, group.id);
-      if (!result.ok) { toast.error(result.message); return; }
-      toast.success(`${group.name} is active again.`);
-      await queryClient.invalidateQueries({ queryKey: groupsRootKey(academyId) });
-    } catch { toast.error("Could not unarchive the group."); }
+  function archive() {
+    if (!archiving) return;
+    const group = archiving;
+    setArchiving(null);
+    void move(group, true, () => archiveGroup(academyId, group.id), "Could not archive the group.");
+  }
+
+  function restore(group: Group) {
+    void move(group, false, () => restoreGroup(academyId, group.id), "Could not unarchive the group.", `${group.name} is active again.`);
   }
 
   function clearFilters() { setSearch(""); setLevelFilter(ALL_LEVELS); }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="page-shell">
       <h1 className="font-heading text-2xl font-bold tracking-tight">Groups</h1>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -93,9 +98,10 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
           />
           <InputGroupAddon><SearchIcon /></InputGroupAddon>
         </InputGroup>
-        <FilterPopover fields={[
+        <div className="flex gap-2 sm:ml-auto">
+        <FilterPopover iconOnly fields={[
             {
-              id: "status", label: "Status", value: showArchived ? "archived" : "active", defaultValue: "active",
+              id: "status", label: "Status", value: showArchived ? "archived" : "active", defaultValue: "active", toggleLabel: "Show archived",
               options: [{ value: "active", label: "Active" }, { value: "archived", label: "Archived" }],
               onChange: (value) => setShowArchived(value === "archived"),
             },
@@ -104,9 +110,9 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
               options: [{ value: ALL_LEVELS, label: "All levels" }, ...usedLevels.map((level) => ({ value: level.level_id, label: data?.levelNames[level.level_id] ?? level.level_id }))],
               onChange: setLevelFilter,
             },
-          ]}>
+          ]}/>
           {canManage && <Button asChild className="flex-1 sm:flex-none"><Link href="/app/groups/new"><Plus />Create group</Link></Button>}
-        </FilterPopover>
+        </div>
       </div>
 
       {isPending && (
@@ -168,9 +174,11 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
               group={group}
               levelName={data.levelNames[group.level_id] ?? group.level_id}
               trackName={data.tracks.find((track) => track.id === group.track_id)?.name}
-              scheduled={data.scheduledGroupIds.has(group.id)}
+              scheduled={data.dependencies.scheduledGroupIds.has(group.id)}
+              hasStudents={data.dependencies.studentGroupIds.has(group.id)}
+              activeStudents={data.dependencies.activeStudentCounts.get(group.id) ?? 0}
               onEdit={canManage && !showArchived ? () => setEditing(group) : undefined}
-              onArchive={canManage && !showArchived ? () => { setActionError(""); setArchiving(group); } : undefined}
+              onArchive={canManage && !showArchived ? () => setArchiving(group) : undefined}
               onRestore={canManage && showArchived ? () => void restore(group) : undefined}
             />
           ))}
@@ -194,7 +202,7 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
                   levels={data.levels}
                   tracks={data.tracks}
                   levelNames={data.levelNames}
-                  programLocked={data.scheduledGroupIds.has(editing.id)}
+                  programLock={programLockReason(data.dependencies, editing.id)}
                   sheetLayout
                   onSaved={() => setEditing(null)}
                   onCancel={() => setEditing(null)}
@@ -205,17 +213,16 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
         </Sheet>
       )}
 
-      <AlertDialog open={Boolean(archiving)} onOpenChange={(open) => { if (!open && !archivingBusy) setArchiving(null); }}>
+      <AlertDialog open={Boolean(archiving)} onOpenChange={(open) => { if (!open) setArchiving(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Archive {archiving?.name}?</AlertDialogTitle>
             <AlertDialogDescription>It will move to Archived for this academic year. Archived groups can no longer be edited.</AlertDialogDescription>
           </AlertDialogHeader>
-          {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={archivingBusy}>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={(event) => { event.preventDefault(); void archive(); }} disabled={archivingBusy}>
-              {archivingBusy ? "Archiving…" : "Archive group"}
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={archive}>
+              Archive group
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -239,4 +246,14 @@ function filterAndSort(data: { groups: Group[]; levels: Level[]; tracks: Track[]
       const [aLevel, aTrack] = order(a), [bLevel, bTrack] = order(b);
       return aLevel - bLevel || aTrack - bTrack || a.name.localeCompare(b.name);
     });
+}
+
+/** Why a group's level and track cannot change, or undefined when they can. */
+function programLockReason(dependencies: GroupDependencies, groupId: string) {
+  const scheduled = dependencies.scheduledGroupIds.has(groupId);
+  const hasStudents = dependencies.studentGroupIds.has(groupId);
+  if (scheduled && hasStudents) return "Level and track can’t change because this group has schedules and student records.";
+  if (scheduled) return "Level and track can’t change because this group has a schedule.";
+  if (hasStudents) return "Level and track can’t change because student records are placed in this group.";
+  return undefined;
 }

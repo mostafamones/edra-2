@@ -8,9 +8,9 @@ export {
   loadActiveYear,
   loadGroup,
   loadGroups,
-  loadScheduledGroupIds,
+  loadGroupDependencies,
   loadStructure,
   structureQueryKey,
 } from "./queries";
-export type { AcademicYear, Group, Level, Track } from "./queries";
+export type { AcademicYear, Group, GroupDependencies, Level, Track } from "./queries";
 export { groupInputSchema } from "./validation";

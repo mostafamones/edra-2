@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { format } from "date-fns";
 import { Archive, ArchiveRestore, CalendarDays, MoreHorizontal, Pencil, UsersRound } from "lucide-react";
 
@@ -7,23 +8,30 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Group } from "../queries";
+import { IconArchive, IconCalendar, IconClipboardList, IconEdit, IconRestore, IconUsers, IconUsersGroup } from "@tabler/icons-react";
 
 type Props = {
   group: Group;
   levelName: string;
   trackName?: string;
   scheduled: boolean;
+  /** Any student record (active or archived) is placed in this group. */
+  hasStudents: boolean;
+  /** Active students placed in this group. */
+  activeStudents: number;
   /** Actions are offered only when the matching handler is set. */
   onEdit?: () => void;
   onArchive?: () => void;
   onRestore?: () => void;
 };
 
-export function GroupCard({ group, levelName, trackName, scheduled, onEdit, onArchive, onRestore }: Props) {
+export function GroupCard({ group, levelName, trackName, scheduled, hasStudents, activeStudents, onEdit, onArchive, onRestore }: Props) {
   const archived = Boolean(group.archived_at);
+  const archiveBlocker = archiveBlockReason(scheduled, hasStudents);
   const hasActions = Boolean(onEdit || onArchive || onRestore);
 
   return (
@@ -42,18 +50,25 @@ export function GroupCard({ group, levelName, trackName, scheduled, onEdit, onAr
                 <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {onEdit && <DropdownMenuItem onSelect={onEdit}><Pencil />Edit group</DropdownMenuItem>}
-              {onRestore && <DropdownMenuItem onSelect={onRestore}><ArchiveRestore />Unarchive</DropdownMenuItem>}
+            <DropdownMenuContent align="end">
+              {onEdit && <DropdownMenuItem onSelect={onEdit}><IconEdit />Edit group</DropdownMenuItem>}
+              {activeStudents > 0 && (
+                <DropdownMenuItem asChild>
+                  <Link href={`/app/students?group=${group.id}`}><IconClipboardList />Show roster</Link>
+                </DropdownMenuItem>
+              )}
+              {onRestore && <DropdownMenuItem onSelect={onRestore}><IconRestore />Unarchive</DropdownMenuItem>}
               {onArchive && (
                 <>
                   {onEdit && <DropdownMenuSeparator />}
-                  <DropdownMenuItem variant="destructive" disabled={scheduled} onSelect={onArchive}><Archive />Archive</DropdownMenuItem>
-                  {scheduled && (
-                    <DropdownMenuLabel className="text-xs font-normal leading-snug text-muted-foreground">
-                      Archive this group&apos;s schedules before archiving it.
-                    </DropdownMenuLabel>
-                  )}
+                  <Tooltip open={archiveBlocker ? undefined : false}>
+                    <TooltipTrigger asChild>
+                      <span className="block">
+                        <DropdownMenuItem variant="destructive" disabled={Boolean(archiveBlocker)} onSelect={onArchive}><IconArchive />Archive</DropdownMenuItem>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">{archiveBlocker}</TooltipContent>
+                  </Tooltip>
                 </>
               )}
             </DropdownMenuContent>
@@ -65,16 +80,19 @@ export function GroupCard({ group, levelName, trackName, scheduled, onEdit, onAr
 
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-border/70 px-4 py-2.5 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <UsersRound className="size-3.5" aria-hidden="true" />
+          <IconUsers className="size-3.5" aria-hidden="true" />
+          <span className="font-medium tabular-nums text-foreground">{activeStudents}</span>
+          <span aria-hidden="true">/</span>
           {group.capacity === null
-            ? <span className="text-sm leading-none text-foreground" title="No capacity limit"><span aria-hidden="true">∞</span><span className="sr-only">No capacity limit</span></span>
-            : <span><span className="font-medium tabular-nums text-foreground">{group.capacity}</span> seats</span>}
+            ? <span className="text-sm leading-none text-foreground" title="No capacity limit"><span aria-hidden="true">∞</span><span className="sr-only">no capacity limit</span></span>
+            : <span className="tabular-nums">{group.capacity}</span>}
+          <span className="sr-only"> students</span>
         </span>
         {archived ? (
           <span>Archived {format(new Date(group.archived_at!), "MMM d, yyyy")}</span>
         ) : scheduled ? (
           <Badge variant="secondary" className="gap-1 rounded-full bg-primary/10 font-normal text-primary dark:bg-primary/25 dark:text-primary-foreground">
-            <CalendarDays aria-hidden="true" />Scheduled
+            <IconCalendar aria-hidden="true" />Scheduled
           </Badge>
         ) : (
           <span>Not scheduled</span>
@@ -82,4 +100,12 @@ export function GroupCard({ group, levelName, trackName, scheduled, onEdit, onAr
       </div>
     </Card>
   );
+}
+
+/** Explains why a group cannot be archived, or returns undefined when it can. */
+function archiveBlockReason(scheduled: boolean, hasStudents: boolean) {
+  if (scheduled && hasStudents) return "Archive this group’s schedules and move its students (including archived ones) to another group first.";
+  if (scheduled) return "Archive this group’s schedules before archiving it.";
+  if (hasStudents) return "Move this group’s students, including archived ones, to another group before archiving it.";
+  return undefined;
 }

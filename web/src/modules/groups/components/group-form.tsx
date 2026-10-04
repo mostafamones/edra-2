@@ -13,7 +13,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { NumberInput } from "@/components/shared/app-input";
 import { useAcademyScope } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
+import { toast } from "sonner";
 import { createGroup, updateGroup } from "../actions";
+import { patchGroupLists } from "../optimistic";
 import { groupsRootKey, type Group, type Level, type Track } from "../queries";
 import { groupInputSchema } from "../validation";
 
@@ -24,13 +26,14 @@ type Props = {
   levels: Level[];
   tracks: Track[];
   levelNames: Record<string, string>;
-  programLocked?: boolean;
+  /** Why the level and track are locked; unset when the program can change. */
+  programLock?: string;
   sheetLayout?: boolean;
   onSaved: () => void;
   onCancel: () => void;
 };
 
-export function GroupForm({ academy, group, levels, tracks, levelNames, programLocked, sheetLayout = false, onSaved, onCancel }: Props) {
+export function GroupForm({ academy, group, levels, tracks, levelNames, programLock, sheetLayout = false, onSaved, onCancel }: Props) {
   const isCurrentAcademy = useAcademyScope();
   const queryClient = useQueryClient();
   const [name, setName] = useState(group?.name ?? "");
@@ -66,9 +69,21 @@ export function GroupForm({ academy, group, levels, tracks, levelNames, programL
       setError("Choose a track for this level.");
       return;
     }
+    if (group) {
+      // Edits close the sheet straight away; a server rejection restores the card and reports it.
+      const edited = { ...group, name: parsed.data.name, level_id: parsed.data.levelId, track_id: parsed.data.trackId, capacity: parsed.data.capacity, notes: parsed.data.notes };
+      const rollback = await patchGroupLists(queryClient, academyId, (groups) => groups.map((item) => (item.id === group.id ? edited : item)));
+      onSaved();
+      try {
+        const result = await updateGroup(group.id, parsed.data);
+        if (!result.ok) { rollback(); toast.error(result.message); }
+      } catch { rollback(); toast.error("Could not save the group. Please try again."); }
+      finally { void queryClient.invalidateQueries({ queryKey: groupsRootKey(academyId) }); }
+      return;
+    }
     setSaving(true);
     try {
-      const result = group ? await updateGroup(group.id, parsed.data) : await createGroup(parsed.data);
+      const result = await createGroup(parsed.data);
       if (!result.ok) { setError(result.message); return; }
       await queryClient.invalidateQueries({ queryKey: groupsRootKey(academyId) });
       if (isCurrentAcademy(academyId)) onSaved();
@@ -89,20 +104,20 @@ export function GroupForm({ academy, group, levels, tracks, levelNames, programL
         <div className={`grid w-full gap-5 ${hasTracks ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
           <Field className="w-full">
             <FieldLabel>Level</FieldLabel>
-            <Select value={levelId} onValueChange={(value) => { setLevelId(value); setTrackId(""); }} disabled={programLocked}>
+            <Select value={levelId} onValueChange={(value) => { setLevelId(value); setTrackId(""); }} disabled={Boolean(programLock)}>
               <SelectTrigger className="w-full"><SelectValue placeholder="Choose a level" /></SelectTrigger>
               <SelectContent>{levels.map((level) => <SelectItem key={level.level_id} value={level.level_id}>{levelNames[level.level_id] ?? level.level_id}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
           {levelId && hasTracks && <Field>
             <FieldLabel>Track</FieldLabel>
-            <Select value={trackId} onValueChange={setTrackId} disabled={programLocked || availableTracks.length === 0}>
+            <Select value={trackId} onValueChange={setTrackId} disabled={Boolean(programLock) || availableTracks.length === 0}>
               <SelectTrigger className="w-full"><SelectValue placeholder={availableTracks.length ? "Choose a track" : "No track required"} /></SelectTrigger>
               <SelectContent>{availableTracks.map((track) => <SelectItem key={track.id} value={track.id}>{track.name}</SelectItem>)}</SelectContent>
             </Select>
           </Field>}
         </div>
-        {programLocked && <FieldDescription>Program cannot change because this group has a schedule.</FieldDescription>}
+        {programLock && <FieldDescription>{programLock}</FieldDescription>}
         <Field>
           <FieldLabel htmlFor="group-capacity">Capacity<span className="text-muted-foreground">(optional)</span></FieldLabel>
           <NumberInput id="group-capacity" min={1} step={1} value={capacity} onChange={(event) => setCapacity(event.target.value)} placeholder="No limit" />
