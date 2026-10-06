@@ -1,8 +1,9 @@
 "use client";
+import { usePortalPath, useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { BookOpen, CalendarDays, GraduationCap, House, Menu, UserRound, ClipboardCheck, BarChart3, FilePenLine, ListChecks, LogOut } from "lucide-react";
+import { IconBook as BookOpen, IconCalendar as CalendarDays, IconSchool as GraduationCap, IconHome as House, IconMenu as Menu, IconUser as UserRound, IconClipboardCheck as ClipboardCheck, IconChartBar as BarChart3, IconFilePencil as FilePenLine, IconListCheck as ListChecks } from "@tabler/icons-react";
+import { IconLogout } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -21,16 +22,17 @@ function BottomLink({ href, label, icon: Icon, active }: { href: string; label: 
 }
 
 export function StudentMobileNav() {
-  const pathname = usePathname();
+  const href = useCanonicalHref();
+  const pathname = usePortalPath("student");
   const workActive = pathname === "/learn/assignments" || pathname === "/learn/quizzes";
   const moreActive = pathname === "/learn/attendance" || pathname === "/learn/results" || pathname === "/learn/profile";
 
   return (
     <nav aria-label="Student mobile navigation" className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 backdrop-blur md:hidden">
       <div className="flex h-14 items-stretch gap-1">
-        <BottomLink href="/learn" label="Home" icon={House} active={pathname === "/learn"} />
-        <BottomLink href="/learn/calendar" label="Calendar" icon={CalendarDays} active={pathname === "/learn/calendar"} />
-        <BottomLink href="/learn/content" label="Learning" icon={GraduationCap} active={pathname === "/learn/content"} />
+        <BottomLink href={href("/learn")} label="Home" icon={House} active={pathname === "/learn"} />
+        <BottomLink href={href("/learn/calendar")} label="Calendar" icon={CalendarDays} active={pathname === "/learn/calendar"} />
+        <BottomLink href={href("/learn/content")} label="Learning" icon={GraduationCap} active={pathname === "/learn/content"} />
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="ghost" aria-label="Open assessments navigation" className={cn("flex h-auto min-w-0 flex-1 flex-col gap-1 px-1 py-1 text-[10px] font-medium text-muted-foreground", workActive && "text-primary")}>
@@ -40,8 +42,8 @@ export function StudentMobileNav() {
           <SheetContent side="bottom" className="rounded-t-xl pb-8">
             <SheetHeader><SheetTitle>Assessments</SheetTitle></SheetHeader>
             <div className="flex flex-col gap-1 px-4">
-              <SheetClose asChild><Link href="/learn/assignments" className="flex items-center gap-3 rounded-md px-3 py-3 text-sm hover:bg-accent"><FilePenLine className="size-4" />Assignments</Link></SheetClose>
-              <SheetClose asChild><Link href="/learn/quizzes" className="flex items-center gap-3 rounded-md px-3 py-3 text-sm hover:bg-accent"><ListChecks className="size-4" />Quizzes</Link></SheetClose>
+              <SheetClose asChild><Link href={href("/learn/assignments")} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm hover:bg-accent"><FilePenLine className="size-4" />Assignments</Link></SheetClose>
+              <SheetClose asChild><Link href={href("/learn/quizzes")} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm hover:bg-accent"><ListChecks className="size-4" />Quizzes</Link></SheetClose>
             </div>
           </SheetContent>
         </Sheet>
@@ -54,10 +56,10 @@ export function StudentMobileNav() {
           <SheetContent side="bottom" className="rounded-t-xl pb-8">
             <SheetHeader><SheetTitle>More</SheetTitle></SheetHeader>
             <div className="flex flex-col gap-1 px-4">
-              <SheetClose asChild><Link href="/learn/attendance" className="flex items-center gap-3 rounded-md px-3 py-3 text-sm hover:bg-accent"><ClipboardCheck className="size-4" />Attendance</Link></SheetClose>
-              <SheetClose asChild><Link href="/learn/results" className="flex items-center gap-3 rounded-md px-3 py-3 text-sm hover:bg-accent"><BarChart3 className="size-4" />Results</Link></SheetClose>
-              <SheetClose asChild><Link href="/learn/profile" className="flex items-center gap-3 rounded-md px-3 py-3 text-sm hover:bg-accent"><UserRound className="size-4" />Profile</Link></SheetClose>
-              <form action="/auth/signout" method="post"><button type="submit" className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm text-destructive hover:bg-accent"><LogOut className="size-4" />Sign out</button></form>
+              <SheetClose asChild><Link href={href("/learn/attendance")} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm hover:bg-accent"><ClipboardCheck className="size-4" />Attendance</Link></SheetClose>
+              <SheetClose asChild><Link href={href("/learn/results")} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm hover:bg-accent"><BarChart3 className="size-4" />Results</Link></SheetClose>
+              <SheetClose asChild><Link href={href("/learn/profile")} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm hover:bg-accent"><UserRound className="size-4" />Profile</Link></SheetClose>
+              <form action="/auth/signout" method="post"><button type="submit" className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm text-destructive hover:bg-accent"><IconLogout className="size-4" />Sign out</button></form>
             </div>
           </SheetContent>
         </Sheet>

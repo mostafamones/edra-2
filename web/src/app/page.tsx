@@ -1,11 +1,5 @@
-import {
-  ArrowDownRight,
-  BookOpenText,
-  CalendarDays,
-  Check,
-  ClipboardCheck,
-  UsersRound,
-} from "lucide-react";
+import { staffEntryHref, authHref } from "@/lib/routing";
+import { IconArrowDownRight as ArrowDownRight, IconBook2 as BookOpenText, IconCalendar as CalendarDays, IconCheck as Check, IconClipboardCheck as ClipboardCheck, IconUsersGroup as UsersRound } from "@tabler/icons-react";
 import { IconArrowRight, IconSchool } from "@tabler/icons-react";
 import Link from "next/link";
 
@@ -77,18 +71,18 @@ export default async function Home() {
           <div className="flex items-center gap-3">
             {isSignedIn ? (
               <Button asChild size="default" className="rounded-full px-4">
-                <Link href="/app">
+                <Link href={staffEntryHref()}>
                   Go to app
                   <IconArrowRight />
                 </Link>
               </Button>
             ) : (
               <>
-                <a className="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline" href="/auth/login">
+                <a className="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline" href={authHref()}>
                   Sign in
                 </a>
                 <Button asChild size="sm" className="rounded-full px-4">
-                  <a href="/auth/signup">Get started</a>
+                  <a href={authHref("signup")}>Get started</a>
                 </Button>
               </>
             )}
@@ -116,7 +110,7 @@ export default async function Home() {
 
             <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-4">
               <Button asChild size="lg" className="rounded-full px-4">
-                <a href={isSignedIn ? "/app" : "/auth/signup"}>
+                <a href={isSignedIn ? staffEntryHref() : authHref("signup")}>
                   {isSignedIn ? "Go to app" : "Create your account"}
                   <IconArrowRight />
                 </a>
@@ -265,7 +259,7 @@ export default async function Home() {
             A calmer home for teacher-led academies.
           </p>
         </div>
-        <a className="text-sm font-medium text-foreground underline-offset-4 hover:underline" href={isSignedIn ? "/app" : "/auth/signup"}>
+        <a className="text-sm font-medium text-foreground underline-offset-4 hover:underline" href={isSignedIn ? staffEntryHref() : authHref("signup")}>
           {isSignedIn ? "Go to app" : "Get started with Edra"}
         </a>
       </footer>

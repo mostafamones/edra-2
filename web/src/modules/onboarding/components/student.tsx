@@ -1,10 +1,12 @@
 "use client";
+import { studentHref } from "@/lib/routing";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconCheck as Check } from "@tabler/icons-react";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -37,7 +39,6 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
   const [code, setCode] = useState("");
   const [levelId, setLevelId] = useState<LevelId | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [cooldownUntil, setCooldownUntil] = useState<string | null>(null);
@@ -73,7 +74,6 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
     }
     setBusy(true);
     setError(null);
-    setNotice(null);
     const result = await requestParentCode(normalized);
     setBusy(false);
     if (!result.ok || !result.value?.challenge) {
@@ -85,14 +85,13 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
     setChallenge(result.value.challenge);
     setCooldownUntil(result.value.challenge.retryAt);
     setNow(Date.now());
-    setNotice(studentOnboardingCopy.status.codeSent);
+    toast.success(studentOnboardingCopy.status.codeSent);
   }
 
   async function changeNumber() {
     if (!challenge) return;
     setBusy(true);
     setError(null);
-    setNotice(null);
     const result = await invalidateParentChallenge(challenge.id);
     setBusy(false);
     if (!result.ok || !result.value?.invalidated) {
@@ -121,7 +120,6 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
     setCode("");
     setCooldownUntil(null);
     setVerified(true);
-    setNotice(studentOnboardingCopy.status.parentVerified);
   }
 
   async function finish() {
@@ -137,13 +135,12 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
       setError(getParentCodeErrorMessage(result.ok ? "unavailable" : result.error));
       return;
     }
-    router.replace("/learn");
+    window.location.assign(studentHref());
     router.refresh();
   }
 
   function back() {
     setError(null);
-    setNotice(null);
     if (step === 1) {
       router.push("/onboarding");
       return;
@@ -155,7 +152,6 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
   function continueToLevel() {
     if (!verified) return;
     setError(null);
-    setNotice(null);
     setDirection(1);
     setStep(2);
   }
@@ -183,12 +179,6 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
                     {currentScreenCopy.description}
                   </p>
                 </div>
-
-                {notice && !error && (
-                  <p role="status" className="mb-5 rounded-lg border border-primary/35 bg-primary/5 px-4 py-3 text-sm">
-                    {notice}
-                  </p>
-                )}
 
                 {error && (
                   <p role="alert" className="mb-5 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">

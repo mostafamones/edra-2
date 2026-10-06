@@ -32,7 +32,7 @@ export const roleChoiceCopy = {
   },
   footer: {
     back: "Back",
-    appHome: "Landing Page",
+    signOut: "Sign out",
     tagline: "Your path can grow from here",
   },
 } as const;

@@ -30,8 +30,7 @@ export const studentOnboardingCopy = {
     sending: "Please wait...",
   },
   status: {
-    codeSent: "Enter the six-digit code to verify this number.",
-    parentVerified: "Parent number verified.",
+    codeSent: "Code sent",
     verifiedTitle: "Parent number verified",
     verifiedNumber: (lastFour: string) => `Number ending in ${lastFour}`,
   },

@@ -1,0 +1,27 @@
+/* A deliberate first entrance: gentle departure, fast middle, gentle arrival. */
+@keyframes academy-entry-fade {
+  from { filter: blur(3px); opacity: 0; }
+  to { filter: blur(0); opacity: 1; }
+}
+@keyframes academy-entry-slide {
+  from { translate: var(--slide-offset); }
+  to { translate: 0; }
+}
+::view-transition-old(.academy-forward) {
+  --slide-offset: -100vw;
+  animation: 800ms ease-in both academy-entry-fade reverse,
+    1600ms cubic-bezier(0.76, 0, 0.24, 1) both academy-entry-slide reverse;
+}
+::view-transition-new(.academy-forward) {
+  --slide-offset: 100vw;
+  animation: 800ms ease-out 200ms both academy-entry-fade,
+    1600ms cubic-bezier(0.76, 0, 0.24, 1) both academy-entry-slide;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(.academy-forward),
+  ::view-transition-new(.academy-forward),
+  ::view-transition-group(academy-entry) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

@@ -9,5 +9,5 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const params = await searchParams;
   const nextPath = safeNextPath(params.next);
 
-  return <LoginForm nextPath={nextPath} passwordReset={params.reset === "1"} />;
+  return <LoginForm nextPath={nextPath} passwordReset={params.reset === "1"} phoneVerified={params.verified === "1"} />;
 }

@@ -1,8 +1,8 @@
 "use client";
+import { usePortalPath, useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconChevronRight as ChevronRight } from "@tabler/icons-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -49,11 +49,12 @@ function activeFor(pathname: string, href: string) {
 }
 
 function StaffLink({ item, pathname, closeMobile }: { item: NavItem; pathname: string; closeMobile: () => void }) {
+  const href = useCanonicalHref();
   const Icon = NAV_ICONS[item.icon];
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild tooltip={item.label} isActive={activeFor(pathname, item.href)}>
-        <Link href={item.href} onClick={closeMobile} aria-current={pathname === item.href ? "page" : undefined}>
+        <Link href={href(item.href)} onClick={closeMobile} aria-current={pathname === item.href ? "page" : undefined}>
           <Icon aria-hidden="true" />
           <span>{item.label}</span>
         </Link>
@@ -73,6 +74,7 @@ function WorkspaceSection({ label, icon, items, pathname, closeMobile, sidebarOp
   savedOpen: boolean | undefined;
   onToggle: (open: boolean) => void;
 }) {
+  const href = useCanonicalHref();
   const Icon = NAV_ICONS[icon];
   const active = items.some((item) => activeFor(pathname, item.href));
   return (
@@ -102,7 +104,7 @@ function WorkspaceSection({ label, icon, items, pathname, closeMobile, sidebarOp
             {items.map((item) => (
               <SidebarMenuSubItem key={item.href}>
                 <SidebarMenuSubButton asChild isActive={activeFor(pathname, item.href)}>
-                  <Link href={item.href} onClick={closeMobile} aria-current={pathname === item.href ? "page" : undefined}>
+                  <Link href={href(item.href)} onClick={closeMobile} aria-current={pathname === item.href ? "page" : undefined}>
                     <span>{item.label}</span>
                   </Link>
                 </SidebarMenuSubButton>
@@ -164,6 +166,7 @@ function WorkspaceNavigation({ pathname, role, closeMobile, sidebarOpen, expandS
 }
 
 function ManagementNavigation({ pathname, role, closeMobile }: { pathname: string; role: StaffRole | null; closeMobile: () => void }) {
+  const href = useCanonicalHref();
   return (
     <>
       <SidebarGroup>
@@ -171,7 +174,7 @@ function ManagementNavigation({ pathname, role, closeMobile }: { pathname: strin
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Back to workspace">
-                <Link href="/app" onClick={closeMobile}>
+                <Link href={href("/app")} onClick={closeMobile}>
                   <ArrowLeft aria-hidden="true" />
                   <span>Back to workspace</span>
                 </Link>
@@ -200,7 +203,7 @@ function ManagementNavigation({ pathname, role, closeMobile }: { pathname: strin
 }
 
 export function StaffSidebar() {
-  const pathname = usePathname();
+  const pathname = usePortalPath("staff");
   const { activeAcademy } = useAuth();
   const { isMobile, open, setOpen, setOpenMobile } = useSidebar();
   const role = activeAcademy?.role ?? null;

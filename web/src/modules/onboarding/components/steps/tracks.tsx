@@ -1,5 +1,6 @@
 "use client";
 
+import { newUuid } from "@/lib/uuid";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Plus, Trash2 } from "lucide-react";
@@ -45,7 +46,7 @@ export function TracksStep({ draft, update }: {
       }
     }
 
-    const nextTrack = { id: crypto.randomUUID(), levelId, name: "" };
+    const nextTrack = { id: newUuid(), levelId, name: "" };
     update({ tracks: [...tracks, nextTrack] });
     originalTrackRef.current = { id: nextTrack.id, name: "", isNew: true };
     setActiveTrackId(nextTrack.id);
@@ -59,7 +60,7 @@ export function TracksStep({ draft, update }: {
     const name = track.name.trim();
     if (!name) return;
 
-    const nextTrack = { id: crypto.randomUUID(), levelId: track.levelId, name: "" };
+    const nextTrack = { id: newUuid(), levelId: track.levelId, name: "" };
     update({
       tracks: [
         ...draft.tracks.map((item) => item.id === track.id ? { ...item, name } : item),

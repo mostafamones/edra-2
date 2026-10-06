@@ -1,8 +1,9 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import Link from "next/link";
 import { format } from "date-fns";
-import { Archive, ArchiveRestore, CalendarDays, MoreHorizontal, Pencil, UsersRound } from "lucide-react";
+import { IconDots as MoreHorizontal } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Group } from "../queries";
-import { IconArchive, IconCalendar, IconClipboardList, IconEdit, IconRestore, IconUsers, IconUsersGroup } from "@tabler/icons-react";
+import { IconArchive, IconCalendar, IconClipboardList, IconEdit, IconRestore, IconUsers } from "@tabler/icons-react";
 
 type Props = {
   group: Group;
@@ -30,6 +31,7 @@ type Props = {
 };
 
 export function GroupCard({ group, levelName, trackName, scheduled, hasStudents, activeStudents, onEdit, onArchive, onRestore }: Props) {
+  const href = useCanonicalHref();
   const archived = Boolean(group.archived_at);
   const archiveBlocker = archiveBlockReason(scheduled, hasStudents);
   const hasActions = Boolean(onEdit || onArchive || onRestore);
@@ -54,7 +56,7 @@ export function GroupCard({ group, levelName, trackName, scheduled, hasStudents,
               {onEdit && <DropdownMenuItem onSelect={onEdit}><IconEdit />Edit group</DropdownMenuItem>}
               {activeStudents > 0 && (
                 <DropdownMenuItem asChild>
-                  <Link href={`/app/students?group=${group.id}`}><IconClipboardList />Show roster</Link>
+                  <Link href={href(`/app/students?group=${group.id}`)}><IconClipboardList />Show roster</Link>
                 </DropdownMenuItem>
               )}
               {onRestore && <DropdownMenuItem onSelect={onRestore}><IconRestore />Unarchive</DropdownMenuItem>}

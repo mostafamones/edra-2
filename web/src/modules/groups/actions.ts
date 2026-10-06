@@ -33,7 +33,7 @@ export async function createGroup(value: unknown): Promise<Result> {
     capacity: input.capacity, notes: input.notes,
   });
   if (error) return { ok: false, message: error.message };
-  revalidatePath("/app/groups");
+  revalidatePath("/app/[academySlug]/groups", "page");
   return { ok: true };
 }
 
@@ -50,7 +50,7 @@ export async function updateGroup(groupId: string, value: unknown): Promise<Resu
   }).eq("id", groupId).eq("academy_id", input.academyId).is("archived_at", null).select("id").single();
   if (error) return { ok: false, message: error.message };
   if (!data) return { ok: false, message: "Group not found." };
-  revalidatePath("/app/groups");
+  revalidatePath("/app/[academySlug]/groups", "page");
   return { ok: true };
 }
 
@@ -63,7 +63,7 @@ export async function archiveGroup(academyId: string, groupId: string): Promise<
     .eq("id", groupId).eq("academy_id", academyId).is("archived_at", null).select("id").single();
   if (error) return { ok: false, message: error.message };
   if (!data) return { ok: false, message: "Group not found." };
-  revalidatePath("/app/groups");
+  revalidatePath("/app/[academySlug]/groups", "page");
   return { ok: true };
 }
 
@@ -78,6 +78,6 @@ export async function restoreGroup(academyId: string, groupId: string): Promise<
   if (error?.code === "23505") return { ok: false, message: "An active group in this level already uses this name." };
   if (error) return { ok: false, message: error.message };
   if (!data) return { ok: false, message: "Group not found." };
-  revalidatePath("/app/groups");
+  revalidatePath("/app/[academySlug]/groups", "page");
   return { ok: true };
 }

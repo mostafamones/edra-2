@@ -43,7 +43,6 @@ export const academyCreationCopy = {
     linkLabel: "Academy link",
     linkInfoLabel: "Academy link information",
     linkInfo: "This is your academy’s unique link. You can’t change it later, so choose carefully.",
-    linkPrefix: "edra.academy/",
     linkPlaceholder: "your-academy",
     suggestionsLabel: "Academy link suggestions",
     suggestions: "Suggestions",
@@ -72,7 +71,6 @@ export const academyCreationCopy = {
     edit: "Edit",
     academyDetails: "Academy details",
     levelsAndTracks: "Levels & tracks",
-    linkPrefix: "edra.academy/",
   },
   validation: {
     academyNameRequired: "Enter your academy name.",

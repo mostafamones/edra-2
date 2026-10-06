@@ -1,10 +1,11 @@
 "use client";
+import { staffAcademyHref } from "@/lib/routing";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, LoaderCircle } from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconCheck as Check, IconLoader2 as LoaderCircle } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -163,7 +164,7 @@ export function AcademyCreation({ userId }: { userId: string }) {
 
       clear();
       clearBrowserQueryCache();
-      router.replace("/app");
+      window.location.assign(staffAcademyHref(draft.slug));
       router.refresh();
     } catch {
       setSubmitError(copy.submitErrors.saveFailed);

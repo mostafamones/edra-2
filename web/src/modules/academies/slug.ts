@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-export const RESERVED_ACADEMY_SLUGS = ["app", "auth", "onboarding", "api"] as const;
+import { RESERVED_NAMESPACES } from "../../lib/routing";
+
+export const RESERVED_ACADEMY_SLUGS = RESERVED_NAMESPACES;
 
 export const academySlugSchema = z
   .string()

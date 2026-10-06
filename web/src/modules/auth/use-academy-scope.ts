@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 import { useAuth } from "./components/provider";
 
@@ -13,6 +13,9 @@ import { useAuth } from "./components/provider";
 export function useAcademyScope() {
   const { activeAcademy } = useAuth();
   const latest = useRef(activeAcademy?.id ?? null);
-  useEffect(() => { latest.current = activeAcademy?.id ?? null; }, [activeAcademy?.id]);
+  useLayoutEffect(() => {
+    latest.current = activeAcademy?.id ?? null;
+    return () => { latest.current = null; };
+  }, [activeAcademy?.id]);
   return useCallback((academyId: string) => latest.current === academyId, []);
 }

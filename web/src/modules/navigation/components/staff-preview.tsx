@@ -1,4 +1,5 @@
 "use client";
+import { useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
 
@@ -8,6 +9,7 @@ import { canViewStaffItem, type NavItem, type PagePreview } from "../manifest";
 import { PagePreviewView } from "./preview";
 
 export function StaffPreview({ item, preview }: { item: NavItem; preview: PagePreview }) {
+  const href = useCanonicalHref();
   const { activeAcademy } = useAuth();
 
   if (!activeAcademy) return null;
@@ -18,7 +20,7 @@ export function StaffPreview({ item, preview }: { item: NavItem; preview: PagePr
         <p className="mt-4 text-sm leading-6 text-muted-foreground">
           This section is not available to your role in {activeAcademy.name}.
         </p>
-        <Link href="/app" className="mt-6 text-sm font-medium text-primary underline-offset-4 hover:underline">Back to Overview</Link>
+        <Link href={href("/app")} className="mt-6 text-sm font-medium text-primary underline-offset-4 hover:underline">Back to Overview</Link>
       </section>
     );
   }

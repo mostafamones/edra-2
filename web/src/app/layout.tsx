@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { ROUTE_HEADER } from "@/lib/routing";
 import { Geist, Geist_Mono, Noto_Sans_Arabic, Nunito_Sans } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -7,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { PortalTransition } from "@/components/shared/portal-transition";
 
 const nunitoSansHeading = Nunito_Sans({
   subsets: ["latin"],
@@ -37,7 +40,9 @@ export const metadata: Metadata = {
   description: "One place to run your academy.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const platformHeader = (await headers()).get(ROUTE_HEADER);
+  const initialPlatform = platformHeader === "marketing" || platformHeader === "staff" || platformHeader === "student" ? platformHeader : null;
   return (
     <html
       lang="en"
@@ -48,7 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           <QueryProvider>
             <TooltipProvider>
-              <AuthProvider>{children}</AuthProvider>
+              <AuthProvider initialPlatform={initialPlatform}><PortalTransition>{children}</PortalTransition></AuthProvider>
               <Toaster />
             </TooltipProvider>
           </QueryProvider>

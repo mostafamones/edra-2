@@ -1,7 +1,8 @@
 "use client";
+import { useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
-import { GraduationCap } from "lucide-react";
+import { IconSchool as GraduationCap } from "@tabler/icons-react";
 
 import {
   Sidebar,
@@ -16,10 +17,11 @@ import { AccountMenu } from "./account-menu";
 import { SidebarNavigation } from "./sidebar-nav";
 
 export function StudentSidebar() {
+  const href = useCanonicalHref();
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <Link href="/learn" className="flex h-12 items-center gap-2 rounded-md px-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+        <Link href={href("/learn")} className="flex h-12 items-center gap-2 rounded-md px-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
             <GraduationCap className="size-4" aria-hidden="true" />
           </span>

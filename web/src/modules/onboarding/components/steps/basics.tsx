@@ -1,7 +1,8 @@
 "use client";
+import { platformOrigin } from "@/lib/routing";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { BookOpen, Code2, GraduationCap, Globe2, Info, Microscope, Music2, Palette, School, Trophy } from "lucide-react";
+import { IconBook as BookOpen, IconCode as Code2, IconSchool as GraduationCap, IconWorld as Globe2, IconInfoCircle as Info, IconMicroscope as Microscope, IconMusic as Music2, IconPalette as Palette, IconBuildingCommunity as School, IconTrophy as Trophy } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
@@ -180,7 +181,7 @@ export function BasicsStep({
           </Tooltip>
         </div>
         <div className="flex h-11 overflow-hidden rounded-lg border border-input focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30">
-          <span className="flex shrink-0 items-center border-r border-border bg-muted/50 px-3 text-sm text-muted-foreground">{COPY.profile.linkPrefix}</span>
+          <span className="flex shrink-0 items-center border-r border-border bg-muted/50 px-3 text-sm text-muted-foreground">{platformOrigin("staff") + "/"}</span>
           <Input
             id="academy-slug"
             value={draft.slug}

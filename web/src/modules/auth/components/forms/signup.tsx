@@ -6,7 +6,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
-import { FcGoogle } from "react-icons/fc";
+import { IconBrandGoogle } from "@tabler/icons-react";
 import { IconInfoCircle } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ import { AuthSubmitButton } from "../submit-button";
 type SignUpFields = z.input<typeof signUpSchema>;
 type SignUpOutput = z.output<typeof signUpSchema>;
 
-export function SignupForm({ nextPath = "/app" }: { nextPath?: string }) {
+export function SignupForm({ nextPath = "/" }: { nextPath?: string }) {
   const router = useRouter();
   const authDraft = useAuthDraft();
   const draft = authDraft.readDraft();
@@ -47,7 +47,8 @@ export function SignupForm({ nextPath = "/app" }: { nextPath?: string }) {
       return;
     }
     savePendingAuthFlow({ kind: "signup", phone: values.phone, nextPath });
-    authDraft.clearDraft();
+    // Kept in memory only, so verification can finish with a password session.
+    authDraft.updateDraft({ phone: values.phone, password: values.password });
     router.push("/auth/verify?mode=signup");
   }
 
@@ -61,7 +62,7 @@ export function SignupForm({ nextPath = "/app" }: { nextPath?: string }) {
           <TooltipTrigger asChild>
             <span tabIndex={0} className="block w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <Button type="button" variant="outline" className="h-10 w-full gap-2" disabled>
-                <FcGoogle aria-hidden="true" size={18} />
+                <IconBrandGoogle aria-hidden="true" size={18} />
                 Sign up with Google
               </Button>
             </span>

@@ -1,30 +1,4 @@
-import {
-  BarChart3,
-  Bell,
-  BookOpen,
-  Building2,
-  CalendarDays,
-  CalendarClock,
-  ClipboardCheck,
-  ClipboardList,
-  FilePenLine,
-  FileText,
-  GraduationCap,
-  House,
-  Library,
-  ListChecks,
-  MessageCircle,
-  Network,
-  Plug,
-  SearchCheck,
-  Settings,
-  Ticket,
-  UserCog,
-  UserRound,
-  Users,
-  UsersRound,
-  type LucideIcon,
-} from "lucide-react";
+import { IconChartBar as BarChart3, IconBell as Bell, IconBook as BookOpen, IconBuilding as Building2, IconCalendar as CalendarDays, IconCalendarClock as CalendarClock, IconClipboardCheck as ClipboardCheck, IconClipboardList as ClipboardList, IconFilePencil as FilePenLine, IconFileText as FileText, IconSchool as GraduationCap, IconHome as House, IconId as IdCard, IconBooks as Library, IconListCheck as ListChecks, IconMessageCircle as MessageCircle, IconSitemap as Network, IconPlug as Plug, IconZoomCheck as SearchCheck, IconSettings as Settings, IconTicket as Ticket, IconUserCog as UserCog, IconUser as UserRound, IconUsers as Users, IconUsersGroup as UsersRound, type Icon as TablerIcon } from "@tabler/icons-react";
 
 export const NAV_ICONS = {
   overview: House,
@@ -48,13 +22,14 @@ export const NAV_ICONS = {
   settings: Settings,
   academy: Building2,
   structure: Network,
+  studentCodes: IdCard,
   bookingForm: ClipboardList,
   team: UserCog,
   notifications: Bell,
   integrations: Plug,
   account: UserRound,
   learning: GraduationCap,
-} satisfies Record<string, LucideIcon>;
+} satisfies Record<string, TablerIcon>;
 
 export type StaffRole = "owner" | "admin" | "instructor";
 export type NavIcon = keyof typeof NAV_ICONS;
@@ -86,7 +61,7 @@ export type StaffNavSection = {
 };
 
 export const STAFF_WORKSPACE_SECTIONS: readonly (StaffNavSection & { icon: NavIcon })[] = [
-  { label: "Teaching", icon: "schedules", hrefs: ["/app/schedules", "/app/sessions", "/app/attendance"] },
+  { label: "Teaching", icon: "schedules", hrefs: ["/app/schedules", "/app/sessions"] },
   { label: "Students", icon: "students", hrefs: ["/app/students", "/app/groups"] },
   { label: "Content", icon: "content", hrefs: ["/app/content", "/app/releases"] },
   { label: "Assessments", icon: "assignments", hrefs: ["/app/assignments", "/app/quizzes", "/app/exams", "/app/marking", "/app/results"] },
@@ -96,7 +71,7 @@ export const STAFF_MANAGEMENT_GROUPS: readonly StaffNavSection[] = [
   { label: "Personal", hrefs: ["/app/manage/account"] },
   { label: "Intake", hrefs: ["/app/manage/bookings", "/app/manage/bookings/review"] },
   { label: "Access & delivery", hrefs: ["/app/manage/access", "/app/manage/messages"] },
-  { label: "Academy", hrefs: ["/app/manage/academy", "/app/manage/structure", "/app/manage/booking-form", "/app/manage/team"] },
+  { label: "Academy", hrefs: ["/app/manage/academy", "/app/manage/structure", "/app/manage/student-codes", "/app/manage/booking-form", "/app/manage/team"] },
   { label: "Services", hrefs: ["/app/manage/notifications", "/app/manage/integrations"] },
 ];
 
@@ -149,32 +124,6 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         label: "Sessions",
         href: "/app/sessions",
         icon: "sessions",
-        preview: {
-          title: "Sessions",
-          purpose: "Run individual class meetings and their expected rosters.",
-          sections: [
-            "Upcoming, completed, rescheduled, and cancelled sessions.",
-            "Date, location, schedule, group, expected roster, and session notes.",
-            "Attendance state and any unexpected or replacement attendees.",
-          ],
-          actions: ["Open a session, create a permitted occurrence, or reschedule one."],
-        },
-      },
-      {
-        label: "Attendance",
-        href: "/app/attendance",
-        icon: "attendance",
-        preview: {
-          title: "Attendance",
-          purpose: "Record attendance and keep published history accurate.",
-          sections: [
-            "Session rosters with draft, published, and corrected attendance states.",
-            "Present and absent marks, unexpected attendees, and session notes.",
-            "Replacement attendance and whether a missed session was resolved.",
-            "Publication effects on content access and parent notification status.",
-          ],
-          actions: ["Record, publish, correct, and republish attendance where permitted."],
-        },
       },
     ],
   },
@@ -417,6 +366,11 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             },
           },
           {
+            label: "Student codes",
+            href: "/app/manage/student-codes",
+            icon: "studentCodes",
+          },
+          {
             label: "Booking form",
             href: "/app/manage/booking-form",
             icon: "bookingForm",
@@ -431,11 +385,11 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             },
           },
           {
-            label: "Team and invitations",
+            label: "Team",
             href: "/app/manage/team",
             icon: "team",
             preview: {
-              title: "Team and invitations",
+              title: "Team",
               purpose: "See academy staff and manage permitted invitations.",
               sections: [
                 "Current Owner, Admin, and Instructor memberships and their status.",
@@ -508,18 +462,9 @@ export const STAFF_CREATE_ITEMS: readonly NavItem[] = [
     icon: "students",
   },
   {
-    label: "Session",
+    label: "Start session",
     href: "/app/sessions/new",
     icon: "sessions",
-    preview: {
-      title: "Create session",
-      purpose: "Schedule a dated class occurrence with a stable expected roster.",
-      sections: [
-        "Source schedule or permitted one-off occurrence.",
-        "Date, time, location, group, and attendance expectations.",
-        "Review before making the session visible to staff and students.",
-      ],
-    },
   },
   {
     label: "Create a schedule",

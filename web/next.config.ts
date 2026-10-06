@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  allowedDevOrigins: ["lvh.me", "app.lvh.me", "learn.lvh.me"],
 };
 
 export default nextConfig;

@@ -22,12 +22,23 @@ export async function signUp(input: SignUpInput) {
   });
 }
 
-export async function verifyPhoneCode(input: VerificationInput) {
-  return createClient().auth.verifyOtp({
+/**
+ * Verifies a signup code. A phone-code session has no application authority (the database only
+ * accepts password sessions), so it is revoked and replaced by a password sign-in. `signedIn` is
+ * false when the password is unavailable or rejected; the caller then sends the user to sign in.
+ */
+export async function verifySignup(input: VerificationInput, password: string | null) {
+  const supabase = createClient();
+  const verification = await supabase.auth.verifyOtp({
     phone: input.phone,
     token: input.code,
     type: "sms",
   });
+  if (verification.error) return { error: verification.error, signedIn: false };
+  await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+  if (!password) return { error: null, signedIn: false };
+  const { error } = await supabase.auth.signInWithPassword({ phone: input.phone, password });
+  return { error: null, signedIn: !error };
 }
 
 export async function resendSignupCode(phone: string) {

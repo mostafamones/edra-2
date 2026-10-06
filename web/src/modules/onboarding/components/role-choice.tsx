@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Building2, GraduationCap, UserRound, UsersRound } from "lucide-react";
+import { IconArrowLeft, IconArrowRight, IconBuilding, IconLogout, IconSchool, IconUser, IconUsersGroup } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -43,10 +43,10 @@ export function RoleChoice({ initialScreen = "role" }: { initialScreen?: "role" 
                     <Button asChild variant="outline" className="h-auto w-full justify-between rounded-xl border-border/80 px-5 py-5 text-left hover:border-primary/45 hover:bg-primary/5">
                       <Link href="/onboarding/student">
                         <span className="flex items-center gap-4">
-                          <span className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary"><GraduationCap className="size-5" /></span>
+                          <span className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary"><IconSchool className="size-5" /></span>
                           <span><span className="block text-base font-semibold">{roleChoiceCopy.screens.role.options.student.title}</span><span className="mt-1 block text-sm font-normal text-muted-foreground">{roleChoiceCopy.screens.role.options.student.description}</span></span>
                         </span>
-                        <ArrowRight className="size-5 text-muted-foreground" />
+                        <IconArrowRight className="size-5 text-muted-foreground" />
                       </Link>
                     </Button>
                     <Button
@@ -55,10 +55,10 @@ export function RoleChoice({ initialScreen = "role" }: { initialScreen?: "role" 
                       className="h-auto w-full justify-between rounded-xl border-border/80 px-5 py-5 text-left hover:border-primary/45 hover:bg-primary/5"
                     >
                       <span className="flex items-center gap-4">
-                        <span className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary"><UserRound className="size-5" /></span>
+                        <span className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary"><IconUser className="size-5" /></span>
                         <span><span className="block text-base font-semibold">{roleChoiceCopy.screens.role.options.instructor.title}</span><span className="mt-1 block text-sm font-normal text-muted-foreground">{roleChoiceCopy.screens.role.options.instructor.description}</span></span>
                       </span>
-                      <ArrowRight className="size-5 text-muted-foreground" />
+                      <IconArrowRight className="size-5 text-muted-foreground" />
                     </Button>
                   </>
                 ) : (
@@ -66,19 +66,19 @@ export function RoleChoice({ initialScreen = "role" }: { initialScreen?: "role" 
                     <Button asChild variant="outline" className="h-auto w-full justify-between rounded-xl border-border/80 px-5 py-5 text-left hover:border-primary/45 hover:bg-primary/5">
                       <Link href="/onboarding/instructor/join">
                         <span className="flex items-center gap-4">
-                          <span className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary"><UsersRound className="size-5" /></span>
+                          <span className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary"><IconUsersGroup className="size-5" /></span>
                           <span><span className="block text-base font-semibold">{roleChoiceCopy.screens.instructor.options.join.title}</span><span className="mt-1 block text-sm font-normal text-muted-foreground">{roleChoiceCopy.screens.instructor.options.join.description}</span></span>
                         </span>
-                        <ArrowRight className="size-5 text-muted-foreground" />
+                        <IconArrowRight className="size-5 text-muted-foreground" />
                       </Link>
                     </Button>
                     <Button asChild variant="outline" className="h-auto w-full justify-between rounded-xl border-border/80 px-5 py-5 text-left hover:border-primary/45 hover:bg-primary/5">
                       <Link href="/onboarding/academy/create">
                         <span className="flex items-center gap-4">
-                          <span className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary"><Building2 className="size-5" /></span>
+                          <span className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary"><IconBuilding className="size-5" /></span>
                           <span><span className="block text-base font-semibold">{roleChoiceCopy.screens.instructor.options.owner.title}</span><span className="mt-1 block text-sm font-normal text-muted-foreground">{roleChoiceCopy.screens.instructor.options.owner.description}</span></span>
                         </span>
-                        <ArrowRight className="size-5 text-muted-foreground" />
+                        <IconArrowRight className="size-5 text-muted-foreground" />
                       </Link>
                     </Button>
                   </>
@@ -90,9 +90,11 @@ export function RoleChoice({ initialScreen = "role" }: { initialScreen?: "role" 
       </OnboardingContentTransition>
       <OnboardingFooter
         left={screen === "instructor" ? (
-          <Button variant="ghost" onClick={() => setScreen("role")} className="-ml-2"><ArrowLeft className="size-4" />{roleChoiceCopy.footer.back}</Button>
+          <Button variant="ghost" onClick={() => setScreen("role")} className="-ml-2"><IconArrowLeft className="size-4" />{roleChoiceCopy.footer.back}</Button>
         ) : (
-          <Button variant="ghost" asChild className="-ml-2"><Link href="/app"><ArrowLeft className="size-4" />{roleChoiceCopy.footer.appHome}</Link></Button>
+          <form action="/auth/signout" method="post">
+            <Button type="submit" variant="ghost" className="-ml-2"><IconLogout className="size-4" aria-hidden="true" />{roleChoiceCopy.footer.signOut}</Button>
+          </form>
         )}
         right={<span className="text-xs text-muted-foreground">{roleChoiceCopy.footer.tagline}</span>}
       />

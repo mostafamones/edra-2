@@ -1,7 +1,8 @@
 "use client";
+import { useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { IconPlus as Plus } from "@tabler/icons-react";
 
 import {
   DropdownMenu,
@@ -15,6 +16,7 @@ import { useAuth } from "@/modules/auth";
 import { canViewStaffItem, NAV_ICONS, STAFF_CREATE_ITEMS } from "../manifest";
 
 export function QuickCreate() {
+  const href = useCanonicalHref();
   const { activeAcademy } = useAuth();
   return (
     <SidebarMenu>
@@ -31,7 +33,7 @@ export function QuickCreate() {
               const Icon = NAV_ICONS[item.icon];
               return (
                 <DropdownMenuItem key={item.href} asChild>
-                  <Link href={item.href} className="gap-2 py-2">
+                  <Link href={href(item.href)} className="gap-2 py-2">
                     <Icon className="size-4" aria-hidden="true" />
                     <span>{item.label}</span>
                   </Link>

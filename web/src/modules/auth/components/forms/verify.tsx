@@ -14,8 +14,9 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import {
   requestPasswordRecovery,
   resendSignupCode,
-  verifyPhoneCode,
+  verifySignup,
 } from "@/modules/auth/client";
+import { useAuthDraft } from "@/modules/auth/components/draft-provider";
 import { getAuthErrorMessage } from "@/modules/auth/errors";
 import { clearPendingAuthFlow, readPendingAuthFlow, savePendingAuthFlow, type PendingAuthKind } from "@/modules/auth/pending-flow";
 import { verificationSchema } from "@/modules/auth/validation";
@@ -42,6 +43,7 @@ const subscribeToPendingFlow = () => () => {};
 
 export function VerifyForm({ mode }: { mode: PendingAuthKind }) {
   const router = useRouter();
+  const authDraft = useAuthDraft();
   const copy = FLOW_COPY[mode];
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export function VerifyForm({ mode }: { mode: PendingAuthKind }) {
       return;
     }
 
-    const verification = await verifyPhoneCode(parsed);
+    const verification = await verifySignup(parsed, authDraft.readDraft().password || null);
     if (verification.error) {
       setFormError(getAuthErrorMessage(verification.error));
       return;
@@ -87,6 +89,17 @@ export function VerifyForm({ mode }: { mode: PendingAuthKind }) {
 
     const nextPath = safeNextPath(readPendingAuthFlow("signup")?.nextPath);
     clearPendingAuthFlow();
+    authDraft.updateDraft({ phone: parsed.phone, password: "" });
+    if (!verification.signedIn) {
+      // The number is verified; the password is no longer in memory (for example after a reload).
+      router.replace(`/auth/login?verified=1&next=${encodeURIComponent(nextPath)}`);
+      return;
+    }
+    authDraft.clearDraft();
+    if (nextPath.startsWith("https://") || nextPath.startsWith("http://")) {
+      window.location.assign(nextPath);
+      return;
+    }
     router.replace(nextPath);
     router.refresh();
   }
@@ -112,7 +125,9 @@ export function VerifyForm({ mode }: { mode: PendingAuthKind }) {
         return;
       }
 
-      savePendingAuthFlow({ kind: mode, phone: phoneResult.data });
+      // Keep the signup continuation (such as a staff invitation join screen) across resends.
+      const nextPath = mode === "signup" ? readPendingAuthFlow("signup")?.nextPath : undefined;
+      savePendingAuthFlow({ kind: mode, phone: phoneResult.data, nextPath });
       setCooldown(60);
       setNotice("A new code was requested. Check WhatsApp.");
     } finally {

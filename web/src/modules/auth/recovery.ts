@@ -19,8 +19,10 @@ export function createRecoveryClient() {
 /**
  * Password recovery runs entirely on the server. The recovery OTP is exchanged for a
  * session that lives only in this request's memory: it is never written to cookies or
- * returned to the browser, so a recovery code cannot be used for ordinary account access.
- * The session is used once to set the new password, then revoked globally.
+ * returned to the browser. The database also refuses every phone-code session for application
+ * operations (edra_auth.check_request), so a code verified directly against Auth grants nothing
+ * beyond setting a password. The session is used once to set the new password, then revoked
+ * globally, which also invalidates every other session's unexpired access tokens.
  */
 export async function completePasswordRecovery(
   input: RecoverPasswordInput,

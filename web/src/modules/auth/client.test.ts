@@ -18,7 +18,7 @@ import {
   signIn,
   signUp,
   recoverPassword,
-  verifyPhoneCode,
+  verifySignup,
 } from "./client";
 
 describe("phone authentication client", () => {
@@ -45,11 +45,38 @@ describe("phone authentication client", () => {
 
   it("verifies and resends signup codes as sms verification types", async () => {
     auth.verifyOtp.mockResolvedValue({ data: {}, error: null });
+    auth.signOut.mockResolvedValue({ error: null });
+    auth.signInWithPassword.mockResolvedValue({ data: {}, error: null });
     auth.resend.mockResolvedValue({ data: {}, error: null });
-    await verifyPhoneCode({ phone: "+201001234567", code: "123456" });
+    await verifySignup({ phone: "+201001234567", code: "123456" }, "secret123");
     await resendSignupCode("+201001234567");
     expect(auth.verifyOtp).toHaveBeenCalledWith({ phone: "+201001234567", token: "123456", type: "sms" });
     expect(auth.resend).toHaveBeenCalledWith({ phone: "+201001234567", type: "sms" });
+  });
+
+  it("replaces the signup phone-code session with a password session", async () => {
+    auth.verifyOtp.mockResolvedValue({ data: {}, error: null });
+    auth.signOut.mockResolvedValue({ error: null });
+    auth.signInWithPassword.mockResolvedValue({ data: {}, error: null });
+    await expect(verifySignup({ phone: "+201001234567", code: "123456" }, "secret123"))
+      .resolves.toEqual({ error: null, signedIn: true });
+    expect(auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(auth.signOut.mock.invocationCallOrder[0]).toBeLessThan(auth.signInWithPassword.mock.invocationCallOrder[0]);
+    expect(auth.signInWithPassword).toHaveBeenCalledWith({ phone: "+201001234567", password: "secret123" });
+  });
+
+  it("reports signup verification without a password session when the password is unavailable", async () => {
+    auth.verifyOtp.mockResolvedValue({ data: {}, error: null });
+    auth.signOut.mockResolvedValue({ error: null });
+    await expect(verifySignup({ phone: "+201001234567", code: "123456" }, null))
+      .resolves.toEqual({ error: null, signedIn: false });
+    expect(auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(auth.signInWithPassword).not.toHaveBeenCalled();
+
+    const failure = new Error("Token has expired or is invalid");
+    auth.verifyOtp.mockResolvedValue({ data: {}, error: failure });
+    await expect(verifySignup({ phone: "+201001234567", code: "000000" }, "secret123"))
+      .resolves.toEqual({ error: failure, signedIn: false });
   });
 
   it("requests recovery without allowing account creation", async () => {

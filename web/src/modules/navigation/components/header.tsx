@@ -1,7 +1,7 @@
 "use client";
+import { usePortalPath, useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 import {
   Breadcrumb,
@@ -18,7 +18,8 @@ import { useBreadcrumbOverride } from "@/components/shared/breadcrumb-title";
 import { findStaffItem, findStudentItem, parentHref } from "../manifest";
 
 export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
-  const pathname = usePathname();
+  const href = useCanonicalHref();
+  const pathname = usePortalPath(portal);
   const override = useBreadcrumbOverride();
   const homeHref = portal === "staff" ? "/app" : "/learn";
   const homeLabel = portal === "staff" ? "Overview" : "Home";
@@ -42,7 +43,7 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
           {pathname !== homeHref ? (
             <>
               <BreadcrumbItem>
-                <BreadcrumbLink asChild><Link href={homeHref}>{homeLabel}</Link></BreadcrumbLink>
+                <BreadcrumbLink asChild><Link href={href(homeHref)}>{homeLabel}</Link></BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
             </>
@@ -50,7 +51,7 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
           {managementItem ? (
             <>
               <BreadcrumbItem>
-                <BreadcrumbLink asChild><Link href={managementItem.href}>{managementItem.label}</Link></BreadcrumbLink>
+                <BreadcrumbLink asChild><Link href={href(managementItem.href)}>{managementItem.label}</Link></BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
             </>
@@ -58,7 +59,7 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
           {parentItem && parentItem.href !== managementItem?.href ? (
             <>
               <BreadcrumbItem>
-                <BreadcrumbLink asChild><Link href={parentItem.href}>{parentItem.label}</Link></BreadcrumbLink>
+                <BreadcrumbLink asChild><Link href={href(parentItem.href)}>{parentItem.label}</Link></BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
             </>

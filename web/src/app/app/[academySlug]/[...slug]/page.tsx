@@ -2,10 +2,12 @@ import { notFound, redirect } from "next/navigation";
 
 import { StaffPreview } from "@/modules/navigation/components/staff-preview";
 import { findStaffItem } from "@/modules/navigation/manifest";
+import { platformOrigin, staffAcademyPath } from "@/lib/routing";
 
-export default async function StaffPreviewPage({ params }: PageProps<"/app/[...slug]">) {
-  const { slug } = await params;
+export default async function StaffPreviewPage({ params }: { params: Promise<{ academySlug: string; slug: string[] }> }) {
+  const { academySlug, slug } = await params;
   const href = `/app/${slug.join("/")}`;
+  if (href === "/app/manage/account") redirect(`${platformOrigin("staff")}/account`);
   const previousRoutes: Record<string, string> = {
     "/app/bookings": "/app/manage/bookings",
     "/app/bookings/review": "/app/manage/bookings/review",
@@ -20,11 +22,11 @@ export default async function StaffPreviewPage({ params }: PageProps<"/app/[...s
     "/app/settings/integrations": "/app/manage/integrations",
     "/app/settings/account": "/app/manage/account",
     "/app/reports": "/app/students",
-    "/app/reports/attendance": "/app/attendance",
+    "/app/reports/attendance": "/app/sessions",
     "/app/reports/progress": "/app/students",
     "/app/reports/parents": "/app/students",
   };
-  if (previousRoutes[href]) redirect(previousRoutes[href]);
+  if (previousRoutes[href]) redirect(staffAcademyPath(academySlug, previousRoutes[href].slice(4)));
 
   const item = findStaffItem(href);
   const preview = item?.preview;

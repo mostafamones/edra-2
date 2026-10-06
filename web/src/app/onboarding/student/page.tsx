@@ -1,3 +1,4 @@
+import { studentHref } from "@/lib/routing";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
@@ -14,7 +15,7 @@ export default async function StudentOnboardingPage() {
   if (error) {
     return <main className="mx-auto flex min-h-svh max-w-xl items-center px-6"><p role="alert">{studentOnboardingCopy.loadError}</p></main>;
   }
-  if (profile?.level_id && profile.parent_phone_verified_at) redirect("/learn");
+  if (profile?.level_id && profile.parent_phone_verified_at) redirect(studentHref());
 
   return <StudentOnboarding initialParentPhone={profile?.parent_phone_verified_at ? profile.parent_phone : null} />;
 }

@@ -104,7 +104,7 @@ export async function createAcademySetup(value: unknown): Promise<AcademySetupRe
   }
 
   try {
-    revalidatePath("/app");
+    revalidatePath("/app", "layout");
   } catch (error) {
     console.error("Academy setup cache refresh failed", error);
   }

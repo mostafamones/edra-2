@@ -6,7 +6,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
-import { FcGoogle } from "react-icons/fc";
+import { IconBrandGoogle } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -23,7 +23,11 @@ import { AuthSubmitButton } from "../submit-button";
 
 type SignInFields = z.input<typeof signInSchema>;
 
-export function LoginForm({ nextPath = "/app", passwordReset = false }: { nextPath?: string; passwordReset?: boolean }) {
+export function LoginForm({ nextPath = "/", passwordReset = false, phoneVerified = false }: {
+  nextPath?: string;
+  passwordReset?: boolean;
+  phoneVerified?: boolean;
+}) {
   const router = useRouter();
   const authDraft = useAuthDraft();
   const draft = authDraft.readDraft();
@@ -44,6 +48,10 @@ export function LoginForm({ nextPath = "/app", passwordReset = false }: { nextPa
       return;
     }
     authDraft.clearDraft();
+    if (nextPath.startsWith("https://") || nextPath.startsWith("http://")) {
+      window.location.assign(nextPath);
+      return;
+    }
     router.replace(nextPath);
     router.refresh();
   }
@@ -54,13 +62,16 @@ export function LoginForm({ nextPath = "/app", passwordReset = false }: { nextPa
       {passwordReset && (
         <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm">Your password was changed. Sign in again.</p>
       )}
+      {phoneVerified && (
+        <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm">Your number is verified. Sign in with your password to continue.</p>
+      )}
 
       <div className="space-y-4">
         <Tooltip delayDuration={400}>
           <TooltipTrigger asChild>
             <span tabIndex={0} className="block w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <Button type="button" variant="outline" className="h-10 w-full gap-2" disabled>
-                <FcGoogle aria-hidden="true" size={18} />
+                <IconBrandGoogle aria-hidden="true" size={18} />
                 Login with Google
               </Button>
             </span>

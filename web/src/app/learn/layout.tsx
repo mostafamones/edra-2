@@ -1,8 +1,9 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/supabase/server";
+import { PUBLIC_PATH_HEADER } from "@/lib/routing";
 import { getStudentProfile } from "@/modules/students/server";
 import { PortalHeader } from "@/modules/navigation/components/header";
 import { StudentMobileNav } from "@/modules/navigation/components/student-mobile-nav";
@@ -11,7 +12,10 @@ import { StudentSidebar } from "@/modules/navigation/components/student-sidebar"
 export default async function LearnLayout({ children }: LayoutProps<"/learn">) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) redirect("/auth/login?next=/learn");
+  if (!data?.claims) {
+    const path = (await headers()).get(PUBLIC_PATH_HEADER) ?? "/";
+    redirect(`/auth/login?next=${encodeURIComponent(path)}`);
+  }
 
   const { data: profile, error } = await getStudentProfile(data.claims.sub);
   if (error) throw error;

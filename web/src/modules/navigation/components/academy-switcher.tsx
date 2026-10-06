@@ -2,21 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  BookOpen,
-  Check,
-  ChevronsUpDown,
-  Code2,
-  Globe2,
-  GraduationCap,
-  Microscope,
-  Music2,
-  Palette,
-  Plus,
-  School,
-  Trophy,
-  type LucideIcon,
-} from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { onboardingHref } from "@/lib/routing";
+import { academySwitchHref } from "../switch-destination";
+import type { AcademyEntry } from "@/modules/academies";
+import { IconBook as BookOpen, IconCheck as Check, IconSelector as ChevronsUpDown, IconCode as Code2, IconWorld as Globe2, IconSchool as GraduationCap, IconMicroscope as Microscope, IconMusic as Music2, IconPalette as Palette, IconPlus as Plus, IconBuildingCommunity as School, IconTrophy as Trophy, type Icon as TablerIcon } from "@tabler/icons-react";
 
 import {
   DropdownMenu,
@@ -29,7 +19,7 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/modules/auth";
 
-const academyIcons: Record<string, LucideIcon> = {
+const academyIcons: Record<string, TablerIcon> = {
   school: School,
   book: BookOpen,
   graduate: GraduationCap,
@@ -47,9 +37,18 @@ function AcademyIcon({ icon }: { icon: string | undefined }) {
 }
 
 export function AcademySwitcher() {
+  const pathname = usePathname();
+  const router = useRouter();
   const { academies, academiesLoading, academiesError, activeAcademy, setActiveAcademy } = useAuth();
   const { isMobile } = useSidebar();
   const [open, setOpen] = useState(false);
+
+  function switchAcademy(academy: AcademyEntry) {
+    const destination = academySwitchHref(pathname, activeAcademy?.slug, academy);
+    setActiveAcademy(academy);
+    setOpen(false);
+    router.push(destination);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -59,12 +58,14 @@ export function AcademySwitcher() {
       const academy = academies[Number(event.key) - 1];
       if (!academy) return;
       event.preventDefault();
+      const destination = academySwitchHref(pathname, activeAcademy?.slug, academy);
       setActiveAcademy(academy);
       setOpen(false);
+      router.push(destination);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, academies, setActiveAcademy]);
+  }, [open, academies, setActiveAcademy, pathname, activeAcademy?.slug, router]);
 
   return (
     <SidebarMenu>
@@ -88,7 +89,7 @@ export function AcademySwitcher() {
             ) : academies.length === 0 ? (
               <p className="px-2 py-3 text-sm text-muted-foreground">No academies yet.</p>
             ) : academies.map((academy, index) => (
-              <DropdownMenuItem key={academy.id} onSelect={() => setActiveAcademy(academy)} className="gap-2 py-2">
+              <DropdownMenuItem key={academy.id} onSelect={() => switchAcademy(academy)} className="gap-2 py-2">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-md border text-primary">
                   <AcademyIcon icon={academy.icon} />
                 </span>
@@ -105,7 +106,7 @@ export function AcademySwitcher() {
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/onboarding/academy/create" className="gap-2 py-2">
+              <Link href={onboardingHref("academy/create")} className="gap-2 py-2">
                 <span className="flex size-8 items-center justify-center rounded-md border"><Plus className="size-4" /></span>
                 <span>Create academy</span>
               </Link>

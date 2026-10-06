@@ -1,6 +1,7 @@
 "use client";
+import { platformOrigin } from "@/lib/routing";
 
-import { Pencil } from "lucide-react";
+import { IconPencil as Pencil } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,7 @@ export function ReviewStep({ draft, edit }: { draft: AcademyDraft; edit: (step: 
             <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-semibold">{draft.name}</p>
-                <p className="truncate text-sm text-muted-foreground">{academyCreationCopy.review.linkPrefix}<span className="font-semibold text-foreground/85">{draft.slug}</span></p>
+                <p className="truncate text-sm text-muted-foreground">{platformOrigin("staff") + "/"}<span className="font-semibold text-foreground/85">{draft.slug}</span></p>
               </div>
               <Badge variant="secondary" className="max-w-[42%] shrink-0 rounded-md">
                 <span className="block truncate">{draft.subject}</span>

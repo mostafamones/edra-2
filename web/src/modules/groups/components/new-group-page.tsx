@@ -1,4 +1,5 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ export function NewGroupPage() {
 }
 
 function NewGroupContent({ academy }: { academy: AcademyEntry }) {
+  const href = useCanonicalHref();
   const router = useRouter();
   const canManage = academy.role === "owner" || academy.role === "admin";
   const query = useQuery({ queryKey: structureQueryKey(academy.id), queryFn: () => loadStructure(academy.id), enabled: canManage });
@@ -72,8 +74,8 @@ function NewGroupContent({ academy }: { academy: AcademyEntry }) {
           levels={query.data.levels}
           tracks={query.data.tracks}
           levelNames={query.data.levelNames}
-          onSaved={() => router.push("/app/groups")}
-          onCancel={() => router.push("/app/groups")}
+          onSaved={() => router.push(href("/app/groups"))}
+          onCancel={() => router.push(href("/app/groups"))}
         />
       ) : <p role="alert">Add a level to your academy before creating a group.</p>)}
     </main>

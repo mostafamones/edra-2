@@ -1,10 +1,11 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertCircle, Plus, SearchIcon, SearchX, UsersRound } from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconPlus as Plus, IconSearch as SearchIcon, IconSearchOff as SearchX, IconUsersGroup as UsersRound } from "@tabler/icons-react";
 
 import { FilterPopover } from "@/components/shared/filter-popover";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -34,6 +35,7 @@ export function GroupsPage() {
 }
 
 function GroupsContent({ academy }: { academy: AcademyEntry }) {
+  const href = useCanonicalHref();
   const academyId = academy.id;
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
@@ -111,7 +113,7 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
               onChange: setLevelFilter,
             },
           ]}/>
-          {canManage && <Button asChild className="flex-1 sm:flex-none"><Link href="/app/groups/new"><Plus />Create group</Link></Button>}
+          {canManage && <Button asChild className="flex-1 sm:flex-none"><Link href={href("/app/groups/new")} ><Plus />Create group</Link></Button>}
         </div>
       </div>
 
@@ -154,7 +156,7 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
           <EmptyContent className="w-full flex-row justify-center gap-2">
             {showArchived
               ? <Button size="sm" variant="outline" onClick={() => setShowArchived(false)}>View active groups</Button>
-              : canManage && <Button size="sm" asChild><Link href="/app/groups/new"><Plus />Create group</Link></Button>}
+              : canManage && <Button size="sm" asChild><Link href={href("/app/groups/new")} ><Plus />Create group</Link></Button>}
           </EmptyContent>
         </Empty>
       ) : visibleGroups.length === 0 ? (

@@ -1,3 +1,4 @@
+import { platformOrigin } from "@/lib/routing";
 import Link from "next/link";
 import { IconSchool } from "@tabler/icons-react";
 
@@ -14,7 +15,7 @@ export function OnboardingFrame({ children, progress, progressLabel = onboarding
     <main className="flex min-h-svh bg-background text-foreground">
       <section className="flex min-h-svh w-full flex-col lg:w-[57%] lg:pl-6">
         <header className="mr-auto flex w-full max-w-[690px] items-center px-5 py-3 sm:px-9 lg:py-7">
-          <Link href="/" className="inline-flex items-center gap-2.5 font-semibold tracking-tight" aria-label={onboardingFrameCopy.appHomeLabel}>
+          <Link href={platformOrigin("marketing")} className="inline-flex items-center gap-2.5 font-semibold tracking-tight" aria-label={onboardingFrameCopy.appHomeLabel}>
             <span className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground">
               <IconSchool className="size-5" aria-hidden="true" />
             </span>

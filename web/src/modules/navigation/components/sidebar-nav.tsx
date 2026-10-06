@@ -1,7 +1,7 @@
 "use client";
+import { usePortalPath, useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 import {
   SidebarGroup,
@@ -31,7 +31,8 @@ export function SidebarNavigation({
   role?: StaffRole | null;
   staff?: boolean;
 }) {
-  const pathname = usePathname();
+  const href = useCanonicalHref();
+  const pathname = usePortalPath(staff ? "staff" : "student");
   const { setOpenMobile } = useSidebar();
   const visible = (item: NavItem) => !staff || canViewStaffItem(item, role ?? null);
   const closeMobile = () => setOpenMobile(false);
@@ -52,7 +53,7 @@ export function SidebarNavigation({
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton asChild tooltip={item.label} isActive={activeFor(pathname, item.href)}>
-                        <Link href={item.href} onClick={closeMobile} aria-current={pathname === item.href ? "page" : undefined}>
+                        <Link href={href(item.href)} onClick={closeMobile} aria-current={pathname === item.href ? "page" : undefined}>
                           <Icon aria-hidden="true" />
                           <span>{item.label}</span>
                         </Link>
@@ -62,7 +63,7 @@ export function SidebarNavigation({
                           {children.map((child) => (
                             <SidebarMenuSubItem key={child.href}>
                               <SidebarMenuSubButton asChild isActive={pathname === child.href}>
-                                <Link href={child.href} onClick={closeMobile} aria-current={pathname === child.href ? "page" : undefined}>
+                                <Link href={href(child.href)} onClick={closeMobile} aria-current={pathname === child.href ? "page" : undefined}>
                                   <span>{child.label}</span>
                                 </Link>
                               </SidebarMenuSubButton>
