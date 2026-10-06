@@ -17,6 +17,22 @@ const PHONE_PATTERN = /^\+201[0125]\d{8}$/;
 const CODE_PATTERN = /^\d{6}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const PHONE_CODE_METHODS = new Set(["otp", "recovery", "magiclink"]);
+
+/**
+ * True for sessions established with a phone code (password recovery). They may only set a new
+ * password, never act in the app. Call only after the token was verified by Auth.
+ */
+function isPhoneCodeSession(token: string) {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const amr: unknown = payload?.amr;
+    return !Array.isArray(amr) || amr.some((entry) => PHONE_CODE_METHODS.has(entry?.method));
+  } catch {
+    return true;
+  }
+}
+
 function respond(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: CORS_HEADERS });
 }
@@ -87,6 +103,7 @@ Deno.serve(async (request) => {
   });
   const { data: auth, error: authError } = await admin.auth.getUser(bearer);
   if (authError || !auth.user) return respond({ error: "not_authenticated" }, 401);
+  if (isPhoneCodeSession(bearer)) return respond({ error: "not_authenticated" }, 401);
 
   const accountPhone = normalizePhone(auth.user.phone);
   if (!accountPhone || !auth.user.phone_confirmed_at) {
