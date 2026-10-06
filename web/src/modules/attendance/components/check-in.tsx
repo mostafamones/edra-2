@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -27,10 +27,12 @@ function readLateAfter(sessionId: string) {
  * Pick a student from the list (or type a name and press Enter) to check them in, then the next one. The late deadline is
  * kept on this device per session and sent with each check-in; the server decides who is late.
  */
-export function CheckIn({ academyId, sessionId, entries }: { academyId: string; sessionId: string; entries: SheetEntry[] }) {
+export function CheckIn({ academyId, sessionId, entries, showCodes }: { academyId: string; sessionId: string; entries: SheetEntry[]; showCodes: boolean }) {
   const queryClient = useQueryClient();
   const isCurrentAcademy = useAcademyScope();
   const [typed, setTyped] = useState("");
+  // Students already marked Present or Late are done; only the rest can still be checked in.
+  const pending = useMemo(() => entries.filter((entry) => entry.status !== "present" && entry.status !== "late"), [entries]);
   const [lateAfter, setLateAfter] = useState(() => readLateAfter(sessionId));
 
   function changeLateAfter(value: string) {
@@ -60,25 +62,34 @@ export function CheckIn({ academyId, sessionId, entries }: { academyId: string; 
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-2">
       <Combobox
-        items={entries}
+        items={pending}
         value={null}
         inputValue={typed}
         onInputValueChange={setTyped}
         onValueChange={(student: SheetEntry | null) => { if (student) void checkIn(student); }}
         itemToStringLabel={(student: SheetEntry) => student.fullName}
+        filter={(student: SheetEntry, query: string) => {
+          const needle = query.trim().toLowerCase();
+          return student.fullName.toLowerCase().includes(needle) || (showCodes && (student.studentCode?.toLowerCase().includes(needle) ?? false));
+        }}
         isItemEqualToValue={(a: SheetEntry, b: SheetEntry) => a.annualStudentRecordId === b.annualStudentRecordId}
         autoHighlight
       >
-        <ComboboxInput placeholder="Type a name, press Enter to check in" aria-label="Check in a student by name" autoComplete="off" showTrigger={false} className="w-full sm:w-80" />
+        <ComboboxInput placeholder="Check in a student" aria-label={showCodes ? "Check in a student by name or code" : "Check in a student by name"} autoComplete="off" showTrigger={false} className="w-sm" />
         <ComboboxContent>
           <ComboboxEmpty>No student matches.</ComboboxEmpty>
           <ComboboxList>
             {(student: SheetEntry) => (
-              <ComboboxItem key={student.annualStudentRecordId} value={student}>
-                <span className="flex-1 truncate">{student.fullName}</span>
-                <span className="text-xs text-muted-foreground">{STATUS_LABELS[student.status]}</span>
+              <ComboboxItem key={student.annualStudentRecordId} value={student} className={"px-3"}>
+                <div className="flex flex-row w-full items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="">{student.fullName}</span>
+                    {showCodes && student.studentCode && <span className="font-mono text-xs text-muted-foreground">{student.studentCode}</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{STATUS_LABELS[student.status]}</p>
+                </div>
               </ComboboxItem>
             )}
           </ComboboxList>

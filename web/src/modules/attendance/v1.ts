@@ -4,7 +4,8 @@ import { z } from "zod";
 
 import type { StaffApiContext } from "@/lib/api/handler";
 import { apiError, apiJson, readJson, snakeKeys, type ApiErrorCode } from "@/lib/api/http";
-import { changeAttendance, checkIn, getAttendance, MAX_BULK_CHANGES, MAX_LATE_AFTER_MINUTES, publishAttendance } from "./data";
+import { normalizeStudentCode } from "@/modules/students/contract";
+import { changeAttendance, checkIn, getAttendance, MAX_BULK_CHANGES, MAX_CODE_INPUT_LENGTH, MAX_LATE_AFTER_MINUTES, publishAttendance } from "./data";
 import { ATTENDANCE_STATUSES, type AttendanceErrorCode, type AttendanceFailure } from "./types";
 
 /**
@@ -18,6 +19,10 @@ const API_CODES: Record<AttendanceErrorCode, ApiErrorCode> = {
   not_found: "NOT_FOUND",
   student_not_found: "STUDENT_NOT_FOUND",
   not_on_roster: "NOT_ON_ROSTER",
+  student_codes_disabled: "STUDENT_CODES_DISABLED",
+  student_code_retired: "STUDENT_CODE_RETIRED",
+  student_code_not_found: "STUDENT_CODE_NOT_FOUND",
+  student_code_ambiguous: "STUDENT_CODE_AMBIGUOUS",
   session_ended: "SESSION_ENDED",
   year_unavailable: "YEAR_CLOSED",
   publication_stale: "PUBLICATION_STALE",
@@ -45,20 +50,27 @@ export async function attendanceResponse(context: StaffApiContext, academyId: st
 }
 
 /**
- * `student_id` (academy-assigned identifier) is reserved for the planned student-ID system and is
- * rejected until its resolver exists. Exactly one identifier is required.
+ * Exactly one identifier: `student_id` (the academy-local student code, resolved by the database in
+ * the same transaction) or `annual_student_record_id` (permanent UUID, independent of codes).
  */
 const checkInBody = z.object({
-  annual_student_record_id: z.uuid(),
+  student_id: z.string().max(MAX_CODE_INPUT_LENGTH).optional(),
+  annual_student_record_id: z.uuid().optional(),
   late_after_minutes: z.number().int().min(0).max(MAX_LATE_AFTER_MINUTES).optional(),
-}).strict();
+}).strict().refine((body) => (body.student_id === undefined) !== (body.annual_student_record_id === undefined))
+  .refine((body) => body.student_id === undefined || normalizeStudentCode(body.student_id) !== null);
 
 export async function checkInResponse(context: StaffApiContext, request: Request, academyId: string, sessionId: string) {
   const key = idempotencyKey(request);
   if (!key) return missingKey(context);
   const body = checkInBody.safeParse(await readJson(request));
-  if (!body.success) return apiError(context, "INVALID_REQUEST", { message: "Send exactly one identifier: annual_student_record_id (UUID)." });
-  const result = await checkIn({ academyId, sessionId, annualStudentRecordId: body.data.annual_student_record_id, idempotencyKey: key, lateAfterMinutes: body.data.late_after_minutes }, context.authority);
+  if (!body.success) {
+    return apiError(context, "INVALID_REQUEST", { message: "Send exactly one identifier: student_id (a student code string) or annual_student_record_id (UUID)." });
+  }
+  const who = body.data.student_id !== undefined
+    ? { studentCode: body.data.student_id }
+    : { annualStudentRecordId: body.data.annual_student_record_id as string };
+  const result = await checkIn({ academyId, sessionId, ...who, idempotencyKey: key, lateAfterMinutes: body.data.late_after_minutes }, context.authority);
   if (!result.ok) return fail(context, result);
   const payload = snakeKeys({ outcome: result.outcome, entry: result.entry, revision: result.revision, correctionPending: result.correctionPending, replayed: result.replayed });
   if (result.outcome === "review_required") return apiError(context, "REVIEW_REQUIRED", { details: payload });

@@ -18,6 +18,10 @@ export type ApiErrorCode =
   | "YEAR_CLOSED"
   | "IDEMPOTENCY_CONFLICT"
   | "NOT_ON_ROSTER"
+  | "STUDENT_CODES_DISABLED"
+  | "STUDENT_CODE_RETIRED"
+  | "STUDENT_CODE_NOT_FOUND"
+  | "STUDENT_CODE_AMBIGUOUS"
   | "THROTTLED"
   | "INTERNAL";
 
@@ -35,6 +39,10 @@ const STATUS: Record<ApiErrorCode, number> = {
   YEAR_CLOSED: 409,
   IDEMPOTENCY_CONFLICT: 409,
   NOT_ON_ROSTER: 422,
+  STUDENT_CODES_DISABLED: 409,
+  STUDENT_CODE_RETIRED: 409,
+  STUDENT_CODE_NOT_FOUND: 404,
+  STUDENT_CODE_AMBIGUOUS: 409,
   THROTTLED: 429,
   INTERNAL: 500,
 };
@@ -53,6 +61,10 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   YEAR_CLOSED: "This academic year is closed. Attendance is read-only.",
   IDEMPOTENCY_CONFLICT: "This Idempotency-Key was already used for a different request.",
   NOT_ON_ROSTER: "This student is not on the session's roster. A staff member must review it.",
+  STUDENT_CODES_DISABLED: "Student codes are turned off for this academy. Check the student in with annual_student_record_id.",
+  STUDENT_CODE_RETIRED: "This code is no longer active. Use the student's current code or annual_student_record_id.",
+  STUDENT_CODE_NOT_FOUND: "No student in this session's academy has this code.",
+  STUDENT_CODE_AMBIGUOUS: "This code was issued to more than one student. Use annual_student_record_id; staff must issue a new code.",
   THROTTLED: "Too many requests. Retry after the indicated delay.",
   INTERNAL: "Something went wrong. Retry with the same Idempotency-Key.",
 };

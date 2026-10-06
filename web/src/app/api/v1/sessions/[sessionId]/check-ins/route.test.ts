@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   quota: { allowed: true, retry_after: 1 } as unknown,
   quotaError: null as { code: string } | null,
   checkIn: { data: null, error: null } as Rpc,
+  codeCheckIn: { data: null, error: null } as Rpc,
   calls: [] as { name: string; args: unknown }[],
 }));
 
@@ -32,6 +33,7 @@ vi.mock("@/lib/supabase/authority", () => ({
           if (name === "consume_api_quota") return { data: state.quotaError ? null : state.quota, error: state.quotaError };
           if (name === "session_academy") return { data: state.sessionAcademy, error: null };
           if (name === "check_in_attendance") return state.checkIn;
+          if (name === "check_in_attendance_by_code") return state.codeCheckIn;
           throw new Error(`unexpected rpc ${name}`);
         },
       },
@@ -64,6 +66,7 @@ beforeEach(() => {
   state.quota = { allowed: true, retry_after: 1 };
   state.quotaError = null;
   state.checkIn = { data: { outcome: "recorded", entry, revision: 3, correction_pending: false, replayed: false }, error: null };
+  state.codeCheckIn = state.checkIn;
   state.calls = [];
 });
 
@@ -107,11 +110,51 @@ describe("POST /api/v1/sessions/{id}/check-ins", () => {
     expect((await call()).status).toBe(403);
   });
 
-  it("requires an Idempotency-Key and exactly one supported identifier", async () => {
+  it("requires an Idempotency-Key and exactly one valid identifier", async () => {
     expect((await call({ headers: { "idempotency-key": "" } })).status).toBe(400);
-    expect((await call({ body: { student_id: "0042" } })).status).toBe(400);
+    expect((await call({ body: {} })).status).toBe(400);
     expect((await call({ body: { annual_student_record_id: STUDENT, student_id: "0042" } })).status).toBe(400);
-    expect(state.calls.some((c) => c.name === "check_in_attendance")).toBe(false);
+    for (const bad of [42, "", "   ", "00 42", "ÀB12", "A".repeat(21), "A".repeat(65), "AB_1", "AB\u0000"]) {
+      expect((await call({ body: { student_id: bad } })).status, String(bad)).toBe(400);
+    }
+    expect((await call({ body: { student_id: "0042", extra: true } })).status).toBe(400);
+    expect((await call({ body: { student_id: "0042", late_after_minutes: 1441 } })).status).toBe(400);
+    expect((await call({ body: { student_id: "0042", late_after_minutes: 1.5 } })).status).toBe(400);
+    expect((await call({ body: { annual_student_record_id: "not-a-uuid" } })).status).toBe(400);
+    expect(state.calls.some((c) => c.name.startsWith("check_in_attendance"))).toBe(false);
+  });
+
+  it("submits a normalized student code to the single database command, preserving leading zeroes", async () => {
+    const response = await call({ body: { student_id: "  st0042 ", late_after_minutes: 10 } });
+    expect(response.status).toBe(200);
+    expect((await response.json()).entry.annual_student_record_id).toBe(STUDENT);
+    const rpc = state.calls.filter((c) => c.name.startsWith("check_in_attendance"));
+    expect(rpc).toEqual([{
+      name: "check_in_attendance_by_code",
+      args: { p_academy_id: ACADEMY, p_session_id: SESSION, p_code: "ST0042", p_key: KEY, p_late_after_minutes: 10 },
+    }]);
+    // The omitted option is sent as 0 so omitted and 0 share a fingerprint.
+    await call({ body: { student_id: "0042" } });
+    expect(state.calls.filter((c) => c.name === "check_in_attendance_by_code").at(-1)?.args).toMatchObject({ p_code: "0042", p_late_after_minutes: 0 });
+  });
+
+  it("maps student code failures to stable codes", async () => {
+    for (const [message, status, code] of [
+      ["student_codes_disabled", 409, "STUDENT_CODES_DISABLED"], ["student_code_retired", 409, "STUDENT_CODE_RETIRED"],
+      ["student_code_not_found", 404, "STUDENT_CODE_NOT_FOUND"], ["student_code_ambiguous", 409, "STUDENT_CODE_AMBIGUOUS"],
+      ["not_on_roster", 422, "NOT_ON_ROSTER"], ["idempotency_conflict", 409, "IDEMPOTENCY_CONFLICT"],
+    ] as const) {
+      state.codeCheckIn = { data: null, error: { code: "P0001", message } };
+      const response = await call({ body: { student_id: "0042" } });
+      expect(response.status).toBe(status);
+      expect((await response.json()).error.code).toBe(code);
+    }
+    state.codeCheckIn = { data: { outcome: "review_required", entry: { ...entry, status: "excused" }, revision: 3, correction_pending: false, replayed: false }, error: null };
+    expect((await (await call({ body: { student_id: "0042" } })).json()).error.code).toBe("REVIEW_REQUIRED");
+    state.codeCheckIn = { data: null, error: { code: "P0001", message: "throttled", details: "9" } };
+    const limited = await call({ body: { student_id: "0042" } });
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("retry-after")).toBe("9");
   });
 
   it("maps review, roster, lifecycle, and retry outcomes to stable codes", async () => {

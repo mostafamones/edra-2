@@ -8,9 +8,9 @@ import type { AttendanceChange, ChangeResult, CheckInResult, PublishResult } fro
 
 type Target = { academyId: string; sessionId: string; idempotencyKey: string };
 
-export async function recordCheckIn(value: Target & { annualStudentRecordId: string; lateAfterMinutes?: number }): Promise<CheckInResult> {
+export async function recordCheckIn(value: Target & { lateAfterMinutes?: number } & ({ annualStudentRecordId: string } | { studentCode: string })): Promise<CheckInResult> {
   if (!value || typeof value !== "object") return failure("validation");
-  return checkIn(value);
+  return checkIn(value as Parameters<typeof checkIn>[0]);
 }
 
 export async function saveAttendanceChanges(value: Target & { changes: AttendanceChange[] }): Promise<ChangeResult> {

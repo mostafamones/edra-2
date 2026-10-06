@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconAlertCircle, IconArrowLeft, IconChecklist, IconLock, IconQuestionMark, IconSearch,
@@ -35,6 +36,7 @@ import { PublishDialog } from "./publish-dialog";
 import { SheetTable } from "./sheet-table";
 import { useAttendanceChannel, type ChannelStatus } from "./use-channel";
 import { useAttendanceEdits } from "./use-edits";
+import { Separator } from "@/components/ui/separator";
 
 /** Reconciliation while realtime works, and polling while it is degraded. */
 const RECONCILE_MS = 60_000;
@@ -163,7 +165,7 @@ function SyncStatus({ status, syncedAt, peers }: { status: ChannelStatus; synced
                 {status === "live" && <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/60" />}
                 <span className={cn("relative inline-flex size-1.5 rounded-full", status === "live" ? "bg-primary" : "bg-muted-foreground/60")} />
               </span>
-              {status === "live" ? "Live" : "Connecting…"}
+              {status === "live" ? "Realtime" : "Connecting…"}
             </Badge>
           )}
         </TooltipTrigger>
@@ -228,30 +230,35 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
     if (saved) setMarkingAbsent(false);
   }
 
+  // Opened from the sessions list (not the details page), so Back returns there.
+  const fromSessions = useSearchParams().get("from") === "sessions";
   const canPublish = sheet.permittedActions.publish && sheet.publication !== "published";
 
   return (
     <>
       <div className="flex flex-col gap-3">
         <Button variant="ghost" size="sm" className="-ml-2 w-fit text-muted-foreground" asChild>
-          <Link href={href(`/app/sessions/${session.id}`)}><IconArrowLeft />Session details</Link>
+          {fromSessions
+            ? <Link href={href("/app/sessions")}><IconArrowLeft />Sessions</Link>
+            : <Link href={href(`/app/sessions/${session.id}`)}><IconArrowLeft />Session details</Link>}
         </Button>
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-          <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="font-heading text-2xl font-bold tracking-tight">{session.scheduleTitle}</h1>
-              {live ? <Badge>Live</Badge> : <Badge variant="secondary">Ended</Badge>}
             </div>
-            <p className="text-sm text-muted-foreground">
-              {[session.groupName, session.mandatory ? "Mandatory" : "Optional"].filter(Boolean).join(" · ")}
-            </p>
+            <div className="flex flex-row gap-2 items-center">
+              <p className="text-sm text-muted-foreground">
+                {[session.groupName, session.mandatory ? "Mandatory" : "Optional"].filter(Boolean).join(" · ")}
+              </p>
+              <SyncStatus status={channelStatus} syncedAt={syncedAt} peers={peers} />
+              <Badge variant={sheet.publication === "published" ? "outline" : "secondary"}>{PUBLICATION_LABELS[sheet.publication]}</Badge>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <SyncStatus status={channelStatus} syncedAt={syncedAt} peers={peers} />
-            <Badge variant={sheet.publication === "published" ? "outline" : "secondary"}>{PUBLICATION_LABELS[sheet.publication]}</Badge>
-            {sheet.permittedActions.publish && (
+              {sheet.permittedActions.publish && (
               <Button onClick={() => setPublishing(true)} disabled={!canPublish}>
-                <IconChecklist />{sheet.publicationCount > 0 ? "Publish corrections" : "Review and publish"}
+                <IconChecklist />{sheet.publicationCount > 0 ? "Save" : "Publish"}
               </Button>
             )}
           </div>
@@ -272,11 +279,10 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
         </Alert>
       ) : null}
 
-      {sheet.lastPublishedAt && (
-        <p className="text-xs text-muted-foreground">
-          Last published {formatMoment(sheet.lastPublishedAt)}{sheet.lastPublishedByName ? ` by ${sheet.lastPublishedByName}` : ""}.
-          {sheet.publication === "pending_corrections" ? " Published values stay official until you publish the corrections." : ""}
-        </p>
+      {sheet.permittedActions.checkIn && sheet.entries.length > 0 && (
+        <div className="rounded-xl border border-border bg-card/30 p-3">
+          <CheckIn academyId={session.academyId} sessionId={session.id} entries={sheet.entries} showCodes={sheet.studentCodesEnabled} />
+        </div>
       )}
 
       <div role="group" aria-label="Filter by status" className="grid grid-cols-3 gap-2 sm:grid-cols-6">
@@ -293,43 +299,48 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
         ))}
       </div>
 
-      {sheet.permittedActions.checkIn && sheet.entries.length > 0 && session.state !== "live" && (
-        <div className="rounded-xl border border-border bg-card/30 p-3">
-          <CheckIn academyId={session.academyId} sessionId={session.id} entries={sheet.entries} />
-        </div>
-      )}
+      <Separator />
 
       {sheet.entries.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <InputGroup className="sm:max-w-xs">
-            <InputGroupInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search students" aria-label="Search students" />
-            <InputGroupAddon><IconSearch /></InputGroupAddon>
-          </InputGroup>
-          {corrections > 0 && (
-            <Button size="default" variant="outline" className={filter === "correction" ? "bg-foreground/20!" : ""} aria-pressed={filter === "correction"} onClick={() => setFilter(filter === "correction" ? "all" : "correction")}>
-              Pending<Badge variant="outline" className="tabular-nums">{corrections}</Badge>
-            </Button>
-          )}
-          <div className="ms-auto flex flex-wrap items-center gap-2">
-            {editable && selected.size > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline" disabled={edits.bulkBusy}>
-                    {edits.bulkBusy ? "Saving…" : `Set ${selected.size} selected`}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {INPUT_STATUSES.map((status) => (
-                    <DropdownMenuItem key={status} onSelect={() => void setSelectedStatus(status)}>{STATUS_LABELS[status]}</DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+        <div className="flex items-center justify-between">
+          <div>
+            {sheet.lastPublishedAt && (
+              <p className="text-sm text-muted-foreground">
+                Last published {formatMoment(sheet.lastPublishedAt)}{sheet.lastPublishedByName ? <span> by <strong>{sheet.lastPublishedByName}</strong></span> : ""}.
+              </p>
             )}
-            {editable && session.mandatory && unrecorded.length > 0 && (
-              <Button size="sm" variant="outline" onClick={() => setMarkingAbsent(true)} disabled={edits.bulkBusy}>
-                <IconUserX />Mark {unrecorded.length} unrecorded absent
+          </div>
+          <div className="flex items-center gap-2">
+            {corrections > 0 && (
+              <Button size="default" variant="outline" className={filter === "correction" ? "bg-foreground/20!" : ""} aria-pressed={filter === "correction"} onClick={() => setFilter(filter === "correction" ? "all" : "correction")}>
+                Pending<Badge variant="outline" className="tabular-nums">{corrections}</Badge>
               </Button>
             )}
+            <div className=" flex flex-wrap items-center gap-2">
+              {editable && selected.size > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" disabled={edits.bulkBusy}>
+                      {edits.bulkBusy ? "Saving…" : `Set ${selected.size} selected`}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {INPUT_STATUSES.map((status) => (
+                      <DropdownMenuItem key={status} onSelect={() => void setSelectedStatus(status)}>{STATUS_LABELS[status]}</DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {editable && session.mandatory && unrecorded.length > 0 && (
+                <Button variant="outline" className="text-destructive" onClick={() => setMarkingAbsent(true)} disabled={edits.bulkBusy}>
+                  <IconUserX />Mark rest absent
+                </Button>
+              )}
+            </div>
+            <InputGroup className="w-sm sm:max-w-xs">
+              <InputGroupInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search students" aria-label="Search students" />
+              <InputGroupAddon><IconSearch /></InputGroupAddon>
+            </InputGroup>
           </div>
         </div>
       )}

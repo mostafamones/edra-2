@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { cookieAuthority, type Authority } from "@/lib/supabase/authority";
 import type { Json } from "@/lib/supabase/database.types";
+import { normalizeStudentCode } from "@/modules/students/contract";
 import { failure, failureFromDatabase } from "./errors";
 import {
   ATTENDANCE_STATUSES, type AttendanceChange, type AttendanceEntry, type AttendanceSheet, type ChangeResult,
@@ -21,6 +22,7 @@ const statusSchema = z.enum(ATTENDANCE_STATUSES);
 const entrySchema = z.object({
   annual_student_record_id: z.string(),
   full_name: z.string(),
+  student_code: z.string().nullish(),
   archived: z.boolean(),
   origin: z.enum(["expected", "eligible"]),
   group_name: z.string().nullable(),
@@ -49,6 +51,7 @@ const sheetSchema = z.object({
     ended_at: z.string().nullable(),
     year_open: z.boolean(),
   }),
+  student_codes_enabled: z.boolean().optional(),
   revision: z.number().int().nonnegative(),
   published_revision: z.number().int().nullable(),
   publication_count: z.number().int().nonnegative(),
@@ -78,6 +81,7 @@ const publishSchema = z.object({
 const toEntry = (row: z.infer<typeof entrySchema>): AttendanceEntry => ({
   annualStudentRecordId: row.annual_student_record_id,
   fullName: row.full_name,
+  studentCode: row.student_code ?? null,
   archived: row.archived,
   origin: row.origin,
   groupName: row.group_name,
@@ -138,6 +142,7 @@ export async function getAttendance(academyId: string, sessionId: string, author
           endedAt: sheet.session.ended_at,
           yearOpen: open,
         },
+        studentCodesEnabled: sheet.student_codes_enabled ?? false,
         revision: sheet.revision,
         publishedRevision: sheet.published_revision,
         publicationCount: sheet.publication_count,
@@ -155,26 +160,42 @@ export async function getAttendance(academyId: string, sessionId: string, author
 }
 
 export const MAX_LATE_AFTER_MINUTES = 1440;
-const checkInInput = z.object({
-  academyId: z.uuid(), sessionId: z.uuid(), annualStudentRecordId: z.uuid(), idempotencyKey: z.uuid(),
+/** Longest raw `student_id`/code text accepted before normalization (outer whitespace is trimmed). */
+export const MAX_CODE_INPUT_LENGTH = 64;
+const checkInBase = z.object({
+  academyId: z.uuid(), sessionId: z.uuid(), idempotencyKey: z.uuid(),
   lateAfterMinutes: z.number().int().min(0).max(MAX_LATE_AFTER_MINUTES).optional(),
 });
+const checkInInput = z.union([
+  checkInBase.extend({ annualStudentRecordId: z.uuid() }).strict(),
+  checkInBase.extend({ studentCode: z.string().max(MAX_CODE_INPUT_LENGTH) }).strict(),
+]);
+export type CheckInInput = z.input<typeof checkInBase> & ({ annualStudentRecordId: string; studentCode?: never } | { studentCode: string; annualStudentRecordId?: never });
 
 /**
- * Positive check-in for a roster student while the session is live. With `lateAfterMinutes` above 0,
- * a first check-in made more than that many minutes after the session started is recorded as Late;
- * 0 or omitted never marks Late automatically.
+ * Positive check-in for a roster student while the session is live, by permanent record UUID or by
+ * academy-local student code (resolved by the database in the same transaction; the UUID is never
+ * resolved here and sent separately). With `lateAfterMinutes` above 0, a first check-in made more
+ * than that many minutes after the session started is recorded as Late; 0 or omitted never marks Late.
+ * That is a second versioned write: a replay returns the original acknowledgment and never reapplies it.
  */
-export async function checkIn(input: z.input<typeof checkInInput>, authority?: Authority | null): Promise<CheckInResult> {
+export async function checkIn(input: CheckInInput, authority?: Authority | null): Promise<CheckInResult> {
   const parsed = checkInInput.safeParse(input);
   if (!parsed.success) return failure("validation");
-  const { academyId, sessionId, annualStudentRecordId, idempotencyKey, lateAfterMinutes = 0 } = parsed.data;
+  const { academyId, sessionId, idempotencyKey, lateAfterMinutes = 0 } = parsed.data;
+  const code = "studentCode" in parsed.data ? normalizeStudentCode(parsed.data.studentCode) : undefined;
+  if ("studentCode" in parsed.data && code === null) return failure("validation");
   const caller = await member(academyId, authority);
   if (!caller) return failure("forbidden");
   try {
-    const { data, error } = await caller.db.rpc("check_in_attendance", {
-      p_academy_id: academyId, p_session_id: sessionId, p_annual_record_id: annualStudentRecordId, p_key: idempotencyKey,
-    });
+    const { data, error } = code
+      ? await caller.db.rpc("check_in_attendance_by_code", {
+        p_academy_id: academyId, p_session_id: sessionId, p_code: code, p_key: idempotencyKey, p_late_after_minutes: lateAfterMinutes,
+      })
+      : await caller.db.rpc("check_in_attendance", {
+        p_academy_id: academyId, p_session_id: sessionId, p_annual_record_id: (parsed.data as { annualStudentRecordId: string }).annualStudentRecordId,
+        p_key: idempotencyKey,
+      });
     if (error) return failureFromDatabase(error);
     const result = checkInSchema.parse(data);
     const checkedIn: CheckInResult = {

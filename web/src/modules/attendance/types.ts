@@ -11,6 +11,8 @@ export const ATTENDANCE_STATUSES = ["unknown", "present", "late", "absent", "exc
 export type AttendanceEntry = {
   annualStudentRecordId: string;
   fullName: string;
+  /** The student's current code while the academy has student codes enabled, else null. */
+  studentCode: string | null;
   /** The annual record is archived now; the roster entry is kept as history. */
   archived: boolean;
   origin: Enums["session_roster_origin"];
@@ -53,6 +55,8 @@ export type AttendanceSheet = {
     endedAt: string | null;
     yearOpen: boolean;
   };
+  /** The academy has student codes enabled, so entries may carry `studentCode`. */
+  studentCodesEnabled: boolean;
   /** Monotonic attendance revision; pass it back when publishing. */
   revision: number;
   publishedRevision: number | null;
@@ -71,6 +75,10 @@ export type AttendanceErrorCode =
   | "not_found"
   | "student_not_found"
   | "not_on_roster"
+  | "student_codes_disabled"
+  | "student_code_retired"
+  | "student_code_not_found"
+  | "student_code_ambiguous"
   | "session_ended"
   | "year_unavailable"
   | "publication_stale"

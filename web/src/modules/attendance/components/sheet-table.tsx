@@ -68,7 +68,7 @@ export function SheetTable({ total, rows, editable, pending, selected, onSelect,
             )}
             <TableHead>Student</TableHead>
             <TableHead>Attendance</TableHead>
-            <TableHead>Published</TableHead>
+            <TableHead className="w-75">Published</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -84,7 +84,7 @@ export function SheetTable({ total, rows, editable, pending, selected, onSelect,
                 </TableCell>
               )}
               <TableCell>
-                <div className="flex flex-col gap-0.5">
+                <div className="flex min-h-[38px] flex-col justify-center gap-0.5">
                   <span className="flex flex-wrap items-center gap-1.5 font-medium">
                     {entry.fullName}
                     {entry.archived && <Badge variant="outline" className="text-[11px] text-muted-foreground">Archived</Badge>}
