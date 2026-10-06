@@ -217,7 +217,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, AppInputProps & { 
         )}
         <ButtonGroup
           className={cn(
-            variant === "sm" ? "h-6" : variant === "md" ? "h-8" : variant === "lg" ? "h-10" : variant === "xl" ? "h-12" : "h-10", "w-full",
+            variant === "sm" ? "h-6" : variant === "md" ? "h-8" : variant === "lg" ? "h-10" : variant === "xl" ? "h-12" : "h-9", "w-full",
             error && "border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive"
           )}
         >

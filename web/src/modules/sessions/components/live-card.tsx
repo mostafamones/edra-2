@@ -13,7 +13,7 @@ import { formatClock, sessionAudience, startedByLabel } from "./format";
 export function LiveSessionCard({ session }: { session: LiveSession }) {
   const href = useCanonicalHref();
   return (
-    <Card size="sm" className="border-l-3 border-l-primary bg-card/40 shadow-sm ring-0 transition-colors hover:bg-muted/30">
+    <Card size="sm" className="border-l-3 border-l-primary py-4 px-2 bg-card/40 shadow-sm ring-0 transition-colors hover:bg-muted/30">
       <CardContent className="py-1">
         <Link href={href(`/app/sessions/${session.id}`)} className="flex items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
           <div className="flex min-w-0 flex-col gap-0.5">

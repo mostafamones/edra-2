@@ -11,7 +11,7 @@ import { MAX_WEEKLY_SLOTS, type ScheduleFormValues } from "../validation";
 import { TimeSelect } from "./time-select";
 
 const NEW_SLOT = { weekday: 6, startsAt: "", endsAt: "" };
-const ROW = "grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem] items-start gap-3";
+const ROW = "grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem] items-start gap-2";
 
 /** Weekly slots for a recurring schedule: 1–20 rows in one card, each a weekday with start and end times. */
 export function SlotFields({ disabled }: { disabled?: boolean }) {

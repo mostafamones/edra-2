@@ -19,7 +19,7 @@ export function HistorySessionCard({ session, canDelete }: { session: PastSessio
   const [deleting, setDeleting] = useState(false);
   const detailsHref = href(`/app/sessions/${session.id}`);
   return (
-    <Card size="sm" className="bg-card/40 shadow-sm border-l-3 border-foreground/20 ring-0 transition-colors hover:bg-muted/30">
+    <Card size="sm" className="bg-card/40 py-4 px-2 shadow-sm border-l-3 border-foreground/20 ring-0 transition-colors hover:bg-muted/30">
       <CardContent className="py-1">
         <div className="flex items-center gap-3">
         <Link href={detailsHref} className="min-w-0 flex-1 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
@@ -45,14 +45,14 @@ export function HistorySessionCard({ session, canDelete }: { session: PastSessio
               <IconDots />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-fit">
             <DropdownMenuItem asChild className="whitespace-nowrap">
-              <Link href={href(`/app/sessions/${session.id}/attendance`)}><IconClipboardList />View attendance</Link>
+              <Link href={href(`/app/sessions/${session.id}/attendance?from=sessions`)}><IconClipboardList />View attendance</Link>
             </DropdownMenuItem>
             {canDelete && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" className="whitespace-nowrap" onSelect={() => setDeleting(true)}><IconTrash />Delete</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive!" onSelect={() => setDeleting(true)}><IconTrash />Delete</DropdownMenuItem>
               </>
             )}
           </DropdownMenuContent>

@@ -38,7 +38,7 @@ export function ScheduleRow({ schedule, startsAt, date, slotCount, sessionCount,
   return (
     <Card
       size="sm"
-      className={`border-l-3 border-l-primary ring-0 bg-card/40 shadow-sm transition-colors hover:bg-muted/30 ${archived ? "opacity-60" : ""}`}
+      className={`border-l-3 ${oneOff ? "border-foreground/20" : "border-primary"} ring-0 bg-card/40 shadow-sm transition-colors hover:bg-muted/30 ${archived ? "opacity-60" : ""}`}
     >
       <CardContent className="flex flex-row items-center gap-2 py-1">
         <div className="flex flex-col items-center gap-0 px-2 pr-4">
@@ -62,7 +62,7 @@ export function ScheduleRow({ schedule, startsAt, date, slotCount, sessionCount,
             ) : null}
             {archived ? <Badge variant="outline" className="text-[11px] text-muted-foreground">Archived</Badge> : null}
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
             {level ? (
               <span className="flex items-center gap-1"><IconSchool className="size-3" />{level}</span>
             ) : null}
@@ -82,7 +82,7 @@ export function ScheduleRow({ schedule, startsAt, date, slotCount, sessionCount,
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${schedule.title}`}>
+                  <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label={`Actions for ${schedule.title}`}>
                     <IconDotsVertical className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>

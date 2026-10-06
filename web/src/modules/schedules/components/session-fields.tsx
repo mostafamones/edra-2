@@ -10,7 +10,7 @@ import { DatePicker } from "./date-picker";
 import { TimeSelect } from "./time-select";
 
 const NEW_SESSION = { date: "", startsAt: "", endsAt: "" };
-const ROW = "grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem] items-start gap-3";
+const ROW = "grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem] items-start gap-2";
 
 type Props = { minDate: string; maxDate: string; disabled?: boolean };
 

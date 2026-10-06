@@ -115,7 +115,7 @@ function SessionsContent({ academy, startOpen }: { academy: AcademyEntry; startO
       </section>
       )}
 
-      {upcoming.length > 0 && (
+      {upcoming.length > 0 && liveSessions.length === 0 && (
         <section aria-labelledby="upcoming-heading" className="flex flex-col gap-2.5">
           <SectionHeading id="upcoming-heading">Upcoming today</SectionHeading>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

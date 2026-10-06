@@ -160,3 +160,9 @@
     font-family: "Geist", var(--font-arabic-fallback), sans-serif;
   }
 }
+
+/* Sonner sets its own font stack, which skips the Arabic fallback; toasts follow the page font. */
+body [data-sonner-toaster],
+body [data-sonner-toast] {
+  font-family: inherit;
+}

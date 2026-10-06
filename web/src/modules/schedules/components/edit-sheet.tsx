@@ -43,7 +43,7 @@ export function ScheduleEditSheet({ academy, editing, onClose }: Props) {
         >
           <SheetHeader className="shrink-0 border-b px-6 py-5 pr-16">
             <SheetTitle className="text-xl">Edit schedule</SheetTitle>
-            <SheetDescription className="break-words">{editing?.schedule.title}</SheetDescription>
+            <SheetDescription className="wrap-break-words">{editing?.schedule.title}</SheetDescription>
           </SheetHeader>
           <div className="flex min-h-0 flex-1 flex-col">
             {editing && (
