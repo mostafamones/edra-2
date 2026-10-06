@@ -1,4 +1,5 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -13,6 +14,7 @@ import { ImportDialog } from "./start-dialog";
 
 /** The Import button: choose a format, then pick a file in the start dialog. Owners and admins only. */
 export function ImportMenu({ academyId, showLogs = false, variant = "outline", size }: { academyId: string; showLogs?: boolean; variant?: "outline" | "default", size?: "sm" | "default" }) {
+  const href = useCanonicalHref();
   const [format, setFormat] = useState<ImportFormat | null>(null);
   return (
     <>
@@ -29,7 +31,7 @@ export function ImportMenu({ academyId, showLogs = false, variant = "outline", s
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/app/students/imports"><IconList />View logs</Link>
+                <Link href={href("/app/students/imports")} ><IconList />View logs</Link>
               </DropdownMenuItem>
             </>
           )}

@@ -4,11 +4,11 @@ import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertCircle, ArchiveRestore } from "lucide-react";
+import { IconId } from "@tabler/icons-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAcademyScope } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
 import { groupDependencyQueryKey } from "@/modules/groups";
@@ -16,6 +16,8 @@ import { setStudentRecordsArchived } from "../actions";
 import { canArchiveStudentRecords } from "../permissions";
 import { fetchStudentRecord, StudentRequestError, studentRecordQueryKey, studentsRootKey } from "../queries";
 import type { StudentRecord } from "../types";
+import { StudentCodeDialog } from "../../codes/components/dialog";
+import { useStudentCodeSettings } from "../../codes/use-settings";
 import { DiscardDialog } from "./discard-dialog";
 import { FormSkeleton, StudentRecordForm, type FormStatus } from "./form";
 
@@ -88,6 +90,8 @@ function SheetBody({ academy, recordId, onSaved, onCancel, onStatusChange, onBus
   const queryClient = useQueryClient();
   const isCurrentAcademy = useAcademyScope();
   const [restoring, setRestoring] = useState(false);
+  const [codeOpen, setCodeOpen] = useState(false);
+  const codesEnabled = useStudentCodeSettings(academy.id).data?.enabled ?? false;
   const query = useQuery({
     queryKey: studentRecordQueryKey(academy.id, recordId),
     queryFn: ({ signal }) => fetchStudentRecord(academy.id, recordId, signal),
@@ -122,12 +126,23 @@ function SheetBody({ academy, recordId, onSaved, onCancel, onStatusChange, onBus
   return (
     <>
       <SheetHeader className="shrink-0 border-b px-6 py-5 pr-16">
-        <SheetTitle className="flex items-center gap-2 text-xl">
-          {archived ? "Archived student" : "Edit student"}
-          {archived && <Badge variant="secondary">Archived</Badge>}
+        <SheetTitle className="flex items-center gap-2 text-xl font-normal">
+          {archived ? "Archived student: " : "Edit student: "}
+          <span className="font-[Noto_Sans_Arabic] font-semibold">{record?.fullName ?? "Loading..."}</span>
         </SheetTitle>
-        <SheetDescription className="break-words">{record?.fullName ?? "Loading the latest saved details…"}</SheetDescription>
+        {record && !archived && codesEnabled && (
+          <Button type="button" variant="outline" size="sm" className="mt-2 w-fit" onClick={() => setCodeOpen(true)}>
+            <IconId data-icon="inline-start" />Student code
+          </Button>
+        )}
       </SheetHeader>
+      {record && (
+        <StudentCodeDialog
+          academy={academy}
+          target={codeOpen ? { id: record.id, fullName: record.fullName, levelId: record.levelId } : null}
+          onClose={() => setCodeOpen(false)}
+        />
+      )}
       <div className="flex min-h-0 flex-1 flex-col">
         {query.isError ? (
           <div className="px-6 py-5">

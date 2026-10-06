@@ -58,7 +58,7 @@ export async function createStudentRecord(value: unknown): Promise<StudentRecord
     if (error) return failureFromDatabase(error);
     const created = data?.[0];
     if (!created) return failure("unavailable");
-    revalidatePath("/app/students");
+    revalidatePath("/app/[academySlug]/students", "page");
     return { ok: true, data: { id: created.id, version: created.version } };
   } catch {
     return failure("unavailable");
@@ -80,7 +80,7 @@ export async function updateStudentRecord(recordId: string, expectedVersion: num
     if (error) return failureFromDatabase(error);
     const updated = data?.[0];
     if (!updated) return failure("not_found");
-    revalidatePath("/app/students");
+    revalidatePath("/app/[academySlug]/students", "page");
     return { ok: true, data: { id: updated.id, version: updated.version } };
   } catch {
     return failure("unavailable");
@@ -110,7 +110,7 @@ export async function setStudentRecordsArchived(
       p_archived: parsed.data.archived,
     });
     if (error) return failureFromDatabase(error);
-    revalidatePath("/app/students");
+    revalidatePath("/app/[academySlug]/students", "page");
     return { ok: true, data: { ids: data ?? [] } };
   } catch {
     return failure("unavailable");
@@ -169,7 +169,7 @@ export async function setStudentRecordsGroup(
       changed: z.array(z.object({ id: z.string(), version: z.number().int() })),
       unchanged: z.array(z.string()),
     }).parse(data);
-    revalidatePath("/app/students");
+    revalidatePath("/app/[academySlug]/students", "page");
     return { ok: true, data: result };
   } catch {
     return failure("unavailable");

@@ -192,4 +192,31 @@ wait
 psqlx -tA -c "select string_agg(outcome || ':' || coalesce(outcome_code, ''), ',' order by ordinal) from public.student_import_rows where session_id = '$S10'" \
   | grep -qx 'failed:invalid_placement,created:' || fail "the archived group's row was not recorded as a failure"
 
+# 11. Student code settings: two first saves race; exactly one wins and the other is stale.
+save_codes() { echo "select public.save_student_code_settings('$ACADEMY', $1, $2, '####', '[]');"; }
+( psqlx -c "begin; $as_admin $(save_codes 0 true) select pg_sleep(2); commit;" >"$OUT/11a" 2>&1 && echo ok >"$OUT/11a.status" || echo failed >"$OUT/11a.status" ) &
+sleep 0.6
+( psqlx -c "begin; $as_admin $(save_codes 0 false) commit;" >"$OUT/11b" 2>&1 && echo ok >"$OUT/11b.status" || echo failed >"$OUT/11b.status" ) &
+wait
+[ "$(cat "$OUT/11a.status")" = ok ] && [ "$(cat "$OUT/11b.status")" = failed ] && grep -q stale_settings "$OUT/11b" \
+  || fail "concurrent first student code saves did not produce one stale save"
+psqlx -tA -c "select enabled::text || ':' || version from public.student_code_settings where academy_id = '$ACADEMY'" | grep -qx 'true:1' \
+  || fail "the winning student code save is missing"
+
+# 12. An in-flight issuer holds the settings share lock; a concurrent disable waits for it, and an
+#     issue attempted after the disable commits is rejected.
+R12="$(new_student 'Code race' 01055550001)"
+[ -n "$R12" ] || fail "could not create the code race student"
+issue12() { # $1 code
+  echo "insert into public.student_code_assignments (academy_id, academic_year_id, academy_student_profile_id, annual_student_record_id, level_id, code, code_version, issued_by)
+    select academy_id, academic_year_id, academy_student_profile_id, id, level_id, '$1', 1, '$ADMIN' from public.annual_student_records where id = '$R12';"
+}
+( psqlx -c "begin; $(issue12 0001) select pg_sleep(2); commit;" >"$OUT/12a" 2>&1 && echo ok >"$OUT/12a.status" || echo failed >"$OUT/12a.status" ) &
+sleep 0.6
+( psqlx -c "begin; $as_admin $(save_codes 1 false) commit;" >"$OUT/12b" 2>&1 && echo ok >"$OUT/12b.status" || echo failed >"$OUT/12b.status" ) &
+wait
+[ "$(cat "$OUT/12a.status")" = ok ] && [ "$(cat "$OUT/12b.status")" = ok ] || fail "issuer and disable did not both commit in order"
+psqlx -c "begin; $(issue12 0002) commit;" >"$OUT/12c" 2>&1 && fail "a code was issued after disable" || true
+grep -q codes_disabled "$OUT/12c" || fail "issue after disable failed for the wrong reason: $(cat "$OUT/12c")"
+
 echo "concurrency checks passed"

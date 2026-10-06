@@ -1,10 +1,11 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, ArrowLeft } from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconArrowLeft as ArrowLeft } from "@tabler/icons-react";
 import { z } from "zod";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -40,6 +41,7 @@ export function ImportStudentsPage() {
 type DraftInfo = { fileName: string; entries: number };
 
 function ImportContent({ academy }: { academy: AcademyEntry }) {
+  const href = useCanonicalHref();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -56,12 +58,12 @@ function ImportContent({ academy }: { academy: AcademyEntry }) {
     if (next.session) query.set("session", next.session);
     router.replace(`${pathname}?${query}`);
   };
-  const toList = () => router.replace("/app/students");
+  const toList = () => router.replace(href("/app/students"));
   // Without a chosen file or a saved session there is nothing to review: choosing a file happens in the list's dialog.
   const nothingToImport = !sessionId && !pending;
   useEffect(() => {
-    if (nothingToImport) router.replace("/app/students");
-  }, [nothingToImport, router]);
+    if (nothingToImport) router.replace(href("/app/students"));
+  }, [nothingToImport, router, href]);
 
   if (!canImportStudents(academy.role)) {
     return (
@@ -120,13 +122,14 @@ function ImportContent({ academy }: { academy: AcademyEntry }) {
 }
 
 function Shell({ info, session, children }: { info: DraftInfo | null; session?: ImportSummary; children: ReactNode }) {
+  const href = useCanonicalHref();
   const title = session ? importTitle(session.importNumber) : "Review Import";
   useBreadcrumbTitle(title);
   return (
     <main className="page-shell min-w-0">
       <div className="flex flex-col gap-1">
         <Button variant="ghost" size="sm" className="-ml-2 w-fit text-muted-foreground" asChild>
-          <Link href="/app/students"><ArrowLeft />Students</Link>
+          <Link href={href("/app/students")} ><ArrowLeft />Students</Link>
         </Button>
         <h1 className="font-heading text-2xl font-bold tracking-tight">{title}</h1>
         <p className="text-sm text-muted-foreground">

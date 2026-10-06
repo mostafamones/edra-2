@@ -1,4 +1,5 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -9,11 +10,12 @@ import { StudentRecordForm, type FormStatus } from "./form";
 
 /** Full-page student form for the create route. */
 export function StudentFormPage({ academy, title }: { academy: AcademyEntry; title: string }) {
+  const href = useCanonicalHref();
   const router = useRouter();
   const [status, setStatus] = useState<FormStatus>({ dirty: false, saving: false });
   const [confirming, setConfirming] = useState(false);
   const onStatusChange = useCallback((next: FormStatus) => setStatus(next), []);
-  const leave = () => router.push("/app/students");
+  const leave = () => router.push(href("/app/students"));
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">

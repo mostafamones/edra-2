@@ -2,6 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
+import { IconId } from "@tabler/icons-react";
 import { Archive, ArchiveRestore, Eye, MoreHorizontal, Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,8 @@ export type ColumnOptions = {
   onTogglePage: (selected: boolean) => void;
   onOpen: (row: StudentRecordRow) => void;
   onArchive: (row: StudentRecordRow, archive: boolean) => void;
+  /** Opens the student code dialog; omitted while student codes are off. */
+  onCode?: (row: StudentRecordRow) => void;
 };
 
 const muted = (text: string, label: string) => (
@@ -124,6 +127,9 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
             <DropdownMenuItem onSelect={() => options.onOpen(row.original)}>
               {archived ? <><Eye />View</> : <><Pencil />Edit</>}
             </DropdownMenuItem>
+            {options.onCode && !archived && (
+              <DropdownMenuItem onSelect={() => options.onCode?.(row.original)}><IconId />Student code</DropdownMenuItem>
+            )}
             {options.canManage && (
               <>
                 <DropdownMenuSeparator />

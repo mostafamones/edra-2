@@ -1,4 +1,5 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -6,7 +7,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   getCoreRowModel, useReactTable, type ColumnSizingState, type Updater, type VisibilityState,
 } from "@tanstack/react-table";
-import { AlertCircle, Archive, Plus, SearchX, UsersRound } from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconArchive as Archive, IconPlus as Plus, IconSearchOff as SearchX, IconUsersGroup as UsersRound } from "@tabler/icons-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,8 @@ import { bulkTargets, pageSelectionState, syncSelection, togglePage, toggleRow, 
 import { useListParams } from "../table/use-list-params";
 import { useTablePreferences } from "../table/use-preferences";
 import { ArchiveDialog, type ArchiveRequest } from "./archive-dialog";
+import { StudentCodeDialog, type CodeTarget } from "../../codes/components/dialog";
+import { useStudentCodeSettings } from "../../codes/use-settings";
 import { StudentEditSheet } from "./edit-sheet";
 import { GroupChangeSheet } from "./group-sheet";
 import { ImportMenu } from "../imports/components/menu";
@@ -56,6 +59,7 @@ const apply = <T,>(updater: Updater<T>, current: T): T =>
   typeof updater === "function" ? (updater as (old: T) => T)(current) : updater;
 
 function StudentsContent({ academy }: { academy: AcademyEntry }) {
+  const href = useCanonicalHref();
   const academyId = academy.id;
   const { user } = useAuth();
   const canManage = canArchiveStudentRecords(academy.role);
@@ -111,6 +115,8 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
 
   const isSelected = useCallback((id: string) => Boolean(selection[id]), [selection]);
   const pageSelection = pageSelectionState(selection, rows);
+  const codesEnabled = useStudentCodeSettings(academyId).data?.enabled ?? false;
+  const [codeTarget, setCodeTarget] = useState<CodeTarget | null>(null);
   const columns = useMemo(() => buildColumns({
     canManage,
     isSelected,
@@ -119,7 +125,8 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     onTogglePage: (selected) => setSelection((current) => togglePage(current, rows, selected)),
     onOpen: (row) => setEditingId(row.id),
     onArchive: (row, archive) => setArchiveRequest({ archive, records: [{ id: row.id, version: row.version }], name: row.fullName }),
-  }), [canManage, isSelected, pageSelection, rows]);
+    onCode: codesEnabled ? (row) => setCodeTarget({ id: row.id, fullName: row.fullName, levelId: row.levelId }) : undefined,
+  }), [canManage, codesEnabled, isSelected, pageSelection, rows]);
 
   const columnOrder = useMemo(
     () => [...(canManage ? [SELECT_COLUMN] : []), ...preferences.order, ACTIONS_COLUMN],
@@ -204,7 +211,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
             {canImportStudents(academy.role) && (
               <ImportMenu academyId={academyId} showLogs />
             )}
-            <Button asChild><Link href="/app/students/new"><Plus />Add student</Link></Button>
+            <Button asChild><Link href={href("/app/students/new")} ><Plus />Add student</Link></Button>
           </>
         }
       >
@@ -244,7 +251,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
             <EmptyTitle className="text-xl font-semibold">No students yet</EmptyTitle>
             <EmptyDescription className="leading-[1.4em]">Add students to this academic year to start tracking their placement.</EmptyDescription>
           </EmptyHeader>
-          <EmptyContent><Button size="sm" asChild><Link href="/app/students/new"><Plus />Add student</Link></Button></EmptyContent>
+          <EmptyContent><Button size="sm" asChild><Link href={href("/app/students/new")} ><Plus />Add student</Link></Button></EmptyContent>
         </Empty>
       ) : (
         <>
@@ -309,6 +316,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
         </>
       )}
 
+      <StudentCodeDialog academy={academy} target={codeTarget} onClose={() => setCodeTarget(null)} />
       <StudentEditSheet academy={academy} recordId={editingId} onClose={() => setEditingId(null)} />
       {canChangeStudentGroups(academy.role) && (
         <GroupChangeSheet

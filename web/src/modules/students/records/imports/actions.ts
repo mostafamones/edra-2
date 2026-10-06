@@ -236,7 +236,7 @@ export async function processStudentImportBatch(id: string, batchIndex: number):
     const { data, error } = await db.rpc("process_student_import_batch", { p_session_id: id, p_batch_index: batchIndex });
     if (error) return failureFromDatabase(error);
     const result = batchSchema.parse(data);
-    revalidatePath("/app/students");
+    revalidatePath("/app/[academySlug]/students", "page");
     return {
       ok: true,
       data: {

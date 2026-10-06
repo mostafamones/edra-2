@@ -1,8 +1,9 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import { useRef, useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, FileUp, History } from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconFileUpload as FileUp, IconHistory as History } from "@tabler/icons-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export function ImportDialog({ academyId, format, onFormatChange, onClose }: Pro
 }
 
 function DialogBody({ academyId, format, onFormatChange }: { academyId: string; format: ImportFormat; onFormatChange: (format: ImportFormat) => void }) {
+  const href = useCanonicalHref();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
@@ -58,7 +60,7 @@ function DialogBody({ academyId, format, onFormatChange }: { academyId: string; 
       return;
     }
     setPendingImportFile({ academyId, file, format });
-    router.push(`/app/students/import?format=${format}`);
+    router.push(href(`/app/students/import?format=${format}`));
   }
 
   function drop(event: DragEvent<HTMLButtonElement>) {
@@ -87,7 +89,7 @@ function DialogBody({ academyId, format, onFormatChange }: { academyId: string; 
           <AlertTitle>Continue unfinished import</AlertTitle>
           <AlertDescription className="flex flex-wrap items-center gap-3">
             <span dir="auto">{session.fileName} ({FORMAT_LABELS[session.format]}) is {session.state === "importing" ? "partly imported" : session.state === "reviewing" ? "ready to review" : "partly prepared"}.</span>
-            <Button size="sm" variant="outline" onClick={() => { clearPendingImportFile(); router.push(`/app/students/import?format=${session.format}&session=${session.id}`); }}>Continue</Button>
+            <Button size="sm" variant="outline" onClick={() => { clearPendingImportFile(); router.push(href(`/app/students/import?format=${session.format}&session=${session.id}`)); }}>Continue</Button>
           </AlertDescription>
         </Alert>
       )}

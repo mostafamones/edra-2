@@ -1,9 +1,10 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import { useState } from "react";
 import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, History } from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconHistory as History } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -23,12 +24,13 @@ export function ImportLogsPage() {
 }
 
 function Logs({ academyId }: { academyId: string }) {
+  const href = useCanonicalHref();
   useBreadcrumbTitle("Import logs");
   const [page, setPage] = useState(0);
   const query = useQuery({ queryKey: importLogsQueryKey(academyId, page), queryFn: ({ signal }) => fetchImportLogs(academyId, page, signal), placeholderData: keepPreviousData });
   const data = query.data;
   return <main className="page-shell min-w-0">
-    <Button variant="ghost" size="sm" className="-ml-2 w-fit text-muted-foreground" asChild><Link href="/app/students"><ArrowLeft />Students</Link></Button>
+    <Button variant="ghost" size="sm" className="-ml-2 w-fit text-muted-foreground" asChild><Link href={href("/app/students")} ><ArrowLeft />Students</Link></Button>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className="font-heading text-2xl font-bold tracking-tight">Import logs</h1>
     </div>
@@ -41,7 +43,7 @@ function Logs({ academyId }: { academyId: string }) {
           <EmptyDescription className="leading-[1.4em]">Completed imports appear here with who ran them and how many students were created, skipped, or failed.</EmptyDescription>
         </EmptyHeader>
         <EmptyContent className="flex-row justify-center gap-2">
-          <Button size="sm" variant="outline" asChild><Link href="/app/students">Back to students</Link></Button>
+          <Button size="sm" variant="outline" asChild><Link href={href("/app/students")} >Back to students</Link></Button>
           <ImportMenu academyId={academyId} variant="default" size="sm" />
         </EmptyContent>
       </Empty>
@@ -49,7 +51,7 @@ function Logs({ academyId }: { academyId: string }) {
       <TableHeader><TableRow><TableHead className="pl-4">Import</TableHead><TableHead>File</TableHead><TableHead>Imported by</TableHead><TableHead>Date</TableHead><TableHead>Status</TableHead><TableHead>Created</TableHead><TableHead>Skipped</TableHead><TableHead>Failed</TableHead></TableRow></TableHeader>
       <TableBody>
         {data?.logs.map((log) => <TableRow key={log.id}>
-          <TableCell className="pl-4 font-medium"><Link className="underline-offset-4 hover:underline" href={`/app/students/import?format=${log.format}&session=${log.id}`}>{importTitle(log.importNumber)}</Link></TableCell>
+          <TableCell className="pl-4 font-medium"><Link className="underline-offset-4 hover:underline" href={href(`/app/students/import?format=${log.format}&session=${log.id}`)}>{importTitle(log.importNumber)}</Link></TableCell>
           <TableCell dir="auto">{log.fileName}</TableCell><TableCell dir="auto" className="text-left">{log.importedByName}</TableCell><TableCell>{new Date(log.completedAt ?? log.createdAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</TableCell>
           <TableCell><Badge variant="outline">{STATES[log.state]}</Badge></TableCell>
           <TableCell className="tabular-nums">{log.createdCount}</TableCell><TableCell className="tabular-nums">{log.skippedCount}</TableCell><TableCell className="tabular-nums">{log.failedCount}</TableCell>
