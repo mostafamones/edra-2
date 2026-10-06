@@ -1,0 +1,122 @@
+import "server-only";
+
+import { z } from "zod";
+
+import type { StaffApiContext } from "@/lib/api/handler";
+import { apiError, apiJson, readJson, snakeKeys, type ApiErrorCode } from "@/lib/api/http";
+import { changeAttendance, checkIn, getAttendance, MAX_BULK_CHANGES, MAX_LATE_AFTER_MINUTES, publishAttendance } from "./data";
+import { ATTENDANCE_STATUSES, type AttendanceErrorCode, type AttendanceFailure } from "./types";
+
+/**
+ * The attendance part of the external `/api/v1` contract (snake_case JSON). Route handlers resolve
+ * the session's academy and call these; documented in docs/api/sessions-attendance.openapi.yaml.
+ */
+
+const API_CODES: Record<AttendanceErrorCode, ApiErrorCode> = {
+  validation: "INVALID_REQUEST",
+  forbidden: "FORBIDDEN",
+  not_found: "NOT_FOUND",
+  student_not_found: "STUDENT_NOT_FOUND",
+  not_on_roster: "NOT_ON_ROSTER",
+  session_ended: "SESSION_ENDED",
+  year_unavailable: "YEAR_CLOSED",
+  publication_stale: "PUBLICATION_STALE",
+  idempotency_conflict: "IDEMPOTENCY_CONFLICT",
+  throttled: "THROTTLED",
+  unavailable: "INTERNAL",
+};
+
+const fail = (context: StaffApiContext, result: AttendanceFailure) =>
+  apiError(context, API_CODES[result.code], result.retryAfter ? { retryAfter: result.retryAfter } : undefined);
+
+/** The required `Idempotency-Key` header (a UUID created per action and reused on retry), or null. */
+function idempotencyKey(request: Request) {
+  const value = request.headers.get("idempotency-key")?.trim() ?? "";
+  return z.uuid().safeParse(value).success ? value : null;
+}
+
+const missingKey = (context: StaffApiContext) =>
+  apiError(context, "INVALID_REQUEST", { message: "Send an Idempotency-Key header containing a UUID; reuse it when retrying." });
+
+export async function attendanceResponse(context: StaffApiContext, academyId: string, sessionId: string) {
+  const result = await getAttendance(academyId, sessionId, context.authority);
+  if (!result.ok) return apiError(context, result.status === 403 ? "FORBIDDEN" : result.status === 404 ? "NOT_FOUND" : result.status === 400 ? "INVALID_REQUEST" : "INTERNAL");
+  return apiJson(context, snakeKeys(result.data));
+}
+
+/**
+ * `student_id` (academy-assigned identifier) is reserved for the planned student-ID system and is
+ * rejected until its resolver exists. Exactly one identifier is required.
+ */
+const checkInBody = z.object({
+  annual_student_record_id: z.uuid(),
+  late_after_minutes: z.number().int().min(0).max(MAX_LATE_AFTER_MINUTES).optional(),
+}).strict();
+
+export async function checkInResponse(context: StaffApiContext, request: Request, academyId: string, sessionId: string) {
+  const key = idempotencyKey(request);
+  if (!key) return missingKey(context);
+  const body = checkInBody.safeParse(await readJson(request));
+  if (!body.success) return apiError(context, "INVALID_REQUEST", { message: "Send exactly one identifier: annual_student_record_id (UUID)." });
+  const result = await checkIn({ academyId, sessionId, annualStudentRecordId: body.data.annual_student_record_id, idempotencyKey: key, lateAfterMinutes: body.data.late_after_minutes }, context.authority);
+  if (!result.ok) return fail(context, result);
+  const payload = snakeKeys({ outcome: result.outcome, entry: result.entry, revision: result.revision, correctionPending: result.correctionPending, replayed: result.replayed });
+  if (result.outcome === "review_required") return apiError(context, "REVIEW_REQUIRED", { details: payload });
+  return apiJson(context, payload);
+}
+
+const patchBody = z.object({ status: z.enum(ATTENDANCE_STATUSES), expected_version: z.number().int().min(0) }).strict();
+
+export async function patchResponse(context: StaffApiContext, request: Request, academyId: string, sessionId: string, recordId: string) {
+  const key = idempotencyKey(request);
+  if (!key) return missingKey(context);
+  const body = patchBody.safeParse(await readJson(request));
+  if (!body.success || !z.uuid().safeParse(recordId).success) return apiError(context, "INVALID_REQUEST");
+  const result = await changeAttendance({
+    academyId, sessionId, idempotencyKey: key,
+    changes: [{ annualStudentRecordId: recordId, status: body.data.status, expectedVersion: body.data.expected_version }],
+  }, context.authority);
+  if (!result.ok) return fail(context, result);
+  if (result.outcome === "conflict") {
+    return apiError(context, "ATTENDANCE_CONFLICT", { details: snakeKeys({ current: result.conflicts[0], revision: result.revision }) });
+  }
+  return apiJson(context, snakeKeys({ outcome: result.outcome, changed: result.changed, entry: result.entries[0], revision: result.revision, replayed: result.replayed }));
+}
+
+const bulkBody = z.object({
+  changes: z.array(z.object({
+    annual_student_record_id: z.uuid(), status: z.enum(ATTENDANCE_STATUSES), expected_version: z.number().int().min(0),
+  }).strict()).min(1).max(MAX_BULK_CHANGES),
+}).strict();
+
+export async function bulkResponse(context: StaffApiContext, request: Request, academyId: string, sessionId: string) {
+  const key = idempotencyKey(request);
+  if (!key) return missingKey(context);
+  const body = bulkBody.safeParse(await readJson(request));
+  if (!body.success) return apiError(context, "INVALID_REQUEST");
+  const result = await changeAttendance({
+    academyId, sessionId, idempotencyKey: key,
+    changes: body.data.changes.map((change) => ({
+      annualStudentRecordId: change.annual_student_record_id, status: change.status, expectedVersion: change.expected_version,
+    })),
+  }, context.authority);
+  if (!result.ok) return fail(context, result);
+  if (result.outcome === "conflict") {
+    return apiError(context, "ATTENDANCE_CONFLICT", { details: snakeKeys({ conflicts: result.conflicts, revision: result.revision }) });
+  }
+  return apiJson(context, snakeKeys({ outcome: result.outcome, changed: result.changed, entries: result.entries, revision: result.revision, replayed: result.replayed }));
+}
+
+const publishBody = z.object({ expected_revision: z.number().int().min(0) }).strict();
+
+export async function publishResponse(context: StaffApiContext, request: Request, academyId: string, sessionId: string) {
+  const key = idempotencyKey(request);
+  if (!key) return missingKey(context);
+  const body = publishBody.safeParse(await readJson(request));
+  if (!body.success) return apiError(context, "INVALID_REQUEST");
+  const result = await publishAttendance({ academyId, sessionId, expectedRevision: body.data.expected_revision, idempotencyKey: key }, context.authority);
+  if (!result.ok) return fail(context, result);
+  return apiJson(context, snakeKeys({
+    outcome: result.outcome, publicationId: result.publicationId, revision: result.revision, itemCount: result.itemCount, replayed: result.replayed,
+  }));
+}
