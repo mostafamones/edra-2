@@ -639,6 +639,7 @@ export type Database = {
           fingerprint: string
           idempotency_key: string
           operation: string
+          resolved: Json | null
           response: Json
           session_id: string
         }
@@ -649,6 +650,7 @@ export type Database = {
           fingerprint: string
           idempotency_key: string
           operation: string
+          resolved?: Json | null
           response: Json
           session_id: string
         }
@@ -659,6 +661,7 @@ export type Database = {
           fingerprint?: string
           idempotency_key?: string
           operation?: string
+          resolved?: Json | null
           response?: Json
           session_id?: string
         }
@@ -1437,6 +1440,74 @@ export type Database = {
           },
         ]
       }
+      student_code_reservations: {
+        Row: {
+          academy_id: string
+          code: string
+          reserved_at: string
+        }
+        Insert: {
+          academy_id: string
+          code: string
+          reserved_at?: string
+        }
+        Update: {
+          academy_id?: string
+          code?: string
+          reserved_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_code_reservations_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_code_requests: {
+        Row: {
+          academy_id: string
+          actor_id: string
+          created_at: string
+          fingerprint: string
+          request_key: string
+          result: Json
+        }
+        Insert: {
+          academy_id: string
+          actor_id: string
+          created_at?: string
+          fingerprint: string
+          request_key: string
+          result: Json
+        }
+        Update: {
+          academy_id?: string
+          actor_id?: string
+          created_at?: string
+          fingerprint?: string
+          request_key?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_code_requests_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_code_requests_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_code_settings: {
         Row: {
           academy_id: string
@@ -1876,6 +1947,16 @@ export type Database = {
         }
         Returns: Json
       }
+      check_in_attendance_by_code: {
+        Args: {
+          p_academy_id: string
+          p_code: string
+          p_key: string
+          p_late_after_minutes?: number
+          p_session_id: string
+        }
+        Returns: Json
+      }
       check_in_attendance: {
         Args: {
           p_academy_id: string
@@ -1989,6 +2070,24 @@ export type Database = {
         Args: { p_level_id: string; p_user_id: string }
         Returns: boolean
       }
+      force_delete_session: {
+        Args: { p_academy_id: string; p_session_id: string }
+        Returns: undefined
+      }
+      generate_student_codes: {
+        Args: {
+          p_academy_id: string
+          p_expected_version: number
+          p_ids: string[]
+          p_mode: string
+          p_parity?: string
+          p_preview_token: string
+          p_request_key: string
+          p_start?: number
+          p_step?: number
+        }
+        Returns: Json
+      }
       get_attendance: {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: Json
@@ -2005,17 +2104,9 @@ export type Database = {
         Args: { p_academy_id: string; p_record_id: string }
         Returns: Json
       }
-      list_retired_student_codes: {
-        Args: { p_academy_id: string; p_limit: number; p_offset: number; p_search: string }
+      get_student_codes: {
+        Args: { p_academy_id: string; p_record_ids: string[] }
         Returns: Json
-      }
-      unretire_student_code: {
-        Args: { p_academy_id: string; p_assignment_id: string }
-        Returns: Json
-      }
-      peek_next_student_code: {
-        Args: { p_academy_id: string; p_record_id: string }
-        Returns: string
       }
       is_academy_member: {
         Args: { target_academy_id: string }
@@ -2039,6 +2130,15 @@ export type Database = {
           p_limit: number
           p_search: string
           p_to: string
+        }
+        Returns: Json
+      }
+      list_retired_student_codes: {
+        Args: {
+          p_academy_id: string
+          p_limit: number
+          p_offset: number
+          p_search: string
         }
         Returns: Json
       }
@@ -2162,7 +2262,22 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      peek_next_student_code: {
+        Args: { p_academy_id: string; p_record_id: string }
+        Returns: string
+      }
       preview_staff_invitation: { Args: { p_token: string }; Returns: Json }
+      preview_student_code_generation: {
+        Args: {
+          p_academy_id: string
+          p_ids: string[]
+          p_mode: string
+          p_parity?: string
+          p_start?: number
+          p_step?: number
+        }
+        Returns: Json
+      }
       process_student_import_batch: {
         Args: { p_batch_index: number; p_session_id: string }
         Returns: Json
@@ -2380,6 +2495,10 @@ export type Database = {
         Returns: string
       }
       student_import_summary: { Args: { p_session_id: string }; Returns: Json }
+      unretire_student_code: {
+        Args: { p_academy_id: string; p_assignment_id: string }
+        Returns: Json
+      }
       update_schedule: {
         Args: {
           p_academy_id: string
@@ -2446,7 +2565,11 @@ export type Database = {
       session_roster_origin: "expected" | "eligible"
       session_state: "live" | "ended"
       staff_invitation_status: "pending" | "accepted" | "revoked" | "expired"
-      student_code_retirement_reason: "manual" | "level_changed" | "year_closed"
+      student_code_retirement_reason:
+        | "manual"
+        | "level_changed"
+        | "year_closed"
+        | "released"
       student_import_format: "csv" | "json" | "xlsx"
       student_import_state:
         | "staging"
@@ -2602,6 +2725,7 @@ export const Constants = {
         "manual",
         "level_changed",
         "year_closed",
+        "released",
       ],
       student_import_format: ["csv", "json", "xlsx"],
       student_import_state: [
