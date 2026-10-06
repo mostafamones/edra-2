@@ -18,4 +18,10 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/groups_schedules.sql
 psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_records.sql
 psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_imports.sql
 psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_import_logs.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/staff_invitations.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/sessions.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/attendance.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/session_authority.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_codes.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_code_changes.sql
 bash supabase/tests/concurrency.sh

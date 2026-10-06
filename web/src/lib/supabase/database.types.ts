@@ -343,6 +343,389 @@ export type Database = {
           },
         ]
       }
+      api_rate_windows: {
+        Row: {
+          actor_id: string
+          bucket: string
+          hits: number
+          window_start: string
+        }
+        Insert: {
+          actor_id: string
+          bucket: string
+          hits: number
+          window_start: string
+        }
+        Update: {
+          actor_id?: string
+          bucket?: string
+          hits?: number
+          window_start?: string
+        }
+        Relationships: []
+      }
+      attendance_effects: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          annual_student_record_id: string
+          created_at: string
+          effect_type: Database["public"]["Enums"]["attendance_effect_type"]
+          id: string
+          processed_at: string | null
+          publication_id: string
+          reverses: Database["public"]["Enums"]["attendance_effect_type"] | null
+          session_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          annual_student_record_id: string
+          created_at?: string
+          effect_type: Database["public"]["Enums"]["attendance_effect_type"]
+          id?: string
+          processed_at?: string | null
+          publication_id: string
+          reverses?:
+            | Database["public"]["Enums"]["attendance_effect_type"]
+            | null
+          session_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          annual_student_record_id?: string
+          created_at?: string
+          effect_type?: Database["public"]["Enums"]["attendance_effect_type"]
+          id?: string
+          processed_at?: string | null
+          publication_id?: string
+          reverses?:
+            | Database["public"]["Enums"]["attendance_effect_type"]
+            | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_effects_academy_id_academic_year_id_publication_fkey"
+            columns: ["academy_id", "academic_year_id", "publication_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_publications"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "attendance_effects_session_id_annual_student_record_id_fkey"
+            columns: ["session_id", "annual_student_record_id"]
+            isOneToOne: false
+            referencedRelation: "session_roster_entries"
+            referencedColumns: ["session_id", "annual_student_record_id"]
+          },
+        ]
+      }
+      attendance_publication_items: {
+        Row: {
+          annual_student_record_id: string
+          previous_status:
+            | Database["public"]["Enums"]["attendance_status"]
+            | null
+          publication_id: string
+          session_id: string
+          status: Database["public"]["Enums"]["attendance_status"]
+        }
+        Insert: {
+          annual_student_record_id: string
+          previous_status?:
+            | Database["public"]["Enums"]["attendance_status"]
+            | null
+          publication_id: string
+          session_id: string
+          status: Database["public"]["Enums"]["attendance_status"]
+        }
+        Update: {
+          annual_student_record_id?: string
+          previous_status?:
+            | Database["public"]["Enums"]["attendance_status"]
+            | null
+          publication_id?: string
+          session_id?: string
+          status?: Database["public"]["Enums"]["attendance_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_publication_items_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_publication_items_session_id_annual_student_rec_fkey"
+            columns: ["session_id", "annual_student_record_id"]
+            isOneToOne: false
+            referencedRelation: "session_roster_entries"
+            referencedColumns: ["session_id", "annual_student_record_id"]
+          },
+        ]
+      }
+      attendance_publications: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          id: string
+          item_count: number
+          kind: Database["public"]["Enums"]["attendance_publication_kind"]
+          published_at: string
+          published_by: string
+          published_by_name: string | null
+          revision: number
+          sequence: number
+          session_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          id?: string
+          item_count: number
+          kind: Database["public"]["Enums"]["attendance_publication_kind"]
+          published_at?: string
+          published_by: string
+          published_by_name?: string | null
+          revision: number
+          sequence: number
+          session_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          id?: string
+          item_count?: number
+          kind?: Database["public"]["Enums"]["attendance_publication_kind"]
+          published_at?: string
+          published_by?: string
+          published_by_name?: string | null
+          revision?: number
+          sequence?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_publications_academy_id_academic_year_id_sessio_fkey"
+            columns: ["academy_id", "academic_year_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "attendance_publications_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_records: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          annual_student_record_id: string
+          checked_in_at: string | null
+          checked_in_by: string | null
+          published_at: string | null
+          published_publication_id: string | null
+          published_status:
+            | Database["public"]["Enums"]["attendance_status"]
+            | null
+          session_id: string
+          source: Database["public"]["Enums"]["attendance_source"]
+          status: Database["public"]["Enums"]["attendance_status"]
+          updated_at: string
+          updated_by: string
+          updated_by_name: string | null
+          version: number
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          annual_student_record_id: string
+          checked_in_at?: string | null
+          checked_in_by?: string | null
+          published_at?: string | null
+          published_publication_id?: string | null
+          published_status?:
+            | Database["public"]["Enums"]["attendance_status"]
+            | null
+          session_id: string
+          source: Database["public"]["Enums"]["attendance_source"]
+          status: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          updated_by: string
+          updated_by_name?: string | null
+          version: number
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          annual_student_record_id?: string
+          checked_in_at?: string | null
+          checked_in_by?: string | null
+          published_at?: string | null
+          published_publication_id?: string | null
+          published_status?:
+            | Database["public"]["Enums"]["attendance_status"]
+            | null
+          session_id?: string
+          source?: Database["public"]["Enums"]["attendance_source"]
+          status?: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          updated_by?: string
+          updated_by_name?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_academy_id_academic_year_id_annual_stud_fkey"
+            columns: [
+              "academy_id",
+              "academic_year_id",
+              "annual_student_record_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "attendance_records_academy_id_academic_year_id_session_id_fkey"
+            columns: ["academy_id", "academic_year_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "attendance_records_checked_in_by_fkey"
+            columns: ["checked_in_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_publication_fkey"
+            columns: ["published_publication_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_session_id_annual_student_record_id_fkey"
+            columns: ["session_id", "annual_student_record_id"]
+            isOneToOne: true
+            referencedRelation: "session_roster_entries"
+            referencedColumns: ["session_id", "annual_student_record_id"]
+          },
+          {
+            foreignKeyName: "attendance_records_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_requests: {
+        Row: {
+          academy_id: string
+          actor_id: string
+          created_at: string
+          fingerprint: string
+          idempotency_key: string
+          operation: string
+          response: Json
+          session_id: string
+        }
+        Insert: {
+          academy_id: string
+          actor_id: string
+          created_at?: string
+          fingerprint: string
+          idempotency_key: string
+          operation: string
+          response: Json
+          session_id: string
+        }
+        Update: {
+          academy_id?: string
+          actor_id?: string
+          created_at?: string
+          fingerprint?: string
+          idempotency_key?: string
+          operation?: string
+          response?: Json
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_requests_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_sheets: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          last_published_at: string | null
+          last_published_by: string | null
+          last_published_by_name: string | null
+          publication_count: number
+          published_revision: number | null
+          revision: number
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          last_published_at?: string | null
+          last_published_by?: string | null
+          last_published_by_name?: string | null
+          publication_count?: number
+          published_revision?: number | null
+          revision?: number
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          last_published_at?: string | null
+          last_published_by?: string | null
+          last_published_by_name?: string | null
+          publication_count?: number
+          published_revision?: number | null
+          revision?: number
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_sheets_academy_id_academic_year_id_session_id_fkey"
+            columns: ["academy_id", "academic_year_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "attendance_sheets_last_published_by_fkey"
+            columns: ["last_published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       global_levels: {
         Row: {
           id: string
@@ -612,6 +995,533 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_roster_entries: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          annual_student_record_id: string
+          created_at: string
+          level_id: string
+          origin: Database["public"]["Enums"]["session_roster_origin"]
+          participation_type: Database["public"]["Enums"]["student_participation_type"]
+          primary_group_id: string | null
+          session_id: string
+          track_id: string | null
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          annual_student_record_id: string
+          created_at?: string
+          level_id: string
+          origin: Database["public"]["Enums"]["session_roster_origin"]
+          participation_type: Database["public"]["Enums"]["student_participation_type"]
+          primary_group_id?: string | null
+          session_id: string
+          track_id?: string | null
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          annual_student_record_id?: string
+          created_at?: string
+          level_id?: string
+          origin?: Database["public"]["Enums"]["session_roster_origin"]
+          participation_type?: Database["public"]["Enums"]["student_participation_type"]
+          primary_group_id?: string | null
+          session_id?: string
+          track_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_roster_entries_academy_id_academic_year_id_annual__fkey"
+            columns: [
+              "academy_id",
+              "academic_year_id",
+              "annual_student_record_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "session_roster_entries_academy_id_academic_year_id_session_fkey"
+            columns: ["academy_id", "academic_year_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          audience: Database["public"]["Enums"]["schedule_audience"]
+          auto_end_at: string
+          end_reason: Database["public"]["Enums"]["session_end_reason"] | null
+          ended_at: string | null
+          ended_by: string | null
+          ended_by_name: string | null
+          group_id: string | null
+          group_name: string | null
+          id: string
+          level_id: string
+          location: string | null
+          mandatory: boolean
+          metadata_version: number
+          schedule_id: string
+          schedule_kind: Database["public"]["Enums"]["schedule_kind"]
+          schedule_title: string
+          start_key: string
+          started_at: string
+          started_by: string
+          started_by_name: string | null
+          state: Database["public"]["Enums"]["session_state"]
+          track_id: string | null
+          track_name: string | null
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          audience: Database["public"]["Enums"]["schedule_audience"]
+          auto_end_at: string
+          end_reason?: Database["public"]["Enums"]["session_end_reason"] | null
+          ended_at?: string | null
+          ended_by?: string | null
+          ended_by_name?: string | null
+          group_id?: string | null
+          group_name?: string | null
+          id?: string
+          level_id: string
+          location?: string | null
+          mandatory: boolean
+          metadata_version?: number
+          schedule_id: string
+          schedule_kind: Database["public"]["Enums"]["schedule_kind"]
+          schedule_title: string
+          start_key: string
+          started_at?: string
+          started_by: string
+          started_by_name?: string | null
+          state?: Database["public"]["Enums"]["session_state"]
+          track_id?: string | null
+          track_name?: string | null
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          audience?: Database["public"]["Enums"]["schedule_audience"]
+          auto_end_at?: string
+          end_reason?: Database["public"]["Enums"]["session_end_reason"] | null
+          ended_at?: string | null
+          ended_by?: string | null
+          ended_by_name?: string | null
+          group_id?: string | null
+          group_name?: string | null
+          id?: string
+          level_id?: string
+          location?: string | null
+          mandatory?: boolean
+          metadata_version?: number
+          schedule_id?: string
+          schedule_kind?: Database["public"]["Enums"]["schedule_kind"]
+          schedule_title?: string
+          start_key?: string
+          started_at?: string
+          started_by?: string
+          started_by_name?: string | null
+          state?: Database["public"]["Enums"]["session_state"]
+          track_id?: string | null
+          track_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_academy_id_academic_year_id_fkey"
+            columns: ["academy_id", "academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "sessions_academy_id_academic_year_id_schedule_id_fkey"
+            columns: ["academy_id", "academic_year_id", "schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "sessions_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_invitation_lookup_limits: {
+        Row: {
+          failures: number
+          user_id: string
+          window_started_at: string
+        }
+        Insert: {
+          failures: number
+          user_id: string
+          window_started_at: string
+        }
+        Update: {
+          failures?: number
+          user_id?: string
+          window_started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invitation_lookup_limits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_invitations: {
+        Row: {
+          academy_id: string
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          phone: string
+          revoked_at: string | null
+          revoked_by: string | null
+          role: Database["public"]["Enums"]["academy_role"]
+          status: Database["public"]["Enums"]["staff_invitation_status"]
+          token_ciphertext: string
+          token_hash: string
+        }
+        Insert: {
+          academy_id: string
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id?: string
+          phone: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role: Database["public"]["Enums"]["academy_role"]
+          status?: Database["public"]["Enums"]["staff_invitation_status"]
+          token_ciphertext: string
+          token_hash: string
+        }
+        Update: {
+          academy_id?: string
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role?: Database["public"]["Enums"]["academy_role"]
+          status?: Database["public"]["Enums"]["staff_invitation_status"]
+          token_ciphertext?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invitations_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invitations_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invitations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invitations_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_code_assignments: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          academy_student_profile_id: string
+          annual_student_record_id: string
+          code: string
+          code_version: number
+          id: string
+          issued_at: string
+          issued_by: string
+          level_id: string
+          retired_at: string | null
+          retired_by: string | null
+          retirement_reason:
+            | Database["public"]["Enums"]["student_code_retirement_reason"]
+            | null
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          academy_student_profile_id: string
+          annual_student_record_id: string
+          code: string
+          code_version: number
+          id?: string
+          issued_at?: string
+          issued_by: string
+          level_id: string
+          retired_at?: string | null
+          retired_by?: string | null
+          retirement_reason?:
+            | Database["public"]["Enums"]["student_code_retirement_reason"]
+            | null
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          academy_student_profile_id?: string
+          annual_student_record_id?: string
+          code?: string
+          code_version?: number
+          id?: string
+          issued_at?: string
+          issued_by?: string
+          level_id?: string
+          retired_at?: string | null
+          retired_by?: string | null
+          retirement_reason?:
+            | Database["public"]["Enums"]["student_code_retirement_reason"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_code_assignments_academy_id_academy_student_profil_fkey"
+            columns: ["academy_id", "academy_student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "academy_student_profiles"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "student_code_assignments_academy_id_level_id_fkey"
+            columns: ["academy_id", "level_id"]
+            isOneToOne: false
+            referencedRelation: "academy_levels"
+            referencedColumns: ["academy_id", "level_id"]
+          },
+          {
+            foreignKeyName: "student_code_assignments_annual_student_record_id_academy__fkey"
+            columns: [
+              "annual_student_record_id",
+              "academy_id",
+              "academic_year_id",
+              "academy_student_profile_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: [
+              "id",
+              "academy_id",
+              "academic_year_id",
+              "academy_student_profile_id",
+            ]
+          },
+          {
+            foreignKeyName: "student_code_assignments_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_code_assignments_retired_by_fkey"
+            columns: ["retired_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_code_counters: {
+        Row: {
+          academy_id: string
+          last_value: number
+          prefix: string
+          width: number
+        }
+        Insert: {
+          academy_id: string
+          last_value?: number
+          prefix: string
+          width: number
+        }
+        Update: {
+          academy_id?: string
+          last_value?: number
+          prefix?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_code_counters_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_code_level_patterns: {
+        Row: {
+          academy_id: string
+          level_id: string
+          pattern: string
+        }
+        Insert: {
+          academy_id: string
+          level_id: string
+          pattern: string
+        }
+        Update: {
+          academy_id?: string
+          level_id?: string
+          pattern?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_code_level_patterns_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "student_code_settings"
+            referencedColumns: ["academy_id"]
+          },
+          {
+            foreignKeyName: "student_code_level_patterns_academy_id_level_id_fkey"
+            columns: ["academy_id", "level_id"]
+            isOneToOne: true
+            referencedRelation: "academy_levels"
+            referencedColumns: ["academy_id", "level_id"]
+          },
+        ]
+      }
+      student_code_settings: {
+        Row: {
+          academy_id: string
+          default_pattern: string | null
+          enabled: boolean
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          academy_id: string
+          default_pattern?: string | null
+          enabled?: boolean
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          academy_id?: string
+          default_pattern?: string | null
+          enabled?: boolean
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_code_settings_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: true
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_code_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_code_states: {
+        Row: {
+          academy_id: string
+          annual_student_record_id: string
+          current_assignment_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          academy_id: string
+          annual_student_record_id: string
+          current_assignment_id?: string | null
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          academy_id?: string
+          annual_student_record_id?: string
+          current_assignment_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_code_states_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_code_states_annual_student_record_id_fkey"
+            columns: ["annual_student_record_id"]
+            isOneToOne: true
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_code_states_current_assignment_id_annual_student_r_fkey"
+            columns: ["current_assignment_id", "annual_student_record_id"]
+            isOneToOne: false
+            referencedRelation: "student_code_assignments"
+            referencedColumns: ["id", "annual_student_record_id"]
           },
         ]
       }
@@ -911,9 +1821,69 @@ export type Database = {
         Args: { candidate_slug: string }
         Returns: boolean
       }
+      accept_staff_invitation: { Args: { p_token: string }; Returns: Json }
+      allocate_student_code: {
+        Args: { p_academy_id: string; p_level_id: string }
+        Returns: string
+      }
+      apply_attendance_changes: {
+        Args: {
+          p_academy_id: string
+          p_changes: Json
+          p_key: string
+          p_operation: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      attendance_entry: {
+        Args: { p_record_id: string; p_session_id: string }
+        Returns: Json
+      }
+      attendance_pending: { Args: { p_session_id: string }; Returns: boolean }
+      attendance_replay: {
+        Args: { p_fingerprint: string; p_key: string; p_operation: string }
+        Returns: Json
+      }
+      bump_attendance_revision: {
+        Args: { p_session: Database["public"]["Tables"]["sessions"]["Row"] }
+        Returns: number
+      }
+      can_join_attendance_channel: {
+        Args: { p_topic: string }
+        Returns: boolean
+      }
       cancel_student_import: {
         Args: { p_session_id: string }
         Returns: undefined
+      }
+      change_staff_member_role: {
+        Args: {
+          p_academy_id: string
+          p_role: Database["public"]["Enums"]["academy_role"]
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      change_student_code: {
+        Args: {
+          p_academy_id: string
+          p_action: string
+          p_code: string
+          p_expected_version: number
+          p_record_id: string
+          p_request_key: string
+        }
+        Returns: Json
+      }
+      check_in_attendance: {
+        Args: {
+          p_academy_id: string
+          p_annual_record_id: string
+          p_key: string
+          p_session_id: string
+        }
+        Returns: Json
       }
       check_student_record_input: {
         Args: {
@@ -927,6 +1897,10 @@ export type Database = {
       }
       confirm_student_import: {
         Args: { p_expected_revision: number; p_session_id: string }
+        Returns: Json
+      }
+      consume_api_quota: {
+        Args: { p_bucket: string; p_limit: number; p_window_seconds: number }
         Returns: Json
       }
       correct_student_import_row: {
@@ -967,6 +1941,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_staff_invitation: {
+        Args: {
+          p_academy_id: string
+          p_phone: string
+          p_role: Database["public"]["Enums"]["academy_role"]
+          p_token: string
+          p_token_ciphertext: string
+        }
+        Returns: Json
+      }
       create_student_record: {
         Args: {
           p_academic_year_id: string
@@ -984,6 +1968,19 @@ export type Database = {
           version: number
         }[]
       }
+      current_attendance_revision: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
+      delete_session: {
+        Args: { p_academy_id: string; p_session_id: string }
+        Returns: undefined
+      }
+      end_session: {
+        Args: { p_academy_id: string; p_session_id: string }
+        Returns: string
+      }
+      expire_sessions: { Args: { p_schedule_id: string }; Returns: undefined }
       finalize_student_import: {
         Args: { p_session_id: string }
         Returns: number
@@ -992,9 +1989,67 @@ export type Database = {
         Args: { p_level_id: string; p_user_id: string }
         Returns: boolean
       }
+      get_attendance: {
+        Args: { p_academy_id: string; p_session_id: string }
+        Returns: Json
+      }
+      get_session: {
+        Args: { p_academy_id: string; p_session_id: string }
+        Returns: Json
+      }
+      get_student_code_settings: {
+        Args: { p_academy_id: string }
+        Returns: Json
+      }
+      get_student_code_state: {
+        Args: { p_academy_id: string; p_record_id: string }
+        Returns: Json
+      }
+      list_retired_student_codes: {
+        Args: { p_academy_id: string; p_limit: number; p_offset: number; p_search: string }
+        Returns: Json
+      }
+      unretire_student_code: {
+        Args: { p_academy_id: string; p_assignment_id: string }
+        Returns: Json
+      }
+      peek_next_student_code: {
+        Args: { p_academy_id: string; p_record_id: string }
+        Returns: string
+      }
       is_academy_member: {
         Args: { target_academy_id: string }
         Returns: boolean
+      }
+      list_live_sessions: {
+        Args: {
+          p_academy_id: string
+          p_before_id: string
+          p_before_started_at: string
+          p_limit: number
+        }
+        Returns: Json
+      }
+      list_past_sessions: {
+        Args: {
+          p_academy_id: string
+          p_before_id: string
+          p_before_started_at: string
+          p_from: string
+          p_limit: number
+          p_search: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      list_staff_invitations: {
+        Args: {
+          p_academy_id: string
+          p_page_index: number
+          p_page_size: number
+          p_status: string
+        }
+        Returns: Json
       }
       list_student_import_rows: {
         Args: {
@@ -1021,6 +2076,42 @@ export type Database = {
           p_track: string
         }
         Returns: Json
+      }
+      lock_attendance_session: {
+        Args: { p_academy_id: string; p_session_id: string }
+        Returns: {
+          academic_year_id: string
+          academy_id: string
+          audience: Database["public"]["Enums"]["schedule_audience"]
+          auto_end_at: string
+          end_reason: Database["public"]["Enums"]["session_end_reason"] | null
+          ended_at: string | null
+          ended_by: string | null
+          ended_by_name: string | null
+          group_id: string | null
+          group_name: string | null
+          id: string
+          level_id: string
+          location: string | null
+          mandatory: boolean
+          metadata_version: number
+          schedule_id: string
+          schedule_kind: Database["public"]["Enums"]["schedule_kind"]
+          schedule_title: string
+          start_key: string
+          started_at: string
+          started_by: string
+          started_by_name: string | null
+          state: Database["public"]["Enums"]["session_state"]
+          track_id: string | null
+          track_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       lock_student_import_session: {
         Args: { p_session_id: string }
@@ -1058,13 +2149,50 @@ export type Database = {
       }
       normalize_egyptian_phone: { Args: { value: string }; Returns: string }
       normalize_import_label: { Args: { value: string }; Returns: string }
+      normalize_student_code: { Args: { value: string }; Returns: string }
+      normalize_student_code_pattern: {
+        Args: { value: string }
+        Returns: string
+      }
+      normalize_student_code_text: {
+        Args: { allow_hash: boolean; value: string }
+        Returns: string
+      }
+      note_staff_invitation_lookup_failure: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      preview_staff_invitation: { Args: { p_token: string }; Returns: Json }
       process_student_import_batch: {
         Args: { p_batch_index: number; p_session_id: string }
+        Returns: Json
+      }
+      publish_attendance: {
+        Args: {
+          p_academy_id: string
+          p_expected_revision: number
+          p_key: string
+          p_session_id: string
+        }
         Returns: Json
       }
       refresh_student_import: {
         Args: { p_ordinal: number; p_session_id: string }
         Returns: string
+      }
+      remember_attendance_request: {
+        Args: {
+          p_fingerprint: string
+          p_key: string
+          p_operation: string
+          p_response: Json
+          p_session: Database["public"]["Tables"]["sessions"]["Row"]
+        }
+        Returns: Json
+      }
+      remove_staff_member: {
+        Args: { p_academy_id: string; p_user_id: string }
+        Returns: Json
       }
       remove_student_import_entries: {
         Args: {
@@ -1073,6 +2201,17 @@ export type Database = {
           p_session_id: string
         }
         Returns: number
+      }
+      require_open_attendance_year: {
+        Args: { p_session: Database["public"]["Tables"]["sessions"]["Row"] }
+        Returns: undefined
+      }
+      require_roster_student: {
+        Args: {
+          p_record_id: string
+          p_session: Database["public"]["Tables"]["sessions"]["Row"]
+        }
+        Returns: undefined
       }
       require_student_import_state: {
         Args: {
@@ -1096,6 +2235,25 @@ export type Database = {
           p_source: Json
         }
         Returns: Record<string, unknown>
+      }
+      revoke_staff_invitation: {
+        Args: { p_academy_id: string; p_invitation_id: string }
+        Returns: Json
+      }
+      save_student_code_settings: {
+        Args: {
+          p_academy_id: string
+          p_default_pattern: string
+          p_enabled: boolean
+          p_expected_version: number
+          p_levels: Json
+        }
+        Returns: Json
+      }
+      session_academy: { Args: { p_session_id: string }; Returns: string }
+      session_auto_end_at: {
+        Args: { p_now: string; p_schedule_id: string }
+        Returns: string
       }
       set_student_import_row_excluded: {
         Args: {
@@ -1128,9 +2286,59 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      staff_can_manage_invitation: {
+        Args: {
+          actor: string
+          actor_role: Database["public"]["Enums"]["academy_role"]
+          invitation_creator: string
+          invitation_role: Database["public"]["Enums"]["academy_role"]
+        }
+        Returns: boolean
+      }
+      staff_invitation_digest: { Args: { p_token: string }; Returns: string }
+      staff_invitation_link_ciphertext: {
+        Args: { p_academy_id: string; p_invitation_id: string }
+        Returns: Json
+      }
+      staff_invitation_lookup_blocked: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      staff_invitation_response: {
+        Args: {
+          invitation: Database["public"]["Tables"]["staff_invitations"]["Row"]
+          state: string
+        }
+        Returns: Json
+      }
+      staff_invitation_state: {
+        Args: {
+          invitation: Database["public"]["Tables"]["staff_invitations"]["Row"]
+          p_actor: string
+        }
+        Returns: string
+      }
+      staff_role_can_invite: {
+        Args: {
+          actor_role: Database["public"]["Enums"]["academy_role"]
+          target_role: Database["public"]["Enums"]["academy_role"]
+        }
+        Returns: boolean
+      }
       stage_student_import_rows: {
         Args: { p_rows: Json; p_session_id: string }
         Returns: number
+      }
+      start_session: {
+        Args: {
+          p_academy_id: string
+          p_schedule_id: string
+          p_start_key: string
+        }
+        Returns: {
+          outcome: string
+          session_id: string
+        }[]
       }
       start_student_import: {
         Args: {
@@ -1154,6 +2362,15 @@ export type Database = {
         }
         Returns: string
       }
+      student_code_effective_pattern: {
+        Args: { p_academy_id: string; p_level_id: string }
+        Returns: string
+      }
+      student_code_pattern_prefix: {
+        Args: { pattern: string }
+        Returns: string
+      }
+      student_code_pattern_width: { Args: { pattern: string }; Returns: number }
       student_import_cell: {
         Args: { cells: Json; field: string }
         Returns: string
@@ -1197,15 +2414,39 @@ export type Database = {
           version: number
         }[]
       }
+      verified_account_phone: { Args: { p_user_id: string }; Returns: string }
       verify_student_parent_challenge: {
         Args: { p_challenge_id: string; p_code_hash: string; p_user_id: string }
         Returns: string
       }
+      was_removed_from_academy: { Args: { p_slug: string }; Returns: boolean }
+      write_attendance: {
+        Args: {
+          p_check_in: boolean
+          p_record_id: string
+          p_session: Database["public"]["Tables"]["sessions"]["Row"]
+          p_source: Database["public"]["Enums"]["attendance_source"]
+          p_status: Database["public"]["Enums"]["attendance_status"]
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       academy_role: "owner" | "admin" | "instructor"
+      attendance_effect_type:
+        | "explanation_access"
+        | "absence_event"
+        | "revocation_review"
+      attendance_publication_kind: "initial" | "correction"
+      attendance_source: "manual" | "bulk" | "check_in"
+      attendance_status: "unknown" | "present" | "late" | "absent" | "excused"
       schedule_audience: "group" | "level" | "program"
       schedule_kind: "recurring" | "one_off"
+      session_end_reason: "manual" | "auto"
+      session_roster_origin: "expected" | "eligible"
+      session_state: "live" | "ended"
+      staff_invitation_status: "pending" | "accepted" | "revoked" | "expired"
+      student_code_retirement_reason: "manual" | "level_changed" | "year_closed"
       student_import_format: "csv" | "json" | "xlsx"
       student_import_state:
         | "staging"
@@ -1343,8 +2584,25 @@ export const Constants = {
   public: {
     Enums: {
       academy_role: ["owner", "admin", "instructor"],
+      attendance_effect_type: [
+        "explanation_access",
+        "absence_event",
+        "revocation_review",
+      ],
+      attendance_publication_kind: ["initial", "correction"],
+      attendance_source: ["manual", "bulk", "check_in"],
+      attendance_status: ["unknown", "present", "late", "absent", "excused"],
       schedule_audience: ["group", "level", "program"],
       schedule_kind: ["recurring", "one_off"],
+      session_end_reason: ["manual", "auto"],
+      session_roster_origin: ["expected", "eligible"],
+      session_state: ["live", "ended"],
+      staff_invitation_status: ["pending", "accepted", "revoked", "expired"],
+      student_code_retirement_reason: [
+        "manual",
+        "level_changed",
+        "year_closed",
+      ],
       student_import_format: ["csv", "json", "xlsx"],
       student_import_state: [
         "staging",
