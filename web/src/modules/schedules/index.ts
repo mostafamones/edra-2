@@ -4,3 +4,6 @@ export type { Schedule, ScheduleSession, ScheduleSlot } from "./queries";
 export { canArchiveSchedule, canCreateSchedule, canEditSchedule, creatableKinds } from "./permissions";
 export { scheduleInputSchema } from "./validation";
 export type { ScheduleInput } from "./validation";
+export { audienceLabel, buildAudienceLookup } from "./derive";
+export type { AudienceLookup } from "./derive";
+export { ACADEMY_TIME_ZONE, academyNow, formatTime, weekdayName } from "./time";
