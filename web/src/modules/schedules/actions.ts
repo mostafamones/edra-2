@@ -63,7 +63,7 @@ export async function createSchedule(value: unknown): Promise<Result> {
     p_academy_id: input.academyId, p_academic_year_id: year.id, p_kind: input.kind, ...timing(input),
   }));
   if (error) return { ok: false, message: error.message };
-  revalidatePath("/app/schedules");
+  revalidatePath("/app/[academySlug]/schedules", "page");
   return { ok: true };
 }
 
@@ -87,7 +87,7 @@ export async function updateSchedule(scheduleId: string, value: unknown): Promis
   }));
   if (error) return { ok: false, message: error.message };
   if (!data) return { ok: false, message: "Schedule not found." };
-  revalidatePath("/app/schedules");
+  revalidatePath("/app/[academySlug]/schedules", "page");
   return { ok: true };
 }
 
@@ -106,6 +106,6 @@ export async function archiveSchedule(academyId: string, scheduleId: string): Pr
     .eq("id", scheduleId).eq("academy_id", academyId).is("archived_at", null).select("id").maybeSingle();
   if (error) return { ok: false, message: error.message };
   if (!data) return { ok: false, message: "Schedule not found." };
-  revalidatePath("/app/schedules");
+  revalidatePath("/app/[academySlug]/schedules", "page");
   return { ok: true };
 }

@@ -1,4 +1,5 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import { useCallback, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -13,11 +14,12 @@ type Props = Omit<React.ComponentProps<typeof ScheduleForm>, "onSaved" | "onCanc
 
 /** Full-page schedule form shared by the create route and the direct edit route. */
 export function ScheduleFormPage({ title, description, ...formProps }: Props) {
+  const href = useCanonicalHref();
   const router = useRouter();
   const [status, setStatus] = useState<FormStatus>({ dirty: false, saving: false });
   const [confirming, setConfirming] = useState(false);
   const onStatusChange = useCallback((next: FormStatus) => setStatus(next), []);
-  const leave = () => router.push("/app/schedules");
+  const leave = () => router.push(href("/app/schedules"));
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">

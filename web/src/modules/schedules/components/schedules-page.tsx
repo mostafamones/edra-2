@@ -1,9 +1,10 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, CalendarClock, ChevronDown, Plus, SearchX } from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconCalendarClock as CalendarClock, IconChevronDown as ChevronDown, IconPlus as Plus, IconSearchOff as SearchX } from "@tabler/icons-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ function useMinuteClock() {
 }
 
 function SchedulesContent({ academy }: { academy: AcademyEntry }) {
+  const href = useCanonicalHref();
   const academyId = academy.id;
   const { user } = useAuth();
   const now = useMinuteClock();
@@ -162,7 +164,7 @@ function SchedulesContent({ academy }: { academy: AcademyEntry }) {
           <EmptyContent className="w-full flex-row justify-center gap-2">
             {archived
               ? <Button size="sm" variant="outline" onClick={() => setArchived(false)}>View active schedules</Button>
-              : <Button size="sm" asChild><Link href="/app/schedules/new"><Plus />Create schedule</Link></Button>}
+              : <Button size="sm" asChild><Link href={href("/app/schedules/new")} ><Plus />Create schedule</Link></Button>}
           </EmptyContent>
         </Empty>
       ) : list.matched === 0 ? (

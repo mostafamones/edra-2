@@ -1,8 +1,9 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle } from "lucide-react";
+import { IconAlertCircle as AlertCircle } from "@tabler/icons-react";
 import { z } from "zod";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -30,9 +31,10 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
   );
 }
 
-const backLink = <Button variant="outline" size="sm" asChild><Link href="/app/schedules">Back to schedules</Link></Button>;
 
 function EditScheduleContent({ academy, id }: { academy: AcademyEntry; id: string }) {
+  const href = useCanonicalHref();
+  const backLink = <Button variant="outline" size="sm" asChild><Link href={href("/app/schedules")} >Back to schedules</Link></Button>;
   const validId = z.uuid().safeParse(id).success;
   // Fetched directly by academy and id, so the link works however many schedules exist.
   const query = useQuery({ queryKey: scheduleQueryKey(academy.id, id), queryFn: () => loadSchedule(academy.id, id), enabled: validId });

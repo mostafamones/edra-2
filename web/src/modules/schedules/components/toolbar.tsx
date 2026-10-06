@@ -1,7 +1,8 @@
 "use client";
+import { useCanonicalHref } from "@/modules/navigation";
 
 import Link from "next/link";
-import { Plus, SearchIcon } from "lucide-react";
+import { IconPlus as Plus, IconSearch as SearchIcon } from "@tabler/icons-react";
 
 import { FilterPopover } from "@/components/shared/filter-popover";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ type Props = {
 
 /** Search on the left; the Filter panel (status, level, attendance) and Create schedule on the right. */
 export function SchedulesToolbar({ filters, onFiltersChange, archived, onArchivedChange, levels, levelNames }: Props) {
+  const href = useCanonicalHref();
   const set = (change: Partial<ScheduleFilters>) => onFiltersChange({ ...filters, ...change });
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -51,7 +53,7 @@ export function SchedulesToolbar({ filters, onFiltersChange, archived, onArchive
             onChange: (attendance) => set({ attendance: attendance as ScheduleFilters["attendance"] }),
           },
         ]}/>
-        <Button asChild className="flex-1 sm:flex-none"><Link href="/app/schedules/new"><Plus />Create schedule</Link></Button>
+        <Button asChild className="flex-1 sm:flex-none"><Link href={href("/app/schedules/new")} ><Plus />Create schedule</Link></Button>
       </div>
     </div>
   );
