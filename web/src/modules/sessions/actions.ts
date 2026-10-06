@@ -63,3 +63,19 @@ export async function deleteSession(value: unknown): Promise<DeleteResult> {
     return failure("unavailable");
   }
 }
+
+/** Deletes an ended session together with its published attendance history. Owners and admins only. */
+export async function forceDeleteSession(value: unknown): Promise<DeleteResult> {
+  const parsed = endSchema.safeParse(value);
+  if (!parsed.success) return failure("validation");
+  const { academyId, sessionId } = parsed.data;
+  const actor = await sessionActor(academyId);
+  if (!actor) return failure("forbidden");
+  try {
+    const { error } = await actor.db.rpc("force_delete_session", { p_academy_id: academyId, p_session_id: sessionId });
+    if (error) return failureFromDatabase(error);
+    return { ok: true };
+  } catch {
+    return failure("unavailable");
+  }
+}

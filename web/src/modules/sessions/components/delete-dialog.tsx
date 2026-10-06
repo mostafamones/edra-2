@@ -11,23 +11,36 @@ import {
 import { useAcademyScope } from "@/modules/auth";
 import { deleteSession } from "../actions";
 import { sessionsRootKey } from "../queries";
+import { forceDeleteOptimistically } from "./delete-session";
 
 type Props = { academyId: string; sessionId: string; title: string; open: boolean; onClose: () => void };
 
-/** Confirms deleting a finished session. The server refuses once its attendance was published. */
+/**
+ * Confirms deleting a finished session. If its attendance was published, the button becomes Force
+ * delete, which removes the card immediately and restores it only if the delete fails.
+ */
 export function DeleteSessionDialog({ academyId, sessionId, title, open, onClose }: Props) {
   const queryClient = useQueryClient();
   const isCurrentAcademy = useAcademyScope();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [published, setPublished] = useState(false);
 
   async function remove() {
     if (busy) return;
+    if (published) {
+      onClose();
+      void forceDeleteOptimistically(queryClient, { academyId, sessionId, title });
+      return;
+    }
     const targetAcademyId = academyId;
     setError(""); setBusy(true);
     try {
       const result = await deleteSession({ academyId: targetAcademyId, sessionId });
-      if (!result.ok) { if (isCurrentAcademy(targetAcademyId)) setError(result.message); return; }
+      if (!result.ok) {
+        if (isCurrentAcademy(targetAcademyId)) { setError(result.message); setPublished(result.code === "session_published"); }
+        return;
+      }
       await queryClient.invalidateQueries({ queryKey: sessionsRootKey(targetAcademyId) });
       if (!isCurrentAcademy(targetAcademyId)) return;
       toast.success(`${title} was deleted.`);
@@ -40,7 +53,7 @@ export function DeleteSessionDialog({ academyId, sessionId, title, open, onClose
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={(next) => { if (!next && !busy) { setError(""); onClose(); } }}>
+    <AlertDialog open={open} onOpenChange={(next) => { if (!next && !busy) { setError(""); setPublished(false); onClose(); } }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {title}?</AlertDialogTitle>
@@ -50,7 +63,7 @@ export function DeleteSessionDialog({ academyId, sessionId, title, open, onClose
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={(event) => { event.preventDefault(); void remove(); }} disabled={busy}>
-            {busy ? "Deleting…" : "Delete session"}
+            {busy ? "Deleting…" : published ? "Force delete" : "Delete session"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

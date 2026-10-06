@@ -9,7 +9,7 @@ const MESSAGES: Record<SessionErrorCode, string> = {
   idempotency_conflict: "This start request was already used for another schedule. Try again.",
   session_ended: "This session has already ended.",
   session_live: "End this session before deleting it.",
-  session_published: "This session’s attendance was published, so it can’t be deleted.",
+  session_published: "This session’s attendance was published. You could force delete the session, but attendance will be permanently deleted too.",
   unavailable: "Could not reach the server. Check your connection and try again.",
 };
 
