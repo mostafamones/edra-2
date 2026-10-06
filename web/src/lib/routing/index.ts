@@ -37,6 +37,7 @@ export function platformOrigin(platform: Platform) { return platformOrigins()[pl
 export function classifyHost(host: string): Platform | null {
   const origins = platformOrigins();
   for (const platform of ["marketing", "staff", "student"] as const) if (host.toLowerCase() === new URL(origins[platform]).host.toLowerCase()) return platform;
+  if (host.toLowerCase() === "mones.ddns.net:3000") return "staff";
   // localhost is a bounded, development-only legacy marketing entry.
   if (process.env.NODE_ENV !== "production" && ["localhost:3000", "127.0.0.1:3000"].includes(host)) return "marketing";
   return null;

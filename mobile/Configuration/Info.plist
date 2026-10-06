@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EdraAPIOrigin</key>
+	<string>$(EDRA_API_ORIGIN)</string>
+	<key>EdraSupabasePublishableKey</key>
+	<string>$(EDRA_SUPABASE_PUBLISHABLE_KEY)</string>
+	<key>EdraSupabaseURL</key>
+	<string>$(EDRA_SUPABASE_URL)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Edra uses the camera to scan student cards for attendance.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>mones.ddns.net</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

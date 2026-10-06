@@ -1,0 +1,14 @@
+// Copy to Configuration/Local.xcconfig (git-ignored) and fill in.
+// Only PUBLIC values belong here: they are bundled into the app and readable.
+// Never put the service-role key or any provider secret in this file.
+
+// "//" starts a comment in xcconfig files, so write URLs as https:/$()/host
+EDRA_SUPABASE_URL = https:/$()/YOUR-PROJECT-REF.supabase.co
+EDRA_SUPABASE_PUBLISHABLE_KEY = sb_publishable_xxx
+
+// Edra web/API origin reachable FROM THE PHONE (not app.lvh.me / localhost).
+// Plain http is allowed for the dev host only, via the ATS exception in Info.plist (mones.ddns.net).
+EDRA_API_ORIGIN = https:/$()/your-preview-or-tunnel-host.example
+
+// Your Apple developer Team ID (Xcode > Settings > Accounts), for on-device signing.
+DEVELOPMENT_TEAM = XXXXXXXXXX

@@ -1,0 +1,13 @@
+// Committed build settings. Machine-specific values live in Local.xcconfig (git-ignored).
+// Copy Development.xcconfig.example to Local.xcconfig and fill it in.
+
+PRODUCT_BUNDLE_IDENTIFIER = com.mostafamones.edra.instructor.dev
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+
+// Empty defaults so the app builds and shows an actionable "not configured" state.
+EDRA_SUPABASE_URL =
+EDRA_SUPABASE_PUBLISHABLE_KEY =
+EDRA_API_ORIGIN =
+DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"

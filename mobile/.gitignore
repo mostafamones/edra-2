@@ -1,0 +1,9 @@
+# Xcode / build output
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+
+# Local, machine-specific configuration (signing team, real URLs/keys)
+Configuration/Local.xcconfig
