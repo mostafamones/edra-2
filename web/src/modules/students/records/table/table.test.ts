@@ -21,7 +21,8 @@ describe("table preferences", () => {
 
   it("drops unknown and duplicate columns and appends missing ones", () => {
     const result = sanitizePreferences({ order: ["group", "secret", "name", "group", 7] });
-    expect(result.order.slice(0, 2)).toEqual(["group", "name"]);
+    // The code column, added later, joins at the far left of an older saved layout.
+    expect(result.order.slice(0, 3)).toEqual(["code", "group", "name"]);
     expect([...result.order].sort()).toEqual([...DATA_COLUMNS].sort());
   });
 
@@ -40,8 +41,8 @@ describe("table preferences", () => {
 
   it("moves columns one step and stops at the edges", () => {
     const order = [...DATA_COLUMNS];
-    expect(moveColumn(order, "studentPhone", -1).slice(0, 2)).toEqual(["studentPhone", "name"]);
-    expect(moveColumn(order, "name", -1)).toBe(order);
+    expect(moveColumn(order, "studentPhone", -1).slice(1, 3)).toEqual(["studentPhone", "name"]);
+    expect(moveColumn(order, "code", -1)).toBe(order);
     expect(moveColumn(order, "createdAt", 1)).toBe(order);
   });
 });

@@ -219,4 +219,83 @@ wait
 psqlx -c "begin; $(issue12 0002) commit;" >"$OUT/12c" 2>&1 && fail "a code was issued after disable" || true
 grep -q codes_disabled "$OUT/12c" || fail "issue after disable failed for the wrong reason: $(cat "$OUT/12c")"
 
+# 13. Two issuers race for the same never-issued string on different records: exactly one wins, the
+#     other fails at the reservation registry, and the string stays reserved.
+psqlx -c "begin; $as_admin $(save_codes 2 true) commit;"
+R13A="$(new_student 'Reserve race A' 01055550013)"
+R13B="$(new_student 'Reserve race B' 01055550014)"
+issue13() { # $1 record, $2 code
+  echo "insert into public.student_code_assignments (academy_id, academic_year_id, academy_student_profile_id, annual_student_record_id, level_id, code, code_version, issued_by)
+    select academy_id, academic_year_id, academy_student_profile_id, id, level_id, '$2', 1, '$ADMIN' from public.annual_student_records where id = '$1';"
+}
+( psqlx -c "begin; $(issue13 "$R13A" 0130) select pg_sleep(2); commit;" >"$OUT/13a" 2>&1 && echo ok >"$OUT/13a.status" || echo failed >"$OUT/13a.status" ) &
+sleep 0.6
+( psqlx -c "begin; $(issue13 "$R13B" 0130) commit;" >"$OUT/13b" 2>&1 && echo ok >"$OUT/13b.status" || echo failed >"$OUT/13b.status" ) &
+wait
+[ "$(cat "$OUT/13a.status")" = ok ] && [ "$(cat "$OUT/13b.status")" = failed ] && grep -q code_taken "$OUT/13b" \
+  || fail "concurrent issuers of one code did not produce exactly one winner: $(cat "$OUT/13b")"
+
+# 14-16. Code check-in races. A live session with one coded student; each case holds a conflicting
+#     change open while a scan arrives, then the scan must observe the committed result.
+GROUP_SCAN=c2222222-2222-4222-8222-222222222230
+psqlx -c "insert into public.groups (id, academy_id, academic_year_id, level_id, name) values ('$GROUP_SCAN', '$ACADEMY', '$YEAR', 'grade-10', 'Scan race');"
+new_grouped() { # $1 name, $2 phone; prints the record id
+  printf 'begin; %s select id from public.create_student_record(%s); commit;\n' "$as_admin" \
+    "'$ACADEMY','$YEAR','$1','$2','01112223333','grade-10',null,'$GROUP_SCAN','in_person'" \
+    | psqlx -tA | grep -E '^[0-9a-f-]{36}$'
+}
+R14="$(new_grouped 'Scan race one' 01055550021)"
+R15="$(new_grouped 'Scan race two' 01055550022)"
+R16="$(new_grouped 'Scan race three' 01055550023)"
+SCHED_SCAN="$(psqlx -tA <<SQL | grep -E '^[0-9a-f-]{36}$' | tail -1
+begin; $as_admin
+select public.create_schedule('$ACADEMY','$YEAR','Scan race weekly','recurring','group','$GROUP_SCAN',null,null,true,null,
+  '[{"weekday":1,"startsAt":"17:00","endsAt":"18:30"}]'::jsonb, '[]'::jsonb);
+commit;
+SQL
+)"
+SESSION_SCAN="$(psqlx -tA <<SQL | grep -E '^[0-9a-f-]{36}$' | tail -1
+begin; $as_admin
+select session_id from public.start_session('$ACADEMY', '$SCHED_SCAN', 'cccccccc-0000-4000-8000-000000000014');
+commit;
+SQL
+)"
+[ -n "$SESSION_SCAN" ] || fail "could not start the scan race session"
+assign_code() { echo "select public.change_student_code('$ACADEMY','$1','assign','$2',0,gen_random_uuid());"; }
+psqlx -c "begin; $as_admin $(assign_code "$R14" 0140) $(assign_code "$R15" 0150) $(assign_code "$R16" 0160) commit;"
+scan() { echo "select public.check_in_attendance_by_code('$ACADEMY','$SESSION_SCAN','$1',gen_random_uuid(),null);"; }
+
+# 14. A retirement holds the record lock; a concurrent scan waits, then is rejected as retired.
+( psqlx -c "begin; $as_admin select public.change_student_code('$ACADEMY','$R14','retire',null,1,gen_random_uuid()); select pg_sleep(2); commit;" >"$OUT/14a" 2>&1 ) &
+sleep 0.6
+( psqlx -c "begin; $as_admin $(scan 0140) commit;" >"$OUT/14b" 2>&1 && echo ok >"$OUT/14b.status" || echo failed >"$OUT/14b.status" ) &
+wait
+[ "$(cat "$OUT/14b.status")" = failed ] && grep -q student_code_retired "$OUT/14b" || fail "a scan checked in a holder retired concurrently: $(cat "$OUT/14b")"
+psqlx -tA -c "select count(*) from public.attendance_records where session_id = '$SESSION_SCAN' and annual_student_record_id = '$R14'" | grep -qx 0 \
+  || fail "attendance was written for a retired code"
+
+# 15. A non-level edit holds the record lock; the scan waits and then succeeds (only a real level
+#     change retires a code; that path is covered in student_code_checkin.sql).
+( psqlx -c "begin; update public.annual_student_records set level_id = 'grade-10', student_phone = '01055559999' where id = '$R15'; select pg_sleep(2); commit;" >"$OUT/15a" 2>&1 ) &
+sleep 0.6
+( psqlx -c "begin; $as_admin $(scan 0150) commit;" >"$OUT/15b" 2>&1 && echo ok >"$OUT/15b.status" || echo failed >"$OUT/15b.status" ) &
+wait
+[ "$(cat "$OUT/15b.status")" = ok ] || fail "a contact edit must not block a scan: $(cat "$OUT/15b")"
+
+# 16. Disabling holds the settings lock; a concurrent scan waits and then fails as disabled.
+( psqlx -c "begin; $as_admin $(save_codes 3 false) select pg_sleep(2); commit;" >"$OUT/16a" 2>&1 ) &
+sleep 0.6
+( psqlx -c "begin; $as_admin $(scan 0160) commit;" >"$OUT/16b" 2>&1 && echo ok >"$OUT/16b.status" || echo failed >"$OUT/16b.status" ) &
+wait
+[ "$(cat "$OUT/16b.status")" = failed ] && grep -q student_codes_disabled "$OUT/16b" || fail "a scan ran against codes disabled concurrently: $(cat "$OUT/16b")"
+
+# 17. Two instructors scanning the same student at once: one records, the other sees already recorded.
+psqlx -c "begin; $as_admin $(save_codes 4 true) commit;"
+( psqlx -c "begin; $as_admin $(scan 0160) commit;" >"$OUT/17a" 2>&1 && echo ok >"$OUT/17a.status" || echo failed >"$OUT/17a.status" ) &
+( psqlx -c "begin; $as_admin $(scan 0160) commit;" >"$OUT/17b" 2>&1 && echo ok >"$OUT/17b.status" || echo failed >"$OUT/17b.status" ) &
+wait
+[ "$(cat "$OUT/17a.status")" = ok ] && [ "$(cat "$OUT/17b.status")" = ok ] || fail "a simultaneous scan failed: $(cat "$OUT/17a" "$OUT/17b")"
+psqlx -tA -c "select version || ':' || status from public.attendance_records where session_id = '$SESSION_SCAN' and annual_student_record_id = '$R16'" | grep -qx '1:present' \
+  || fail "simultaneous scans wrote the student more than once"
+
 echo "concurrency checks passed"

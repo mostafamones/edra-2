@@ -29,6 +29,8 @@ export type ColumnOptions = {
   onArchive: (row: StudentRecordRow, archive: boolean) => void;
   /** Opens the student code dialog; omitted while student codes are off. */
   onCode?: (row: StudentRecordRow) => void;
+  /** Current code per record id for the rows on this page; the column is hidden while codes are off. */
+  codes: Record<string, string>;
 };
 
 const muted = (text: string, label: string) => (
@@ -72,6 +74,10 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
   }
 
   columns.push(
+    data("code", ({ row }) => {
+      const code = options.codes[row.original.id];
+      return code ? <CellText text={code} className="font-mono">{code}</CellText> : muted("—", "No code");
+    }),
     data("name", ({ row }) => (
       <button
         type="button"

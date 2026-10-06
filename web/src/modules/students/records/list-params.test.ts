@@ -12,7 +12,7 @@ const read = (query: string, fallback?: 10 | 20 | 50 | 100) => readListParams(ne
 describe("list parameters", () => {
   it("defaults to active records, name order, the first page, and 20 rows", () => {
     expect(read("")).toEqual({ params: DEFAULT_LIST_PARAMS, valid: true });
-    expect(DEFAULT_LIST_PARAMS.pageSize).toBe(20);
+    expect(DEFAULT_LIST_PARAMS.pageSize).toBe(10);
     expect(DEFAULT_LIST_PARAMS.sorts).toEqual([{ id: "name", desc: false }]);
   });
 

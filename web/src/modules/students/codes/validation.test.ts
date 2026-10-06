@@ -20,8 +20,8 @@ describe("studentCodeSettingsInputSchema", () => {
     expect(studentCodeSettingsInputSchema.safeParse(base).success).toBe(true);
   });
 
-  it("requires a default format only when enabled", () => {
-    expect(errors({ ...base, defaultPattern: " ", levels: [] })).toHaveProperty("defaultPattern");
+  it("accepts codes turned on before any format exists", () => {
+    expect(errors({ ...base, defaultPattern: " ", levels: [] })).toEqual({});
     expect(errors({ ...base, defaultPattern: " " })).toEqual({});
     expect(errors({ ...base, enabled: false, defaultPattern: "", levels: [] })).toEqual({});
   });

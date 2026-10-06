@@ -42,7 +42,9 @@ export function sanitizePreferences(raw: unknown): TablePreferences {
 
   if (Array.isArray(raw.order)) {
     const order = [...new Set(raw.order.filter(isDataColumn))];
-    result.order = [...order, ...DATA_COLUMNS.filter((id) => !order.includes(id))];
+    // Columns added later join in default order; the code column belongs at the far left.
+    const missing = DATA_COLUMNS.filter((id) => !order.includes(id));
+    result.order = [...missing.filter((id) => id === "code"), ...order, ...missing.filter((id) => id !== "code")];
   }
   if (isRecord(raw.visibility)) {
     for (const id of DATA_COLUMNS) {
@@ -87,4 +89,11 @@ export function moveColumn(order: DataColumnId[], id: DataColumnId, direction: -
   const next = [...order];
   [next[from], next[to]] = [next[to], next[from]];
   return next;
+}
+
+/** Puts `id` back at `index` in an order that was edited without it. */
+export function withColumnAt(order: DataColumnId[], id: DataColumnId, index: number): DataColumnId[] {
+  const rest = order.filter((item) => item !== id);
+  rest.splice(Math.min(Math.max(index, 0), rest.length), 0, id);
+  return rest;
 }

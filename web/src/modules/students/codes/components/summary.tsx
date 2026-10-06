@@ -1,7 +1,6 @@
 import { IconListNumbers } from "@tabler/icons-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 
 import type { StudentCodeSettings } from "../types";
@@ -26,7 +25,6 @@ export function StudentCodeSettingsSummary({ settings, levels }: Props) {
       <CardHeader>
         <CardTitle>Student codes</CardTitle>
         <CardDescription>Only the academy owner or an admin can change these settings.</CardDescription>
-        <CardAction><Badge variant={settings.enabled ? "default" : "secondary"}>{settings.enabled ? "On" : "Off"}</Badge></CardAction>
       </CardHeader>
       {settings.enabled && (
         <CardContent>

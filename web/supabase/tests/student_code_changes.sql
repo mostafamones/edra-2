@@ -191,28 +191,27 @@ do $$ begin
   end if;
 end $$;
 
--- Releasing the old code frees it for anyone; retiring it keeps it reserved.
+-- Issued codes stay reserved permanently: release and unretire are gone, retired values are never
+-- issued again (to the former holder or anyone else), and a retired row cannot change.
 set local role authenticated;
 set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
-do $$ declare released jsonb; begin
-  released := public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'replace_release', '0012', 5, gen_random_uuid());
-  if released <> '{"code": "0012", "version": 7}'::jsonb then raise exception 'Release-change returned %', released; end if;
+select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'replace_release', '0012', 5, gen_random_uuid()) $s$, 'code_release_removed');
+do $$ declare replaced jsonb; begin
+  replaced := public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'replace', '0012', 5, gen_random_uuid());
+  if replaced <> '{"code": "0012", "version": 7}'::jsonb then raise exception 'Replacement returned %', replaced; end if;
 end $$;
-select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'replace_release', '0012', 7, gen_random_uuid()) $s$, 'code_taken');
--- 0011 was released, so another student can take it; 0009 was retired and cannot be taken.
+-- 0009 and 0011 are retired: neither the former holder nor another student can take them.
+select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'replace', '0011', 7, gen_random_uuid()) $s$, 'code_taken');
 select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9b')::uuid, 'replace', '0009', 1, gen_random_uuid()) $s$, 'code_taken');
-select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9b')::uuid, 'replace', '0011', 1, gen_random_uuid());
-reset role;
+select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9b')::uuid, 'replace', '0011', 1, gen_random_uuid()) $s$, 'code_taken');
+-- Peeking and allocation skip every issued string.
 do $$ begin
-  if not exists (select 1 from public.student_code_assignments where code = '0011' and retirement_reason = 'released')
-    or (select count(*) from public.student_code_assignments where code = '0011' and retirement_reason is distinct from 'released') <> 1 then
-    raise exception 'A released code must stay in the ledger and be reusable exactly once';
+  if public.peek_next_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9b')::uuid) in ('0001', '0007', '0009', '0011', '0012') then
+    raise exception 'Peeking must skip issued codes';
   end if;
 end $$;
 
--- Retired codes are listed for staff; only owners and admins can unretire, and that frees the code.
-set local role authenticated;
-set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
+-- Retired codes are listed for staff, with search that treats wildcards literally.
 do $$ declare page jsonb; begin
   page := public.list_retired_student_codes('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '', 10, 0);
   if (page ->> 'total')::int < 1
@@ -223,28 +222,24 @@ do $$ declare page jsonb; begin
     or (public.list_retired_student_codes('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'zzz%', 10, 0) ->> 'total')::int <> 0 then
     raise exception 'Search must match codes and names and treat wildcards literally';
   end if;
-  -- Released codes are not listed.
-  if exists (select 1 from jsonb_array_elements(public.list_retired_student_codes('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '0011', 10, 0) -> 'rows') x where x ->> 'reason' = 'released') then
-    raise exception 'Released codes must not be listed';
-  end if;
   perform set_config('test.retired0007', (select id::text from public.student_code_assignments where code = '0007' and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'), true);
 end $$;
-select pg_temp.expect_error($s$ select public.unretire_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.retired0007')::uuid) $s$, 'forbidden');
 set local request.jwt.claim.sub = 'b1111111-1111-4111-8111-111111111111';
 select pg_temp.expect_error($s$ select public.list_retired_student_codes('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '', 10, 0) $s$, 'forbidden');
-select pg_temp.expect_error($s$ select public.unretire_student_code('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', current_setting('test.retired0007')::uuid) $s$, 'not_found');
+-- The old unretire RPC no longer frees anything, for any role.
 set local request.jwt.claim.sub = 'a2222222-2222-4222-8222-222222222222';
-select public.unretire_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.retired0007')::uuid);
-select pg_temp.expect_error($s$ select public.unretire_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.retired0007')::uuid) $s$, 'stale_code');
--- A current code cannot be unretired.
-select pg_temp.expect_error($s$ select public.unretire_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', (select id from public.student_code_assignments where code = '0011' and retired_at is null)) $s$, 'stale_code');
+select pg_temp.expect_error($s$ select public.unretire_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.retired0007')::uuid) $s$, 'code_release_removed');
 set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
-select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9b')::uuid, 'replace', '0007', 3, gen_random_uuid());
+select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9b')::uuid, 'replace', '0007', 3, gen_random_uuid()) $s$, 'code_taken');
 reset role;
+-- Even a privileged direct update cannot release a retired row or reuse its string.
+select pg_temp.expect_error($s$ update public.student_code_assignments set retirement_reason = 'released' where id = current_setting('test.retired0007')::uuid $s$, 'code_history');
+select pg_temp.expect_error($s$ delete from public.student_code_assignments where id = current_setting('test.retired0007')::uuid $s$, 'code_history');
 do $$ begin
-  if not exists (select 1 from public.student_code_assignments where id = current_setting('test.retired0007')::uuid and retirement_reason = 'released')
-    or not exists (select 1 from public.student_code_assignments where code = '0007' and retired_at is null) then
-    raise exception 'An unretired code must be released and reusable';
+  if not exists (select 1 from public.student_code_reservations where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and code in ('0007'))
+    or (select count(*) from public.student_code_reservations r where r.academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
+       <> (select count(distinct code) from public.student_code_assignments where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') then
+    raise exception 'Every issued string must be reserved exactly once';
   end if;
 end $$;
 

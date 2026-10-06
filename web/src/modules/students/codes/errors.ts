@@ -13,10 +13,13 @@ const MESSAGES: Record<StudentCodeErrorCode, string> = {
   code_exists: "This student already has a code. Retire it before assigning another.",
   stale_code: "This student’s code changed since you opened this. Reopen it to see the latest code.",
   code_taken: "This code is already used, or was used before, by a student in this academy.",
+  code_release_removed: "Issued codes are reserved permanently and cannot be released or reused. Issue a new code instead.",
   invalid_format: "This code doesn’t match the format for this student’s level.",
   code_exhausted: "This format has no unused codes left. Change the format in student code settings.",
   pattern_missing: "No format is set for this student’s level. Set one in student code settings.",
   idempotency_conflict: "This request was already used for a different change. Try again.",
+  invalid_target: "One of the chosen levels or groups is no longer available. Choose again.",
+  stale_preview: "Students or formats changed since this summary loaded. Review the updated numbers and try again.",
 };
 
 const CODES = new Set(Object.keys(MESSAGES));

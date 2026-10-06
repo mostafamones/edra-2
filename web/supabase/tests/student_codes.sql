@@ -157,7 +157,6 @@ select pg_temp.expect_error($s$ select public.allocate_student_code('aaaaaaaa-aa
 -- ---------------------------------------------------------------------------------------------
 -- Owner configures: validation, foreign levels, versions.
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
-select pg_temp.expect_error($s$ select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, null, '[]') $s$, 'validation');
 select pg_temp.expect_error($s$ select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, 'ST#A#', '[]') $s$, 'validation');
 select pg_temp.expect_error($s$ select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, '####',
   '[{"levelId":"grade-10","pattern":"ST 2###"}]') $s$, 'validation');
@@ -255,7 +254,7 @@ select pg_temp.issue(current_setting('test.rb'), '0001', 1);
 
 -- One current code per record; codes unique per academy forever; normalized strings only.
 select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r9'), '0009', 2) $s$, 'code_exists');
-select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r9c'), '0001', 1) $s$, '%student_code_assignments_code_unique%');
+select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r9c'), '0001', 1) $s$, 'code_taken');
 select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r9c'), 'abc', 1) $s$, '%check constraint%');
 select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r9c'), 'ABC', 2) $s$, 'stale_code');
 select pg_temp.expect_error($s$ insert into public.student_code_assignments (academy_id, academic_year_id, academy_student_profile_id,
@@ -283,7 +282,7 @@ do $$ begin
     raise exception 'Retirement must advance the version and clear the pointer';
   end if;
 end $$;
-select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r9c'), '0001', 1) $s$, '%student_code_assignments_code_unique%');
+select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r9c'), '0001', 1) $s$, 'code_taken');
 select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r9'), '0010', 2) $s$, 'stale_code');
 select pg_temp.issue(current_setting('test.r9'), '0010', 3);
 select pg_temp.expect_error($s$ update public.student_code_assignments set retired_at = null, retirement_reason = null, retired_by = null
@@ -320,11 +319,77 @@ select pg_temp.expect_error($s$ select public.get_student_code_state('aaaaaaaa-a
 
 -- ---------------------------------------------------------------------------------------------
 -- Disable keeps everything and blocks code operations; re-enable restores them.
+-- Student search uses current codes with caller authority and the existing filters/paging.
+-- A saved code can retain an older format; use a prefix that cannot also match a phone number.
+set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
+select set_config('test.search', id::text, true) from public.create_student_record(
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Search Student',
+  '01000000005', '01100000001', 'grade-9', null, null, 'in_person');
+reset role;
+select pg_temp.issue(current_setting('test.search'), 'LOOKUP10', 1);
+set local role authenticated;
+do $$ declare page jsonb; actor text; term text; begin
+  foreach actor in array array[
+    'a1111111-1111-4111-8111-111111111111',
+    'a2222222-2222-4222-8222-222222222222',
+    'a3333333-3333-4333-8333-333333333333'
+  ] loop
+    perform set_config('request.jwt.claim.sub', actor, true);
+    foreach term in array array['st2001', ' st2 ', 'LOOKUP10'] loop
+      page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+        term, 'active', null, null, null, null, null, 0, 10);
+      if (page ->> 'total')::int <> 1 or jsonb_array_length(page -> 'rows') <> 1
+        or page -> 'rows' -> 0 ->> 'id' <> current_setting(case when term = 'LOOKUP10' then 'test.search' else 'test.r10' end) then
+        raise exception 'Current code search failed for actor %, term %: %', actor, term, page;
+      end if;
+    end loop;
+  end loop;
+  page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+    'ST2', 'active', 'grade-9', null, null, null, null, 0, 10);
+  if (page ->> 'total')::int <> 0 then raise exception 'Code search bypassed the level filter'; end if;
+  page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+    'ST2', 'archived', null, null, null, null, null, 0, 10);
+  if (page ->> 'total')::int <> 0 then raise exception 'Code search bypassed the status filter'; end if;
+  page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+    'ST2', 'active', null, null, null, null, null, 1, 10);
+  if (page ->> 'total')::int <> 1 or page -> 'rows' <> '[]'::jsonb then
+    raise exception 'Code search counts and pagination disagree';
+  end if;
+  foreach term in array array['%', '_'] loop
+    page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+      term, 'all', null, null, null, null, null, 0, 10);
+    if (page ->> 'total')::int <> 0 then raise exception 'Code search did not escape wildcard %', term; end if;
+  end loop;
+  page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb',
+    'ST2', 'all', null, null, null, null, null, 0, 10);
+  if (page ->> 'total')::int <> 0 then raise exception 'Code search crossed academic years'; end if;
+end $$;
+set local request.jwt.claim.sub = 'c9999999-9999-4999-8999-999999999999';
+select pg_temp.expect_error($s$ select public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+  'ST2', 'all', null, null, null, null, null, 0, 10) $s$, 'forbidden');
+set local request.jwt.claim.sub = 'b1111111-1111-4111-8111-111111111111';
+select pg_temp.expect_error($s$ select public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+  'ST2', 'all', null, null, null, null, null, 0, 10) $s$, 'forbidden');
+
 set local request.jwt.claim.sub = 'a2222222-2222-4222-8222-222222222222';
 select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2, false, '####', '[{"levelId":"grade-10","pattern":"ST2###"}]');
+do $$ declare page jsonb; term text; begin
+  foreach term in array array['ST2', 'LOOKUP10'] loop
+    page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+      term, 'all', null, null, null, null, null, 0, 10);
+    if (page ->> 'total')::int <> 0 or page -> 'rows' <> '[]'::jsonb then
+      raise exception 'Disabled saved codes still matched student search: %', page;
+    end if;
+  end loop;
+  foreach term in array array['Ten One', '01000000004'] loop
+    page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+      term, 'active', null, null, null, null, null, 0, 10);
+    if (page ->> 'total')::int <> 1 then raise exception 'Disabling codes broke name/phone search'; end if;
+  end loop;
+end $$;
 reset role;
 do $$ begin
-  if (select count(*) from public.student_code_assignments where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') <> 4
+  if (select count(*) from public.student_code_assignments where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') <> 5
     or (select last_value from public.student_code_counters where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and prefix = '' and width = 4) <> 3
     or (select pattern from public.student_code_level_patterns where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') <> 'ST2###' then
     raise exception 'Disabling must preserve assignments, counters, and formulas';
@@ -339,6 +404,16 @@ where code = 'ST2001' and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 set local role authenticated;
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
 select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 3, true, '####', '[{"levelId":"grade-10","pattern":"ST2###"}]');
+do $$ declare page jsonb; begin
+  page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+    'LOOKUP10', 'active', null, null, null, null, null, 0, 10);
+  if (page ->> 'total')::int <> 1 or page -> 'rows' -> 0 ->> 'id' <> current_setting('test.search') then
+    raise exception 'Re-enabling did not restore current code search';
+  end if;
+  page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+    'ST2001', 'all', null, null, null, null, null, 0, 10);
+  if (page ->> 'total')::int <> 0 then raise exception 'Retired codes matched student search'; end if;
+end $$;
 reset role;
 do $$ begin
   if public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-9') <> '0004'
@@ -371,8 +446,13 @@ select pg_temp.expect_error($s$ select public.allocate_student_code('aaaaaaaa-aa
 -- Closed years receive no code; year-close retirement still works.
 update public.academic_years set closed_at = now() where id = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
 select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r10'), 'LATE1', 3) $s$, 'year_unavailable');
-update public.student_code_assignments set retired_at = now(), retirement_reason = 'year_closed'
-where code = '0010' and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+do $$ begin
+  -- Closing the year retired every active code of that year (the hook in 20261006270000).
+  if exists (select 1 from public.student_code_assignments where academic_year_id = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa' and retired_at is null)
+    or not exists (select 1 from public.student_code_assignments where code = '0010' and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and retirement_reason = 'year_closed') then
+    raise exception 'Year closure must retire the year''s active codes';
+  end if;
+end $$;
 
 rollback;
 select 'student codes checks passed';

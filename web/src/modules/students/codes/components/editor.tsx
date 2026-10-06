@@ -12,9 +12,9 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { useAcademyScope } from "@/modules/auth";
 
 import { saveStudentCodeSettings } from "../actions";
@@ -40,7 +40,6 @@ export function StudentCodeSettingsEditor({ academyId, settings, levels, onSaved
   const isCurrentAcademy = useAcademyScope();
   const savedOverrides = Object.fromEntries(settings.levels.map((level) => [level.levelId, level.pattern]));
   const savedMode: Mode = settings.levels.length > 0 ? "levels" : "academy";
-  const [enabled, setEnabled] = useState(settings.enabled);
   const [mode, setMode] = useState<Mode>(savedMode);
   const [defaultPattern, setDefaultPattern] = useState(settings.defaultPattern ?? "");
   const [overrides, setOverrides] = useState<Record<string, string>>(savedOverrides);
@@ -56,8 +55,7 @@ export function StudentCodeSettingsEditor({ academyId, settings, levels, onSaved
     ? { defaultPattern: "", levels: levelEntries(overrides) }
     : { defaultPattern, levels: [] };
   const dirty =
-    enabled !== settings.enabled
-    || canonical(draft.defaultPattern) !== (mode === "academy" ? settings.defaultPattern ?? "" : "")
+    canonical(draft.defaultPattern) !== (mode === "academy" ? settings.defaultPattern ?? "" : "")
     || JSON.stringify(draft.levels.map((l) => [l.levelId, canonical(l.pattern)]))
       !== JSON.stringify(levelEntries(savedOverrides).map((l) => [l.levelId, l.pattern]));
 
@@ -71,7 +69,6 @@ export function StudentCodeSettingsEditor({ academyId, settings, levels, onSaved
   }
 
   function discard() {
-    setEnabled(settings.enabled);
     setMode(savedMode);
     setDefaultPattern(settings.defaultPattern ?? "");
     setOverrides(savedOverrides);
@@ -83,7 +80,7 @@ export function StudentCodeSettingsEditor({ academyId, settings, levels, onSaved
     event.preventDefault();
     if (saving || !dirty) return;
     setError("");
-    if (enabled && mode === "levels") {
+    if (settings.enabled && mode === "levels") {
       const missing = Object.fromEntries(
         levels.filter(({ levelId }) => !overrides[levelId]?.trim()).map(({ levelId }) => [`level:${levelId}`, "Enter a format for this level."]),
       );
@@ -92,7 +89,7 @@ export function StudentCodeSettingsEditor({ academyId, settings, levels, onSaved
         return;
       }
     }
-    const parsed = studentCodeSettingsInputSchema.safeParse({ academyId, expectedVersion: settings.version, enabled, ...draft });
+    const parsed = studentCodeSettingsInputSchema.safeParse({ academyId, expectedVersion: settings.version, enabled: settings.enabled, ...draft });
     if (!parsed.success) {
       setFieldErrors(settingsFieldErrors(parsed.error));
       return;
@@ -110,9 +107,9 @@ export function StudentCodeSettingsEditor({ academyId, settings, levels, onSaved
         if (mode === "levels" && result.fieldErrors?.defaultPattern) setError(result.fieldErrors.defaultPattern);
         return;
       }
-      toast.success(enabled ? "Student code settings saved." : "Student codes are off. Settings and existing codes are kept.");
+      toast.success("Formats saved.");
       onSaved({
-        enabled,
+        enabled: settings.enabled,
         defaultPattern: parsed.data.defaultPattern.trim() ? canonical(parsed.data.defaultPattern) : null,
         version: result.data.version,
         levels: parsed.data.levels.map(({ levelId, pattern }) => ({ levelId, pattern: canonical(pattern) })),
@@ -126,21 +123,11 @@ export function StudentCodeSettingsEditor({ academyId, settings, levels, onSaved
 
   return (
     <form onSubmit={submit} noValidate>
-      <Card>
+      <p className="text-muted-foreground font-medium pb-1">Formats</p>
+      <Card aria-disabled={!settings.enabled} className={cn("transition-opacity", !settings.enabled && "opacity-50")}>
         <Collapsible open={helpOpen} onOpenChange={setHelpOpen} className="contents">
           <CardContent className="flex flex-col gap-6">
-            <Field orientation="horizontal" className="items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <FieldLabel htmlFor="student-codes-enabled">Use student codes</FieldLabel>
-                <Hint label="About turning codes on or off">
-                  Turning codes off keeps formats, assigned codes, and history. Turning them on or saving a format gives nobody a
-                  code; new and imported students start without one.
-                </Hint>
-              </div>
-              <Switch id="student-codes-enabled" checked={enabled} onCheckedChange={setEnabled} disabled={saving} />
-            </Field>
-
-            <fieldset disabled={!enabled || saving} className="m-0 flex min-w-0 flex-col gap-6 border-0 p-0 transition-opacity disabled:opacity-50">
+            <fieldset disabled={saving || !settings.enabled} className="m-0 flex min-w-0 flex-col gap-6 border-0 p-0">
               <Tabs value={mode} onValueChange={(value) => { setMode(value as Mode); setFieldErrors({}); }}>
                 <TabsList className="w-full">
                   <TabsTrigger value="academy">Whole academy</TabsTrigger>
@@ -231,14 +218,14 @@ export function StudentCodeSettingsEditor({ academyId, settings, levels, onSaved
           </CardContent>
           <CardFooter className="justify-between gap-2">
             <CollapsibleTrigger asChild>
-              <Button type="button" variant="ghost" size="sm" className="-ml-2 text-muted-foreground">
+              <Button type="button" variant="ghost" size="sm" className="text-muted-foreground">
                 How formats work
                 <IconChevronDown aria-hidden="true" data-icon="inline-end" className={helpOpen ? "rotate-180" : undefined} />
               </Button>
             </CollapsibleTrigger>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={discard} disabled={!dirty || saving}>Discard</Button>
-              <Button type="submit" disabled={!dirty || saving || stale}>{saving ? "Saving…" : "Save"}</Button>
+              <Button type="button" variant="outline" onClick={discard} disabled={!dirty || saving || !settings.enabled}>Discard</Button>
+              <Button type="submit" disabled={!dirty || saving || stale || !settings.enabled}>{saving ? "Saving…" : "Save"}</Button>
             </div>
           </CardFooter>
           <CollapsibleContent className="px-6 pb-2">

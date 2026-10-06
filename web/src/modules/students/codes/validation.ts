@@ -16,9 +16,7 @@ export const studentCodeSettingsInputSchema = z.object({
   levels: z.array(z.object({ levelId: z.string().min(1).max(50), pattern: z.string().max(100) })).max(MAX_LEVEL_PATTERNS),
 }).superRefine((input, context) => {
   const blank = input.defaultPattern.trim() === "";
-  if (input.enabled && blank && input.levels.length === 0) {
-    context.addIssue({ code: "custom", path: ["defaultPattern"], message: "Enter a format before turning student codes on." });
-  } else if (!blank) {
+  if (!blank) {
     const parsed = parseStudentCodePattern(input.defaultPattern);
     if (!parsed.ok) context.addIssue({ code: "custom", path: ["defaultPattern"], message: parsed.message });
   }

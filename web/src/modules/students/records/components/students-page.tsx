@@ -22,13 +22,14 @@ import {
 import { canArchiveStudentRecords, canChangeStudentGroups, canImportStudents } from "../permissions";
 import { fetchStudentList, studentListQueryKey } from "../queries";
 import type { GroupChangeRow, RecordVersion, StudentRecordRow } from "../types";
-import { ACTIONS_COLUMN, SELECT_COLUMN } from "../table/config";
-import { defaultLayout, type TablePreferences } from "../table/preferences";
+import { ACTIONS_COLUMN, CODE_COLUMN, SELECT_COLUMN } from "../table/config";
+import { defaultLayout, withColumnAt, type TablePreferences } from "../table/preferences";
 import { bulkTargets, pageSelectionState, syncSelection, togglePage, toggleRow, type Selection } from "../table/selection";
 import { useListParams } from "../table/use-list-params";
 import { useTablePreferences } from "../table/use-preferences";
 import { ArchiveDialog, type ArchiveRequest } from "./archive-dialog";
 import { StudentCodeDialog, type CodeTarget } from "../../codes/components/dialog";
+import { fetchStudentCodes, studentCodeQueryKeys } from "../../codes/queries";
 import { useStudentCodeSettings } from "../../codes/use-settings";
 import { StudentEditSheet } from "./edit-sheet";
 import { GroupChangeSheet } from "./group-sheet";
@@ -41,6 +42,7 @@ import { StudentsPagination } from "./table/pagination";
 import { StudentsToolbar } from "./table/toolbar";
 
 const NO_ROWS: StudentRecordRow[] = [];
+const NO_CODES: Record<string, string> = {};
 
 export function StudentsPage() {
   // The gate re-mounts the content per academy, which resets selection, the sheet, and dialogs.
@@ -116,6 +118,14 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   const isSelected = useCallback((id: string) => Boolean(selection[id]), [selection]);
   const pageSelection = pageSelectionState(selection, rows);
   const codesEnabled = useStudentCodeSettings(academyId).data?.enabled ?? false;
+  const rowIds = useMemo(() => rows.map((row) => row.id), [rows]);
+  const codesQuery = useQuery({
+    queryKey: [...studentCodeQueryKeys.listCodes(academyId), rowIds],
+    queryFn: ({ signal }) => fetchStudentCodes(academyId, rowIds, signal),
+    enabled: codesEnabled && rowIds.length > 0,
+    placeholderData: keepPreviousData,
+  });
+  const codes = codesQuery.data ?? NO_CODES;
   const [codeTarget, setCodeTarget] = useState<CodeTarget | null>(null);
   const columns = useMemo(() => buildColumns({
     canManage,
@@ -125,8 +135,9 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     onTogglePage: (selected) => setSelection((current) => togglePage(current, rows, selected)),
     onOpen: (row) => setEditingId(row.id),
     onArchive: (row, archive) => setArchiveRequest({ archive, records: [{ id: row.id, version: row.version }], name: row.fullName }),
+    codes,
     onCode: codesEnabled ? (row) => setCodeTarget({ id: row.id, fullName: row.fullName, levelId: row.levelId }) : undefined,
-  }), [canManage, codesEnabled, isSelected, pageSelection, rows]);
+  }), [canManage, codes, codesEnabled, isSelected, pageSelection, rows]);
 
   const columnOrder = useMemo(
     () => [...(canManage ? [SELECT_COLUMN] : []), ...preferences.order, ACTIONS_COLUMN],
@@ -147,7 +158,8 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     enableColumnResizing: true,
     state: {
       columnOrder,
-      columnVisibility: preferences.visibility as VisibilityState,
+      // The code column does not exist while the academy has student codes off.
+      columnVisibility: { ...preferences.visibility, [CODE_COLUMN]: codesEnabled && preferences.visibility[CODE_COLUMN] } as VisibilityState,
       columnSizing: preferences.sizing as ColumnSizingState,
       sorting: params.sorts,
       pagination: { pageIndex: params.pageIndex, pageSize: params.pageSize },
@@ -201,6 +213,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
       <StudentsToolbar
         params={params}
         onSearch={onSearch}
+        codesEnabled={codesEnabled}
         onFiltersChange={onFiltersChange}
         levels={structureQuery.data?.levels ?? []}
         levelNames={structureQuery.data?.levelNames ?? {}}
@@ -216,10 +229,14 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
         }
       >
         <ColumnsPopover
-          order={preferences.order}
+          order={codesEnabled ? preferences.order : preferences.order.filter((id) => id !== CODE_COLUMN)}
           visibility={preferences.visibility}
           customized={customized}
-          onOrderChange={(order) => updatePreferences((current) => ({ ...current, order }))}
+          onOrderChange={(order) => updatePreferences((current) => ({
+            ...current,
+            // While codes are off the column is hidden from the popover; keep its saved position.
+            order: codesEnabled ? order : withColumnAt(order, CODE_COLUMN, current.order.indexOf(CODE_COLUMN)),
+          }))}
           onVisibilityChange={(id, visible) => updatePreferences((current) => ({ ...current, visibility: { ...current.visibility, [id]: visible } }))}
           onReset={() => updatePreferences((current) => ({ ...defaultLayout(), pageSize: current.pageSize }))}
         />
@@ -281,12 +298,12 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
                   <EmptyHeader className="gap-1">
                     <EmptyMedia variant="icon"><SearchX aria-hidden="true" /></EmptyMedia>
                     <EmptyTitle>No matching students</EmptyTitle>
-                    <EmptyDescription>Try a different search, or clear the filters to see every active student.</EmptyDescription>
+                    <EmptyDescription>Try a different search, or clear the search and filters to see every active student.</EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
                     <Button size="sm" variant="outline" onClick={() => onFiltersChange({
                       search: "", status: "active", levelId: null, track: null, group: null, participationType: null,
-                    })}>Clear filters</Button>
+                    })}>{params.search.trim() ? "Clear search and filters" : "Clear filters"}</Button>
                   </EmptyContent>
                 </Empty>
               ) : (

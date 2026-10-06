@@ -1,12 +1,15 @@
 import { SORT_FIELDS, type SortField } from "../list-params";
 
 /** Data columns in their default order. Selection and actions stay pinned at the table edges. */
-export const DATA_COLUMNS = SORT_FIELDS;
-export type DataColumnId = SortField;
+export const DATA_COLUMNS = ["code", ...SORT_FIELDS] as const;
+export type DataColumnId = "code" | SortField;
+/** The student code column exists only while the academy uses student codes, and is not sortable. */
+export const CODE_COLUMN = "code" satisfies DataColumnId;
 export const SELECT_COLUMN = "select";
 export const ACTIONS_COLUMN = "actions";
 
 export const COLUMN_LABELS: Record<DataColumnId, string> = {
+  code: "Code",
   name: "Name",
   studentPhone: "Student phone",
   parentPhone: "Parent phone",
@@ -23,6 +26,7 @@ export const MIN_COLUMN_WIDTH = 100;
 export const RESIZE_STEP = 10;
 
 export const COLUMN_WIDTHS: Record<DataColumnId, { size: number; minSize: number; maxSize: number }> = {
+  code: { size: 96, minSize: 72, maxSize: MAX_COLUMN_WIDTH },
   name: { size: 260, minSize: 180, maxSize: MAX_COLUMN_WIDTH },
   studentPhone: { size: 180, minSize: MIN_COLUMN_WIDTH, maxSize: MAX_COLUMN_WIDTH },
   parentPhone: { size: 180, minSize: MIN_COLUMN_WIDTH, maxSize: MAX_COLUMN_WIDTH },
@@ -40,6 +44,7 @@ export const ACTIONS_WIDTH = 48;
 export const ALWAYS_VISIBLE: readonly DataColumnId[] = ["name"];
 
 export const DEFAULT_VISIBILITY: Record<DataColumnId, boolean> = {
+  code: true,
   name: true,
   studentPhone: true,
   parentPhone: true,

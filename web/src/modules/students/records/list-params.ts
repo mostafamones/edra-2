@@ -11,7 +11,7 @@ export type SortDescriptor = { id: SortField; desc: boolean };
 
 export const PAGE_SIZES = [10, 20, 50, 100] as const;
 export type PageSize = (typeof PAGE_SIZES)[number];
-export const DEFAULT_PAGE_SIZE: PageSize = 20;
+export const DEFAULT_PAGE_SIZE: PageSize = 10;
 export const MAX_SORTS = 3;
 export const MAX_SEARCH_LENGTH = 100;
 

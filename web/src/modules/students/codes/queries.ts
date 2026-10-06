@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { createClient } from "@/lib/supabase/client";
 import { loadActiveYear } from "@/modules/groups";
 
@@ -5,6 +7,8 @@ import { retiredStudentCodePageSchema, studentCodeSettingsSchema, studentCodeSta
 
 // Keyed by account and academy so a late response never fills another academy's or account's view.
 export const studentCodeQueryKeys = {
+  /** Prefix of every students-table codes query; invalidate it after any code change. */
+  listCodes: (academyId: string) => ["student-codes", academyId, "list-codes"] as const,
   levelStudents: (academyId: string) => ["student-codes", academyId, "level-students"] as const,
   retired: (academyId: string) => ["student-codes", academyId, "retired"] as const,
   state: (academyId: string, recordId: string) => ["student-codes", academyId, "state", recordId] as const,
@@ -56,4 +60,13 @@ export async function fetchRetiredStudentCodes(
   const { data, error } = await request;
   if (error) throw new Error(error.message);
   return retiredStudentCodePageSchema.parse(data);
+}
+
+/** Current codes of the given records, keyed by record id; records without a code are absent. */
+export async function fetchStudentCodes(academyId: string, recordIds: string[], signal?: AbortSignal): Promise<Record<string, string>> {
+  let request = createClient().rpc("get_student_codes", { p_academy_id: academyId, p_record_ids: recordIds });
+  if (signal) request = request.abortSignal(signal);
+  const { data, error } = await request;
+  if (error) throw new Error(error.message);
+  return z.record(z.string(), z.string()).parse(data);
 }

@@ -29,7 +29,8 @@ export const studentCodeStateSchema = z.object({
 export type StudentCodeErrorCode =
   | "validation" | "forbidden" | "invalid_level" | "stale_settings" | "unavailable"
   | "codes_disabled" | "not_found" | "archived_record" | "year_unavailable" | "code_exists" | "stale_code"
-  | "code_taken" | "invalid_format" | "code_exhausted" | "pattern_missing" | "idempotency_conflict";
+  | "code_taken" | "code_release_removed" | "invalid_format" | "code_exhausted" | "pattern_missing" | "idempotency_conflict"
+  | "invalid_target" | "stale_preview";
 
 /** Field keys: `defaultPattern` or `level:<levelId>`. */
 export type StudentCodeFailure = {
@@ -41,10 +42,10 @@ export type StudentCodeFailure = {
 
 export type StudentCodeResult<T> = { ok: true; data: T } | StudentCodeFailure;
 
-export const CODE_ACTIONS = ["assign", "replace", "replace_release", "generate", "retire"] as const;
+export const CODE_ACTIONS = ["assign", "replace", "generate", "retire"] as const;
 export type StudentCodeAction = (typeof CODE_ACTIONS)[number];
 
-export const RETIREMENT_REASONS = ["manual", "level_changed", "year_closed"] as const;
+export const RETIREMENT_REASONS = ["manual", "level_changed", "year_closed", "released"] as const;
 
 /** One retired code with the student who held it. */
 export const retiredStudentCodeSchema = z.object({
@@ -63,3 +64,54 @@ export const retiredStudentCodePageSchema = z.object({
 
 export type RetiredStudentCode = z.infer<typeof retiredStudentCodeSchema>;
 export type RetiredStudentCodePage = z.infer<typeof retiredStudentCodePageSchema>;
+
+/** Which students a generation run targets: everyone, chosen levels, or chosen groups (open year, active only). */
+export const GENERATION_MODES = ["all", "levels", "groups"] as const;
+export type GenerationMode = (typeof GENERATION_MODES)[number];
+
+/** How numbers are picked: where to start (null continues after the format's counter), the gap between codes, and odd/even only. */
+export const GENERATION_PARITIES = ["any", "even", "odd"] as const;
+export const generationOptionsSchema = z.object({
+  start: z.number().int().min(1).max(99999999).nullable(),
+  step: z.number().int().min(1).max(1000),
+  parity: z.enum(GENERATION_PARITIES),
+});
+export type GenerationOptions = z.infer<typeof generationOptionsSchema>;
+export const DEFAULT_GENERATION_OPTIONS: GenerationOptions = { start: null, step: 1, parity: "any" };
+
+/** One format a generation run would use. Examples are the next free values now, not a promise. */
+export const generationPatternSchema = z.object({
+  pattern: z.string(),
+  levelIds: z.array(z.string()),
+  missing: z.number().int().nonnegative(),
+  available: z.number().int(),
+  examples: z.array(z.string()),
+});
+
+/** What a run would do; `token` identifies this exact summary so a stale review is rejected. */
+export const generationPreviewSchema = z.object({
+  settingsVersion: z.number().int().positive(),
+  options: generationOptionsSchema,
+  token: z.string(),
+  targets: z.number().int().nonnegative(),
+  coded: z.number().int().nonnegative(),
+  missing: z.number().int().nonnegative(),
+  patterns: z.array(generationPatternSchema),
+  missingFormat: z.array(z.object({ levelId: z.string(), missing: z.number().int().positive() })),
+});
+
+/** A completed run. Codes were issued in name order (`order: "name"`). */
+export const generationResultSchema = z.object({
+  targets: z.number().int().nonnegative(),
+  assigned: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  mode: z.enum(GENERATION_MODES),
+  ids: z.array(z.string()),
+  settingsVersion: z.number().int().positive(),
+  options: generationOptionsSchema,
+  order: z.literal("name"),
+});
+
+export type GenerationPattern = z.infer<typeof generationPatternSchema>;
+export type GenerationPreview = z.infer<typeof generationPreviewSchema>;
+export type GenerationResult = z.infer<typeof generationResultSchema>;

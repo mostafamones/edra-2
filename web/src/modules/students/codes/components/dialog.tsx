@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { studentsRootKey } from "../../records/queries";
+
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconAlertCircle, IconWand } from "@tabler/icons-react";
 import { toast } from "sonner";
@@ -11,7 +13,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAcademyScope } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
@@ -66,13 +67,10 @@ function DialogBody({ academy, target, onClose, onBusyChange }: BodyProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [inputError, setInputError] = useState("");
-  // On: the old code is retired and stays reserved. Off: it is released and can be given to anyone.
-  const [retireOld, setRetireOld] = useState(true);
   const [pending, setPending] = useState<StudentCodeAction | null>(null);
   const [peeking, setPeeking] = useState(false);
   // Kept across retries of one attempt so a repeated submit replays instead of changing twice.
-  const [firstKey] = useState(newRequestKey);
-  const requestKey = useRef(firstKey);
+  const [requestKey, setRequestKey] = useState(newRequestKey);
 
   const state = query.data;
   const pattern = settings.data ? effectivePattern(settings.data, target.levelId) : null;
@@ -88,22 +86,24 @@ function DialogBody({ academy, target, onClose, onBusyChange }: BodyProps) {
   /** The prefix is fixed by the level's format; staff only type the number, padded with zeros. */
   const fullCode = format && digits ? format.prefix + digits.padStart(format.width, "0") : "";
 
-  async function run(action: StudentCodeAction, current: StudentCodeState) {
-    if (busy) return;
+  /** `suggested` is a code from the wand: it is saved straight away instead of waiting for Save. */
+  async function run(action: StudentCodeAction, current: StudentCodeState, suggested?: string) {
+    if (pending || (peeking && !suggested)) return;
+    const code = suggested ?? fullCode;
     setError("");
     setInputError("");
-    if (action !== "retire" && (!format || !fullCode || Number(digits) < 1)) {
+    if (action !== "retire" && !suggested && (!format || !fullCode || Number(digits) < 1)) {
       setInputError(`Enter a number from 1 to ${format ? format.capacity.toLocaleString("en") : ""}.`);
       return;
     }
     setPending(action); onBusyChange(true);
     try {
       const result = await changeStudentCode({
-        academyId: academy.id, recordId: target.id, action, code: fullCode, expectedVersion: current.version, requestKey: requestKey.current,
+        academyId: academy.id, recordId: target.id, action, code, expectedVersion: current.version, requestKey,
       });
       if (!isCurrentAcademy(academy.id)) return;
       if (!result.ok) {
-        if (result.code !== "unavailable") requestKey.current = newRequestKey();
+        if (result.code !== "unavailable") setRequestKey(newRequestKey());
         if (result.code === "stale_code" || result.code === "code_exists") {
           setDraft(null);
           void queryClient.invalidateQueries({ queryKey: stateKey });
@@ -112,10 +112,13 @@ function DialogBody({ academy, target, onClose, onBusyChange }: BodyProps) {
         else setError(result.message);
         return;
       }
-      requestKey.current = newRequestKey();
+      setRequestKey(newRequestKey());
       queryClient.setQueryData(stateKey, result.data);
+      void queryClient.invalidateQueries({ queryKey: studentCodeQueryKeys.listCodes(academy.id) });
+      void queryClient.invalidateQueries({ queryKey: [...studentsRootKey(academy.id), "list"] });
       setDraft(null);
       toast.success(action === "retire" ? `Retired ${current.code}.` : `${target.fullName} now has code ${result.data.code}.`);
+      onClose();
     } catch {
       setError("Something went wrong. Check your connection and try again.");
     } finally {
@@ -123,8 +126,8 @@ function DialogBody({ academy, target, onClose, onBusyChange }: BodyProps) {
     }
   }
 
-  /** Puts the next unused number in the field. Nothing is reserved or saved until the form is submitted. */
-  async function suggest() {
+  /** Gets the next unused number, shows it in the field, and saves it as this student's code. */
+  async function suggest(action: StudentCodeAction, current: StudentCodeState) {
     if (busy || !format) return;
     setError("");
     setInputError("");
@@ -132,8 +135,13 @@ function DialogBody({ academy, target, onClose, onBusyChange }: BodyProps) {
     try {
       const result = await peekNextStudentCode(academy.id, target.id);
       if (!isCurrentAcademy(academy.id)) return;
-      if (result.ok) setDigits(result.data.code.slice(format.prefix.length));
-      else setInputError(result.message);
+      if (!result.ok) {
+        setInputError(result.message);
+        return;
+      }
+      setDigits(result.data.code.slice(format.prefix.length));
+      setPeeking(false);
+      await run(action, current, result.data.code);
     } catch {
       setInputError("Something went wrong. Check your connection and try again.");
     } finally {
@@ -142,11 +150,10 @@ function DialogBody({ academy, target, onClose, onBusyChange }: BodyProps) {
   }
 
   function codeForm(action: "assign" | "replace", current: StudentCodeState, submitLabel: string, pendingLabel: string, extra?: React.ReactNode) {
-    const submitAction: StudentCodeAction = action === "replace" && !retireOld ? "replace_release" : action;
     return (
       <form
         noValidate
-        onSubmit={(event) => { event.preventDefault(); void run(submitAction, current); }}
+        onSubmit={(event) => { event.preventDefault(); void run(action, current); }}
         className="flex flex-col gap-4"
       >
         <Field data-invalid={Boolean(inputError)} className="gap-2">
@@ -170,11 +177,11 @@ function DialogBody({ academy, target, onClose, onBusyChange }: BodyProps) {
             <InputGroupAddon align="inline-end">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <InputGroupButton size="icon-xs" aria-label="Fill in the next number" disabled={busy || !format} onClick={() => void suggest()}>
+                  <InputGroupButton size="icon-xs" aria-label="Generate and save the next code" disabled={busy || !format} onClick={() => void suggest(action, current)}>
                     <IconWand aria-hidden="true" />
                   </InputGroupButton>
                 </TooltipTrigger>
-                <TooltipContent>Fill in the next number</TooltipContent>
+                <TooltipContent>Generate and save the next code</TooltipContent>
               </Tooltip>
             </InputGroupAddon>
           </InputGroup>
@@ -185,7 +192,7 @@ function DialogBody({ academy, target, onClose, onBusyChange }: BodyProps) {
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
           <Button type="submit" disabled={busy || !digits || !format || (action === "replace" && digits === currentDigits)}>
-            {pending === submitAction ? pendingLabel : submitLabel}
+            {pending === action ? pendingLabel : submitLabel}
           </Button>
         </DialogFooter>
       </form>
@@ -210,15 +217,9 @@ function DialogBody({ academy, target, onClose, onBusyChange }: BodyProps) {
     content = codeForm(
       "replace", state, "Save", "Saving…",
       digits !== currentDigits && (
-        <Field orientation="horizontal" className="items-center justify-between rounded-lg border px-3 py-2.5">
-          <FieldLabel htmlFor="student-code-retire" className="font-normal">
-            Retire <span className="font-mono font-medium">{state.code}</span>
-            <span className="block text-xs text-muted-foreground">
-              {retireOld ? "It can never be used again." : "It can be given to any student."}
-            </span>
-          </FieldLabel>
-          <Switch id="student-code-retire" checked={retireOld} onCheckedChange={setRetireOld} disabled={busy} />
-        </Field>
+        <p className="text-xs text-muted-foreground">
+          <span className="font-mono font-medium">{state.code}</span> will be retired. Retired codes stay reserved and are never used again.
+        </p>
       ),
     );
   } else if (state.code) {

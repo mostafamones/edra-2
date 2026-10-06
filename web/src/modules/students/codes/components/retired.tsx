@@ -1,51 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconAlertCircle, IconArchive, IconArrowBackUp, IconSearch, IconSearchOff } from "@tabler/icons-react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { IconAlertCircle, IconArchive, IconSearch, IconSearchOff } from "@tabler/icons-react";
 import { format } from "date-fns";
-import { toast } from "sonner";
 
-import {
-  AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useAcademyScope } from "@/modules/auth";
 
-import { unretireStudentCode } from "../actions";
+import { RETIREMENT_REASONS } from "../types";
 import { fetchRetiredStudentCodes, RETIRED_PAGE_SIZE, studentCodeQueryKeys } from "../queries";
-import type { RetiredStudentCode } from "../types";
 
-const REASONS: Record<RetiredStudentCode["reason"], string> = {
+const REASONS: Record<(typeof RETIREMENT_REASONS)[number], string> = {
   manual: "Retired by staff",
   level_changed: "Level changed",
   year_closed: "Year closed",
+  released: "Retired by staff",
 };
 
 type Props = {
   academyId: string;
   levelNames: Record<string, string>;
-  /** Owners and admins can unretire; other staff see the list only. */
-  canUnretire: boolean;
 };
 
-/** Every retired code with the student who held it. Unretiring frees a code to be issued again. */
-export function RetiredStudentCodes({ academyId, levelNames, canUnretire }: Props) {
-  const queryClient = useQueryClient();
-  const isCurrentAcademy = useAcademyScope();
+/** Every retired code with the student who held it. Retired codes stay reserved and are never issued again. */
+export function RetiredStudentCodes({ academyId, levelNames }: Props) {
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const [target, setTarget] = useState<RetiredStudentCode | null>(null);
-  const [working, setWorking] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => { setSearch(input.trim()); setPage(0); }, 300);
@@ -59,27 +46,6 @@ export function RetiredStudentCodes({ academyId, levelNames, canUnretire }: Prop
   });
   const data = query.data;
   const pages = data ? Math.max(1, Math.ceil(data.total / RETIRED_PAGE_SIZE)) : 1;
-
-  async function unretire(row: RetiredStudentCode) {
-    setWorking(true);
-    setError("");
-    try {
-      const result = await unretireStudentCode(academyId, row.id);
-      if (!isCurrentAcademy(academyId)) return;
-      if (!result.ok) {
-        setError(result.message);
-        if (result.code === "stale_code" || result.code === "not_found") void queryClient.invalidateQueries({ queryKey: studentCodeQueryKeys.retired(academyId) });
-        return;
-      }
-      setTarget(null);
-      toast.success(`${row.code} can be used again.`);
-      await queryClient.invalidateQueries({ queryKey: studentCodeQueryKeys.retired(academyId) });
-    } catch {
-      setError("Something went wrong. Check your connection and try again.");
-    } finally {
-      setWorking(false);
-    }
-  }
 
   let body: React.ReactNode;
   if (query.isPending) {
@@ -124,7 +90,6 @@ export function RetiredStudentCodes({ academyId, levelNames, canUnretire }: Prop
               <TableHead>Student</TableHead>
               <TableHead className="hidden sm:table-cell">Reason</TableHead>
               <TableHead className="hidden md:table-cell">Retired</TableHead>
-              {canUnretire && <TableHead className="w-0"><span className="sr-only">Actions</span></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -137,13 +102,6 @@ export function RetiredStudentCodes({ academyId, levelNames, canUnretire }: Prop
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground sm:table-cell">{REASONS[row.reason]}</TableCell>
                 <TableCell className="hidden text-muted-foreground tabular-nums md:table-cell">{format(new Date(row.retiredAt), "MMM d, yyyy")}</TableCell>
-                {canUnretire && (
-                  <TableCell className="text-right">
-                    <Button type="button" variant="outline" size="sm" onClick={() => { setError(""); setTarget(row); }}>
-                      <IconArrowBackUp aria-hidden="true" data-icon="inline-start" />Unretire
-                    </Button>
-                  </TableCell>
-                )}
               </TableRow>
             ))}
           </TableBody>
@@ -162,35 +120,19 @@ export function RetiredStudentCodes({ academyId, levelNames, canUnretire }: Prop
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Retired codes</CardTitle>
-        <CardDescription>Retired codes can’t be reused unless you unretire them.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {(data?.total ?? 0) > 0 || search ? (
-          <InputGroup>
-            <InputGroupAddon><IconSearch aria-hidden="true" /></InputGroupAddon>
-            <InputGroupInput value={input} onChange={(event) => setInput(event.target.value)} placeholder="Search code or student" aria-label="Search retired codes" />
-          </InputGroup>
-        ) : null}
-        {body}
-      </CardContent>
-      <AlertDialog open={Boolean(target)} onOpenChange={(open) => { if (!open && !working) setTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unretire {target?.code}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              It will no longer be reserved and can be given to any student. It isn’t returned to {target?.studentName}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={working}>Cancel</AlertDialogCancel>
-            <Button type="button" onClick={() => target && void unretire(target)} disabled={working}>{working ? "Unretiring…" : "Unretire"}</Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
+    <div>
+    <p className="text-muted-foreground font-medium pb-1">Retired codes</p>
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          {(data?.total ?? 0) > 0 || search ? (
+            <InputGroup>
+              <InputGroupAddon><IconSearch aria-hidden="true" /></InputGroupAddon>
+              <InputGroupInput value={input} onChange={(event) => setInput(event.target.value)} placeholder="Search code or student" aria-label="Search retired codes" />
+            </InputGroup>
+          ) : null}
+          {body}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -19,7 +19,7 @@ export type {
   ImportFormat, ImportIssue, ImportRow, ImportSession, ImportSummary,
 } from "./records/imports/types";
 export type { StudentRecordInput } from "./records/validation";
-export { changeStudentCode, saveStudentCodeSettings } from "./codes/actions";
+export { changeStudentCode, generateStudentCodes, previewStudentCodeGeneration, saveStudentCodeSettings } from "./codes/actions";
 export { StudentCodeDialog } from "./codes/components/dialog";
 export type { CodeTarget } from "./codes/components/dialog";
 export { StudentCodesPage } from "./codes/components/page";
@@ -28,4 +28,6 @@ export {
 } from "./codes/pattern";
 export type { StudentCodePattern } from "./codes/pattern";
 export { canConfigureStudentCodes, canViewStudentCodeSettings } from "./codes/permissions";
-export type { LevelPattern, StudentCodeSettings, StudentCodeState } from "./codes/types";
+export type {
+  GenerationMode, GenerationPreview, GenerationResult, LevelPattern, StudentCodeSettings, StudentCodeState,
+} from "./codes/types";

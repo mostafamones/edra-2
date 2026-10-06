@@ -38,6 +38,7 @@ Authenticated users can only `select` the tables (through RLS). Every write goes
 - Updates and archive/restore send the version the caller last saw; a changed record returns `stale_record` and nothing is written. Batches are all-or-nothing.
 - Reads: `GET /api/students` (list parameters in the query string, see `list-params.ts`) and `GET /api/students/[id]`, both scoped by `academy` and checked against membership. Import reads live under `GET /api/students/imports` (the caller's unfinished import), `/imports/[id]` (summary and counts), `/imports/[id]/rows` (paginated rows); they require an owner or admin.
 - Table layout preferences live in localStorage under `edra.students.table.v1:<user>:<academy>`; no student data is stored.
+- Search stays in the search input, separate from filter chips; clearing the filter chips preserves the search. Search matches names, phones, levels, tracks, groups, and current student codes only while the academy's student codes setting is enabled. Saved codes are excluded while disabled, and retired codes never match.
 
 ## Bulk group changes
 

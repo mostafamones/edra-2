@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { SearchIcon, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { IconSearch as SearchIcon, IconX as X } from "@tabler/icons-react";
 
 import { FilterPopover, type FilterField } from "@/components/shared/filter-popover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import type { Group, Level, Track } from "@/modules/groups";
 import {
-  DEFAULT_LIST_PARAMS, isFiltering, MAX_SEARCH_LENGTH, NONE, type StatusFilter, type StudentListParams,
+  DEFAULT_LIST_PARAMS, MAX_SEARCH_LENGTH, NONE, type StatusFilter, type StudentListParams,
 } from "../../list-params";
 import { isParticipationType, PARTICIPATION_LABELS, PARTICIPATION_TYPES } from "../../validation";
 
@@ -19,6 +19,7 @@ const SEARCH_DELAY = 300;
 type Props = {
   params: StudentListParams;
   onSearch: (search: string) => void;
+  codesEnabled: boolean;
   /** Applies a filter change; the page resets to the first page. */
   onFiltersChange: (change: Partial<StudentListParams>) => void;
   levels: Level[];
@@ -32,7 +33,8 @@ type Props = {
 };
 
 /** Search, the Filter panel, and the badges for every active filter. */
-export function StudentsToolbar({ params, onSearch, onFiltersChange, levels, levelNames, tracks, groups, children, actions }: Props) {
+export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChange, levels, levelNames, tracks, groups, children, actions }: Props) {
+  const searchRef = useRef<HTMLInputElement>(null);
   // The typed value runs ahead of the URL until the debounce applies it.
   const [draft, setDraft] = useState<string | null>(null);
   const [appliedSearch, setAppliedSearch] = useState(params.search);
@@ -46,6 +48,13 @@ export function StudentsToolbar({ params, onSearch, onFiltersChange, levels, lev
     const timer = setTimeout(() => onSearch(draft.trim()), SEARCH_DELAY);
     return () => clearTimeout(timer);
   }, [draft, params.search, onSearch]);
+
+  const searchValue = draft ?? params.search;
+  function clearSearch() {
+    setDraft("");
+    onSearch("");
+    searchRef.current?.focus();
+  }
 
   const levelName = (id: string) => levelNames[id] ?? id;
   const trackById = new Map(tracks.map((track) => [track.id, track]));
@@ -111,7 +120,6 @@ export function StudentsToolbar({ params, onSearch, onFiltersChange, levels, lev
   ];
 
   const active: { key: string; label: string; clear: () => void }[] = [];
-  if (params.search) active.push({ key: "search", label: `Search: “${params.search}”`, clear: () => { setDraft(null); onSearch(""); } });
   if (params.status !== "active") {
     active.push({ key: "status", label: params.status === "archived" ? "Archived" : "Active and archived", clear: () => onFiltersChange({ status: "active" }) });
   }
@@ -129,9 +137,8 @@ export function StudentsToolbar({ params, onSearch, onFiltersChange, levels, lev
   }
 
   function clearAll() {
-    setDraft(null);
     onFiltersChange({
-      search: "", status: DEFAULT_LIST_PARAMS.status, levelId: null, track: null, group: null, participationType: null,
+      status: DEFAULT_LIST_PARAMS.status, levelId: null, track: null, group: null, participationType: null,
     });
   }
 
@@ -140,14 +147,28 @@ export function StudentsToolbar({ params, onSearch, onFiltersChange, levels, lev
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <InputGroup className="sm:max-w-sm">
           <InputGroupInput
+            ref={searchRef}
             type="search"
-            placeholder="Search names, phones, levels, groups"
+            className="[&::-webkit-search-cancel-button]:appearance-none"
+            placeholder={codesEnabled ? "Search names, phones, codes, levels, groups" : "Search names, phones, levels, groups"}
             aria-label="Search students"
             maxLength={MAX_SEARCH_LENGTH}
-            value={draft ?? params.search}
+            value={searchValue}
             onChange={(event) => setDraft(event.target.value)}
           />
           <InputGroupAddon><SearchIcon /></InputGroupAddon>
+          {searchValue.length > 0 && (
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                size="icon-xs"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+                onClick={clearSearch}
+              >
+                <X className="size-3.5" aria-hidden="true" />
+              </InputGroupButton>
+            </InputGroupAddon>
+          )}
         </InputGroup>
         <div className="flex gap-2 sm:ml-auto">
           <FilterPopover fields={fields} iconOnly>{children}</FilterPopover>
@@ -164,9 +185,7 @@ export function StudentsToolbar({ params, onSearch, onFiltersChange, levels, lev
               </Button>
             </Badge>
           ))}
-          {isFiltering(params) && (
-            <Button variant="ghost" size="sm" className="h-7 text-muted-foreground" onClick={clearAll}>Clear all</Button>
-          )}
+          <Button variant="ghost" size="sm" className="h-7 text-muted-foreground" onClick={clearAll}>Clear all</Button>
         </div>
       )}
     </div>

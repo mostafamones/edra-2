@@ -7,7 +7,10 @@ import type { Database } from "@/lib/supabase/database.types";
 import { staffContext } from "../records/data";
 import { failure, failureFromDatabase } from "./errors";
 import { canConfigureStudentCodes } from "./permissions";
-import { CODE_ACTIONS, studentCodeStateSchema, type StudentCodeResult, type StudentCodeState } from "./types";
+import {
+  CODE_ACTIONS, GENERATION_MODES, generationOptionsSchema, generationPreviewSchema, generationResultSchema, studentCodeStateSchema,
+  type GenerationPreview, type GenerationResult, type StudentCodeResult, type StudentCodeState,
+} from "./types";
 import { settingsFieldErrors, studentCodeSettingsInputSchema } from "./validation";
 
 type SaveArgs = Database["public"]["Functions"]["save_student_code_settings"]["Args"];
@@ -65,7 +68,7 @@ export async function changeStudentCode(value: unknown): Promise<StudentCodeResu
       p_academy_id: input.academyId,
       p_record_id: input.recordId,
       p_action: input.action,
-      p_code: (input.action === "assign" || input.action === "replace" || input.action === "replace_release" ? input.code ?? "" : null) as string,
+      p_code: (input.action === "assign" || input.action === "replace" ? input.code ?? "" : null) as string,
       p_expected_version: input.expectedVersion,
       p_request_key: input.requestKey,
     });
@@ -99,19 +102,69 @@ export async function peekNextStudentCode(academyId: unknown, recordId: unknown)
   }
 }
 
-/** Owner/Admin: stops reserving a retired code so it can be issued again, to any student. */
-export async function unretireStudentCode(academyId: unknown, assignmentId: unknown): Promise<StudentCodeResult<{ id: string }>> {
-  const ids = z.object({ academyId: z.uuid(), assignmentId: z.uuid() }).safeParse({ academyId, assignmentId });
-  if (!ids.success) return failure("validation");
-  const actor = await staffContext(ids.data.academyId);
-  if (!actor || !canConfigureStudentCodes(actor.role)) return failure("forbidden");
+const scopeSchema = z.object({
+  academyId: z.uuid(),
+  mode: z.enum(GENERATION_MODES),
+  ids: z.array(z.string().min(1).max(100)).max(100),
+  options: generationOptionsSchema,
+});
+
+/**
+ * What generating missing codes for a scope would do: counts, formats, capacity, and advisory
+ * examples. Reserves nothing. Every staff role may preview while codes are on.
+ */
+export async function previewStudentCodeGeneration(value: unknown): Promise<StudentCodeResult<GenerationPreview>> {
+  const parsed = scopeSchema.safeParse(value);
+  if (!parsed.success) return failure("validation");
+  const input = parsed.data;
+  const actor = await staffContext(input.academyId);
+  if (!actor) return failure("forbidden");
   try {
-    const { data, error } = await actor.db.rpc("unretire_student_code", {
-      p_academy_id: ids.data.academyId, p_assignment_id: ids.data.assignmentId,
+    const { data, error } = await actor.db.rpc("preview_student_code_generation", {
+      p_academy_id: input.academyId, p_mode: input.mode, p_ids: input.ids,
+      // SQL null continues after the format's counter; the generated type only models optional arguments.
+      p_start: input.options.start as number, p_step: input.options.step, p_parity: input.options.parity,
     });
     if (error) return failureFromDatabase(error);
-    const id = (data as { id?: unknown } | null)?.id;
-    return typeof id === "string" ? { ok: true, data: { id } } : failure("unavailable");
+    const preview = generationPreviewSchema.safeParse(data);
+    return preview.success ? { ok: true, data: preview.data } : failure("unavailable");
+  } catch {
+    return failure("unavailable");
+  }
+}
+
+const generateSchema = scopeSchema.extend({
+  expectedVersion: z.number().int().positive(),
+  previewToken: z.string().regex(/^[0-9a-f]{32}$/),
+  requestKey: z.uuid(),
+});
+
+/**
+ * Issues every missing code in the reviewed scope in one transaction, or none. Returns
+ * `stale_preview` when the reviewed summary no longer holds. The browser keeps `requestKey` for a
+ * retry after an unknown outcome, which replays the original counts.
+ */
+export async function generateStudentCodes(value: unknown): Promise<StudentCodeResult<GenerationResult>> {
+  const parsed = generateSchema.safeParse(value);
+  if (!parsed.success) return failure("validation");
+  const input = parsed.data;
+  const actor = await staffContext(input.academyId);
+  if (!actor) return failure("forbidden");
+  try {
+    const { data, error } = await actor.db.rpc("generate_student_codes", {
+      p_academy_id: input.academyId,
+      p_mode: input.mode,
+      p_ids: input.ids,
+      p_expected_version: input.expectedVersion,
+      p_preview_token: input.previewToken,
+      p_request_key: input.requestKey,
+      p_start: input.options.start as number,
+      p_step: input.options.step,
+      p_parity: input.options.parity,
+    });
+    if (error) return failureFromDatabase(error);
+    const result = generationResultSchema.safeParse(data);
+    return result.success ? { ok: true, data: result.data } : failure("unavailable");
   } catch {
     return failure("unavailable");
   }
