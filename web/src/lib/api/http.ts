@@ -20,8 +20,17 @@ export type ApiErrorCode =
   | "NOT_ON_ROSTER"
   | "STUDENT_CODES_DISABLED"
   | "STUDENT_CODE_RETIRED"
+  | "STUDENT_CHANGED"
   | "STUDENT_CODE_NOT_FOUND"
   | "STUDENT_CODE_AMBIGUOUS"
+  | "ASSIGNMENT_CONFLICT"
+  | "ASSIGNMENT_NOT_OPEN"
+  | "ASSIGNMENT_CLOSED"
+  | "MARKS_CONFLICT"
+  | "NOT_A_RECIPIENT"
+  | "INVALID_SCORE"
+  | "UNKNOWN_PART"
+  | "HAS_MARKS"
   | "THROTTLED"
   | "INTERNAL";
 
@@ -41,8 +50,17 @@ const STATUS: Record<ApiErrorCode, number> = {
   NOT_ON_ROSTER: 422,
   STUDENT_CODES_DISABLED: 409,
   STUDENT_CODE_RETIRED: 409,
+  STUDENT_CHANGED: 409,
   STUDENT_CODE_NOT_FOUND: 404,
   STUDENT_CODE_AMBIGUOUS: 409,
+  ASSIGNMENT_CONFLICT: 409,
+  ASSIGNMENT_NOT_OPEN: 409,
+  ASSIGNMENT_CLOSED: 409,
+  MARKS_CONFLICT: 409,
+  NOT_A_RECIPIENT: 422,
+  INVALID_SCORE: 422,
+  UNKNOWN_PART: 422,
+  HAS_MARKS: 409,
   THROTTLED: 429,
   INTERNAL: 500,
 };
@@ -63,8 +81,17 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   NOT_ON_ROSTER: "This student is not on the session's roster. A staff member must review it.",
   STUDENT_CODES_DISABLED: "Student codes are turned off for this academy. Check the student in with annual_student_record_id.",
   STUDENT_CODE_RETIRED: "This code is no longer active. Use the student's current code or annual_student_record_id.",
+  STUDENT_CHANGED: "This code now identifies a different student than the one previewed. Nothing was saved; resolve the code again.",
   STUDENT_CODE_NOT_FOUND: "No student in this session's academy has this code.",
   STUDENT_CODE_AMBIGUOUS: "This code was issued to more than one student. Use annual_student_record_id; staff must issue a new code.",
+  ASSIGNMENT_CONFLICT: "Someone else changed this assignment first. Review the latest version and try again.",
+  ASSIGNMENT_NOT_OPEN: "Marks can only be entered once the assignment is published or closed.",
+  ASSIGNMENT_CLOSED: "This assignment is closed, so no newly received work can be recorded.",
+  MARKS_CONFLICT: "This student's marks changed after you loaded them. Review the current values and try again.",
+  NOT_A_RECIPIENT: "This student is not a recipient of this assignment.",
+  INVALID_SCORE: "A score must be a string from 0 up to the part's maximum with at most two decimals.",
+  UNKNOWN_PART: "A part_id does not belong to this assignment.",
+  HAS_MARKS: "This student already has marks. Clear them first.",
   THROTTLED: "Too many requests. Retry after the indicated delay.",
   INTERNAL: "Something went wrong. Retry with the same Idempotency-Key.",
 };

@@ -1,0 +1,54 @@
+"use server";
+
+import { changeAssignmentState, createAssignment, publishResults, recordWork, resolveStudent, saveMarks, updateAssignment } from "./data";
+import { failure } from "./errors";
+import type { AssignmentAction, AssignmentDraft, AssignmentResult, AnswerChange, MarkChange, PublishResult, SaveMarksResult, StudentLookup, WorkResult, WorkStatus } from "./types";
+
+/** Staff web actions. They run the same domain operations as the external API with the cookie session. */
+
+export async function createAssignmentDraft(
+  value: { academyId: string; academicYearId: string; assignmentId: string; draft: AssignmentDraft },
+): Promise<AssignmentResult> {
+  if (!value || typeof value !== "object") return failure("validation");
+  return createAssignment(value);
+}
+
+export async function saveAssignment(
+  value: { academyId: string; assignmentId: string; expectedVersion: number; draft: AssignmentDraft },
+): Promise<AssignmentResult> {
+  if (!value || typeof value !== "object") return failure("validation");
+  return updateAssignment(value);
+}
+
+export async function changeAssignment(
+  value: { academyId: string; assignmentId: string; expectedVersion: number; action: AssignmentAction },
+): Promise<AssignmentResult> {
+  if (!value || typeof value !== "object") return failure("validation");
+  return changeAssignmentState(value);
+}
+
+export async function saveStudentMarks(
+  value: { academyId: string; assignmentId: string; recordId: string | null; code: string | null; expectedRecordId?: string | null; expectedVersion: number; marks: MarkChange[]; answers?: AnswerChange[]; feedback?: string; key: string },
+): Promise<SaveMarksResult> {
+  if (!value || typeof value !== "object") return failure("validation");
+  return saveMarks(value);
+}
+
+export async function recordStudentWork(
+  value: { academyId: string; assignmentId: string; recordId: string; expectedVersion: number; status: WorkStatus; receivedAt: string | null; note: string },
+): Promise<WorkResult> {
+  if (!value || typeof value !== "object") return failure("validation");
+  return recordWork(value);
+}
+
+export async function publishStudentResults(
+  value: { academyId: string; assignmentId: string; key: string; items: { recordId: string; expectedVersion: number }[] },
+): Promise<PublishResult> {
+  if (!value || typeof value !== "object") return failure("validation");
+  return publishResults(value);
+}
+
+export async function lookUpStudent(value: { academyId: string; assignmentId: string; code: string }): Promise<StudentLookup> {
+  if (!value || typeof value !== "object") return failure("validation");
+  return resolveStudent(value);
+}
