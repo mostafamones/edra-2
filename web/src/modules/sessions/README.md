@@ -29,6 +29,6 @@ HTTP (cookie session):
 
 `metadataVersion` is the session's own version (incremented on lifecycle changes). Attendance must keep its own revision.
 
-Web routes: `/app/sessions` (live now, upcoming today as faded quick-start cards, and searchable history cards; the Start session button opens a dialog with a schedule select), `/app/sessions/new` (the sessions page with the start dialog open), `/app/sessions/<id>` (details). **Take attendance** links to `/app/sessions/<id>/attendance` (the attendance module).
+Web routes: `/app/attendance` (live now, upcoming today as faded quick-start cards, and searchable history cards; the Start session button opens a dialog with a schedule select), `/app/attendance/new` (the sessions page with the start dialog open), `/app/attendance/<id>` (session facts, with the attendance module's section composed underneath by the route; `/app/attendance/<id>/attendance` redirects there).
 
 Starting and ending sessions are web-only server actions; the `/api/v1` token API does not expose them.

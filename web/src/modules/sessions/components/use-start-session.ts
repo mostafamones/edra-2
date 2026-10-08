@@ -42,7 +42,7 @@ export function useStartSession(academyId: string) {
       await queryClient.invalidateQueries({ queryKey: sessionsRootKey(targetAcademyId) });
       if (!isCurrentAcademy(targetAcademyId)) return;
       if (result.outcome === "existing") toast.info("This class is already live. Opened its session.");
-      router.push(href(`/app/sessions/${result.sessionId}`));
+      router.push(href(`/app/attendance/${result.sessionId}`));
     } catch {
       if (isCurrentAcademy(targetAcademyId)) toast.error("Could not start the session. Check your connection and try again.");
     } finally {

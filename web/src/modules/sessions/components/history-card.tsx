@@ -17,7 +17,7 @@ import { formatClock, formatDay, sessionAudience, startedByLabel } from "./forma
 export function HistorySessionCard({ session, canDelete }: { session: PastSession; canDelete: boolean }) {
   const href = useCanonicalHref();
   const [deleting, setDeleting] = useState(false);
-  const detailsHref = href(`/app/sessions/${session.id}`);
+  const detailsHref = href(`/app/attendance/${session.id}`);
   return (
     <Card size="sm" className="bg-card/40 py-4 px-2 shadow-sm border-l-3 border-foreground/20 ring-0 transition-colors hover:bg-muted/30">
       <CardContent className="py-1">
@@ -47,7 +47,7 @@ export function HistorySessionCard({ session, canDelete }: { session: PastSessio
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-fit">
             <DropdownMenuItem asChild className="whitespace-nowrap">
-              <Link href={href(`/app/sessions/${session.id}/attendance?from=sessions`)}><IconClipboardList />View attendance</Link>
+              <Link href={href(`/app/attendance/${session.id}`)}><IconClipboardList />View attendance</Link>
             </DropdownMenuItem>
             {canDelete && (
               <>

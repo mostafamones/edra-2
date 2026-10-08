@@ -26,12 +26,6 @@ export function formatDayMonth(iso: string) {
   return `${parts.find((part) => part.type === "day")?.value}/${parts.find((part) => part.type === "month")?.value}`;
 }
 
-/** Egyptian mobile as "+20 10 1234 5678". */
-export function formatPhone(phone: string) {
-  const match = /^\+20(\d{2})(\d{4})(\d{4})$/.exec(phone);
-  return match ? `+20 ${match[1]} ${match[2]} ${match[3]}` : phone;
-}
-
 /** Only the academy clock time, e.g. "4:52 PM". */
 export function formatClock(iso: string) {
   return timeFormat.format(new Date(iso));

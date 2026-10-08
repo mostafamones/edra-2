@@ -8,7 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { AttendanceStatus, SheetEntry } from "../types";
-import { formatClock, STATUS_LABELS } from "./labels";
+import { cn } from "@/lib/utils";
+import { formatClock, STATUS_DOTS, STATUS_LABELS } from "./labels";
 import { StatusInput } from "./status-input";
 import type { PendingEdits } from "./use-edits";
 
@@ -28,7 +29,7 @@ type Props = {
 export function SheetTable({ total, rows, editable, pending, selected, onSelect, onStatus, onClearFilters }: Props) {
   if (total === 0) {
     return (
-      <Empty className="min-h-48 rounded-xl border border-dashed border-border bg-card/20 py-14">
+      <Empty className="min-h-48 py-14">
         <EmptyHeader className="gap-1">
           <EmptyMedia variant="icon"><IconUsers aria-hidden="true" /></EmptyMedia>
           <EmptyTitle>No students on this roster</EmptyTitle>
@@ -39,7 +40,7 @@ export function SheetTable({ total, rows, editable, pending, selected, onSelect,
   }
   if (rows.length === 0) {
     return (
-      <Empty className="min-h-48 rounded-xl border border-dashed border-border py-14">
+      <Empty className="min-h-48 py-14">
         <EmptyHeader className="gap-1">
           <EmptyMedia variant="icon"><IconFilterOff aria-hidden="true" /></EmptyMedia>
           <EmptyTitle>No matching students</EmptyTitle>
@@ -53,12 +54,12 @@ export function SheetTable({ total, rows, editable, pending, selected, onSelect,
   const ids = rows.map((row) => row.annualStudentRecordId);
   const selectedHere = ids.filter((id) => selected.has(id)).length;
   return (
-    <div className="overflow-x-auto rounded-xl border border-border">
+    <div className="overflow-x-auto">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-muted/30">
           <TableRow>
             {editable && (
-              <TableHead className="w-10">
+              <TableHead className="w-10 pl-4">
                 <Checkbox
                   aria-label="Select all shown students"
                   checked={selectedHere === 0 ? false : selectedHere === ids.length ? true : "indeterminate"}
@@ -66,16 +67,16 @@ export function SheetTable({ total, rows, editable, pending, selected, onSelect,
                 />
               </TableHead>
             )}
-            <TableHead>Student</TableHead>
+            <TableHead className={editable ? undefined : "pl-4"}>Student</TableHead>
             <TableHead>Attendance</TableHead>
-            <TableHead className="w-75">Published</TableHead>
+            <TableHead className="w-90 pr-4">Published</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((entry) => (
             <TableRow key={entry.annualStudentRecordId} data-state={selected.has(entry.annualStudentRecordId) ? "selected" : undefined}>
               {editable && (
-                <TableCell>
+                <TableCell className="pl-4">
                   <Checkbox
                     aria-label={`Select ${entry.fullName}`}
                     checked={selected.has(entry.annualStudentRecordId)}
@@ -83,8 +84,8 @@ export function SheetTable({ total, rows, editable, pending, selected, onSelect,
                   />
                 </TableCell>
               )}
-              <TableCell>
-                <div className="flex min-h-[38px] flex-col justify-center gap-0.5">
+              <TableCell className={editable ? undefined : "pl-4"}>
+                <div className="flex min-h-10 flex-col justify-center gap-0.5">
                   <span className="flex flex-wrap items-center gap-1.5 font-medium">
                     {entry.fullName}
                     {entry.archived && <Badge variant="outline" className="text-[11px] text-muted-foreground">Archived</Badge>}
@@ -112,7 +113,7 @@ export function SheetTable({ total, rows, editable, pending, selected, onSelect,
               <TableCell>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {entry.publishedStatus
-                    ? <Badge variant="outline">{STATUS_LABELS[entry.publishedStatus]}</Badge>
+                    ? <Badge variant="outline" className="gap-1.5"><span className={cn("size-1.5 rounded-full", STATUS_DOTS[entry.publishedStatus])} aria-hidden="true" />{STATUS_LABELS[entry.publishedStatus]}</Badge>
                     : <span className="text-muted-foreground" aria-label="Not published">—</span>}
                   {entry.correctionPending && <Badge variant="secondary">Correction pending</Badge>}
                 </div>

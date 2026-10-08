@@ -30,4 +30,4 @@ Server (`server.ts`): `getAttendance`, `checkIn`, `changeAttendance`, `publishAt
 
 HTTP: `GET /api/sessions/<id>/attendance?academy=` (web, cookie) and the bearer-token `/api/v1` endpoints documented in `docs/api/sessions-attendance.openapi.yaml`.
 
-Web route: `/app/sessions/<id>/attendance` (linked from session details and the history menu as **Take attendance** / **View attendance**).
+Web: the `AttendanceSection` component, shown under the session facts on `/app/attendance/<id>`. The old `/app/attendance/<id>/attendance` route redirects there.

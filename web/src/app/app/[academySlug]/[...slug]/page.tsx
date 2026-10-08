@@ -6,6 +6,8 @@ import { platformOrigin, staffAcademyPath } from "@/lib/routing";
 
 export default async function StaffPreviewPage({ params }: { params: Promise<{ academySlug: string; slug: string[] }> }) {
   const { academySlug, slug } = await params;
+  // The sessions pages moved to /app/attendance; keep older links working.
+  if (slug[0] === "sessions") redirect(staffAcademyPath(academySlug, `/attendance${slug.slice(1).map((part) => `/${part}`).join("")}`));
   const href = `/app/${slug.join("/")}`;
   if (href === "/app/manage/account") redirect(`${platformOrigin("staff")}/account`);
   const previousRoutes: Record<string, string> = {
@@ -22,7 +24,7 @@ export default async function StaffPreviewPage({ params }: { params: Promise<{ a
     "/app/settings/integrations": "/app/manage/integrations",
     "/app/settings/account": "/app/manage/account",
     "/app/reports": "/app/students",
-    "/app/reports/attendance": "/app/sessions",
+    "/app/reports/attendance": "/app/attendance",
     "/app/reports/progress": "/app/students",
     "/app/reports/parents": "/app/students",
   };

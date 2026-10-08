@@ -24,9 +24,9 @@ export default async function AcademyLayout({ children, params }: {
         style={{ "--sidebar-width": "calc(var(--spacing) * 68)", "--header-height": "calc(var(--spacing) * 16)" } as React.CSSProperties}>
         <StaffSidebar />
         <BreadcrumbTitleProvider>
-          <SidebarInset className="min-h-0 overflow-y-auto">
+          <SidebarInset className="min-h-0 overflow-y-auto overscroll-none">
             <PortalHeader portal="staff" />
-            <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+            <div className="flex flex-1 flex-col">{children}</div>
           </SidebarInset>
         </BreadcrumbTitleProvider>
       </SidebarProvider>

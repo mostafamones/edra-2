@@ -36,7 +36,7 @@ export function EndSessionDialog({ academyId, sessionId, title, open, onClose }:
       if (!isCurrentAcademy(targetAcademyId)) return;
       toast.success(result.outcome === "already_ended" ? "Another staff member already ended this session." : `${title} has ended.`);
       onClose();
-      router.push(href("/app/sessions"));
+      router.push(href("/app/attendance"));
     } catch {
       if (isCurrentAcademy(targetAcademyId)) setError("Could not end the session. Check your connection and try again.");
     } finally {

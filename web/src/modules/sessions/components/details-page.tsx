@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { IconAlertCircle, IconArrowLeft, IconClipboardCheck, IconPlayerStop, IconQuestionMark } from "@tabler/icons-react";
+import { IconAlertCircle, IconArrowLeft, IconPlayerStop, IconQuestionMark } from "@tabler/icons-react";
 
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,16 +19,16 @@ import type { SessionDetail } from "../types";
 import { EndSessionDialog } from "./end-dialog";
 import { SessionFacts } from "./facts";
 import { formatDayMonth } from "./format";
-import { RosterTable } from "./roster-table";
 
 /** Refreshes so a session ended on another device stops looking live here. */
 const DETAIL_REFRESH_MS = 30_000;
 
-export function SessionDetailsPage({ id }: { id: string }) {
-  return <AcademyGate>{(academy) => <DetailsContent academy={academy} sessionId={id} />}</AcademyGate>;
+/** `/app/attendance/<id>`: the session's headline facts, with its attendance section underneath. */
+export function SessionDetailsPage({ id, attendance }: { id: string; attendance: ReactNode }) {
+  return <AcademyGate>{(academy) => <DetailsContent academy={academy} sessionId={id} attendance={attendance} />}</AcademyGate>;
 }
 
-function DetailsContent({ academy, sessionId }: { academy: AcademyEntry; sessionId: string }) {
+function DetailsContent({ academy, sessionId, attendance }: { academy: AcademyEntry; sessionId: string; attendance: ReactNode }) {
   const href = useCanonicalHref();
   const query = useQuery({
     queryKey: sessionQueryKey(academy.id, sessionId),
@@ -45,8 +45,7 @@ function DetailsContent({ academy, sessionId }: { academy: AcademyEntry; session
       {query.isPending && (
         <div role="status" aria-label="Loading session" className="flex flex-col gap-4">
           <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-28 rounded-xl" />
-          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-24 rounded-xl" />
         </div>
       )}
 
@@ -58,7 +57,7 @@ function DetailsContent({ academy, sessionId }: { academy: AcademyEntry; session
             <EmptyDescription>This session does not exist in this academy.</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Button size="sm" variant="outline" asChild><Link href={href("/app/sessions")}><IconArrowLeft />Back to sessions</Link></Button>
+            <Button size="sm" variant="outline" asChild><Link href={href("/app/attendance")}><IconArrowLeft />Back to sessions</Link></Button>
           </EmptyContent>
         </Empty>
       )}
@@ -77,12 +76,12 @@ function DetailsContent({ academy, sessionId }: { academy: AcademyEntry; session
       )}
 
       {query.data && <Details academyId={academy.id} session={query.data} />}
+      {query.data && attendance}
     </main>
   );
 }
 
 function Details({ academyId, session }: { academyId: string; session: SessionDetail }) {
-  const href = useCanonicalHref();
   const [ending, setEnding] = useState(false);
   const live = session.state === "live";
   return (
@@ -96,21 +95,12 @@ function Details({ academyId, session }: { academyId: string; session: SessionDe
             <Badge variant="secondary">{session.scheduleKind === "one_off" ? "One-off" : "Weekly"}</Badge>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {live && (
-            <Button variant="outline" className="text-destructive" onClick={() => setEnding(true)}><IconPlayerStop />End session</Button>
-          )}
-          <Button asChild>
-            <Link href={href(`/app/sessions/${session.id}/attendance`)}>
-              <IconClipboardCheck />{live ? "Take attendance" : "View attendance"}
-            </Link>
-          </Button>
-        </div>
+        {live && (
+          <Button variant="outline" className="text-destructive" onClick={() => setEnding(true)}><IconPlayerStop />End session</Button>
+        )}
       </div>
 
       <SessionFacts session={session} />
-
-      <RosterTable roster={session.roster} mandatory={session.mandatory} />
 
       <EndSessionDialog
         academyId={academyId}

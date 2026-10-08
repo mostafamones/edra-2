@@ -1,17 +1,13 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  IconAlertCircle, IconArrowLeft, IconChecklist, IconLock, IconQuestionMark, IconSearch,
-  IconUsers, IconUserX, IconWifiOff,
+  IconAlertCircle, IconChecklist, IconSearch, IconUsers, IconUserX, IconWifiOff, IconX,
 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -19,24 +15,25 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Toggle } from "@/components/ui/toggle";
 import type { AcademyEntry } from "@/modules/academies";
 import { AcademyGate, useAuth } from "@/modules/auth";
-import { useCanonicalHref } from "@/modules/navigation";
 import { AttendanceRequestError, attendanceQueryKey, fetchAttendance } from "../queries";
 import type { AttendanceSheet, AttendanceStatus, PublicationState } from "../types";
 import { CheckIn } from "./check-in";
-import { formatClock, formatMoment, INPUT_STATUSES, STATUS_LABELS } from "./labels";
+import { formatClock, formatMoment, INPUT_STATUSES, STATUS_DOTS, STATUS_LABELS, statusName } from "./labels";
+import { AttendanceOverview } from "./overview";
+import { SheetNotice } from "./notice";
 import { PublishDialog } from "./publish-dialog";
 import { SheetTable } from "./sheet-table";
 import { useAttendanceChannel, type ChannelStatus } from "./use-channel";
 import { useAttendanceEdits } from "./use-edits";
-import { Separator } from "@/components/ui/separator";
 
 /** Reconciliation while realtime works, and polling while it is degraded. */
 const RECONCILE_MS = 60_000;
@@ -50,13 +47,12 @@ const PUBLICATION_LABELS: Record<PublicationState, string> = {
   pending_corrections: "Corrections pending",
 };
 
-/** `/app/sessions/<id>/attendance`: take, review, and publish one session's attendance. */
-export function AttendancePage({ sessionId }: { sessionId: string }) {
+/** The attendance section of `/app/attendance/<id>`: take, review, and publish one session's attendance. */
+export function AttendanceSection({ sessionId }: { sessionId: string }) {
   return <AcademyGate>{(academy) => <SheetContent academy={academy} sessionId={sessionId} />}</AcademyGate>;
 }
 
 function SheetContent({ academy, sessionId }: { academy: AcademyEntry; sessionId: string }) {
-  const href = useCanonicalHref();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const key = attendanceQueryKey(academy.id, sessionId);
@@ -80,33 +76,16 @@ function SheetContent({ academy, sessionId }: { academy: AcademyEntry; sessionId
     refetchOnWindowFocus: true,
     retry: (count, error) => !(error instanceof AttendanceRequestError && [400, 403, 404].includes(error.status)) && count < 2,
   });
-  useBreadcrumbTitle(query.data ? `Attendance - ${query.data.session.scheduleTitle}` : "Attendance");
-  const missing = query.error instanceof AttendanceRequestError && [400, 404].includes(query.error.status);
 
   return (
-    <main className="page-shell">
+    <section aria-labelledby="attendance-heading" className="flex flex-col gap-4">
       {query.isPending && (
         <div role="status" aria-label="Loading attendance" className="flex flex-col gap-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-96 rounded-xl" />
         </div>
       )}
 
-      {missing && (
-        <Empty className="min-h-64 rounded-xl border border-dashed border-border py-20">
-          <EmptyHeader className="gap-1">
-            <EmptyMedia variant="icon"><IconQuestionMark aria-hidden="true" /></EmptyMedia>
-            <EmptyTitle className="text-xl font-semibold">Session not found</EmptyTitle>
-            <EmptyDescription>This session does not exist in this academy.</EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <Button size="sm" variant="outline" asChild><Link href={href("/app/sessions")}><IconArrowLeft />Back to sessions</Link></Button>
-          </EmptyContent>
-        </Empty>
-      )}
-
-      {query.isError && !missing && (
+      {query.isError && (
         <Alert variant="destructive">
           <IconAlertCircle />
           <AlertTitle>{query.data ? "Couldn’t refresh attendance" : "Couldn’t load attendance"}</AlertTitle>
@@ -122,31 +101,20 @@ function SheetContent({ academy, sessionId }: { academy: AcademyEntry; sessionId
       {query.data && (
         <Sheet sheet={query.data} syncedAt={query.dataUpdatedAt} channelStatus={channel.status} peers={channel.peers.map((peer) => peer.name)} />
       )}
-    </main>
+    </section>
   );
 }
 
-const STATUS_DOTS: Record<AttendanceStatus, string> = {
-  present: "bg-emerald-500", late: "bg-amber-500", absent: "bg-red-500", excused: "bg-sky-500", unknown: "bg-muted-foreground/60",
-};
-
-/** A count that doubles as a filter: click to show only that status, click again to clear. */
-function StatTile({ label, count, dot, active, onClick }: { label: string; count: number; dot?: string; active: boolean; onClick: () => void }) {
+/** A status filter chip with its color and count; pressing an active chip clears the filter. */
+function FilterChip({ label, count, dot, pressed, onPressedChange }: {
+  label: string; count: number; dot?: string; pressed: boolean; onPressedChange: (pressed: boolean) => void;
+}) {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        "flex flex-col gap-0.5 rounded-xl border px-3 py-2 text-left transition-colors outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50",
-        active ? "border-foreground/30 bg-muted/50" : "border-border",
-      )}
-    >
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        {dot && <span className={cn("size-1.5 rounded-full", dot)} aria-hidden="true" />}{label}
-      </span>
-      <span className="text-lg font-semibold tabular-nums">{count}</span>
-    </button>
+    <Toggle size="sm" variant="outline" pressed={pressed} onPressedChange={onPressedChange} className="gap-1.5 rounded-full px-3 aria-pressed:border-foreground/25">
+      {dot && <span className={cn("size-2 rounded-full", dot)} aria-hidden="true" />}
+      {label}
+      <span className="text-muted-foreground tabular-nums">{count}</span>
+    </Toggle>
   );
 }
 
@@ -186,7 +154,6 @@ function SyncStatus({ status, syncedAt, peers }: { status: ChannelStatus; synced
 }
 
 function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceSheet; syncedAt: number; channelStatus: ChannelStatus; peers: string[] }) {
-  const href = useCanonicalHref();
   const { session } = sheet;
   const edits = useAttendanceEdits(session.academyId, session.id);
   const [search, setSearch] = useState("");
@@ -230,142 +197,128 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
     if (saved) setMarkingAbsent(false);
   }
 
-  // Opened from the sessions list (not the details page), so Back returns there.
-  const fromSessions = useSearchParams().get("from") === "sessions";
   const canPublish = sheet.permittedActions.publish && sheet.publication !== "published";
 
   return (
     <>
-      <div className="flex flex-col gap-3">
-        <Button variant="ghost" size="sm" className="-ml-2 w-fit text-muted-foreground" asChild>
-          {fromSessions
-            ? <Link href={href("/app/sessions")}><IconArrowLeft />Sessions</Link>
-            : <Link href={href(`/app/sessions/${session.id}`)}><IconArrowLeft />Session details</Link>}
-        </Button>
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-          <div className="flex min-w-0 flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="font-heading text-2xl font-bold tracking-tight">{session.scheduleTitle}</h1>
-            </div>
-            <div className="flex flex-row gap-2 items-center">
-              <p className="text-sm text-muted-foreground">
-                {[session.groupName, session.mandatory ? "Mandatory" : "Optional"].filter(Boolean).join(" · ")}
-              </p>
-              <SyncStatus status={channelStatus} syncedAt={syncedAt} peers={peers} />
-              <Badge variant={sheet.publication === "published" ? "outline" : "secondary"}>{PUBLICATION_LABELS[sheet.publication]}</Badge>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-              {sheet.permittedActions.publish && (
+      <Card className="gap-0 bg-card/20 py-0 shadow-none">
+        <CardHeader className="border-b py-4 items-center flex">
+          <CardTitle className="flex flex-1 items-center gap-2.5">
+            <h2 id="attendance-heading" className="text-lg font-bold tracking-tight">Attendance</h2>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant={sheet.publication === "published" ? "outline" : "secondary"}>{PUBLICATION_LABELS[sheet.publication]}</Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                {sheet.lastPublishedAt
+                  ? <>Last published {formatMoment(sheet.lastPublishedAt)}{sheet.lastPublishedByName ? ` by ${sheet.lastPublishedByName}` : ""}.</>
+                  : "Drafts stay private until you publish them."}
+              </TooltipContent>
+            </Tooltip>
+          </CardTitle>
+          <CardAction className="flex flex-wrap items-center justify-end gap-2">
+            <SyncStatus status={channelStatus} syncedAt={syncedAt} peers={peers} />
+            {sheet.permittedActions.publish && (
               <Button onClick={() => setPublishing(true)} disabled={!canPublish}>
                 <IconChecklist />{sheet.publicationCount > 0 ? "Save" : "Publish"}
               </Button>
             )}
-          </div>
-        </div>
-      </div>
+          </CardAction>
+        </CardHeader>
 
-      {!session.yearOpen ? (
-        <Alert>
-          <IconLock />
-          <AlertTitle>Read-only</AlertTitle>
-          <AlertDescription>This academic year is closed, so attendance can no longer change.</AlertDescription>
-        </Alert>
-      ) : !live ? (
-        <Alert>
-          <IconAlertCircle />
-          <AlertTitle>This session has ended</AlertTitle>
-          <AlertDescription>Check-ins are closed. You can still correct attendance and publish it.</AlertDescription>
-        </Alert>
-      ) : null}
+        {(!session.yearOpen || !live) && <SheetNotice sessionId={session.id} kind={!session.yearOpen ? "read-only" : "ended"} />}
 
-      {sheet.permittedActions.checkIn && sheet.entries.length > 0 && (
-        <div className="rounded-xl border border-border bg-card/30 p-3">
-          <CheckIn academyId={session.academyId} sessionId={session.id} entries={sheet.entries} showCodes={sheet.studentCodesEnabled} />
-        </div>
-      )}
-
-      <div role="group" aria-label="Filter by status" className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-        <StatTile label="Roster" count={sheet.counts.total} active={filter === "all"} onClick={() => setFilter("all")} />
-        {INPUT_STATUSES.map((status) => (
-          <StatTile
-            key={status}
-            label={STATUS_LABELS[status]}
-            count={sheet.counts[status]}
-            dot={STATUS_DOTS[status]}
-            active={filter === status}
-            onClick={() => setFilter(filter === status ? "all" : status)}
-          />
-        ))}
-      </div>
-
-      <Separator />
-
-      {sheet.entries.length > 0 && (
-        <div className="flex items-center justify-between">
-          <div>
-            {sheet.lastPublishedAt && (
-              <p className="text-sm text-muted-foreground">
-                Last published {formatMoment(sheet.lastPublishedAt)}{sheet.lastPublishedByName ? <span> by <strong>{sheet.lastPublishedByName}</strong></span> : ""}.
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {corrections > 0 && (
-              <Button size="default" variant="outline" className={filter === "correction" ? "bg-foreground/20!" : ""} aria-pressed={filter === "correction"} onClick={() => setFilter(filter === "correction" ? "all" : "correction")}>
-                Pending<Badge variant="outline" className="tabular-nums">{corrections}</Badge>
-              </Button>
-            )}
-            <div className=" flex flex-wrap items-center gap-2">
-              {editable && selected.size > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" disabled={edits.bulkBusy}>
-                      {edits.bulkBusy ? "Saving…" : `Set ${selected.size} selected`}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {INPUT_STATUSES.map((status) => (
-                      <DropdownMenuItem key={status} onSelect={() => void setSelectedStatus(status)}>{STATUS_LABELS[status]}</DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+        {sheet.entries.length > 0 && (
+          <div className="px-4 pt-4 pb-3">
+            <AttendanceOverview
+              counts={sheet.counts}
+              action={sheet.permittedActions.checkIn && (
+                <CheckIn academyId={session.academyId} sessionId={session.id} entries={sheet.entries} showCodes={sheet.studentCodesEnabled} />
               )}
-              {editable && session.mandatory && unrecorded.length > 0 && (
-                <Button variant="outline" className="text-destructive" onClick={() => setMarkingAbsent(true)} disabled={edits.bulkBusy}>
-                  <IconUserX />Mark rest absent
-                </Button>
+            />
+          </div>
+        )}
+
+        {sheet.entries.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+            <div role="group" aria-label="Filter by status" className="flex flex-wrap items-center gap-1.5">
+              <FilterChip label="All" count={sheet.counts.total} pressed={filter === "all"} onPressedChange={() => setFilter("all")} />
+              {INPUT_STATUSES.map((status) => (
+                <FilterChip
+                  key={status}
+                  label={statusName(status)}
+                  count={sheet.counts[status]}
+                  dot={STATUS_DOTS[status]}
+                  pressed={filter === status}
+                  onPressedChange={(pressed) => setFilter(pressed ? status : "all")}
+                />
+              ))}
+              {corrections > 0 && (
+                <FilterChip
+                  label="Corrections"
+                  count={corrections}
+                  dot="bg-foreground/40"
+                  pressed={filter === "correction"}
+                  onPressedChange={(pressed) => setFilter(pressed ? "correction" : "all")}
+                />
               )}
             </div>
-            <InputGroup className="w-sm sm:max-w-xs">
-              <InputGroupInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search students" aria-label="Search students" />
-              <InputGroupAddon><IconSearch /></InputGroupAddon>
-            </InputGroup>
+            <div className="flex flex-wrap items-center gap-2">
+              {editable && session.mandatory && unrecorded.length > 0 && (
+                <Button variant="outline" size="sm" className="text-destructive" onClick={() => setMarkingAbsent(true)} disabled={edits.bulkBusy}>
+                  <IconUserX />Mark {unrecorded.length} untracked absent
+                </Button>
+              )}
+              <InputGroup className="w-full sm:w-64">
+                <InputGroupInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search students" aria-label="Search students" />
+                <InputGroupAddon><IconSearch /></InputGroupAddon>
+              </InputGroup>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <SheetTable
-        total={sheet.entries.length}
-        rows={rows}
-        editable={editable}
-        pending={edits.pending}
-        selected={selected}
-        onSelect={select}
-        onStatus={(entry, status) => void edits.setStatus(entry, status)}
-        onClearFilters={() => { setSearch(""); setFilter("all"); }}
-      />
+        {editable && selected.size > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2">
+            <span className="text-sm font-medium">{selected.size} selected</span>
+            <div className="flex items-center gap-1.5">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" disabled={edits.bulkBusy}>{edits.bulkBusy ? "Saving…" : "Set status"}</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {INPUT_STATUSES.map((status) => (
+                    <DropdownMenuItem key={status} onSelect={() => void setSelectedStatus(status)}>
+                      <span className={cn("size-2 rounded-full", STATUS_DOTS[status])} aria-hidden="true" />{statusName(status)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button size="icon-sm" variant="ghost" aria-label="Clear selection" onClick={() => setSelected(new Set())} disabled={edits.bulkBusy}>
+                <IconX />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <SheetTable
+          total={sheet.entries.length}
+          rows={rows}
+          editable={editable}
+          pending={edits.pending}
+          selected={selected}
+          onSelect={select}
+          onStatus={(entry, status) => void edits.setStatus(entry, status)}
+          onClearFilters={() => { setSearch(""); setFilter("all"); }}
+        />
+      </Card>
 
       {publishing && <PublishDialog sheet={sheet} onClose={() => setPublishing(false)} />}
 
       <AlertDialog open={markingAbsent} onOpenChange={(next) => { if (!next && !edits.bulkBusy) setMarkingAbsent(false); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mark {unrecorded.length} unrecorded {unrecorded.length === 1 ? "student" : "students"} absent?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Only expected students still marked Unknown change. This is a draft: nothing is official until you publish.
-              If someone records one of them first, nothing changes and you can review again.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Mark {unrecorded.length} untracked {unrecorded.length === 1 ? "student" : "students"} absent?</AlertDialogTitle>
+            <AlertDialogDescription>Nothing is official until you publish.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={edits.bulkBusy}>Cancel</AlertDialogCancel>

@@ -61,7 +61,7 @@ export type StaffNavSection = {
 };
 
 export const STAFF_WORKSPACE_SECTIONS: readonly (StaffNavSection & { icon: NavIcon })[] = [
-  { label: "Teaching", icon: "schedules", hrefs: ["/app/schedules", "/app/sessions"] },
+  { label: "Teaching", icon: "schedules", hrefs: ["/app/schedules", "/app/attendance"] },
   { label: "Students", icon: "students", hrefs: ["/app/students", "/app/groups"] },
   { label: "Content", icon: "content", hrefs: ["/app/content", "/app/releases"] },
   { label: "Assessments", icon: "assignments", hrefs: ["/app/assignments", "/app/quizzes", "/app/exams", "/app/marking", "/app/results"] },
@@ -121,8 +121,8 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         icon: "schedules",
       },
       {
-        label: "Sessions",
-        href: "/app/sessions",
+        label: "Attendance",
+        href: "/app/attendance",
         icon: "sessions",
       },
     ],
@@ -463,7 +463,7 @@ export const STAFF_CREATE_ITEMS: readonly NavItem[] = [
   },
   {
     label: "Start session",
-    href: "/app/sessions/new",
+    href: "/app/attendance/new",
     icon: "sessions",
   },
   {

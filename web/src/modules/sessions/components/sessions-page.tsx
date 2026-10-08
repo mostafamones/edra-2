@@ -22,7 +22,7 @@ import { UpcomingCard } from "./upcoming-card";
 import { useSessionsData } from "./use-start-data";
 import { useStartSession } from "./use-start-session";
 
-/** `startOpen` opens the start dialog on load (the /sessions/new route). */
+/** `startOpen` opens the start dialog on load (the /attendance/new route). */
 export function SessionsPage({ startOpen = false }: { startOpen?: boolean }) {
   return <AcademyGate>{(academy) => <SessionsContent academy={academy} startOpen={startOpen} />}</AcademyGate>;
 }
@@ -60,7 +60,7 @@ function SessionsContent({ academy, startOpen }: { academy: AcademyEntry; startO
   const startButton = <Button size="sm" onClick={() => setDialogOpen(true)}><IconPlayerPlay />Start session</Button>;
   const onDialogChange = (open: boolean) => {
     setDialogOpen(open);
-    if (!open && startOpen) router.replace(href("/app/sessions"));
+    if (!open && startOpen) router.replace(href("/app/attendance"));
   };
 
   return (

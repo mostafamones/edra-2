@@ -76,7 +76,7 @@ export function StartSessionDialog({ academyId, open, onOpenChange, liveBySchedu
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           {liveId ? (
-            <Button asChild><Link href={href(`/app/sessions/${liveId}`)}>Open live session</Link></Button>
+            <Button asChild><Link href={href(`/app/attendance/${liveId}`)}>Open live session</Link></Button>
           ) : (
             <Button onClick={() => void start(scheduleId)} disabled={!scheduleId || pendingId !== null}>
               {pendingId ? "Starting…" : "Start session"}
