@@ -6,7 +6,8 @@ import { Field, FieldDescription, FieldError } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Group, Level, Track } from "@/modules/groups";
 import type { ScheduleFormValues } from "../validation";
-import { Segmented } from "./segmented";
+import { LevelTrackSelect } from "@/components/shared/level-track";
+import { Segmented } from "@/components/shared/segmented";
 
 type Props = {
   groups: Group[];
@@ -23,15 +24,12 @@ const MODES: { value: Mode; label: string }[] = [
   { value: "program", label: "Level / track" },
 ];
 
-const ALL_TRACKS = "__all__";
-
 /** Who the schedule is for: one group, or a program (a level, optionally narrowed to one track). */
 export function AudienceFields({ groups, levels, tracks, levelNames, disabled }: Props) {
   const { control, setValue, formState: { errors } } = useFormContext<ScheduleFormValues>();
   const audience = useWatch({ control, name: "audience" });
-  const levelId = useWatch({ control, name: "levelId" });
+  const trackId = useWatch({ control, name: "trackId" });
   const mode: Mode = audience === "group" ? "group" : "program";
-  const levelTracks = tracks.filter((track) => track.level_id === levelId);
   const trackNames = new Map(tracks.map((track) => [track.id, track.name]));
   const levelName = (id: string) => levelNames[id] ?? id;
   const clear = { shouldDirty: true, shouldValidate: false } as const;
@@ -76,57 +74,22 @@ export function AudienceFields({ groups, levels, tracks, levelNames, disabled }:
           <FieldError>{errors.groupId?.message}</FieldError>
         </Field>
       ) : (
-        <div className={`grid gap-5 ${levelTracks.length ? "sm:grid-cols-2" : ""}`}>
-          <Field data-invalid={Boolean(errors.levelId) || undefined}>
-            <Controller
-              control={control}
-              name="levelId"
-              render={({ field }) => (
-                <Select
-                  value={field.value}
-                  onValueChange={(value) => { field.onChange(value); setValue("trackId", "", clear); setValue("audience", "level", clear); }}
-                  disabled={disabled}
-                >
-                  <SelectTrigger id="schedule-level" aria-label="Level" className="w-full" aria-invalid={Boolean(errors.levelId) || undefined}>
-                    <SelectValue placeholder="Choose a level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {levels.map((level) => <SelectItem key={level.level_id} value={level.level_id}>{levelName(level.level_id)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
+        <Controller
+          control={control}
+          name="levelId"
+          render={({ field }) => (
+            <LevelTrackSelect
+              id="schedule" levels={levels} tracks={tracks} levelNames={levelNames} disabled={disabled}
+              levelId={field.value} trackId={trackId}
+              levelError={errors.levelId?.message} trackError={errors.trackId?.message}
+              onChange={(next) => {
+                field.onChange(next.levelId);
+                setValue("trackId", next.trackId, clear);
+                setValue("audience", next.trackId ? "program" : "level", clear);
+              }}
             />
-            <FieldError>{errors.levelId?.message}</FieldError>
-          </Field>
-          {levelTracks.length > 0 && (
-            <Field data-invalid={Boolean(errors.trackId) || undefined}>
-              <Controller
-                control={control}
-                name="trackId"
-                render={({ field }) => (
-                  <Select
-                    value={field.value || ALL_TRACKS}
-                    onValueChange={(value) => {
-                      const trackId = value === ALL_TRACKS ? "" : value;
-                      field.onChange(trackId);
-                      setValue("audience", trackId ? "program" : "level", clear);
-                    }}
-                    disabled={disabled}
-                  >
-                    <SelectTrigger id="schedule-track" aria-label="Track" className="w-full" aria-invalid={Boolean(errors.trackId) || undefined}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_TRACKS}>All tracks</SelectItem>
-                      {levelTracks.map((track) => <SelectItem key={track.id} value={track.id}>{track.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              <FieldError>{errors.trackId?.message}</FieldError>
-            </Field>
           )}
-        </div>
+        />
       )}
       <FieldError>{errors.audience?.message}</FieldError>
     </div>

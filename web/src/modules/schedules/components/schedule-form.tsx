@@ -29,7 +29,7 @@ import {
 } from "../validation";
 import { AudienceFields } from "./audience-fields";
 import { ChoiceCards } from "@/components/shared/choice-cards";
-import { Segmented } from "./segmented";
+import { Segmented } from "@/components/shared/segmented";
 import { SessionFields } from "./session-fields";
 import { SlotFields } from "./slot-fields";
 import { Separator } from "@/components/ui/separator";
