@@ -1,0 +1,552 @@
+[
+  {
+    "prompt": "What is the capital of France?",
+    "marks": 1,
+    "choices": [
+      "Berlin",
+      "Madrid",
+      "Paris",
+      "Rome"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "How many days are in a leap year?",
+    "marks": 1,
+    "choices": [
+      "364",
+      "365",
+      "366",
+      "367"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "Which planet is known as the Red Planet?",
+    "marks": 1,
+    "choices": [
+      "Venus",
+      "Mars",
+      "Jupiter",
+      "Saturn"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "What is 7 × 8?",
+    "marks": 1,
+    "choices": [
+      "54",
+      "56",
+      "58",
+      "64"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "Which animal is known as the King of the Jungle?",
+    "marks": 1,
+    "choices": [
+      "Tiger",
+      "Elephant",
+      "Lion",
+      "Gorilla"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "What color do you get by mixing blue and yellow?",
+    "marks": 1,
+    "choices": [
+      "Green",
+      "Purple",
+      "Orange",
+      "Brown"
+    ],
+    "answer": "A"
+  },
+  {
+    "prompt": "How many continents are there?",
+    "marks": 1,
+    "choices": [
+      "5",
+      "6",
+      "7",
+      "8"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "What is the largest ocean on Earth?",
+    "marks": 1,
+    "choices": [
+      "Atlantic",
+      "Indian",
+      "Arctic",
+      "Pacific"
+    ],
+    "answer": "D"
+  },
+  {
+    "prompt": "Which gas do plants absorb from the air?",
+    "marks": 1,
+    "choices": [
+      "Oxygen",
+      "Carbon dioxide",
+      "Nitrogen",
+      "Hydrogen"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "What is the freezing point of water in Celsius?",
+    "marks": 1,
+    "choices": [
+      "0°",
+      "32°",
+      "100°",
+      "-10°"
+    ],
+    "answer": "A"
+  },
+  {
+    "prompt": "Which is the longest river in Africa?",
+    "marks": 1,
+    "choices": [
+      "Congo",
+      "Niger",
+      "Nile",
+      "Zambezi"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "How many sides does a hexagon have?",
+    "marks": 1,
+    "choices": [
+      "5",
+      "6",
+      "7",
+      "8"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "In which country are the Pyramids of Giza?",
+    "marks": 1,
+    "choices": [
+      "Egypt",
+      "Mexico",
+      "Peru",
+      "Sudan"
+    ],
+    "answer": "A"
+  },
+  {
+    "prompt": "What is the chemical symbol for water?",
+    "marks": 1,
+    "choices": [
+      "O2",
+      "H2O",
+      "CO2",
+      "HO"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "Which instrument has 88 keys?",
+    "marks": 1,
+    "choices": [
+      "Guitar",
+      "Violin",
+      "Piano",
+      "Flute"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "What is the smallest prime number?",
+    "marks": 1,
+    "choices": [
+      "0",
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "Which organ pumps blood around the body?",
+    "marks": 1,
+    "choices": [
+      "Lungs",
+      "Liver",
+      "Brain",
+      "Heart"
+    ],
+    "answer": "D"
+  },
+  {
+    "prompt": "What is the capital of Japan?",
+    "marks": 1,
+    "choices": [
+      "Kyoto",
+      "Osaka",
+      "Tokyo",
+      "Seoul"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "How many minutes are in an hour?",
+    "marks": 1,
+    "choices": [
+      "30",
+      "60",
+      "90",
+      "100"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "Which language is spoken in Brazil?",
+    "marks": 1,
+    "choices": [
+      "Spanish",
+      "Portuguese",
+      "French",
+      "English"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "Who painted the Mona Lisa?",
+    "marks": 1.5,
+    "choices": [
+      "Michelangelo",
+      "Raphael",
+      "Leonardo da Vinci",
+      "Donatello"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "What is the hardest natural substance?",
+    "marks": 1.5,
+    "choices": [
+      "Gold",
+      "Iron",
+      "Diamond",
+      "Quartz"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "Which element has the chemical symbol Fe?",
+    "marks": 1.5,
+    "choices": [
+      "Fluorine",
+      "Iron",
+      "Lead",
+      "Francium"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "In what year did World War II end?",
+    "marks": 1.5,
+    "choices": [
+      "1943",
+      "1944",
+      "1945",
+      "1946"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "What is the square root of 144?",
+    "marks": 1.5,
+    "choices": [
+      "10",
+      "11",
+      "12",
+      "14"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "Who wrote 'Romeo and Juliet'?",
+    "marks": 1.5,
+    "choices": [
+      "Charles Dickens",
+      "William Shakespeare",
+      "Jane Austen",
+      "Mark Twain"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "Which planet has the most known moons?",
+    "marks": 1.5,
+    "choices": [
+      "Jupiter",
+      "Saturn",
+      "Uranus",
+      "Neptune"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "What is the capital of Australia?",
+    "marks": 1.5,
+    "choices": [
+      "Sydney",
+      "Melbourne",
+      "Canberra",
+      "Perth"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "How many bones are in the adult human body?",
+    "marks": 1.5,
+    "choices": [
+      "196",
+      "206",
+      "216",
+      "226"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "Which scientist proposed the three laws of motion?",
+    "marks": 1.5,
+    "choices": [
+      "Einstein",
+      "Galileo",
+      "Newton",
+      "Kepler"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "What is the largest desert in the world (including polar)?",
+    "marks": 1.5,
+    "choices": [
+      "Sahara",
+      "Gobi",
+      "Antarctic",
+      "Arabian"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "Which country gifted the Statue of Liberty to the USA?",
+    "marks": 1.5,
+    "choices": [
+      "England",
+      "France",
+      "Spain",
+      "Italy"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "What is the main language of Egypt?",
+    "marks": 1.5,
+    "choices": [
+      "Arabic",
+      "Coptic",
+      "French",
+      "Turkish"
+    ],
+    "answer": "A"
+  },
+  {
+    "prompt": "What is 15% of 200?",
+    "marks": 1.5,
+    "choices": [
+      "15",
+      "20",
+      "30",
+      "35"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "Which blood type is the universal donor?",
+    "marks": 1.5,
+    "choices": [
+      "A+",
+      "AB+",
+      "O-",
+      "B-"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "What is the speed of light in a vacuum, approximately?",
+    "marks": 2,
+    "choices": [
+      "300,000 km/s",
+      "150,000 km/s",
+      "30,000 km/s",
+      "3,000,000 km/s"
+    ],
+    "answer": "A"
+  },
+  {
+    "prompt": "Who developed the theory of general relativity?",
+    "marks": 2,
+    "choices": [
+      "Niels Bohr",
+      "Albert Einstein",
+      "Max Planck",
+      "Werner Heisenberg"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "In which year did the Berlin Wall fall?",
+    "marks": 2,
+    "choices": [
+      "1987",
+      "1989",
+      "1991",
+      "1993"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "What is the derivative of sin(x)?",
+    "marks": 2,
+    "choices": [
+      "-cos(x)",
+      "cos(x)",
+      "tan(x)",
+      "-sin(x)"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "Which element has the highest electronegativity?",
+    "marks": 2,
+    "choices": [
+      "Oxygen",
+      "Chlorine",
+      "Fluorine",
+      "Nitrogen"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "Who was the first woman to win a Nobel Prize?",
+    "marks": 2,
+    "choices": [
+      "Rosalind Franklin",
+      "Marie Curie",
+      "Ada Lovelace",
+      "Dorothy Hodgkin"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "What is the capital of Canada?",
+    "marks": 2,
+    "choices": [
+      "Toronto",
+      "Vancouver",
+      "Montreal",
+      "Ottawa"
+    ],
+    "answer": "D"
+  },
+  {
+    "prompt": "Which mathematician is known for the incompleteness theorems?",
+    "marks": 2,
+    "choices": [
+      "Gödel",
+      "Hilbert",
+      "Turing",
+      "Cantor"
+    ],
+    "answer": "A"
+  },
+  {
+    "prompt": "What is the sum of the interior angles of a pentagon?",
+    "marks": 2,
+    "choices": [
+      "360°",
+      "450°",
+      "540°",
+      "720°"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "Which dynasty built the Great Wall's best-known sections?",
+    "marks": 2,
+    "choices": [
+      "Han",
+      "Tang",
+      "Ming",
+      "Qing"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "What is the value of e (Euler's number) to three decimals?",
+    "marks": 3,
+    "choices": [
+      "2.718",
+      "2.716",
+      "3.142",
+      "1.618"
+    ],
+    "answer": "A"
+  },
+  {
+    "prompt": "Which subatomic particle was discovered by James Chadwick in 1932?",
+    "marks": 3,
+    "choices": [
+      "Electron",
+      "Proton",
+      "Neutron",
+      "Positron"
+    ],
+    "answer": "C"
+  },
+  {
+    "prompt": "What is the integral of 1/x dx?",
+    "marks": 3,
+    "choices": [
+      "x²/2 + C",
+      "ln|x| + C",
+      "1/x² + C",
+      "e^x + C"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "Which treaty ended the Thirty Years' War in 1648?",
+    "marks": 3,
+    "choices": [
+      "Treaty of Utrecht",
+      "Peace of Westphalia",
+      "Treaty of Versailles",
+      "Treaty of Paris"
+    ],
+    "answer": "B"
+  },
+  {
+    "prompt": "How many distinct prime factors does 2310 have?",
+    "marks": 3,
+    "choices": [
+      "3",
+      "4",
+      "5",
+      "6"
+    ],
+    "answer": "C"
+  }
+]
