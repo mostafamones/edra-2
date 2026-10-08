@@ -26,4 +26,6 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_codes.sql
 psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_code_changes.sql
 psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_code_generation.sql
 psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_code_checkin.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/assignments.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/assignment_marks.sql
 bash supabase/tests/concurrency.sh
