@@ -275,7 +275,7 @@ function AssignmentFields({ academy, assignment, onSaved, onCancel, onStatusChan
         <Separator className="flex-1" />
       </div>
       <FieldSet className="gap-4">
-        <AudienceFields groups={groups} levels={levels} tracks={tracks} levelNames={levelNames} disabled={locked} />
+        <AudienceFields academyId={academy.id} academicYearId={year.id} groups={groups} levels={levels} tracks={tracks} levelNames={levelNames} disabled={locked} />
       </FieldSet>
       </div>
     ),

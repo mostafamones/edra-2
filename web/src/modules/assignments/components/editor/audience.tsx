@@ -1,6 +1,7 @@
 "use client";
 
 import { Controller, useFormContext, useWatch } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   Combobox, ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxContent, ComboboxEmpty, ComboboxItem, ComboboxList,
@@ -8,17 +9,20 @@ import {
 } from "@/components/ui/combobox";
 import { LevelTrackSelect } from "@/components/shared/level-track";
 import { Segmented } from "@/components/shared/segmented";
-import { Field, FieldError } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError } from "@/components/ui/field";
 import type { Group, Level, Track } from "@/modules/groups";
+import { loadAudiencePreview, previewQueryKey } from "../../queries";
 import type { AssignmentAudience } from "../../types";
 import type { AssignmentFormValues } from "../../validation";
 
 type Props = {
+  academyId: string;
+  academicYearId: string;
   groups: Group[];
   levels: Level[];
   tracks: Track[];
   levelNames: Record<string, string>;
-  /** The audience is locked once the assignment is published. */
+  /** The audience is locked once marking starts. */
   disabled?: boolean;
 };
 
@@ -32,7 +36,7 @@ const KINDS: { value: Kind; label: string }[] = [
 ];
 
 /** Who it's for, as on schedules: selected groups, or a level optionally narrowed to one track. */
-export function AudienceFields({ groups, levels, tracks, levelNames, disabled }: Props) {
+export function AudienceFields({ academyId, academicYearId, groups, levels, tracks, levelNames, disabled }: Props) {
   const { control, setValue, formState: { errors } } = useFormContext<AssignmentFormValues>();
   const [audience, trackId] = useWatch({ control, name: ["audience", "trackId"] });
   const kind: Kind = audience === "groups" ? "groups" : "program";
@@ -86,7 +90,36 @@ export function AudienceFields({ groups, levels, tracks, levelNames, disabled }:
         />
       )}
       <FieldError>{errors.audience?.message}</FieldError>
+      {!disabled && <AudienceCount academyId={academyId} academicYearId={academicYearId} />}
     </div>
+  );
+}
+
+const number = new Intl.NumberFormat("en");
+
+/** The advisory count of students the audience matches now; saving takes the actual snapshot. */
+function AudienceCount({ academyId, academicYearId }: { academyId: string; academicYearId: string }) {
+  const { control } = useFormContext<AssignmentFormValues>();
+  const [audience, levelId, trackId, groupIds] = useWatch({ control, name: ["audience", "levelId", "trackId", "groupIds"] });
+  const query = {
+    academicYearId, audience, levelId: audience === "groups" ? null : levelId || null,
+    trackId: audience === "program" ? trackId || null : null, groupIds: audience === "groups" ? [...groupIds].sort() : [],
+  };
+  const complete = audience === "groups" ? query.groupIds.length > 0 : Boolean(query.levelId) && (audience === "level" || Boolean(query.trackId));
+  const preview = useQuery({
+    queryKey: previewQueryKey(academyId, query),
+    queryFn: () => loadAudiencePreview(academyId, query),
+    enabled: complete,
+  });
+  if (!complete || preview.isError) return null;
+  if (preview.isPending) return <FieldDescription>Counting matching students…</FieldDescription>;
+  const { recipientCount, uncodedCount } = preview.data;
+  return (
+    <FieldDescription>
+      {recipientCount === 0
+        ? "No active students match this audience right now. Students who join later are added each time you save, until marking starts."
+        : <>{number.format(recipientCount)} active student{recipientCount === 1 ? "" : "s"} match now{uncodedCount > 0 ? `, ${number.format(uncodedCount)} without a student code` : ""}. Saving makes them this assignment’s students; once marking starts the list no longer changes.</>}
+    </FieldDescription>
   );
 }
 
