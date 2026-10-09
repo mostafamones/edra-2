@@ -26,6 +26,7 @@ describe("mark focus", () => {
     const focus = { kind: "question", id: "q2" } as const;
     expect([wrong, right, unanswered].map((row) => matchesFocus(row, { ...focus, outcome: "lost" }, 2))).toEqual([true, false, false]);
     expect([wrong, right, unanswered].map((row) => matchesFocus(row, { ...focus, outcome: "full" }, 2))).toEqual([false, true, false]);
+    expect([wrong, right, unanswered].map((row) => matchesFocus(row, { ...focus, outcome: "unmarked" }, 2))).toEqual([false, false, true]);
   });
 
   it("only counts part marks entered question by question", () => {

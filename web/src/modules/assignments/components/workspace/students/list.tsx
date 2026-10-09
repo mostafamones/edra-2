@@ -3,15 +3,16 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconAlertCircle, IconBolt, IconSearch, IconSearchOff, IconUsers } from "@tabler/icons-react";
+import { IconAlertCircle, IconBolt, IconSearch, IconSearchOff, IconUsers, IconX } from "@tabler/icons-react";
 
+import { FilterPopover, type FilterField } from "@/components/shared/filter-popover";
+import { SortPopover } from "@/components/shared/sort-popover";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAcademyScope } from "@/modules/auth";
@@ -20,19 +21,20 @@ import { focusScore, focusTarget, matchesFocus, type MarkFocus } from "../../../
 import { assignmentPermissions } from "../../../permissions";
 import { assignmentsRootKey } from "../../../queries";
 import { formatScore } from "../../../score";
-import type { Assignment, MarkFilter, PublishFailureReason, StudentWork } from "../../../types";
+import type { Assignment, MarkFilter, PublishFailureReason, StudentSort, StudentWork } from "../../../types";
 import { FocusFilter } from "./focus";
+import { StudentsPagination } from "./pagination";
 import { RESULT_BADGE, RESULT_LABELS, WORK_BADGE, WORK_LABELS } from "../../shared/labels";
 import { StudentSheet } from "../../marking/student";
 import { useAttemptKey, useMarks } from "../../../hooks/use-marks";
 import type { AcademyEntry } from "@/modules/academies";
 
 const FILTERS: { value: MarkFilter; label: string }[] = [
-  { value: "all", label: "All students" },
-  { value: "not_received", label: "Work not received" },
+  { value: "all", label: "All statuses" },
+  { value: "not_received", label: "Not received" },
   { value: "needs_marking", label: "Needs marking" },
-  { value: "marked", label: "Fully marked" },
-  { value: "unpublished", label: "Marked, not published" },
+  { value: "marked", label: "Marked" },
+  { value: "unpublished", label: "Ready to publish" },
 ];
 
 const MATCHES: Record<MarkFilter, (row: StudentWork) => boolean> = {
@@ -41,6 +43,20 @@ const MATCHES: Record<MarkFilter, (row: StudentWork) => boolean> = {
   needs_marking: (row) => (row.workStatus === "submitted" || row.workStatus === "late") && row.marking !== "complete",
   marked: (row) => row.marking === "complete",
   unpublished: (row) => row.marking === "complete" && row.publicationState !== "published",
+};
+
+const PAGE_SIZE = 10;
+
+const SORTS: { value: StudentSort; label: string }[] = [
+  { value: "default", label: "Name (A–Z)" },
+  { value: "marks_desc", label: "Highest marks" },
+  { value: "marked_desc", label: "Most recently marked" },
+];
+
+/** Students with nothing marked always sort last, so the order stays about marked work. */
+const COMPARE: Record<Exclude<StudentSort, "default">, (a: StudentWork, b: StudentWork) => number> = {
+  marks_desc: (a, b) => (a.total === null ? 1 : 0) - (b.total === null ? 1 : 0) || Number(b.total ?? 0) - Number(a.total ?? 0),
+  marked_desc: (a, b) => (a.markedParts === 0 ? 1 : 0) - (b.markedParts === 0 ? 1 : 0) || (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""),
 };
 
 const REASONS: Record<PublishFailureReason, string> = {
@@ -65,6 +81,9 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
   const { query, replace } = useMarks(assignment);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<MarkFilter>("all");
+  const [group, setGroup] = useState("all");
+  const [track, setTrack] = useState("all");
+  const [sort, setSort] = useState<StudentSort>("default");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -74,9 +93,22 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
   const students = query.data?.students;
   const term = search.trim().toLowerCase();
   const target = focus ? focusTarget(assignment, focus) : null;
-  const rows = useMemo(() => (students ?? []).filter((row) => MATCHES[filter](row)
+  const rows = useMemo(() => {
+    const matching = (students ?? []).filter((row) => MATCHES[filter](row)
+    && (group === "all" || (group === "none" ? row.placement?.groupId === null : row.placement?.groupId === group))
+    && (track === "all" || (track === "none" ? row.placement?.trackId === null : row.placement?.trackId === track))
     && (!focus || !target || matchesFocus(row, focus, target.max))
-    && (!term || row.fullName.toLowerCase().includes(term) || (row.studentCode ?? "").toLowerCase().includes(term))), [students, filter, term, focus, target]);
+    && (!term || row.fullName.toLowerCase().includes(term) || (row.studentCode ?? "").toLowerCase().includes(term)));
+    return sort === "default" ? matching : matching.sort(COMPARE[sort]);
+  }, [students, filter, group, track, term, focus, target, sort]);
+
+  // Any change to the search, filters, or focus returns to the first page.
+  const filterKey = JSON.stringify([term, filter, group, track, focus, sort]);
+  const [pagedKey, setPagedKey] = useState(filterKey);
+  const [page, setPage] = useState(0);
+  if (pagedKey !== filterKey) { setPagedKey(filterKey); setPage(0); }
+  const pageIndex = Math.min(page, Math.max(0, Math.ceil(rows.length / PAGE_SIZE) - 1));
+  const pageRows = rows.slice(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE);
 
   if (assignment.state === "draft") {
     return (
@@ -108,7 +140,7 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
   const chosen = students.filter((row) => selected.has(row.recordId) && publishable(row));
   const visiblePublishable = rows.filter(publishable);
   const allVisibleChosen = visiblePublishable.length > 0 && visiblePublishable.every((row) => selected.has(row.recordId));
-  const filtering = term !== "" || filter !== "all" || focus !== null;
+  const filtering = term !== "" || filter !== "all" || group !== "all" || track !== "all" || focus !== null;
 
   function toggle(recordId: string, on: boolean) {
     setSelected((current) => { const next = new Set(current); if (on) next.add(recordId); else next.delete(recordId); return next; });
@@ -148,33 +180,53 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
   const maxScore = formatScore(assignment.maxScore);
   const typedParts = new Set(assignment.parts.filter((part) => part.kind !== null).map((part) => part.id));
   const empty = students.length === 0;
+  const groups = new Map(students.flatMap((row) => row.placement?.groupId
+    ? [[row.placement.groupId, row.groupName ?? "Unnamed group"] as const] : []));
+  const tracks = new Map(students.flatMap((row) => row.placement?.trackId
+    ? [[row.placement.trackId, row.placement.trackName ?? "Unnamed track"] as const] : []));
+  const options = (values: Map<string, string>) => [...values].map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  const fields: FilterField[] = [
+    { id: "status", label: "Status", value: filter, defaultValue: "all", options: FILTERS,
+      onChange: (value) => setFilter(value as MarkFilter) },
+    { id: "group", label: "Group", value: group, defaultValue: "all",
+      options: [{ value: "all", label: "All groups" }, ...options(groups),
+        ...(students.some((row) => row.placement?.groupId === null) ? [{ value: "none", label: "No group" }] : [])],
+      onChange: setGroup },
+    ...(tracks.size > 0 ? [{ id: "track", label: "Track", value: track, defaultValue: "all",
+      options: [{ value: "all", label: "All tracks" }, ...options(tracks),
+        ...(students.some((row) => row.placement?.trackId === null) ? [{ value: "none", label: "No track" }] : [])],
+      onChange: setTrack }] : []),
+  ];
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-start gap-2">
-        <div className="flex flex-1 flex-wrap items-center gap-2">
-          <InputGroup className="sm:w-64">
-            <InputGroupInput type="search" placeholder="Search by name or code" aria-label="Search students" value={search} onChange={(event) => setSearch(event.target.value)} />
-            <InputGroupAddon><IconSearch /></InputGroupAddon>
-          </InputGroup>
-          <Select value={filter} onValueChange={(value) => setFilter(value as MarkFilter)}>
-            <SelectTrigger aria-label="Filter students" className="w-44"><SelectValue /></SelectTrigger>
-            <SelectContent>{FILTERS.map((entry) => <SelectItem key={entry.value} value={entry.value}>{entry.label}</SelectItem>)}</SelectContent>
-          </Select>
-          <FocusFilter assignment={assignment} focus={focus} onChange={onFocusChange} />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <InputGroup className="w-full sm:min-w-0 sm:max-w-lg sm:flex-1">
+          <InputGroupInput type="search" placeholder="Search students" aria-label="Search students" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <InputGroupAddon><IconSearch /></InputGroupAddon>
+        </InputGroup>
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          {focus && target && <FocusFilter focus={focus} onChange={onFocusChange} />}
+          <FilterPopover iconOnly fields={fields} />
+          <SortPopover value={sort} defaultValue="default" options={SORTS} onChange={(value) => setSort(value as StudentSort)} />
+          {canMark && (
+            <Button className="shrink-0" disabled={chosen.length === 0 || publishing} onClick={() => void publish()}>
+              {publishing ? "Publishing…" : chosen.length ? `Publish ${chosen.length} result${chosen.length === 1 ? "" : "s"}` : "Publish results"}
+            </Button>
+          )}
         </div>
-        {canMark && (
-          <Button className="shrink-0" disabled={chosen.length === 0 || publishing} onClick={() => void publish()}>
-            {publishing ? "Publishing…" : chosen.length ? `Publish ${chosen.length} result${chosen.length === 1 ? "" : "s"}` : "Publish results"}
-          </Button>
-        )}
       </div>
 
       {!empty && filtering && (
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          <span className="font-medium text-foreground tabular-nums">{rows.length}</span> of {students.length} students
-          {focus && target && <> {focus.outcome === "lost" ? "lost marks on" : "got full marks on"} <span className="font-medium text-foreground">{target.title}</span></>}
-        </p>
+        <div className="flex flex-col items-start gap-2">
+          {focus && target && (
+            <Badge variant="secondary" className="max-w-full gap-1 pl-2.5" title={target.title}>
+              <span className="truncate">{target.title}</span>
+              <Button variant="ghost" size="icon-sm" className="size-6" aria-label="Clear part or question filter" onClick={() => onFocusChange(null)}><IconX /></Button>
+            </Badge>
+          )}
+        </div>
       )}
 
       {rejection && (
@@ -201,9 +253,9 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
           <EmptyHeader className="gap-1">
             <EmptyMedia variant="icon"><IconSearchOff aria-hidden="true" /></EmptyMedia>
             <EmptyTitle>No matching students</EmptyTitle>
-            <EmptyDescription>{focus ? "Only students marked question by question on this part or question are counted." : filtering ? "No student matches this search and filter." : "Try a different name or code."}</EmptyDescription>
+            <EmptyDescription>{focus ? (focus.outcome === "unmarked" ? "Every student has a question-level mark on this part or question, or no student matches the other filters." : "Only students marked question by question on this part or question are counted.") : filtering ? "No student matches this search and filter." : "Try a different name or code."}</EmptyDescription>
           </EmptyHeader>
-          <EmptyContent><Button size="sm" variant="outline" onClick={() => { setSearch(""); setFilter("all"); onFocusChange(null); }}>Clear search and filters</Button></EmptyContent>
+          <EmptyContent><Button size="sm" variant="outline" onClick={() => { setSearch(""); setFilter("all"); setGroup("all"); setTrack("all"); onFocusChange(null); }}>Clear search and filters</Button></EmptyContent>
         </Empty>
       ) : (
         <div className="overflow-x-auto rounded-xl border">
@@ -220,6 +272,7 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
                       })} />
                   </TableHead>
                 )}
+                <TableHead className="w-28">Code</TableHead>
                 <TableHead>Student</TableHead>
                 <TableHead className="w-36">Work</TableHead>
                 <TableHead className="w-44">Result</TableHead>
@@ -229,7 +282,7 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => (
+              {pageRows.map((row) => (
                 <TableRow key={row.recordId}>
                   {canMark && (
                     <TableCell>
@@ -237,15 +290,15 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
                         onCheckedChange={(on) => toggle(row.recordId, on === true)} />
                     </TableCell>
                   )}
+                  <TableCell className="font-mono text-muted-foreground">{row.studentCode ?? "—"}</TableCell>
                   <TableCell>
                     <span className="font-medium">{row.fullName}</span>
                     {row.archived && <Badge variant="secondary" className="ml-2">Archived record</Badge>}
-                    <span className="block text-xs text-muted-foreground">{[row.studentCode, row.groupName].filter(Boolean).join(" · ") || "No code"}</span>
+                    {row.groupName && <span className="block text-xs text-muted-foreground">{row.groupName}</span>}
                   </TableCell>
                   <TableCell><Badge variant={WORK_BADGE[row.workStatus]}>{WORK_LABELS[row.workStatus]}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={RESULT_BADGE[row.publicationState]}>{RESULT_LABELS[row.publicationState]}</Badge>
-                    {row.publication && <span className="block text-xs text-muted-foreground tabular-nums">Official {formatScore(row.publication.total)} · v{row.publication.revision}</span>}
                   </TableCell>
                   {focus && target && <FocusCell score={focusScore(row, focus)} max={target.max} />}
                   <TableCell className="text-right tabular-nums">
@@ -264,6 +317,8 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
           </Table>
         </div>
       )}
+
+      {rows.length > PAGE_SIZE && <StudentsPagination pageIndex={pageIndex} pageSize={PAGE_SIZE} total={rows.length} onPageChange={setPage} />}
 
       <StudentSheet assignment={assignment} student={students.find((row) => row.recordId === editing) ?? null}
         onClose={() => setEditing(null)} onChanged={replace} />

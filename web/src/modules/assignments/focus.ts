@@ -2,9 +2,10 @@ import type { Assignment, StudentWork } from "./types";
 
 /**
  * A narrowing of the student list to one part or question: the students who lost marks on it, or
- * those who got full marks. Like the marks chart, only marks entered question by question count.
+ * those who got full marks, or those with no question-level mark. Like the marks chart,
+ * lost/full outcomes only count marks entered question by question.
  */
-export type MarkFocus = { kind: "part" | "question"; id: string; outcome: "lost" | "full" };
+export type MarkFocus = { kind: "part" | "question"; id: string; outcome: "lost" | "unmarked" | "full" };
 
 export type FocusTarget = { label: string; title: string; max: number };
 
@@ -32,9 +33,10 @@ export function focusScore(student: StudentWork, focus: Pick<MarkFocus, "kind" |
   return mark ? Number(mark.score) : null;
 }
 
-/** Whether the student belongs in the focused list: marked on it, and below (lost) or at (full) its maximum. */
+/** Unmarked means no question-level score; scored outcomes compare that score with the maximum. */
 export function matchesFocus(student: StudentWork, focus: MarkFocus, max: number): boolean {
   const score = focusScore(student, focus);
+  if (focus.outcome === "unmarked") return score === null;
   if (score === null) return false;
   return focus.outcome === "lost" ? score < max : score >= max;
 }
