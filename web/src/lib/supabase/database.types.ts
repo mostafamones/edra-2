@@ -3441,7 +3441,7 @@ export type Database = {
       assignment_mark_kind: "mark" | "excused"
       assignment_part_kind: "online_questions" | "answer_sheet" | "file_upload"
       assignment_result_effect_type: "result_published" | "result_corrected"
-      assignment_state: "draft" | "published" | "closed" | "archived"
+      assignment_state: "active" | "closed" | "archived"
       assignment_work_status:
         | "expected"
         | "submitted"
@@ -3607,7 +3607,7 @@ export const Constants = {
       assignment_mark_kind: ["mark", "excused"],
       assignment_part_kind: ["online_questions", "answer_sheet", "file_upload"],
       assignment_result_effect_type: ["result_published", "result_corrected"],
-      assignment_state: ["draft", "published", "closed", "archived"],
+      assignment_state: ["active", "closed", "archived"],
       assignment_work_status: [
         "expected",
         "submitted",

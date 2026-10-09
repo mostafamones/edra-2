@@ -79,7 +79,7 @@ Commands raise SQLSTATE `P0001` with a stable message, mapped in `errors.ts`: `v
 
 ## Public API
 
-Client-safe (`index.ts`): server actions `createAssignmentDraft`, `saveAssignment`, `changeAssignment`, `saveStudentMarks`, `recordStudentWork`, `publishStudentResults`, `lookUpStudent`; browser reads `loadAssignments`, `loadAssignment`, `loadMarks`, `loadRecipients`, `loadAudiencePreview`, `loadYears` and their query keys; `assignmentPermissions`; score helpers; types.
+Client-safe (`index.ts`): server actions `createNewAssignment`, `saveAssignment`, `changeAssignment`, `saveStudentMarks`, `recordStudentWork`, `announceStudentResults`, `lookUpStudent`; browser reads `loadAssignments`, `loadAssignment`, `loadMarks`, `loadRecipients`, `loadAudiencePreview`, `loadYears` and their query keys; `assignmentPermissions`; score helpers; types.
 
 Server (`server.ts`): `createAssignment`, `updateAssignment`, `changeAssignmentState`, `getAssignment`, `previewAudience`, `listAssignments`, `listMarks`, `saveMarks`, `recordWork`, `publishResults`, `resolveStudent`, `assignmentAcademy`, and the `/api/v1` responses (`v1.ts`). Each takes an optional `Authority` (default: the cookie session) so the future bearer API runs the same operations.
 

@@ -15,7 +15,7 @@ import { assignmentQueryKey, loadAssignment } from "../../queries";
 import { AssignmentFormPage } from "./page";
 import { NotFound } from "../shared/not-found";
 
-/** `/app/assignments/<id>/edit`: the whole draft, or only text details once published (Owner/Admin). */
+/** `/app/assignments/<id>/edit`: the whole setup until marking starts, then only text details (Owner/Admin). */
 export function EditAssignmentPage({ id }: { id: string }) {
   return <AcademyGate>{(academy) => <EditContent academy={academy} assignmentId={id} />}</AcademyGate>;
 }
@@ -62,12 +62,13 @@ function EditContent({ academy, assignmentId }: { academy: AcademyEntry; assignm
           <AlertDescription className="flex flex-col items-start gap-3">
             {assignment.state === "archived" || !assignment.yearOpen
               ? "Archived assignments and assignments of a closed academic year are read-only."
-              : "Only an Owner or Admin can edit an assignment after it is published."}
+              : "Only an Owner or Admin can edit an assignment once marking has started."}
             <Button variant="outline" size="sm" asChild><Link href={href(`/app/assignments/${assignment.id}`)}><IconArrowLeft />Back to assignment</Link></Button>
           </AlertDescription>
         </Alert>
       </main>
     );
   }
-  return <AssignmentFormPage title={assignment.state === "draft" ? "Edit draft" : "Edit assignment details"} academy={academy} assignment={assignment} />;
+  const title = assignmentPermissions(academy.role, assignment).editStructure ? "Edit assignment" : "Edit assignment details";
+  return <AssignmentFormPage title={title} academy={academy} assignment={assignment} />;
 }

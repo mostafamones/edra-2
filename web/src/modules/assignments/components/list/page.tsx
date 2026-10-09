@@ -109,7 +109,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
             {
               id: "state", label: "State", value: filters.state, defaultValue: DEFAULT_LIST_FILTERS.state,
               options: [
-                { value: "active", label: "All but archived" }, { value: ALL, label: "All states" },
+                { value: "unarchived", label: "All but archived" }, { value: ALL, label: "All states" },
                 ...ASSIGNMENT_STATES.map((state) => ({ value: state, label: STATE_LABELS[state] })),
               ],
               onChange: (state) => set({ state: state as AssignmentListFilters["state"] }),
@@ -158,7 +158,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
           <EmptyHeader className="gap-1">
             <EmptyMedia variant="icon"><IconFilePencil aria-hidden="true" /></EmptyMedia>
             <EmptyTitle className="text-xl font-semibold">No assignments yet</EmptyTitle>
-            <EmptyDescription className="leading-[1.4em]">Create homework with one or more marked parts, then publish it to a level, track, or groups.</EmptyDescription>
+            <EmptyDescription className="leading-[1.4em]">Create homework for a level, track, or groups, hand it out, then mark it and announce results.</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button size="sm" asChild><Link href={href("/app/assignments/new")}><IconPlus />Create assignment</Link></Button>
@@ -179,7 +179,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
                 state={row.state}
                 maxScore={row.max_score}
                 parts={row.assignment_parts}
-                students={row.state === "draft" ? null : number.format(row.recipient_count)}
+                students={number.format(row.recipient_count)}
                 dueAt={row.due_at}
               />
             ))}

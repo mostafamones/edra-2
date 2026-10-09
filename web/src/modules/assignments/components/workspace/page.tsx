@@ -31,7 +31,7 @@ import { AssignmentStudents } from "./students/list";
 /**
  * `/app/assignments/<id>`: one workspace for an assignment: a header (title, state, audience, due date,
  * actions), then an Overview tab (stats, marks chart, parts, top students) and a Students tab (the full
- * student list with result publication). Student submissions join it as a later slice.
+ * student list with result announcement). Student submissions join it as a later slice.
  */
 export function AssignmentWorkspace({ id }: { id: string }) {
   return <AcademyGate>{(academy) => <WorkspaceContent academy={academy} assignmentId={id} />}</AcademyGate>;
@@ -124,11 +124,13 @@ function Workspace({ academy, assignment }: { academy: AcademyEntry; assignment:
           <AlertDescription>This assignment belongs to a closed academic year.</AlertDescription>
         </Alert>
       )}
-      {assignment.state === "draft" && academy.role === "instructor" && (
+      {assignment.yearOpen && assignment.state !== "archived" && !assignment.ready && (
         <Alert>
           <IconAlertCircle />
-          <AlertTitle>Draft</AlertTitle>
-          <AlertDescription>An Owner or Admin publishes it to students when it’s ready.</AlertDescription>
+          <AlertTitle>Setup isn’t finished</AlertTitle>
+          <AlertDescription>
+            Finish every part’s questions and marks before recording work or marking. Nothing needs to be published.
+          </AlertDescription>
         </Alert>
       )}
 
@@ -137,7 +139,7 @@ function Workspace({ academy, assignment }: { academy: AcademyEntry; assignment:
           <TabsTrigger value="overview" className="flex-none px-3">Overview</TabsTrigger>
           <TabsTrigger value="students" className="flex-none px-3">
             Students
-            {assignment.state !== "draft" && <span className="text-xs text-muted-foreground tabular-nums">{assignment.recipientCount}</span>}
+            <span className="text-xs text-muted-foreground tabular-nums">{assignment.recipientCount}</span>
           </TabsTrigger>
         </TabsList>
         <TabsContent value="overview">

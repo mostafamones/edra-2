@@ -3,15 +3,13 @@ import { IconDeviceLaptop, IconFileUpload, IconListCheck, IconNumbers, type Icon
 import type { AssignmentAudience, AssignmentState, PartIssue, PartKind, PublicationState, WorkStatus } from "../../types";
 
 export const STATE_LABELS: Record<AssignmentState, string> = {
-  draft: "Draft",
-  published: "Published",
+  active: "Active",
   closed: "Closed",
   archived: "Archived",
 };
 
 export const STATE_BADGE: Record<AssignmentState, "default" | "secondary" | "outline" | "destructive"> = {
-  draft: "outline",
-  published: "default",
+  active: "default",
   closed: "secondary",
   archived: "secondary",
 };
@@ -33,9 +31,9 @@ export const WORK_BADGE: Record<WorkStatus, "default" | "secondary" | "outline" 
 };
 
 export const RESULT_LABELS: Record<PublicationState, string> = {
-  unpublished: "Not published",
-  published: "Published",
-  pending_correction: "Correction pending",
+  unpublished: "Not announced",
+  published: "Announced",
+  pending_correction: "Correction not announced",
 };
 
 export const RESULT_BADGE: Record<PublicationState, "default" | "secondary" | "outline" | "destructive"> = {

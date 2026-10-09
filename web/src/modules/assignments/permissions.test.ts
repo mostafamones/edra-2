@@ -2,40 +2,39 @@ import { describe, expect, it } from "vitest";
 
 import { assignmentPermissions } from "./permissions";
 
-const at = (state: "draft" | "published" | "closed" | "archived", extra: { yearOpen?: boolean; hasActivity?: boolean } = {}) =>
-  ({ state, yearOpen: extra.yearOpen ?? true, hasActivity: extra.hasActivity ?? false });
+const at = (state: "active" | "closed" | "archived", extra: { yearOpen?: boolean; hasActivity?: boolean; ready?: boolean } = {}) =>
+  ({ state, yearOpen: extra.yearOpen ?? true, hasActivity: extra.hasActivity ?? false, ready: extra.ready ?? true });
 
-describe("assignment permissions", () => {
-  it("lets every staff role prepare drafts", () => {
+describe("assignmentPermissions", () => {
+  it("lets every staff role edit the whole setup until marking starts", () => {
     for (const role of ["owner", "admin", "instructor"] as const) {
-      expect(assignmentPermissions(role, at("draft"))).toMatchObject({ edit: true, editStructure: true });
+      expect(assignmentPermissions(role, at("active"))).toMatchObject({ edit: true, editStructure: true });
     }
   });
 
-  it("keeps publication and lifecycle with Owner/Admin", () => {
-    expect(assignmentPermissions("instructor", at("draft"))).toMatchObject({ publish: false, archive: false });
-    expect(assignmentPermissions("instructor", at("published"))).toEqual({
-      edit: false, editStructure: false, publish: false, unpublish: false, close: false, reopen: false, archive: false, mark: true,
+  it("freezes the structure once marking starts and leaves text edits to Owner/Admin", () => {
+    expect(assignmentPermissions("instructor", at("active", { hasActivity: true }))).toEqual({
+      edit: false, editStructure: false, close: false, reopen: false, archive: false, mark: true,
     });
-    expect(assignmentPermissions("admin", at("draft"))).toMatchObject({ publish: true, archive: true });
-    expect(assignmentPermissions("owner", at("published"))).toMatchObject({ edit: true, editStructure: false, unpublish: true, close: true, archive: false });
-    expect(assignmentPermissions("owner", at("closed"))).toMatchObject({ reopen: true, archive: true, close: false });
+    expect(assignmentPermissions("owner", at("active", { hasActivity: true }))).toMatchObject({ edit: true, editStructure: false, close: true, archive: false });
+    expect(assignmentPermissions("admin", at("closed"))).toMatchObject({ edit: true, editStructure: false, reopen: true, archive: true });
   });
 
-  it("lets every staff role mark and publish results once the assignment is published", () => {
+  it("keeps lifecycle actions for Owner/Admin", () => {
+    expect(assignmentPermissions("instructor", at("active"))).toMatchObject({ close: false, archive: false });
+    expect(assignmentPermissions("admin", at("active"))).toMatchObject({ close: true, archive: true, reopen: false });
+  });
+
+  it("lets every staff role mark and announce results without publishing, once every part is complete", () => {
     for (const role of ["owner", "admin", "instructor"] as const) {
-      expect(assignmentPermissions(role, at("published")).mark).toBe(true);
+      expect(assignmentPermissions(role, at("active")).mark).toBe(true);
       expect(assignmentPermissions(role, at("closed")).mark).toBe(true);
-      expect(assignmentPermissions(role, at("draft")).mark).toBe(false);
+      expect(assignmentPermissions(role, at("active", { ready: false })).mark).toBe(false);
     }
-  });
-
-  it("blocks unpublishing once students have activity", () => {
-    expect(assignmentPermissions("owner", at("published", { hasActivity: true })).unpublish).toBe(false);
   });
 
   it("makes archived assignments and closed years read-only", () => {
     expect(Object.values(assignmentPermissions("owner", at("archived"))).some(Boolean)).toBe(false);
-    expect(Object.values(assignmentPermissions("owner", at("draft", { yearOpen: false }))).some(Boolean)).toBe(false);
+    expect(Object.values(assignmentPermissions("owner", at("active", { yearOpen: false }))).some(Boolean)).toBe(false);
   });
 });

@@ -4,7 +4,7 @@ import type { FormPart } from "./validation";
 
 /**
  * Unresolved configuration of a form part, mirroring the database's part_issues so the review step
- * can say what blocks publishing. The database remains the authority at publication.
+ * can say what blocks marking. The database remains the authority when work is marked.
  */
 export function formPartIssues(part: FormPart): PartIssue[] {
   if (part.kind === "legacy") return isValidMaxScore(part.maxScore) ? [] : ["maximum"];

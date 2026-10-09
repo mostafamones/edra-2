@@ -3,8 +3,7 @@
 import type { ReactNode } from "react";
 import { IconAlertTriangle } from "@tabler/icons-react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { MarkFocus } from "../../../focus";
 import { formatScore } from "../../../score";
@@ -31,8 +30,7 @@ function Stat({ label, value, note, loading }: { label: string; value: ReactNode
 /** Total marks, students, marking progress, and the average score, in one divided strip. */
 function Stats({ assignment }: { assignment: Assignment }) {
   const { query } = useMarks(assignment);
-  const draft = assignment.state === "draft";
-  const loading = !draft && query.isPending;
+  const loading = query.isPending;
   const students = query.data?.students ?? [];
   const marked = students.filter((row) => row.marking === "complete").length;
   const partly = students.filter((row) => row.marking === "partial").length;
@@ -45,20 +43,20 @@ function Stats({ assignment }: { assignment: Assignment }) {
     // The 1px gap over a border-coloured card draws the dividers, whatever the column count.
     <Card className="grid grid-cols-2 gap-px bg-border py-0 lg:grid-cols-4">
       <Stat label="Total marks" value={formatScore(assignment.maxScore)} />
-      <Stat label="Students" value={draft ? "—" : number.format(recipients)} />
+      <Stat label="Students" value={number.format(recipients)} />
       <Stat label="Marked" loading={loading}
-        value={draft ? "—" : <>{number.format(marked)}<span className="text-base font-medium text-muted-foreground"> / {number.format(recipients)}</span></>}
+        value={<>{number.format(marked)}<span className="text-base font-medium text-muted-foreground"> / {number.format(recipients)}</span></>}
       />
       <Stat label="Average" loading={loading} value={average === null ? "—" : `${percent.format(average)}%`} />
     </Card>
   );
 }
 
-/** One part as a list row: its type, size, marks, and (on drafts) what still blocks publishing. */
-function PartRow({ part, draft }: { part: AssignmentPart; draft: boolean }) {
+/** One part as a list row: its type, size, marks, and (until setup is finished) what still blocks marking. */
+function PartRow({ part }: { part: AssignmentPart }) {
   const kind = part.kind ?? "legacy";
   const Icon = PART_KIND_ICONS[kind];
-  const issues = draft ? part.issues : [];
+  const issues = part.issues;
   return (
     <li className="flex flex-col gap-2 px-4 py-3">
       <div className="flex items-center gap-3">
@@ -92,14 +90,14 @@ function PartRow({ part, draft }: { part: AssignmentPart; draft: boolean }) {
   );
 }
 
-function Parts({ assignment, draft }: { assignment: Assignment; draft: boolean }) {
+function Parts({ assignment }: { assignment: Assignment }) {
   return (
     <Card className="h-full gap-0 pb-0">
       <CardHeader className="border-b pb-3!">
         <CardTitle>Parts</CardTitle>
       </CardHeader>
       <ol className="flex flex-col divide-y border-b">
-        {assignment.parts.map((part) => <PartRow key={part.id} part={part} draft={draft} />)}
+        {assignment.parts.map((part) => <PartRow key={part.id} part={part} />)}
       </ol>
     </Card>
   );
@@ -114,7 +112,6 @@ type Props = {
 };
 
 export function AssignmentOverview({ assignment, onViewStudents, onSelectBar }: Props) {
-  const draft = assignment.state === "draft";
   return (
     <div className="flex flex-col gap-4">
       <Stats assignment={assignment} />
@@ -132,9 +129,9 @@ export function AssignmentOverview({ assignment, onViewStudents, onSelectBar }: 
 
       <MarkAnalytics assignment={assignment} onSelect={onSelectBar} />
 
-      {draft ? <Parts assignment={assignment} draft /> : (
+      {!assignment.ready ? <Parts assignment={assignment} /> : (
         <div className="grid items-stretch gap-4 lg:grid-cols-2">
-          <Parts assignment={assignment} draft={false} />
+          <Parts assignment={assignment} />
           <TopStudents assignment={assignment} onViewAll={onViewStudents} />
         </div>
       )}

@@ -30,6 +30,7 @@ const assignmentSchema = z.object({
   archived_at: z.string().nullable(),
   year_open: z.boolean(),
   has_activity: z.boolean(),
+  ready: z.boolean(),
   parts: z.array(z.object({
     id: z.string(), position: z.number().int(), title: z.string(), instructions: z.string(), max_score: z.string(),
     kind: z.enum(PART_KINDS).nullable(),
@@ -68,6 +69,7 @@ export function toAssignment(value: unknown): Assignment {
     archivedAt: row.archived_at,
     yearOpen: row.year_open,
     hasActivity: row.has_activity,
+    ready: row.ready,
     parts: row.parts.map((part) => ({
       id: part.id, position: part.position, title: part.title, instructions: part.instructions, maxScore: part.max_score,
       kind: part.kind, issues: part.issues,

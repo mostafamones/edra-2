@@ -1,4 +1,4 @@
-export { changeAssignment, createAssignmentDraft, saveAssignment } from "./actions";
+export { changeAssignment, createNewAssignment, saveAssignment } from "./actions";
 export {
   assignmentListQueryKey, assignmentQueryKey, assignmentsRootKey, loadAssignment, loadAssignments, loadAudiencePreview,
   loadRecipients, loadYears, recipientsQueryKey,

@@ -1,6 +1,7 @@
-export const ASSIGNMENT_STATES = ["draft", "published", "closed", "archived"] as const;
+/** Operational states. Structure readiness (`ready`) and student visibility are separate properties. */
+export const ASSIGNMENT_STATES = ["active", "closed", "archived"] as const;
 export const ASSIGNMENT_AUDIENCES = ["level", "program", "groups"] as const;
-export const ASSIGNMENT_ACTIONS = ["publish", "unpublish", "close", "reopen", "archive"] as const;
+export const ASSIGNMENT_ACTIONS = ["close", "reopen", "archive"] as const;
 
 export type AssignmentState = (typeof ASSIGNMENT_STATES)[number];
 export type AssignmentAudience = (typeof ASSIGNMENT_AUDIENCES)[number];
@@ -55,18 +56,22 @@ export type Assignment = {
   /** Sum of the part maxima, maintained by the database. */
   maxScore: string;
   partCount: number;
+  /** Size of the recipient snapshot, refreshed on each save until activity starts. */
   recipientCount: number;
   version: number;
   createdBy: string;
   createdAt: string;
   updatedBy: string;
   updatedAt: string;
+  /** Provenance of the retired Publish action; never a visibility switch. */
   publishedAt: string | null;
   closedAt: string | null;
   archivedAt: string | null;
   yearOpen: boolean;
-  /** True once a recipient has activity that locks the structure. */
+  /** True once a recipient has activity (work, marks, or a result) that freezes the structure and recipients. */
   hasActivity: boolean;
+  /** Every part is complete, so work can be recorded, marked, and announced. */
+  ready: boolean;
   parts: AssignmentPart[];
 };
 
@@ -106,7 +111,6 @@ export type AssignmentErrorCode =
   | "year_unavailable"
   | "assignment_conflict"
   | "invalid_audience"
-  | "empty_audience"
   | "invalid_state"
   | "structure_locked"
   | "incomplete"
@@ -136,7 +140,7 @@ export type StudentMark = { partId: string; kind: "mark" | "excused"; score: str
 /** One question's entry: the chosen choice (null = left blank) for choice parts, or the mark for manual parts. */
 export type StudentAnswer = { questionId: string; partId: string; choiceId: string | null; score: string };
 
-/** One recipient's work, marks, and result state: the row staff mark and publish. */
+/** One recipient's work, marks, and result state: the row staff mark and announce. */
 export type StudentWork = {
   recordId: string;
   fullName: string;
@@ -159,7 +163,7 @@ export type StudentWork = {
   /** Sum of the marked parts, or null while nothing is marked. */
   total: string | null;
   marking: MarkingState;
-  /** The official snapshot students see; null until published. */
+  /** The official (announced) snapshot; null until the result is announced. */
   publication: { revision: number; total: string; workStatus: WorkStatus; publishedAt: string } | null;
   publicationState: PublicationState;
 };

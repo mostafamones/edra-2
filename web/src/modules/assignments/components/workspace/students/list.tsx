@@ -16,7 +16,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAcademyScope } from "@/modules/auth";
-import { publishStudentResults } from "../../../actions";
+import { announceStudentResults } from "../../../actions";
 import { focusScore, focusTarget, matchesFocus, type MarkFocus } from "../../../focus";
 import { assignmentPermissions } from "../../../permissions";
 import { assignmentsRootKey } from "../../../queries";
@@ -34,7 +34,7 @@ const FILTERS: { value: MarkFilter; label: string }[] = [
   { value: "not_received", label: "Not received" },
   { value: "needs_marking", label: "Needs marking" },
   { value: "marked", label: "Marked" },
-  { value: "unpublished", label: "Ready to publish" },
+  { value: "unpublished", label: "Ready to announce" },
 ];
 
 const MATCHES: Record<MarkFilter, (row: StudentWork) => boolean> = {
@@ -65,13 +65,13 @@ const REASONS: Record<PublishFailureReason, string> = {
   incomplete: "has parts that aren’t marked yet",
 };
 
-/** A student's result can be published once every part has a mark and it differs from what is published. */
-const publishable = (row: StudentWork) => row.marking === "complete" && row.publicationState !== "published";
+/** A student's result can be announced once every part has a mark and it differs from what was announced. */
+const announceable = (row: StudentWork) => row.marking === "complete" && row.publicationState !== "published";
 
 type Props = { academy: AcademyEntry; assignment: Assignment; focus: MarkFocus | null; onFocusChange: (focus: MarkFocus | null) => void };
 
 /**
- * The students of the assignment: work status, marks, totals, and per-student result publication. A
+ * The students of the assignment: work status, marks, totals, and per-student result announcement. A
  * part or question focus (also set from the marks chart) narrows it to who lost or kept those marks.
  */
 export function AssignmentStudents({ academy, assignment, focus, onFocusChange }: Props) {
@@ -86,9 +86,10 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
   const [sort, setSort] = useState<StudentSort>("default");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<string | null>(null);
-  const [publishing, setPublishing] = useState(false);
+  const [announcing, setAnnouncing] = useState(false);
   const [rejection, setRejection] = useState<{ name: string; reason: PublishFailureReason }[] | null>(null);
-  const canMark = assignmentPermissions(academy.role, assignment).mark;
+  const permissions = assignmentPermissions(academy.role, assignment);
+  const canMark = permissions.mark;
 
   const students = query.data?.students;
   const term = search.trim().toLowerCase();
@@ -110,17 +111,6 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
   const pageIndex = Math.min(page, Math.max(0, Math.ceil(rows.length / PAGE_SIZE) - 1));
   const pageRows = rows.slice(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE);
 
-  if (assignment.state === "draft") {
-    return (
-      <Empty className="min-h-48 rounded-xl border border-dashed border-border py-14">
-        <EmptyHeader className="gap-1">
-          <EmptyMedia variant="icon"><IconUsers aria-hidden="true" /></EmptyMedia>
-          <EmptyTitle>Not published yet</EmptyTitle>
-          <EmptyDescription>Students are fixed from the audience when an Owner or Admin publishes the assignment.</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
-    );
-  }
   if (query.isPending) {
     return <div role="status" aria-label="Loading students" className="flex flex-col gap-2">{[0, 1, 2].map((key) => <Skeleton key={key} className="h-10 rounded-lg" />)}</div>;
   }
@@ -137,23 +127,23 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
     );
   }
 
-  const chosen = students.filter((row) => selected.has(row.recordId) && publishable(row));
-  const visiblePublishable = rows.filter(publishable);
-  const allVisibleChosen = visiblePublishable.length > 0 && visiblePublishable.every((row) => selected.has(row.recordId));
+  const chosen = students.filter((row) => selected.has(row.recordId) && announceable(row));
+  const visibleAnnounceable = rows.filter(announceable);
+  const allVisibleChosen = visibleAnnounceable.length > 0 && visibleAnnounceable.every((row) => selected.has(row.recordId));
   const filtering = term !== "" || filter !== "all" || group !== "all" || track !== "all" || focus !== null;
 
   function toggle(recordId: string, on: boolean) {
     setSelected((current) => { const next = new Set(current); if (on) next.add(recordId); else next.delete(recordId); return next; });
   }
 
-  async function publish() {
-    if (chosen.length === 0 || publishing) return;
+  async function announce() {
+    if (chosen.length === 0 || announcing) return;
     const academyId = assignment.academyId;
     const items = chosen.map((row) => ({ recordId: row.recordId, expectedVersion: row.version }));
-    setPublishing(true);
+    setAnnouncing(true);
     setRejection(null);
     try {
-      const result = await publishStudentResults({
+      const result = await announceStudentResults({
         academyId, assignmentId: assignment.id, items, key: attempt.keyFor(JSON.stringify(items)),
       });
       if (!isCurrentAcademy(academyId)) return;
@@ -166,14 +156,14 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
         return;
       }
       const corrected = result.results.filter((entry) => entry.outcome === "corrected").length;
-      const published = result.results.filter((entry) => entry.outcome === "published").length;
-      toast.success(`${published} published${corrected ? `, ${corrected} corrected` : ""}.`);
+      const announced = result.results.filter((entry) => entry.outcome === "published").length;
+      toast.success(`${announced} announced${corrected ? `, ${corrected} corrected` : ""}.`);
       setSelected(new Set());
       await queryClient.invalidateQueries({ queryKey: assignmentsRootKey(academyId) });
     } catch {
-      if (isCurrentAcademy(academyId)) toast.error("Could not confirm the publication. Press Publish again: it won’t be applied twice.");
+      if (isCurrentAcademy(academyId)) toast.error("Could not confirm the announcement. Press Announce again: it won’t be applied twice.");
     } finally {
-      setPublishing(false);
+      setAnnouncing(false);
     }
   }
 
@@ -211,8 +201,8 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
           <FilterPopover iconOnly fields={fields} />
           <SortPopover value={sort} defaultValue="default" options={SORTS} onChange={(value) => setSort(value as StudentSort)} />
           {canMark && (
-            <Button className="shrink-0" disabled={chosen.length === 0 || publishing} onClick={() => void publish()}>
-              {publishing ? "Publishing…" : chosen.length ? `Publish ${chosen.length} result${chosen.length === 1 ? "" : "s"}` : "Publish results"}
+            <Button className="shrink-0" disabled={chosen.length === 0 || announcing} onClick={() => void announce()}>
+              {announcing ? "Announcing…" : chosen.length ? `Announce ${chosen.length} result${chosen.length === 1 ? "" : "s"}` : "Announce results"}
             </Button>
           )}
         </div>
@@ -232,10 +222,10 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
       {rejection && (
         <Alert variant="destructive">
           <IconAlertCircle />
-          <AlertTitle>Nothing was published</AlertTitle>
+          <AlertTitle>Nothing was announced</AlertTitle>
           <AlertDescription>
             <ul className="list-disc pl-4">{rejection.map((entry, index) => <li key={index}>{entry.name} {REASONS[entry.reason]}.</li>)}</ul>
-            Fix these students or deselect them, then publish again.
+            Fix these students or deselect them, then announce again.
           </AlertDescription>
         </Alert>
       )}
@@ -245,7 +235,11 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
           <EmptyHeader className="gap-1">
             <EmptyMedia variant="icon"><IconUsers aria-hidden="true" /></EmptyMedia>
             <EmptyTitle>No students</EmptyTitle>
-            <EmptyDescription>This assignment has no recipients.</EmptyDescription>
+            <EmptyDescription>
+              {permissions.editStructure
+                ? "No active students matched its audience when it was last saved. Saving it again adds students who have joined since."
+                : "This assignment has no students."}
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : rows.length === 0 ? (
@@ -264,10 +258,10 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
               <TableRow>
                 {canMark && (
                   <TableHead className="w-10">
-                    <Checkbox aria-label="Select every publishable student shown" checked={allVisibleChosen} disabled={visiblePublishable.length === 0}
+                    <Checkbox aria-label="Select every student shown whose result can be announced" checked={allVisibleChosen} disabled={visibleAnnounceable.length === 0}
                       onCheckedChange={(on) => setSelected((current) => {
                         const next = new Set(current);
-                        for (const row of visiblePublishable) { if (on === true) next.add(row.recordId); else next.delete(row.recordId); }
+                        for (const row of visibleAnnounceable) { if (on === true) next.add(row.recordId); else next.delete(row.recordId); }
                         return next;
                       })} />
                   </TableHead>
@@ -286,7 +280,7 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
                 <TableRow key={row.recordId}>
                   {canMark && (
                     <TableCell>
-                      <Checkbox aria-label={`Select ${row.fullName}`} checked={selected.has(row.recordId)} disabled={!publishable(row)}
+                      <Checkbox aria-label={`Select ${row.fullName}`} checked={selected.has(row.recordId)} disabled={!announceable(row)}
                         onCheckedChange={(on) => toggle(row.recordId, on === true)} />
                     </TableCell>
                   )}

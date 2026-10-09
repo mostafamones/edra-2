@@ -7,7 +7,7 @@ import type { Json } from "@/lib/supabase/database.types";
 import { failure, failureFromDatabase } from "./errors";
 import { toAssignment, toAudiencePreview, toPublish, toSaveMarks, toStudentList, toStudentWork } from "./mapper";
 import {
-  ASSIGNMENT_ACTIONS, ASSIGNMENT_AUDIENCES, WORK_STATUSES, type Assignment, type AssignmentAction, type AssignmentDraft, type AssignmentResult,
+  ASSIGNMENT_ACTIONS, ASSIGNMENT_AUDIENCES, ASSIGNMENT_STATES, WORK_STATUSES, type Assignment, type AssignmentAction, type AssignmentDraft, type AssignmentResult,
   type AudiencePreview, type AnswerChange, type MarkChange, type MarkFilter, type PublishResult, type ReadResult, type SaveMarksResult, type StudentLookup, type StudentWork,
   type WorkResult, type WorkStatus,
 } from "./types";
@@ -63,7 +63,10 @@ async function command(run: () => PromiseLike<{ data: unknown; error: { code?: s
 
 const createInput = z.object({ academyId: z.uuid(), academicYearId: z.uuid(), assignmentId: z.uuid(), draft: assignmentDraftSchema });
 
-/** Creates a draft. `assignmentId` is generated per create action and reused on retry. */
+/**
+ * Creates an active assignment (no content or due date needed) and snapshots its recipients.
+ * `assignmentId` is generated per create action and reused on retry.
+ */
 export async function createAssignment(input: z.input<typeof createInput>, authority?: Authority | null): Promise<AssignmentResult> {
   const parsed = createInput.safeParse(input);
   if (!parsed.success) return failure("validation");
@@ -80,7 +83,8 @@ const updateInput = z.object({ academyId: z.uuid(), assignmentId: z.uuid(), expe
 
 /**
  * Saves an edit made against `expectedVersion`; a stale version writes nothing (assignment_conflict).
- * Drafts are replaced whole. Published or closed assignments accept text details only.
+ * Until marking starts the whole setup is replaced and recipients are refreshed from the audience.
+ * Afterwards (or once closed) only Owner/Admin may save, and only text details.
  */
 export async function updateAssignment(input: z.input<typeof updateInput>, authority?: Authority | null): Promise<AssignmentResult> {
   const parsed = updateInput.safeParse(input);
@@ -95,7 +99,7 @@ export async function updateAssignment(input: z.input<typeof updateInput>, autho
 
 const stateInput = z.object({ academyId: z.uuid(), assignmentId: z.uuid(), expectedVersion: z.number().int().min(1), action: z.enum(ASSIGNMENT_ACTIONS) });
 
-/** Owner/Admin lifecycle actions: publish, unpublish, close, reopen, archive. */
+/** Owner/Admin lifecycle actions: close, reopen, archive. */
 export async function changeAssignmentState(
   input: { academyId: string; assignmentId: string; expectedVersion: number; action: AssignmentAction }, authority?: Authority | null,
 ): Promise<AssignmentResult> {
@@ -129,7 +133,7 @@ const previewInput = z.object({
   levelId: z.string().min(1).max(40).nullable(), trackId: z.uuid().nullable(), groupIds: z.array(z.uuid()).max(MAX_AUDIENCE_GROUPS),
 });
 
-/** Advisory count of the active students an audience matches now. Publication recomputes it. */
+/** Advisory count of the active students an audience matches now. Saving recomputes it. */
 export async function previewAudience(input: z.input<typeof previewInput>, authority?: Authority | null): Promise<ReadResult<AudiencePreview>> {
   const parsed = previewInput.safeParse(input);
   if (!parsed.success) return { ok: false, status: 400 };
@@ -149,7 +153,7 @@ export async function previewAudience(input: z.input<typeof previewInput>, autho
 }
 
 // ---------------------------------------------------------------------------------------------
-// Marks, recorded work, and result publication. Any staff member of the academy may use these.
+// Marks, recorded work, and result announcement. Any staff member of the academy may use these.
 
 type DatabaseError = { code?: string; message?: string; details?: string };
 
@@ -256,8 +260,8 @@ const publishInput = z.object({
 });
 
 /**
- * Publishes the selected students' complete results (all-or-nothing validation). A changed result
- * of an already published student becomes a correction with a new revision.
+ * Announces the selected students' complete results (all-or-nothing validation). A changed result
+ * of an already announced student becomes a correction with a new revision.
  */
 export async function publishResults(
   input: { academyId: string; assignmentId: string; key: string; items: { recordId: string; expectedVersion: number }[] }, authority?: Authority | null,
@@ -345,7 +349,7 @@ export type AssignmentSummary = {
 
 const listAssignmentsInput = z.object({
   academyId: z.uuid(),
-  state: z.enum(["draft", "published", "closed", "archived"]).nullable(),
+  state: z.enum(ASSIGNMENT_STATES).nullable(),
   limit: z.number().int().min(1).max(100),
   offset: z.number().int().min(0).max(100000),
 });

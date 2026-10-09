@@ -14,7 +14,6 @@ export function useMarks(assignment: Assignment) {
   const query = useQuery({
     queryKey,
     queryFn: () => loadMarks(assignment.academyId, assignment.id, "all"),
-    enabled: assignment.state !== "draft",
   });
   const replace = useCallback((student: StudentWork) => {
     queryClient.setQueryData<{ total: number; students: StudentWork[] }>(queryKey, (current) =>

@@ -21,7 +21,7 @@ type Props = {
   onEditPart: (index: number) => void;
 };
 
-/** The last step: the assignment at a glance, and what still blocks publishing. Drafts can always be saved. */
+/** The last step: the assignment at a glance, and what still blocks marking. Unfinished setup can always be saved. */
 export function ReviewStep({ levelNames, tracks, groups, onEditDetails, onEditPart }: Props) {
   const { control } = useFormContext<AssignmentFormValues>();
   const values = useWatch({ control });
@@ -39,13 +39,13 @@ export function ReviewStep({ levelNames, tracks, groups, onEditDetails, onEditPa
       {unfinished.length === 0 ? (
         <Alert>
           <IconCircleCheck className="text-primary" />
-          <AlertTitle>Ready to publish</AlertTitle>
+          <AlertTitle>Ready for marking</AlertTitle>
           <AlertDescription>Every part is complete.</AlertDescription>
         </Alert>
       ) : (
         <Alert>
           <IconAlertTriangle className="text-destructive" />
-          <AlertTitle>{unfinished.length === 1 ? "One part needs" : `${unfinished.length} parts need`} attention before publishing</AlertTitle>
+          <AlertTitle>{unfinished.length === 1 ? "One part needs" : `${unfinished.length} parts need`} attention before marking</AlertTitle>
           <AlertDescription>
             <ul className="flex flex-col gap-0.5">
               {unfinished.map(({ index, part, issues }) => (

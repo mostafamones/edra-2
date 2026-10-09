@@ -22,7 +22,7 @@ import {
   academicYearQueryKey, groupListQueryKey, loadActiveYear, loadGroups, loadStructure, structureQueryKey,
   type AcademicYear, type Group, type Level, type Track,
 } from "@/modules/groups";
-import { createAssignmentDraft, saveAssignment } from "../../actions";
+import { createNewAssignment, saveAssignment } from "../../actions";
 import { assignmentPermissions } from "../../permissions";
 import { assignmentsRootKey } from "../../queries";
 import type { Assignment, AssignmentDraft, AssignmentResult } from "../../types";
@@ -112,7 +112,7 @@ type FieldsProps = Props & { year: AcademicYear; levels: Level[]; tracks: Track[
 function AssignmentFields({ academy, assignment, onSaved, onCancel, onStatusChange, year, levels, tracks, levelNames, groups }: FieldsProps) {
   const queryClient = useQueryClient();
   const isCurrentAcademy = useAcademyScope();
-  // One id per create action: a retried submit returns the same draft instead of a second one.
+  // One id per create action: a retried submit returns the same assignment instead of a second one.
   const [createId] = useState(newUuid);
   const locked = assignment ? !assignmentPermissions(academy.role, assignment).editStructure : false;
   const form = useForm<AssignmentFormValues, unknown, AssignmentDraft>({
@@ -128,8 +128,8 @@ function AssignmentFields({ academy, assignment, onSaved, onCancel, onStatusChan
   const [direction, setDirection] = useState<1 | -1>(1);
   const [formError, setFormError] = useState<{ title: string; message: string; conflict?: boolean } | null>(null);
   const [autosave, setAutosave] = useState<"idle" | "saving" | "saved">("idle");
-  // Drafts save themselves; a published assignment's text details are saved explicitly.
-  const auto = !assignment || assignment.state === "draft";
+  // Setup saves itself until marking starts; afterwards text details are saved explicitly.
+  const auto = !locked;
   // The latest saved version, and a queue so an automatic and an explicit save never overlap.
   const current = useRef<Assignment | undefined>(assignment);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
@@ -141,7 +141,7 @@ function AssignmentFields({ academy, assignment, onSaved, onCancel, onStatusChan
       const base = current.current;
       const result = base
         ? await saveAssignment({ academyId: academy.id, assignmentId: base.id, expectedVersion: base.version, draft })
-        : await createAssignmentDraft({ academyId: academy.id, academicYearId: year.id, assignmentId: createId, draft });
+        : await createNewAssignment({ academyId: academy.id, academicYearId: year.id, assignmentId: createId, draft });
       if (result.ok) current.current = result.assignment;
       return result;
     });
@@ -156,7 +156,7 @@ function AssignmentFields({ academy, assignment, onSaved, onCancel, onStatusChan
     });
   }
 
-  // Automatic drafting: after a pause in editing, a valid form is saved quietly. Invalid or unfinished
+  // Automatic saving: after a pause in editing, a valid form is saved quietly. Invalid or unfinished
   // input is skipped without errors; it is checked only when the form is submitted.
   useEffect(() => {
     if (!auto) return;
@@ -215,7 +215,7 @@ function AssignmentFields({ academy, assignment, onSaved, onCancel, onStatusChan
       if (!result.ok) { failed(result); return; }
       await queryClient.invalidateQueries({ queryKey: assignmentsRootKey(targetAcademyId) });
       if (!isCurrentAcademy(targetAcademyId)) return;
-      toast.success(assignment ? "Assignment saved." : "Draft saved.");
+      toast.success(assignment ? "Assignment saved." : "Assignment created.");
       onSaved(result.assignment);
     } catch {
       if (isCurrentAcademy(targetAcademyId)) setFormError({ title: "Couldn’t save the assignment", message: "Check your connection and try again." });
@@ -318,7 +318,7 @@ function AssignmentFields({ academy, assignment, onSaved, onCancel, onStatusChan
           <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
           {auto && autosave !== "idle" && (
             <span role="status" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              {autosave === "saving" ? <><IconLoader2 className="size-4 animate-spin" />Saving…</> : <><IconCheck className="size-4" />Draft saved</>}
+              {autosave === "saving" ? <><IconLoader2 className="size-4 animate-spin" />Saving…</> : <><IconCheck className="size-4" />Saved</>}
             </span>
           )}
         </div>

@@ -30,7 +30,7 @@ const withoutIds = (part: FormPart): FormPart => ({
 
 /**
  * The parts of the assignment as cards; opening one edits it. New parts are added by type and open
- * straight away. With `locked` (published) nothing is added, removed or reordered.
+ * straight away. With `locked` (marking started) nothing is added, removed or reordered.
  */
 export function PartsList({ locked, onEdit }: Props) {
   const { control, formState: { errors } } = useFormContext<AssignmentFormValues>();

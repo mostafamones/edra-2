@@ -47,7 +47,7 @@ export function MarkAnalytics({ assignment, onSelect }: { assignment: Assignment
   const [grouping, setGrouping] = useState<Grouping>("questions");
   const [order, setOrder] = useState<Order>("position");
 
-  if (assignment.state === "draft") return null;
+  if (!assignment.ready) return null;
   if (query.isPending) return <Skeleton className="h-80 rounded-xl" />;
   // A failed load is reported by the Students tab; the chart just stays out of the way.
   if (!query.data) return null;

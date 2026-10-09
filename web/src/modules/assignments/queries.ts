@@ -20,11 +20,12 @@ export const ALL = "all";
 export type AssignmentListFilters = {
   search: string;
   yearId: string;
-  state: AssignmentState | "active" | typeof ALL;
+  /** `unarchived` hides archived assignments (the default). */
+  state: AssignmentState | "unarchived" | typeof ALL;
   audience: AssignmentAudience | typeof ALL;
 };
 /** Archived assignments are hidden unless asked for. */
-export const DEFAULT_LIST_FILTERS: Omit<AssignmentListFilters, "yearId"> = { search: "", state: "active", audience: ALL };
+export const DEFAULT_LIST_FILTERS: Omit<AssignmentListFilters, "yearId"> = { search: "", state: "unarchived", audience: ALL };
 export const LIST_PAGE_SIZE = 25;
 
 export type AssignmentListRow = {
@@ -63,7 +64,7 @@ export async function loadAssignments(academyId: string, filters: AssignmentList
     .select("id,academic_year_id,title,audience,level_id,track_id,due_at,state,max_score,part_count,recipient_count,updated_at,assignment_audience_groups(group_id),assignment_parts(title,kind,position)", { count: "exact" })
     .eq("academy_id", academyId);
   if (filters.yearId !== ALL) query = query.eq("academic_year_id", filters.yearId);
-  if (filters.state === "active") query = query.neq("state", "archived");
+  if (filters.state === "unarchived") query = query.neq("state", "archived");
   else if (filters.state !== ALL) query = query.eq("state", filters.state);
   if (filters.audience !== ALL) query = query.eq("audience", filters.audience);
   const search = filters.search.trim();
@@ -93,7 +94,7 @@ const recipientSchema = z.array(z.object({
 }));
 export type Recipient = z.infer<typeof recipientSchema>[number];
 
-/** The published recipient snapshot with each student's current name, group, and code. */
+/** The recipient snapshot with each student's current name, group, and code. */
 export async function loadRecipients(academyId: string, assignmentId: string): Promise<Recipient[]> {
   const { data, error } = await createClient().rpc("list_assignment_recipients", { p_academy_id: academyId, p_assignment_id: assignmentId });
   if (error) throw new Error(error.message);
@@ -108,7 +109,7 @@ export type AudienceQuery = {
   groupIds: string[];
 };
 
-/** Advisory count of active students the audience matches now. Publication recomputes it. */
+/** Advisory count of active students the audience matches now. Saving recomputes it. */
 export async function loadAudiencePreview(academyId: string, query: AudienceQuery): Promise<AudiencePreview> {
   const { data, error } = await createClient().rpc("preview_assignment_audience", {
     p_academy_id: academyId, p_academic_year_id: query.academicYearId, p_audience: query.audience,

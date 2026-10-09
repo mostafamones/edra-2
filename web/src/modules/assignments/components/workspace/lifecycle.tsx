@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconArchive, IconDots, IconLock, IconLockOpen, IconSend, IconArrowBackUp } from "@tabler/icons-react";
+import { IconArchive, IconDots, IconLock, IconLockOpen } from "@tabler/icons-react";
 
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -14,30 +14,18 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAcademyScope } from "@/modules/auth";
 import { changeAssignment } from "../../actions";
 import type { AssignmentPermissions } from "../../permissions";
-import { assignmentsRootKey, loadAudiencePreview, previewQueryKey } from "../../queries";
-import type { Assignment, AssignmentAction } from "../../types";
-
-const number = new Intl.NumberFormat("en");
+import { assignmentsRootKey } from "../../queries";
+import { ASSIGNMENT_ACTIONS, type Assignment, type AssignmentAction } from "../../types";
 
 const COPY: Record<AssignmentAction, { title: string; body: string; confirm: string; done: string }> = {
-  publish: {
-    title: "Publish this assignment?",
-    body: "The matching active students become its recipients now. Students who join or move later are not added. The audience and parts lock once publishing succeeds.",
-    confirm: "Publish", done: "Assignment published.",
-  },
-  unpublish: {
-    title: "Unpublish this assignment?",
-    body: "It returns to draft and its recipient list is cleared. Publishing again builds a fresh list. This is only possible while no student has work on it.",
-    confirm: "Unpublish", done: "Assignment returned to draft.",
-  },
   close: {
     title: "Close this assignment?",
-    body: "No new online submissions are accepted. Staff can still record physical work, mark, and publish results while the year is open.",
+    body: "No newly received work can be recorded. Staff can still mark work already received and announce results while the year is open.",
     confirm: "Close", done: "Assignment closed.",
   },
   reopen: {
     title: "Reopen this assignment?",
-    body: "It becomes published again and accepts new submissions. Its recipients don’t change.",
+    body: "It becomes active again and accepts newly received work. Its students don’t change.",
     confirm: "Reopen", done: "Assignment reopened.",
   },
   archive: {
@@ -47,14 +35,14 @@ const COPY: Record<AssignmentAction, { title: string; body: string; confirm: str
   },
 };
 
-/** Owner/Admin lifecycle controls: Publish as the primary action, the rest in a menu, each confirmed. */
+/** Owner/Admin lifecycle controls in a menu, each confirmed. */
 export function LifecycleActions({ assignment, permissions }: { assignment: Assignment; permissions: AssignmentPermissions }) {
   const queryClient = useQueryClient();
   const isCurrentAcademy = useAcademyScope();
   const [pending, setPending] = useState<AssignmentAction | null>(null);
   const [running, setRunning] = useState(false);
-  const menu = (["unpublish", "close", "reopen", "archive"] as const).filter((action) => permissions[action]);
-  if (!permissions.publish && menu.length === 0) return null;
+  const menu = ASSIGNMENT_ACTIONS.filter((action) => permissions[action]);
+  if (menu.length === 0) return null;
 
   async function run(action: AssignmentAction) {
     const academyId = assignment.academyId;
@@ -74,29 +62,26 @@ export function LifecycleActions({ assignment, permissions }: { assignment: Assi
     }
   }
 
-  const icons = { unpublish: IconArrowBackUp, close: IconLock, reopen: IconLockOpen, archive: IconArchive } as const;
-  const labels = { unpublish: "Unpublish", close: "Close", reopen: "Reopen", archive: "Archive" } as const;
+  const icons = { close: IconLock, reopen: IconLockOpen, archive: IconArchive } as const;
+  const labels = { close: "Close", reopen: "Reopen", archive: "Archive" } as const;
 
   return (
-    <div className="flex gap-2">
-      {permissions.publish && <Button onClick={() => setPending("publish")}><IconSend />Publish</Button>}
-      {menu.length > 0 && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" aria-label="More actions"><IconDots /></Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {menu.map((action) => {
-              const Icon = icons[action];
-              return (
-                <DropdownMenuItem key={action} variant={action === "archive" ? "destructive" : "default"} onSelect={() => setPending(action)}>
-                  <Icon />{labels[action]}
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" aria-label="More actions"><IconDots /></Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {menu.map((action) => {
+            const Icon = icons[action];
+            return (
+              <DropdownMenuItem key={action} variant={action === "archive" ? "destructive" : "default"} onSelect={() => setPending(action)}>
+                <Icon />{labels[action]}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <AlertDialog open={pending !== null} onOpenChange={(open) => { if (!open && !running) setPending(null); }}>
         <AlertDialogContent>
           {pending && (
@@ -105,7 +90,6 @@ export function LifecycleActions({ assignment, permissions }: { assignment: Assi
                 <AlertDialogTitle>{COPY[pending].title}</AlertDialogTitle>
                 <AlertDialogDescription>{COPY[pending].body}</AlertDialogDescription>
               </AlertDialogHeader>
-              {pending === "publish" && <PublishCount assignment={assignment} />}
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={running}>Cancel</AlertDialogCancel>
                 <AlertDialogAction variant={pending === "archive" ? "destructive" : "default"} disabled={running}
@@ -117,29 +101,6 @@ export function LifecycleActions({ assignment, permissions }: { assignment: Assi
           )}
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
-}
-
-/** The live advisory count shown before publishing; the server recomputes it when publishing. */
-function PublishCount({ assignment }: { assignment: Assignment }) {
-  const audience = {
-    academicYearId: assignment.academicYearId, audience: assignment.audience, levelId: assignment.levelId,
-    trackId: assignment.trackId, groupIds: [...assignment.groupIds].sort(),
-  };
-  const preview = useQuery({
-    queryKey: previewQueryKey(assignment.academyId, audience),
-    queryFn: () => loadAudiencePreview(assignment.academyId, audience),
-    staleTime: 0,
-  });
-  if (preview.isPending) return <p className="text-sm text-muted-foreground">Counting matching students…</p>;
-  if (preview.isError) return <p className="text-sm text-muted-foreground">Couldn’t count matching students; publishing still checks them.</p>;
-  const { recipientCount, uncodedCount } = preview.data;
-  return (
-    <p className="text-sm">
-      {recipientCount === 0
-        ? "No active students match this audience right now, so publishing will fail."
-        : <>About <strong>{number.format(recipientCount)}</strong> student{recipientCount === 1 ? "" : "s"} will receive it{uncodedCount > 0 ? `, including ${number.format(uncodedCount)} without a student code` : ""}.</>}
-    </p>
+    </>
   );
 }

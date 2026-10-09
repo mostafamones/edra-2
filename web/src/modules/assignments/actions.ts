@@ -6,7 +6,7 @@ import type { AssignmentAction, AssignmentDraft, AssignmentResult, AnswerChange,
 
 /** Staff web actions. They run the same domain operations as the external API with the cookie session. */
 
-export async function createAssignmentDraft(
+export async function createNewAssignment(
   value: { academyId: string; academicYearId: string; assignmentId: string; draft: AssignmentDraft },
 ): Promise<AssignmentResult> {
   if (!value || typeof value !== "object") return failure("validation");
@@ -41,7 +41,8 @@ export async function recordStudentWork(
   return recordWork(value);
 }
 
-export async function publishStudentResults(
+/** Announces complete results; saving marks never does. */
+export async function announceStudentResults(
   value: { academyId: string; assignmentId: string; key: string; items: { recordId: string; expectedVersion: number }[] },
 ): Promise<PublishResult> {
   if (!value || typeof value !== "object") return failure("validation");

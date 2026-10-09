@@ -20,7 +20,6 @@ const API_CODES: Record<AssignmentErrorCode, ApiErrorCode> = {
   year_unavailable: "YEAR_CLOSED",
   assignment_conflict: "ASSIGNMENT_CONFLICT",
   invalid_audience: "INVALID_REQUEST",
-  empty_audience: "INVALID_REQUEST",
   invalid_state: "ASSIGNMENT_NOT_OPEN",
   structure_locked: "INVALID_REQUEST",
   incomplete: "INVALID_REQUEST",
