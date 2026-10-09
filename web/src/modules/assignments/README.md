@@ -23,7 +23,7 @@ Staff assignments: ordered marked parts, an audience, an advisory due date, a li
 
 ## Question images (migrations `20261007140000`–`20261007160000_assignment_question_images*.sql`)
 
-- Staff paste images into an online question's text or choices. The editor (`components/images/field.tsx`) shows each image as an inline badge: hovering previews it, clicking opens a viewer that can step through the field's images and remove one.
+- Staff paste images into an online question's text or choices. The editor (`components/editor/images/field.tsx`) shows each image as an inline badge: hovering previews it, clicking opens a viewer that can step through the field's images and remove one.
 - The field value stores each image inline as `{{image:<id>}}` (`images.ts`). The browser uploads the image directly to the private `assignment-images` bucket at `<academyId>/<id>`. PNG, JPEG, WebP, and GIF only, up to 5 MB each; the bucket enforces both. The editor shows images through signed URLs that last one hour.
 - Storage RLS (`is_assignment_image_staff`) lets the academy's staff upload and read its images. Objects cannot be updated or deleted through the API, because saved questions may still reference them. A deferred constraint trigger rejects, at commit, any reference to an image outside the question's academy folder and any question with more than 10 images across its text and choices (`validation`, hint `questions`). The form schema enforces the same cap.
 - Not built yet: student read access to images, and cleanup of uploads that no question references (such as an image removed before saving).
@@ -87,8 +87,8 @@ Database: `create_assignment`, `update_assignment`, `change_assignment_state` (c
 
 ## Web
 
-- `/app/assignments`: search, year/state/audience filters (archived hidden by default), Create. Assignments show as cards (`components/card.tsx`); the whole card opens the workspace. Empty and no-results states replace the grid.
-- `/app/assignments/new`, `/app/assignments/<id>/edit`: the form (`components/form.tsx`), with a live advisory recipient preview and the derived maximum.
+- `/app/assignments`: search, year/state/audience filters (archived hidden by default), Create. Assignments show as cards (`components/list/card.tsx`); the whole card opens the workspace. Empty and no-results states replace the grid.
+- `/app/assignments/new`, `/app/assignments/<id>/edit`: the form (`components/editor/form.tsx`), with a live advisory recipient preview and the derived maximum.
 - `/app/assignments/<id>`: the workspace, without tabs: stat cards and the marks chart on top, then parts (left) beside the top five students by total (right). The top students' **View all** opens the full student list (work status, marks, totals, result state, the per-student sheet, select-and-publish), with a back button to the overview. The state badge shows only for draft and closed assignments. Also a **Mark** button beside Edit: a sheet with a student search (name or code) above the marks form; saving resets the search for the next student. Saving from a student’s own sheet (student list) closes it. The student sheet has marks and feedback only: work is recorded as received automatically by the first mark, and the web UI no longer sets other work statuses (missing, late, excused); `record_assignment_work` and the server action remain. Student submissions will join it later.
 
 ## Implementation defaults (not owner-confirmed product rules)
