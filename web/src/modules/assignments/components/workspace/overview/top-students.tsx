@@ -10,7 +10,7 @@ import { formatScore } from "../../../score";
 import type { Assignment } from "../../../types";
 import { useMarks } from "../../../hooks/use-marks";
 
-const SHOWN = 5;
+const SHOWN = 3;
 const percent = new Intl.NumberFormat("en", { maximumFractionDigits: 0 });
 
 /** The highest totals so far, with a way into the full student list. */

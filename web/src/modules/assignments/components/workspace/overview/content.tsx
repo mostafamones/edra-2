@@ -101,9 +101,6 @@ function Parts({ assignment, draft }: { assignment: Assignment; draft: boolean }
       <ol className="flex flex-col divide-y border-b">
         {assignment.parts.map((part) => <PartRow key={part.id} part={part} draft={draft} />)}
       </ol>
-      <div className="flex flex-1 justify-center items-center text-muted-foreground font-medium text-xs">
-        {formatScore(assignment.maxScore)} marks across {assignment.partCount} parts
-      </div>
     </Card>
   );
 }
