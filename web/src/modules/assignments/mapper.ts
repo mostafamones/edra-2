@@ -103,6 +103,7 @@ const studentSchema = z.object({
   })),
   answers: z.array(z.object({ question_id: z.string(), part_id: z.string(), choice_id: z.string().nullable(), score: z.string() })).default([]),
   marked_parts: z.number().int(),
+  updated_at: z.string().nullable().default(null),
   total: z.string().nullable(),
   marking: z.enum(["unmarked", "partial", "complete"]),
   publication: z.object({ revision: z.number().int(), total: z.string(), work_status: workStatus, published_at: z.string() }).nullable(),
@@ -125,6 +126,7 @@ export function toStudentWork(value: unknown): StudentWork {
     marks: row.marks.map((mark) => ({ partId: mark.part_id, kind: mark.kind, score: mark.score, reason: mark.reason, fromAnswers: mark.from_answers })),
     answers: row.answers.map((answer) => ({ questionId: answer.question_id, partId: answer.part_id, choiceId: answer.choice_id, score: answer.score })),
     markedParts: row.marked_parts,
+    updatedAt: row.updated_at,
     total: row.total,
     marking: row.marking,
     publication: row.publication

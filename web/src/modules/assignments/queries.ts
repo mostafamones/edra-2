@@ -124,5 +124,19 @@ export async function loadMarks(academyId: string, assignmentId: string, filter:
     p_academy_id: academyId, p_assignment_id: assignmentId, p_filter: filter, p_limit: 1000, p_offset: 0,
   });
   if (error) throw new Error(error.message);
-  return data === null ? { total: 0, students: [] } : toStudentList(data);
+  const list = data === null ? { total: 0, students: [] } : toStudentList(data);
+  if (list.students.length === 0) return list;
+  // Filter by placement IDs so equally named groups stay distinct. Keep RLS and academy scope.
+  const db = createClient();
+  const batches = Array.from({ length: Math.ceil(list.students.length / 100) }, (_, index) =>
+    list.students.slice(index * 100, (index + 1) * 100).map((student) => student.recordId));
+  const results = await Promise.all(batches.map((ids) => db.from("annual_student_records")
+    .select("id,primary_group_id,track_id,academy_tracks(name)")
+    .eq("academy_id", academyId).in("id", ids)));
+  for (const result of results) if (result.error) throw new Error(result.error.message);
+  const placements = results.flatMap((result) => result.data ?? []);
+  const byId = new Map((placements ?? []).map((row) => [row.id, {
+    groupId: row.primary_group_id, trackId: row.track_id, trackName: row.academy_tracks?.name ?? null,
+  }]));
+  return { ...list, students: list.students.map((student) => ({ ...student, placement: byId.get(student.recordId) })) };
 }

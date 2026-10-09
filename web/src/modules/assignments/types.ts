@@ -142,6 +142,8 @@ export type StudentWork = {
   fullName: string;
   archived: boolean;
   groupName: string | null;
+  /** Current placement for staff filters; command responses omit it. */
+  placement?: { groupId: string | null; trackId: string | null; trackName: string | null };
   studentCode: string | null;
   workStatus: WorkStatus;
   receivedAt: string | null;
@@ -152,6 +154,8 @@ export type StudentWork = {
   marks: StudentMark[];
   answers: StudentAnswer[];
   markedParts: number;
+  /** When the student's marks, work status, or feedback last changed; null if the payload omits it. */
+  updatedAt: string | null;
   /** Sum of the marked parts, or null while nothing is marked. */
   total: string | null;
   marking: MarkingState;
@@ -165,6 +169,8 @@ export type MarkChange = { partId: string; score: string | null; excusedReason?:
 
 /** One question's change: a choice (null = left blank) for choice parts, a mark for manual parts, or clear. */
 export type AnswerChange = { questionId: string } & ({ choiceId: string | null } | { score: string } | { clear: true });
+
+export type StudentSort = "default" | "marks_desc" | "marked_desc";
 
 export type MarkFilter = "all" | "not_received" | "needs_marking" | "marked" | "unpublished";
 

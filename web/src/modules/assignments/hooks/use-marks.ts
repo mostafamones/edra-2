@@ -18,7 +18,7 @@ export function useMarks(assignment: Assignment) {
   });
   const replace = useCallback((student: StudentWork) => {
     queryClient.setQueryData<{ total: number; students: StudentWork[] }>(queryKey, (current) =>
-      current ? { ...current, students: current.students.map((row) => (row.recordId === student.recordId ? student : row)) } : current);
+      current ? { ...current, students: current.students.map((row) => (row.recordId === student.recordId ? { ...student, placement: row.placement } : row)) } : current);
   }, [queryClient, queryKey]);
   return { query, replace, queryKey };
 }
