@@ -8,7 +8,7 @@ import type { z } from "zod";
 
 import { TextInput } from "@/components/shared/app-input";
 import { recoverPassword } from "@/modules/auth/client";
-import { clearPendingAuthFlow, readPendingAuthFlow } from "@/modules/auth/pending-flow";
+import { clearPendingAuthFlow } from "@/modules/auth/pending-flow";
 import { resetPasswordSchema } from "@/modules/auth/validation";
 
 import { AuthCardHeading } from "../card-heading";
@@ -27,13 +27,8 @@ export function ResetPasswordForm() {
 
   async function onSubmit(values: ResetPasswordFields) {
     setFormError(null);
-    const flow = readPendingAuthFlow("recovery");
-    if (!flow?.code) {
-      setFormError("Start password recovery again before choosing a new password.");
-      return;
-    }
     const parsed = resetPasswordSchema.parse(values);
-    const { error } = await recoverPassword({ phone: flow.phone, code: flow.code, password: parsed.password });
+    const { error } = await recoverPassword({ password: parsed.password });
     if (error) {
       setFormError(error);
       return;

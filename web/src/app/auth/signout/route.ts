@@ -17,6 +17,7 @@ export async function POST() {
   const response = NextResponse.redirect(new URL("/auth/login", platformOrigin(platform)), 303);
   response.headers.set("cache-control", "private, no-store");
   response.cookies.set("edra_recovery_pending", "", { httpOnly: true, maxAge: 0, path: "/", sameSite: "lax" });
+  response.cookies.set("edra_recovery_session", "", { httpOnly: true, maxAge: 0, path: "/auth/recover", sameSite: "strict" });
   response.cookies.set("edra_pending_student_invite", "", { httpOnly: true, maxAge: 0, path: "/", sameSite: "lax" });
   clearPendingStaffInvite(response);
   const policy = authCookieOptions();

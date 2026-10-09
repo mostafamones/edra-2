@@ -18,6 +18,7 @@ import {
   signIn,
   signUp,
   recoverPassword,
+  verifyRecoveryCode,
   verifySignup,
 } from "./client";
 
@@ -92,9 +93,13 @@ describe("phone authentication client", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: "Bad code" }), { status: 400 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(recoverPassword({ phone: "+201001234567", code: "123456", password: "secret123" }))
+    await expect(recoverPassword({ password: "secret123" }))
       .resolves.toEqual({ error: "Bad code" });
     expect(fetchMock).toHaveBeenCalledWith("/auth/recover", expect.objectContaining({ method: "POST" }));
+
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    await expect(verifyRecoveryCode({ phone: "+201001234567", code: "123456" })).resolves.toEqual({ error: null });
+    expect(fetchMock).toHaveBeenLastCalledWith("/auth/recover/verify", expect.objectContaining({ method: "POST" }));
     expect(auth.verifyOtp).not.toHaveBeenCalled();
     expect(auth.updateUser).not.toHaveBeenCalled();
     vi.unstubAllGlobals();

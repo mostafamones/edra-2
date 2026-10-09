@@ -39,11 +39,7 @@ export const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
-export const recoverPasswordSchema = z.object({
-  phone: phoneSchema,
-  code: verificationSchema.shape.code,
-  password: newPasswordSchema,
-});
+export const recoverPasswordSchema = z.object({ password: newPasswordSchema });
 
 export type RecoverPasswordInput = z.infer<typeof recoverPasswordSchema>;
 export type SignInInput = z.infer<typeof signInSchema>;

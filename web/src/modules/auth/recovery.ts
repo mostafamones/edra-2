@@ -1,10 +1,20 @@
 import { createClient as createStatelessClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import type { RecoverPasswordInput } from "./validation";
+import type { VerificationInput } from "./validation";
+
+export type RecoveryTokens = { accessToken: string; refreshToken: string };
+
+export type VerifyRecoveryResult = { ok: true; tokens: RecoveryTokens } | { ok: false; message: string };
 
 export type RecoveryResult =
   | { ok: true }
-  | { ok: false; stage: "verify" | "update" | "signout"; message: string; passwordUpdated: boolean };
+  | { ok: false; stage: "session" | "update"; message: string; passwordUpdated: false }
+  | { ok: false; stage: "signout"; message: string; passwordUpdated: true };
+
+/** Recovery cookie: httpOnly, scoped to the recovery route, and short-lived. */
+export const RECOVERY_COOKIE = "edra_recovery_session";
+export const RECOVERY_COOKIE_PATH = "/auth/recover";
+export const RECOVERY_WINDOW_SECONDS = 10 * 60;
 
 const SIGN_OUT_ATTEMPTS = 3;
 
@@ -16,27 +26,56 @@ export function createRecoveryClient() {
   );
 }
 
+export function encodeRecoveryTokens(tokens: RecoveryTokens) {
+  return Buffer.from(JSON.stringify(tokens)).toString("base64url");
+}
+
+export function decodeRecoveryTokens(value: string | undefined): RecoveryTokens | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString()) as Partial<RecoveryTokens>;
+    return typeof parsed.accessToken === "string" && typeof parsed.refreshToken === "string"
+      ? { accessToken: parsed.accessToken, refreshToken: parsed.refreshToken }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Password recovery runs entirely on the server. The recovery OTP is exchanged for a
- * session that lives only in this request's memory: it is never written to cookies or
- * returned to the browser. The database also refuses every phone-code session for application
- * operations (edra_auth.check_request), so a code verified directly against Auth grants nothing
- * beyond setting a password. The session is used once to set the new password, then revoked
- * globally, which also invalidates every other session's unexpired access tokens.
+ * Password recovery runs entirely on the server. The recovery OTP is verified on its own step so a
+ * wrong code is reported immediately, and the resulting session is held only in an httpOnly cookie
+ * scoped to the recovery route; it never reaches browser JavaScript. The database also refuses
+ * every phone-code session for application operations (edra_auth.check_request), so the session
+ * grants nothing beyond setting a password.
+ */
+export async function verifyRecoveryCode(
+  input: VerificationInput,
+  client: SupabaseClient = createRecoveryClient(),
+): Promise<VerifyRecoveryResult> {
+  const verified = await client.auth.verifyOtp({ phone: input.phone, token: input.code, type: "sms" });
+  const session = verified.data.session;
+  if (verified.error || !session) return { ok: false, message: verified.error?.message ?? "Verification failed" };
+  return { ok: true, tokens: { accessToken: session.access_token, refreshToken: session.refresh_token } };
+}
+
+/**
+ * Sets the new password with the verified recovery session, then revokes every session globally,
+ * which also invalidates other sessions' unexpired access tokens. A rejected password leaves the
+ * recovery session in place so the user can choose another without requesting a new code.
  */
 export async function completePasswordRecovery(
-  input: RecoverPasswordInput,
+  password: string,
+  tokens: RecoveryTokens,
   client: SupabaseClient = createRecoveryClient(),
 ): Promise<RecoveryResult> {
-  const verified = await client.auth.verifyOtp({ phone: input.phone, token: input.code, type: "sms" });
-  if (verified.error || !verified.data.session) {
-    return { ok: false, stage: "verify", message: verified.error?.message ?? "Verification failed", passwordUpdated: false };
+  const restored = await client.auth.setSession({ access_token: tokens.accessToken, refresh_token: tokens.refreshToken });
+  if (restored.error || !restored.data.session) {
+    return { ok: false, stage: "session", message: restored.error?.message ?? "Recovery session expired", passwordUpdated: false };
   }
 
-  const updated = await client.auth.updateUser({ password: input.password });
+  const updated = await client.auth.updateUser({ password });
   if (updated.error) {
-    // The password is unchanged: revoke the scoped session so nothing outlives this request.
-    await client.auth.signOut({ scope: "local" }).catch(() => undefined);
     return { ok: false, stage: "update", message: updated.error.message, passwordUpdated: false };
   }
 

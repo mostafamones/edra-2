@@ -52,10 +52,9 @@ export async function requestPasswordRecovery(phone: string) {
   });
 }
 
-/** Recovery is completed by the server; the browser never receives a recovery session. */
-export async function recoverPassword(input: RecoverPasswordInput): Promise<{ error: string | null }> {
+async function postRecovery(path: string, input: unknown): Promise<{ error: string | null }> {
   try {
-    const response = await fetch("/auth/recover", {
+    const response = await fetch(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
@@ -66,4 +65,13 @@ export async function recoverPassword(input: RecoverPasswordInput): Promise<{ er
   } catch {
     return { error: "We could not reach the server. Check your connection and try again." };
   }
+}
+
+/** Recovery runs on the server; the browser never receives a recovery session. */
+export function verifyRecoveryCode(input: VerificationInput) {
+  return postRecovery("/auth/recover/verify", input);
+}
+
+export function recoverPassword(input: RecoverPasswordInput) {
+  return postRecovery("/auth/recover", input);
 }

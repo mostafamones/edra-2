@@ -14,6 +14,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import {
   requestPasswordRecovery,
   resendSignupCode,
+  verifyRecoveryCode,
   verifySignup,
 } from "@/modules/auth/client";
 import { useAuthDraft } from "@/modules/auth/components/draft-provider";
@@ -75,8 +76,12 @@ export function VerifyForm({ mode }: { mode: PendingAuthKind }) {
     const parsed = result.data;
 
     if (mode === "recovery") {
-      // The code is verified by the server together with the new password; no session is created here.
-      savePendingAuthFlow({ kind: "recovery", phone: parsed.phone, code: parsed.code });
+      // The server verifies the code and keeps the recovery session in an httpOnly cookie.
+      const { error } = await verifyRecoveryCode(parsed);
+      if (error) {
+        setFormError(error);
+        return;
+      }
       router.replace("/auth/reset-password");
       return;
     }

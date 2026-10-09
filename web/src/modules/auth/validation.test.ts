@@ -45,8 +45,8 @@ describe("auth input validation", () => {
   it("lets existing short passwords sign in but enforces the new-password policy", () => {
     expect(signInSchema.safeParse({ phone: "01001234567", password: "short" }).success).toBe(true);
     expect(signUpSchema.safeParse({ firstName: "A", lastName: "B", phone: "01001234567", password: "short" }).success).toBe(false);
-    expect(recoverPasswordSchema.safeParse({ phone: "01001234567", code: "123456", password: "short" }).success).toBe(false);
-    expect(recoverPasswordSchema.safeParse({ phone: "01001234567", code: "123456", password: "longenough" }).success).toBe(true);
+    expect(recoverPasswordSchema.safeParse({ password: "short" }).success).toBe(false);
+    expect(recoverPasswordSchema.safeParse({ password: "longenough" }).success).toBe(true);
   });
 
   it("validates new password confirmation", () => {

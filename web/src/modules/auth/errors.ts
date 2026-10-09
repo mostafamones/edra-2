@@ -1,6 +1,8 @@
 const AUTH_ERROR_MESSAGES: Array<[RegExp, string]> = [
   [/invalid login credentials/i, "The phone number or password is incorrect."],
   [/phone.*already.*registered|user already registered/i, "An account already uses this phone number."],
+  // Supabase reports wrong and expired codes with the same message.
+  [/token has expired or is invalid/i, "That code is incorrect or has expired. Check it or request a new code."],
   [/otp.*expired|token has expired/i, "That code has expired. Request a new code."],
   [/invalid.*otp|token.*invalid/i, "The verification code is incorrect."],
   [/rate limit|over.*limit|too many requests/i, "Too many attempts. Please wait before trying again."],
@@ -8,6 +10,7 @@ const AUTH_ERROR_MESSAGES: Array<[RegExp, string]> = [
   [/whatsapp.*rejected|send sms hook|unable to send.*(?:sms|message)|sms.*provider/i, "We could not send the WhatsApp code. Please try again."],
   [/phone.*provider.*disabled|phone.*signups.*disabled/i, "Phone authentication is not enabled yet."],
   [/password.*weak|weak password/i, "Choose a stronger password."],
+  [/different from the old password/i, "Choose a password different from your current one."],
   [/signup.*disabled/i, "Account creation is temporarily unavailable."],
 ];
 
