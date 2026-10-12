@@ -6,7 +6,7 @@ Next.js staff/student application and the modular backend using cloud Supabase. 
 
 From web/, install the locked dependencies with npm ci, copy .env.example to .env.local, set the configured cloud project's public values and development origins, then run npm run dev. Keep secrets server-side. No local database is required.
 
-Development hosts use lvh.me, app.lvh.me and learn.lvh.me on port 3000; see [routing](docs/technical/routing.md). Check available commands in package.json. test:db currently starts/resets local Supabase and is not the default cloud-check path.
+Development hosts use lvh.me, app.lvh.me and learn.lvh.me on port 3000; see [routing](docs/technical/routing.md). Check available commands in package.json. test:db runs the database assertions against an explicitly configured, marked isolated cloud test target; it never starts a local stack, resets a database or applies migrations. See [database assertions](docs/engineering.md#database-assertions).
 
 ## References
 

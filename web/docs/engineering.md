@@ -24,6 +24,25 @@ Current source still contains non-Tabler imports. That is a separate implementat
 
 Use the applicable web scripts: npm run lint, npm run typecheck, npm run test, npm run build and npm run test:edge. Run required checks appropriate to the changed behavior; do not mistake script presence for a pass.
 
-Verify affected database behavior against an authorized cloud development/isolated test target, including permissions, tenant isolation and relevant concurrency/retry rules. test:db currently starts and resets local Supabase through scripts/db-test.sh; it is not the default cloud verification command. A cloud-compatible harness is an implementation follow-up, not a requirement to install local Docker.
+Verify affected database behavior against an authorized cloud development/isolated test target, including permissions, tenant isolation and relevant concurrency/retry rules. The full assertion suite runs only on an isolated test target, as described below.
 
 Report source, test, cloud and deployed-flow evidence separately. Documentation edits do not establish runtime readiness.
+
+### Database assertions
+
+`npm run test:db` (scripts/db-test.sh) runs the SQL suites in supabase/tests/ and then concurrency.sh against one explicitly configured cloud target. It never starts Docker or a local stack, defaults to a connection, resets a database or applies migrations. It needs `psql` 10 or newer and:
+
+- `EDRA_DB_TEST_URL`: a `postgres://` URL for a privileged role (Supabase `postgres`) on the isolated target. Use the direct connection or the session pooler (port 5432); the transaction pooler (port 6543) is rejected because races need stable sessions. The runner moves the password into the environment, never passes it as an argument, and masks the host, user and password in any reported error.
+- `EDRA_DB_TEST_TARGET`: the expected name of the target. A target is isolated only when its `edra_db_test.target` table holds exactly that name.
+
+Run `npm run test:db -- --check` for the read-only preflight alone, or name suites to run a subset, e.g. `npm run test:db -- attendance concurrency`. Exit status 2 means the configuration, target or prerequisites were rejected before any write; 1 means a suite failed.
+
+The read-only preflight rejects a missing or different marker, the app's configured Supabase project, a read-only replica, any repository migration absent from `supabase_migrations.schema_migrations`, missing fixture privileges (insert into `auth.users`, `set role authenticated`, `authenticated` usage on `public` and `auth`) and existing rows that collide with the SQL suites' fixed fixture ids or auth phones.
+
+Target lifecycle and limits:
+
+- Use a dedicated Supabase project or branch for tests, never production or the shared development project. Its owner marks it once, on that target only: `create schema edra_db_test; create table edra_db_test.target (name text primary key); revoke all on schema edra_db_test from public, anon, authenticated; insert into edra_db_test.target values ('<name>');`.
+- Apply migrations to the target with the normal migration workflow before running the suite; the runner only reports what is missing. Replaying all migrations from scratch is a separate, explicitly authorized operation on a clean target, never part of test:db.
+- Every SQL suite runs in one transaction that is rolled back, but suites use fixed fixture ids, take strong locks (sessions.sql disables a trigger inside its transaction) and insert auth users. Do not run them concurrently with other activity on the target.
+- concurrency.sh commits its fixtures because races need separate sessions. Each run creates a fresh academy (`race-<run>` slug), admin and ids, prints them, and retains them: preserved session, attendance and code history cannot be removed through normal flows. Reruns do not collide. Worker output is kept in a temporary directory, with connection details masked, only when the harness fails. Disposing of accumulated fixtures means disposing of the whole test target through its own authorized lifecycle.
+- Races wait until the lock holder is in its transaction and keep it open until the contender is observed waiting on a lock or has finished, instead of relying on fixed sleeps. Every worker's status is checked: a failed lock holder or a lost connection fails the run instead of counting as an expected rejection.
