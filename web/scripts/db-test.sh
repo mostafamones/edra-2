@@ -1,31 +1,155 @@
 #!/usr/bin/env bash
-# Replays every migration on a clean local Supabase database, then runs the SQL assertions and the
-# concurrency harness. Any migration error or failed assertion produces a non-zero exit status.
-# Prerequisites: Docker running, the Supabase CLI and psql on PATH. Destroys the local database.
+# Runs the database assertions and the concurrency harness against an explicitly configured,
+# isolated cloud test target. It never starts infrastructure, resets a database, or applies
+# migrations: apply them to the target first with the normal migration workflow.
+#
+#   EDRA_DB_TEST_URL     postgres:// URL of the isolated target (direct or session pooler; not :6543)
+#   EDRA_DB_TEST_TARGET  name recorded in the target's edra_db_test.target marker row
+#
+# Usage: npm run test:db [-- --check] [-- suite ...]   (suites: SQL file basenames, `concurrency`)
+# Exit status: 0 passed, 1 a suite failed, 2 configuration/target/prerequisite rejected before writes.
+# See docs/engineering.md "Database assertions" for the target contract and fixture retention.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-for tool in docker supabase psql; do
-  command -v "$tool" >/dev/null || { echo "db-test: '$tool' is required but not installed" >&2; exit 2; }
+TESTS=supabase/tests
+SQL_SUITES=(groups_schedules student_records student_imports student_import_logs staff_invitations sessions
+  attendance session_authority student_codes student_code_changes student_code_generation student_code_checkin
+  assignments assignment_marks)
+
+reject() { echo "db-test: $*" >&2; exit 2; }
+
+check_only=false
+selected=()
+for arg in "$@"; do
+  case "$arg" in
+    --check) check_only=true ;;
+    concurrency) selected+=("$arg") ;;
+    -*) reject "unknown option '$arg'" ;;
+    *) [[ " ${SQL_SUITES[*]} " == *" $arg "* ]] || reject "unknown suite '$arg'"; selected+=("$arg") ;;
+  esac
 done
-docker info >/dev/null 2>&1 || { echo "db-test: Docker is not running" >&2; exit 2; }
+[ ${#selected[@]} -gt 0 ] || selected=("${SQL_SUITES[@]}" concurrency)
 
-supabase start >/dev/null
-supabase db reset --local
-export DB_URL="${DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
+# Configuration -----------------------------------------------------------------------------------
+[ -n "${EDRA_DB_TEST_URL:-}" ] || reject "EDRA_DB_TEST_URL is not set (no default connection is used)"
+[ -n "${EDRA_DB_TEST_TARGET:-}" ] || reject "EDRA_DB_TEST_TARGET is not set (name of the isolated target's marker)"
+[[ "$EDRA_DB_TEST_TARGET" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]] || reject "EDRA_DB_TEST_TARGET must be lowercase letters, digits and hyphens"
 
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/groups_schedules.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_records.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_imports.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_import_logs.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/staff_invitations.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/sessions.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/attendance.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/session_authority.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_codes.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_code_changes.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_code_generation.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/student_code_checkin.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/assignments.sql
-psql "$DB_URL" -v ON_ERROR_STOP=1 -X -f supabase/tests/assignment_marks.sql
-bash supabase/tests/concurrency.sh
+[[ "$EDRA_DB_TEST_URL" =~ ^postgres(ql)?://([^@/?#]*@)?([^/:?#]+)(:([0-9]+))?(/[^?#]*)?(\?[^#]*)?$ ]] \
+  || reject "EDRA_DB_TEST_URL must be a postgres:// or postgresql:// URL"
+userinfo="${BASH_REMATCH[2]%@}"; host="${BASH_REMATCH[3]}"; port="${BASH_REMATCH[5]:-5432}"
+path="${BASH_REMATCH[6]}"; query="${BASH_REMATCH[7]}"
+[[ "$query" != *password=* ]] || reject "put the password in the URL userinfo or ~/.pgpass, not a query parameter"
+[ "$port" != 6543 ] || reject "port 6543 is a transaction pooler; races need a direct or session-pooler connection"
+
+user="${userinfo%%:*}"; password=""
+[[ "$userinfo" != *:* ]] || password="${userinfo#*:}"
+if [ -n "$password" ]; then
+  # Keep the password out of process arguments: libpq reads it from the environment instead.
+  export PGPASSWORD; printf -v PGPASSWORD '%b' "${password//%/\\x}"
+fi
+export EDRA_DB_TEST_CONN="postgresql://${user:+$user@}$host:$port$path$query"
+unset EDRA_DB_TEST_URL
+export PGAPPNAME=edra-db-test PGCONNECT_TIMEOUT="${PGCONNECT_TIMEOUT:-15}"
+
+# A Supabase URL identifies its project by host (direct) or by user (pooler). The app's configured
+# project is the shared development target and is never an isolated test target.
+project_ref=""
+[[ "$host" =~ ^db\.([a-z0-9]+)\.supabase\.co$ ]] && project_ref="${BASH_REMATCH[1]}"
+[[ -z "$project_ref" && "$user" =~ ^[a-z_]+\.([a-z0-9]+)$ ]] && project_ref="${BASH_REMATCH[1]}"
+app_url="${NEXT_PUBLIC_SUPABASE_URL:-}"
+[ -n "$app_url" ] || [ ! -f .env.local ] || app_url="$(sed -n 's/^NEXT_PUBLIC_SUPABASE_URL=["'\'']\{0,1\}\([^"'\'']*\).*/\1/p' .env.local | tail -1)"
+if [ -n "$project_ref" ] && [[ "$app_url" =~ ^https://([a-z0-9]+)\.supabase\.co ]] && [ "${BASH_REMATCH[1]}" = "$project_ref" ]; then
+  reject "EDRA_DB_TEST_URL points at the app's configured Supabase project; use an isolated test target"
+fi
+
+command -v psql >/dev/null || reject "psql is required on PATH"
+
+# Never print the connection string: mask its parts in anything psql reports.
+redact() {
+  local text; text="$(cat)"
+  [ -z "${PGPASSWORD:-}" ] || text="${text//"$PGPASSWORD"/<password>}"
+  text="${text//"$host"/<host>}"
+  [ -z "$user" ] || text="${text//"$user"/<user>}"
+  printf '%s\n' "$text"
+}
+export EDRA_DB_TEST_HOST="$host" EDRA_DB_TEST_USER="$user"
+
+# Read-only preflight -----------------------------------------------------------------------------
+versions="$(ls supabase/migrations | sed -n 's/^\([0-9]\{1,\}\)_.*\.sql$/\1/p' | sort | paste -sd, -)"
+fixture_ids="$(grep -ohE "'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'" "$TESTS"/*.sql | tr -d "'" | sort -u | paste -sd, -)"
+fixture_phones="$(grep -hA30 'insert into auth.users' "$TESTS"/*.sql | grep -ohE "'20[0-9]{10}'" | tr -d "'" | sort -u | paste -sd, -)"
+
+preflight_out="$(mktemp)"; trap 'rm -f "$preflight_out"' EXIT
+if ! psql "$EDRA_DB_TEST_CONN" -X -q -tA -v ON_ERROR_STOP=1 -v target="$EDRA_DB_TEST_TARGET" -v versions="$versions" \
+  -v fixture_ids="$fixture_ids" -v fixture_phones="$fixture_phones" >"$preflight_out" 2>&1 <<'SQL'
+begin transaction read only;
+select to_regclass('edra_db_test.target') is not null as has_marker \gset
+\if :has_marker
+  select 'marker=' || coalesce((select string_agg(name, ',' order by name) from edra_db_test.target), '');
+\else
+  select 'marker=';
+\endif
+select 'read_only=' || pg_is_in_recovery();
+select to_regclass('supabase_migrations.schema_migrations') is not null as has_history \gset
+\if :has_history
+  select 'missing_migrations=' || coalesce(string_agg(v, ',' order by v), '')
+  from unnest(string_to_array(:'versions', ',')) v
+  where not exists (select 1 from supabase_migrations.schema_migrations m where m.version = v);
+\else
+  select 'missing_migrations=history table supabase_migrations.schema_migrations is absent';
+\endif
+select 'privileges=' || concat_ws(',',
+  case when not has_table_privilege('auth.users', 'insert') then 'insert into auth.users' end,
+  case when not pg_has_role('authenticated', 'member') then 'set role authenticated' end,
+  case when not has_schema_privilege('authenticated', 'public', 'usage') then 'authenticated usage on public' end,
+  case when not has_schema_privilege('authenticated', 'auth', 'usage') then 'authenticated usage on auth' end);
+select 'collisions=' || coalesce(string_agg(found, ',' order by found), '') from (
+  select 'auth.users ' || id from auth.users where id = any(string_to_array(:'fixture_ids', ',')::uuid[])
+  union all select 'auth.users phone ' || phone from auth.users where phone = any(string_to_array(:'fixture_phones', ','))
+  union all select 'academies ' || id from public.academies where id = any(string_to_array(:'fixture_ids', ',')::uuid[])
+) c(found);
+rollback;
+SQL
+then
+  redact <"$preflight_out" >&2
+  reject "could not run the read-only preflight (connection or catalog access failed); nothing was written"
+fi
+value() { sed -n "s/^$1=//p" "$preflight_out" | tail -1; }
+
+marker="$(value marker)"
+[ -n "$marker" ] || reject "target has no edra_db_test.target marker; it is not a prepared isolated test target"
+[ "$marker" = "$EDRA_DB_TEST_TARGET" ] || reject "target marker is '$marker', expected '$EDRA_DB_TEST_TARGET'"
+[ "$(value read_only)" = f ] || reject "target is a read-only replica"
+missing="$(value missing_migrations)"
+[ -z "$missing" ] || reject "target schema is behind the repository (missing: $missing). Apply migrations with the
+  normal migration workflow first; test:db never applies or replays them"
+privileges="$(value privileges)"
+[ -z "$privileges" ] || reject "connection role lacks fixture privileges: $privileges"
+collisions="$(value collisions)"
+[ -z "$collisions" ] || reject "SQL suite fixtures already exist on the target ($collisions); remove the conflicting
+  rows through the target's own lifecycle or use a fresh isolated target"
+echo "db-test: preflight passed for isolated target '$EDRA_DB_TEST_TARGET'${project_ref:+ (project $project_ref)}"
+if $check_only; then echo "db-test: --check wrote nothing"; exit 0; fi
+
+# Assertions --------------------------------------------------------------------------------------
+export EDRA_DB_TEST_RUN
+EDRA_DB_TEST_RUN="$(date -u +%Y%m%dt%H%M%Sz)-$(od -An -N2 -tx1 /dev/urandom | tr -d ' \n')"
+passed=()
+for suite in "${selected[@]}"; do
+  echo "db-test: running $suite"
+  errors="$(mktemp)"
+  if [ "$suite" = concurrency ]; then
+    bash "$TESTS/concurrency.sh" 2>"$errors" && status=0 || status=$?
+  else
+    psql "$EDRA_DB_TEST_CONN" -X -v ON_ERROR_STOP=1 -f "$TESTS/$suite.sql" 2>"$errors" && status=0 || status=$?
+  fi
+  redact <"$errors" >&2; rm -f "$errors"
+  if [ "$status" -ne 0 ]; then
+    echo "db-test: FAILED $suite (exit $status); passed before it: ${passed[*]:-none}" >&2
+    exit 1
+  fi
+  passed+=("$suite")
+done
+echo "db-test: passed ${#passed[@]} suite(s): ${passed[*]}"
