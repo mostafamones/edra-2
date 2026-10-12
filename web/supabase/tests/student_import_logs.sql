@@ -1,4 +1,6 @@
 -- Import numbering, staff snapshots, atomic entry removal and tenant isolation.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Everything runs in one transaction that is rolled back.
 begin;
 
 create function pg_temp.expect_error(statement text, expected text) returns void language plpgsql as $$

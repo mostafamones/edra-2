@@ -1,7 +1,7 @@
 -- Assignments, checkpoint 1: grants, roles, tenant isolation, exact part maxima, stale edits,
 -- audience validation, the publication snapshot, structure locking, lifecycle, and closed years.
--- Run with `npm run test:db` (psql -v ON_ERROR_STOP=1) against an authorized disposable target
--- after replaying all migrations. Everything runs in one transaction that is rolled back.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Everything runs in one transaction that is rolled back.
 
 do $$ begin
   if not has_function_privilege('authenticated', 'public.create_assignment(uuid, uuid, uuid, jsonb)', 'execute')

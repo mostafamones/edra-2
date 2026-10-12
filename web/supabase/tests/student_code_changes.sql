@@ -1,6 +1,6 @@
 -- Individual student code changes: assign, generate, retire, replay, and authority checks.
--- Run with psql -v ON_ERROR_STOP=1 against an authorized disposable target after replaying all
--- migrations. Everything runs in one transaction that is rolled back.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Everything runs in one transaction that is rolled back.
 
 begin;
 
@@ -185,7 +185,7 @@ set local request.jwt.claim.sub = 'c9999999-9999-4999-8999-999999999999';
 select pg_temp.expect_error($s$ select public.peek_next_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid) $s$, 'forbidden');
 reset role;
 do $$ begin
-  if not exists (select 1 from public.student_code_assignments where code = '0009' and retirement_reason = 'manual' and retired_by = 'a3333333-3333-4333-8333-333333333333')
+  if not exists (select 1 from public.student_code_assignments where code = '0009' and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and retirement_reason = 'manual' and retired_by = 'a3333333-3333-4333-8333-333333333333')
     or (select count(*) from public.student_code_assignments where annual_student_record_id = current_setting('test.r9')::uuid and retired_at is null) <> 1 then
     raise exception 'A change must retire the old code and leave exactly one current code';
   end if;

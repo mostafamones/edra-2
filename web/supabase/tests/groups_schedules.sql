@@ -1,5 +1,6 @@
--- Run with `npm run test:db` (psql -v ON_ERROR_STOP=1) after replaying all migrations on a
--- disposable local database. Any failed assertion aborts psql with a non-zero exit status.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Everything runs in one transaction that is rolled back. Any failed assertion aborts psql with a
+-- non-zero exit status.
 -- Fixtures pin the academic year to 2030 so results do not depend on the wall clock.
 do $$ begin
   if not (select relrowsecurity from pg_class where oid = 'public.groups'::regclass)
@@ -509,11 +510,11 @@ end $$;
 reset role;
 do $$ begin
   if (select count(*) from public.schedule_slots where schedule_id in
-    (select id from public.schedules where title = 'Other slot')) <> 1 then
+    (select id from public.schedules where academy_id in ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') and title = 'Other slot')) <> 1 then
     raise exception 'unauthorized slot deletion succeeded';
   end if;
-  if exists (select 1 from public.schedules where title = 'Cross academy edit')
-    or exists (select 1 from public.schedules where title = 'Group recurring revised' and archived_at is not null) then
+  if exists (select 1 from public.schedules where academy_id in ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') and title = 'Cross academy edit')
+    or exists (select 1 from public.schedules where academy_id in ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') and title = 'Group recurring revised' and archived_at is not null) then
     raise exception 'cross-academy schedule write succeeded';
   end if;
 end $$;

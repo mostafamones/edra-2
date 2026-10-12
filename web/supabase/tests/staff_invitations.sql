@@ -1,7 +1,7 @@
 -- Staff invitations: grants, creation rules, list visibility, revocation, preview, acceptance, expiry,
 -- inviter authority, existing membership, cross-academy access, and lookup rate limiting.
--- Everything runs in one transaction that is rolled back, so it is safe on the cloud development
--- project as well as a disposable database. Any failed assertion aborts with an error.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Everything runs in one transaction that is rolled back. Any failed assertion aborts with an error.
 -- Separate-session races (double accept, accept vs revoke) are not covered here.
 
 begin;
@@ -154,9 +154,9 @@ declare
   own_invite uuid;
 begin
   reset role;
-  select id into admin_invite from public.staff_invitations where token_ciphertext = 'cipher-a';
-  select id into owner_instructor_invite from public.staff_invitations where token_ciphertext = 'cipher-b';
-  select id into own_invite from public.staff_invitations where token_ciphertext = 'cipher-c';
+  select id into admin_invite from public.staff_invitations where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and token_ciphertext = 'cipher-a';
+  select id into owner_instructor_invite from public.staff_invitations where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and token_ciphertext = 'cipher-b';
+  select id into own_invite from public.staff_invitations where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and token_ciphertext = 'cipher-c';
   perform set_config('test.admin_invite', admin_invite::text, true);
   perform set_config('test.owner_instructor_invite', owner_instructor_invite::text, true);
   set local role authenticated;
@@ -220,9 +220,9 @@ do $$ begin
   perform pg_temp.check((select count(*) from public.academy_memberships where user_id = 'c1111111-1111-4111-8111-111111111111') = 1, 'exactly one membership');
   perform pg_temp.check((select role from public.academy_memberships where user_id = 'c1111111-1111-4111-8111-111111111111') = 'admin', 'invited role');
   perform pg_temp.check((select created_by from public.academy_memberships where user_id = 'c1111111-1111-4111-8111-111111111111') = 'a1111111-1111-4111-8111-111111111111', 'membership created by inviter');
-  perform pg_temp.check((select status from public.staff_invitations where token_ciphertext = 'cipher-a') = 'accepted', 'invitation accepted');
+  perform pg_temp.check((select status from public.staff_invitations where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and token_ciphertext = 'cipher-a') = 'accepted', 'invitation accepted');
   perform pg_temp.check((select count(*) from public.academy_memberships where user_id = 'c2222222-2222-4222-8222-222222222222') = 0, 'no membership after revoked or wrong-phone attempts');
-  perform pg_temp.check((select status from public.staff_invitations where token_ciphertext = 'cipher-b') = 'revoked', 'revocation recorded');
+  perform pg_temp.check((select status from public.staff_invitations where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and token_ciphertext = 'cipher-b') = 'revoked', 'revocation recorded');
 end $$;
 
 -- Revoking an accepted invitation does not remove the membership.
@@ -238,7 +238,7 @@ end $$;
 reset role;
 update public.staff_invitations
 set created_at = now() - interval '8 days', expires_at = now() - interval '1 day'
-where token_ciphertext = 'cipher-d';
+where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and token_ciphertext = 'cipher-d';
 -- Recipient 5 becomes a member some other way before accepting.
 insert into public.academy_memberships (academy_id, user_id, role, created_by)
 values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c5555555-5555-4555-8555-555555555555', 'admin', 'a1111111-1111-4111-8111-111111111111');
@@ -268,11 +268,11 @@ end $$;
 
 reset role;
 do $$ begin
-  perform pg_temp.check((select status from public.staff_invitations where token_ciphertext = 'cipher-d') = 'expired', 'expiry recorded');
+  perform pg_temp.check((select status from public.staff_invitations where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and token_ciphertext = 'cipher-d') = 'expired', 'expiry recorded');
   perform pg_temp.check((select role from public.academy_memberships where user_id = 'c5555555-5555-4555-8555-555555555555') = 'admin', 'existing role unchanged');
-  perform pg_temp.check((select status from public.staff_invitations where token_ciphertext = 'cipher-e') = 'pending', 'existing member does not consume invitation');
+  perform pg_temp.check((select status from public.staff_invitations where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and token_ciphertext = 'cipher-e') = 'pending', 'existing member does not consume invitation');
   perform pg_temp.check((select count(*) from public.academy_memberships where user_id in ('c3333333-3333-4333-8333-333333333333', 'c4444444-4444-4444-8444-444444444444')) = 0, 'no membership from expired or unauthorized invitations');
-  perform pg_temp.check((select expires_at - created_at from public.staff_invitations where token_ciphertext = 'cipher-f') = interval '7 days', 'seven-day lifetime');
+  perform pg_temp.check((select expires_at - created_at from public.staff_invitations where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and token_ciphertext = 'cipher-f') = interval '7 days', 'seven-day lifetime');
 end $$;
 
 -- Failed lookups are rate limited per account.

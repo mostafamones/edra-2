@@ -1,8 +1,8 @@
 -- Attendance: grants/RLS, check-in outcomes, versioned edits, all-or-nothing bulk changes, request
 -- idempotency, publication (stale review, corrections, effect deduplication), ended-session and
 -- closed-year rules, tenant isolation, and realtime topic authorization.
--- Run with `npm run test:db` (psql -v ON_ERROR_STOP=1) after replaying all migrations on a
--- disposable database. Everything runs in one transaction that is rolled back.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Everything runs in one transaction that is rolled back.
 
 do $$ begin
   if not (select relrowsecurity from pg_class where oid = 'public.attendance_records'::regclass)
@@ -245,8 +245,9 @@ do $$ begin
   if exists (select 1 from public.attendance_requests where idempotency_key = 'dddddddd-0000-4000-8000-000000000002') then
     raise exception 'A conflict was stored as a replayable result';
   end if;
-  if exists (select 1 from public.attendance_records where published_status is not null)
-    or exists (select 1 from public.attendance_effects) or exists (select 1 from public.attendance_publications) then
+  if exists (select 1 from public.attendance_records where academy_id = '55555555-5555-4555-8555-555555555555' and published_status is not null)
+    or exists (select 1 from public.attendance_effects where academy_id = '55555555-5555-4555-8555-555555555555')
+    or exists (select 1 from public.attendance_publications where academy_id = '55555555-5555-4555-8555-555555555555') then
     raise exception 'Draft attendance produced official state';
   end if;
 end $$;
@@ -276,17 +277,19 @@ end $$;
 reset role;
 do $$ begin
   -- Late -> access; mandatory Absent (expected) -> absence event; Excused and Unknown (a4) -> nothing.
-  if (select count(*) from public.attendance_publications) <> 1
-    or (select count(*) from public.attendance_publication_items) <> 3
-    or (select count(*) from public.attendance_effects) <> 2
+  if (select count(*) from public.attendance_publications where academy_id = '55555555-5555-4555-8555-555555555555') <> 1
+    or (select count(*) from public.attendance_publication_items i join public.attendance_publications p on p.id = i.publication_id
+        where p.academy_id = '55555555-5555-4555-8555-555555555555') <> 3
+    or (select count(*) from public.attendance_effects where academy_id = '55555555-5555-4555-8555-555555555555') <> 2
     or not exists (select 1 from public.attendance_effects where annual_student_record_id = current_setting('test.a1')::uuid and effect_type = 'explanation_access')
     or not exists (select 1 from public.attendance_effects where annual_student_record_id = current_setting('test.a2')::uuid and effect_type = 'absence_event')
     or exists (select 1 from public.attendance_records where annual_student_record_id = current_setting('test.a4')::uuid) then
     raise exception 'Publication effects are wrong';
   end if;
 end $$;
-select pg_temp.expect_error($s$ update public.attendance_publications set item_count = 0 $s$, 'validation');
-select pg_temp.expect_error($s$ delete from public.attendance_publication_items $s$, 'validation');
+select pg_temp.expect_error($s$ update public.attendance_publications set item_count = 0 where academy_id = '55555555-5555-4555-8555-555555555555' $s$, 'validation');
+select pg_temp.expect_error($s$ delete from public.attendance_publication_items
+  where publication_id in (select id from public.attendance_publications where academy_id = '55555555-5555-4555-8555-555555555555') $s$, 'validation');
 set local role authenticated;
 set local request.jwt.claim.sub = '53333333-3333-4333-8333-333333333333';
 
@@ -311,14 +314,14 @@ end $$;
 
 reset role;
 do $$ begin
-  if (select kind from public.attendance_publications where sequence = 2) <> 'correction'
+  if (select kind from public.attendance_publications where academy_id = '55555555-5555-4555-8555-555555555555' and sequence = 2) <> 'correction'
     or (select previous_status from public.attendance_publication_items i join public.attendance_publications p on p.id = i.publication_id
-        where p.sequence = 2 and i.annual_student_record_id = current_setting('test.a2')::uuid) <> 'absent'
+        where p.academy_id = '55555555-5555-4555-8555-555555555555' and p.sequence = 2 and i.annual_student_record_id = current_setting('test.a2')::uuid) <> 'absent'
     -- The original absence stays; the correction asks for review of it, and grants access once.
     or (select count(*) from public.attendance_effects where annual_student_record_id = current_setting('test.a2')::uuid) <> 3
     or not exists (select 1 from public.attendance_effects where annual_student_record_id = current_setting('test.a2')::uuid
       and effect_type = 'revocation_review' and reverses = 'absence_event')
-    or (select count(*) from public.attendance_effects where effect_type = 'explanation_access') <> 3 then
+    or (select count(*) from public.attendance_effects where academy_id = '55555555-5555-4555-8555-555555555555' and effect_type = 'explanation_access') <> 3 then
     raise exception 'Correction effects are wrong';
   end if;
 end $$;

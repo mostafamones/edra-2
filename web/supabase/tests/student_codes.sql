@@ -1,7 +1,7 @@
 -- Student codes foundation: grammar parity, settings permissions and versions, level validation,
 -- disable/re-enable preservation, allocation, and ledger invariants.
--- Run with psql -v ON_ERROR_STOP=1 against an authorized disposable target after replaying all
--- migrations. Everything runs in one transaction that is rolled back.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Everything runs in one transaction that is rolled back.
 
 do $$ begin
   if not (select relrowsecurity from pg_class where oid = 'public.student_code_settings'::regclass)
@@ -245,7 +245,7 @@ do $$ begin
     raise exception 'Allocation must skip issued codes';
   end if;
   if (select current_assignment_id from public.student_code_states where annual_student_record_id = current_setting('test.r9')::uuid)
-    is distinct from (select id from public.student_code_assignments where code = '0001') then
+    is distinct from (select id from public.student_code_assignments where code = '0001' and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') then
     raise exception 'Current pointer not linked';
   end if;
 end $$;
@@ -291,7 +291,7 @@ select pg_temp.expect_error($s$ update public.student_code_assignments set code 
   where code = '0010' and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' $s$, 'code_history');
 select pg_temp.expect_error($s$ update public.student_code_assignments set annual_student_record_id = current_setting('test.r9c')::uuid
   where code = '0001' and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' $s$, '%');
-select pg_temp.expect_error($s$ delete from public.student_code_assignments where code = '0001' $s$, 'code_history');
+select pg_temp.expect_error($s$ delete from public.student_code_assignments where code = '0001' and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' $s$, 'code_history');
 select pg_temp.expect_error($s$ update public.student_code_assignments set retired_at = now(), retirement_reason = 'manual'
   where code = '0010' and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' $s$, '%student_code_assignments_retirement%');
 select pg_temp.expect_error($s$ update public.student_code_states set version = 1

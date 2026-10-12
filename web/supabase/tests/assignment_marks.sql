@@ -1,6 +1,6 @@
 -- Assignment marks and results: grants, authority, exact part marks, work recording, fast code entry,
 -- idempotent retries, per-student publication, corrections, the outbox, and closed years.
--- Run with `npm run test:db` after replaying all migrations on a disposable database.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back.
 
 do $$ begin
@@ -96,7 +96,8 @@ select public.change_student_code('a5555555-5555-4555-8555-555555555555', curren
 -- The outbox has no client grants; this helper reads it as the owner.
 reset role;
 create function pg_temp.effects(effect text default null) returns integer language sql security definer as $$
-  select count(*)::integer from public.assignment_result_effects where effect is null or effect_type::text = effect $$;
+  select count(*)::integer from public.assignment_result_effects
+  where academy_id = 'a5555555-5555-4555-8555-555555555555' and (effect is null or effect_type::text = effect) $$;
 set local role authenticated;
 
 -- Helpers. rec(n) is the record id of student n; ver(n) the recipient's current version.

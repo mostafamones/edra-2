@@ -1,7 +1,7 @@
 -- Student imports and bulk group changes: RLS, grants, staging, validation, duplicates, corrections,
 -- confirmation, batch processing, idempotency, year closure, and set_student_records_group.
--- Run with `npm run test:db` after replaying all migrations on a disposable database. Everything runs
--- in one transaction that is rolled back. Generated ids are kept in custom settings.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Everything runs in one transaction that is rolled back. Generated ids are kept in custom settings.
 
 do $$ begin
   if not (select relrowsecurity from pg_class where oid = 'public.student_import_sessions'::regclass)

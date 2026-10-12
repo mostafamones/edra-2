@@ -1,6 +1,6 @@
 -- Bulk student code generation: scope, preview, all-or-nothing runs, replay, and authority checks.
--- Run with psql -v ON_ERROR_STOP=1 against an authorized disposable target after replaying all
--- migrations. Everything runs in one transaction that is rolled back.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Everything runs in one transaction that is rolled back.
 
 begin;
 

@@ -1,7 +1,7 @@
 -- Student code check-in: permanent reservation, historical ambiguity, lifecycle retirement, receipt
 -- replay, authority/tenant isolation, quota charging, and lock-safe revalidation.
--- Run with `npm run test:db` (psql -v ON_ERROR_STOP=1) against an authorized disposable target
--- after replaying all migrations. Everything runs in one transaction that is rolled back.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Everything runs in one transaction that is rolled back.
 -- Concurrent races (scan vs retirement, two scanners, disable) live in concurrency.sh.
 
 do $$ begin

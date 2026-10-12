@@ -1,7 +1,7 @@
 -- Live sessions: grants/RLS, starting from any schedule at any time, roster capture, retry and
 -- concurrency outcomes, history preservation, ending without reopening, and tenant isolation.
--- Run with `npm run test:db` (psql -v ON_ERROR_STOP=1) after replaying all migrations on a
--- disposable database. Any failed assertion aborts psql with a non-zero exit status.
+-- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Any failed assertion aborts psql with a non-zero exit status.
 -- Everything runs in one transaction that is rolled back. Generated ids are kept in custom settings.
 
 do $$ begin
