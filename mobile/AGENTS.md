@@ -1,13 +1,13 @@
-# Edra iOS guidance
+# Edra native guidance
 
-This file reserves guidance for the planned `mobile/` app. Adding it has not initialized an Xcode project. Follow `../AGENTS.md`, especially Master-thread planning restrictions and cloud-database rules. Setup plan: [`../planning/mobile/setup.md`](../planning/mobile/setup.md).
+Follow `../AGENTS.md`, including Master-thread planning-only and cloud-database rules. Current iPhone setup is in `README.md`; `docs/README.md` links approved scope, native engineering and current API integration. Temporary setup plans are not permanent prerequisites.
 
 ## Confirmed platform and architecture
 
-- Build a native iOS-only app using Swift and SwiftUI. Do not initialize Expo, React Native, Android, a web wrapper, or a mobile Node workspace.
-- The product is a simplified instructor dashboard with academy selection, live sessions, and shared attendance; it is not constrained to a single scan screen. Setup is limited to the setup plan's shell/auth/read-only proof, not the full app.
+- The iOS app uses Swift and SwiftUI. Android direction is native Kotlin parity with the iPhone companion at port time; initialize it only through its authorized implementation plan. Do not replace native apps with Expo, React Native or a web wrapper, or introduce a mobile Node workspace.
+- The product is a simplified instructor dashboard with academy selection, live sessions, and shared attendance; it is not constrained to a single scan screen. The approved instructor MVP includes session/attendance and physical marking; later enhancements remain provisional until reviewed before implementation planning.
 - Maintain the Xcode project, shared schemes, Swift Package Manager dependency resolution, tests, and release workflow independently of `web/`. Do not migrate web dependencies or introduce root workspace orchestration for native setup.
-- Read the current sessions/attendance OpenAPI and API handoff, then verify implementation/deployment status. Use the official Supabase Swift SDK for existing staff phone/password authentication and Edra's bearer HTTP API for academy/session/attendance reads and mutations.
+- Read the relevant web-owned OpenAPI and `docs/api.md`, then distinguish source support from verified deployment. Use the official Supabase Swift SDK for existing staff phone/password authentication and Edra's bearer HTTP API for academy/session/attendance reads and mutations.
 - Keep business rules on the server/database. No direct attendance-table writes, duplicate backend, web server-module imports, or service-role/provider secrets in the app.
 - Keep feature views/models/services under native feature folders and small infrastructure under a native Core/Infrastructure boundary. Views compose state; they do not own network/auth/business rules. Use clear Swift types and deliberate actor isolation rather than reproducing Next.js directory/API conventions.
 
@@ -23,14 +23,14 @@ This file reserves guidance for the planned `mobile/` app. Adding it has not ini
 ## Native UI and resources
 
 - Use accessible SwiftUI/native foundations with safe areas, keyboard handling, Dynamic Type, VoiceOver, and loading/error/empty states. Browser shadcn/Radix primitives do not apply to native views.
-- App-specified icons must come from Tabler. Bundle the small required set as native-compatible vector/image assets with upstream source/version/license attribution and a reproducible conversion approach. Do not introduce another icon set or use SF Symbols as an unapproved replacement for application icons; standard system-controlled UI remains native.
+- Ordinary application icons must come from Tabler. Brand logos use official assets and their brand colors unless a different variant is explicitly specified; they are exempt from the Tabler requirement. Bundle the small required set as native-compatible vector/image assets with upstream source/version/license attribution and a reproducible conversion approach. Do not introduce another icon set or use SF Symbols as an unapproved replacement for application icons; standard system-controlled UI remains native.
 - Keep assets inside the iOS asset catalog and avoid a runtime SVG framework for a handful of static icons unless a concrete need justifies it. Do not edit protected web primitives/theme configuration for mobile.
 - Use Swift Package Manager for necessary native dependencies and commit Package.resolved. Read the selected SDK's current Swift/Xcode/iOS requirements before pinning; avoid deprecated signatures or unnecessary packages.
 - Keep local xcconfig files, signing assets, DerivedData, build products, and user-specific Xcode state out of commits. Commit project configuration and shared schemes required for reproducible builds. Preserve owner changes and generated platform guidance where applicable.
 
 ## Verification and external changes
 
-- Run simulator build, app tests, and applicable Swift formatting/static checks for implementation. Keep simulator compilation, simulator runtime, physical-device evidence, and signed distribution status distinct.
+- Run the applicable native build, app tests and Swift formatting/static checks for implementation using available authorized runtimes; the current `run.sh` targets a connected iPhone. Keep simulator compilation, simulator runtime, physical-device evidence, and signed distribution status distinct.
 - Test auth persistence/refresh/sign-out, API errors, cancelled tasks, nonstaff/removed membership, and academy isolation in the relevant slice. Report unavailable Xcode/runtime/device/cloud paths precisely.
-- Use only authorized cloud Supabase/API targets; no local database or reset of a shared project. Setup does not authorize migrations, server deployment, signing-account changes, TestFlight/App Store submission, or production distribution.
+- Use only authorized cloud Supabase/API targets; no local database or reset of a shared project. Routine non-destructive backend migrations are pre-approved during authorized implementation under web guidance; destructive or hard-to-reverse changes require explicit approval. Native setup does not by itself authorize server deployment, signing-account changes, TestFlight/App Store submission or production distribution.
 - Native development never suspends Master-thread planning-only restrictions. Sensitive edits to this guidance require owner authorization, as with web guidance.
