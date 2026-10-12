@@ -1,8 +1,10 @@
-# Attendance module contract
+# Attendance integration
+
+Current implementation reference. [Product teaching/attendance](../../../docs/product/domains/teaching.md) owns intended rules; [OpenAPI](../../../docs/api/sessions-attendance.openapi.yaml) owns HTTP shapes. Source names publish/publication remain wire identifiers for the product action Finalize.
 
 Attendance for a started session: draft inputs, positive check-ins, explicit publication with corrections, realtime collaboration, and the token API used by the future phone app. Schema: `supabase/migrations/20261005170000_attendance.sql`. Sessions (start, end, roster snapshot) belong to the sessions module.
 
-## Rules (owner-confirmed 2026-10-05)
+## Current source behavior
 
 - Every roster student starts **Unknown** (version 0, no row). Inputs: Present, Late, Absent, Excused, or back to Unknown. Late is set by staff, or automatically by a check-in made after the caller's `lateAfterMinutes` deadline (measured from the session start; 0 or omitted disables it).
 - Nothing marks students absent or publishes automatically, including ending a session. **Mark unrecorded absent** is an explicit bulk action for expected students of a mandatory class.
@@ -30,4 +32,4 @@ Server (`server.ts`): `getAttendance`, `checkIn`, `changeAttendance`, `publishAt
 
 HTTP: `GET /api/sessions/<id>/attendance?academy=` (web, cookie) and the bearer-token `/api/v1` endpoints documented in `docs/api/sessions-attendance.openapi.yaml`.
 
-Web: the `AttendanceSection` component, shown under the session facts on `/app/attendance/<id>`. The old `/app/attendance/<id>/attendance` route redirects there.
+Web: the `AttendanceSection` component, shown under session facts at /<academySlug>/attendance/<id> on the staff host (internal /app/[academySlug]/attendance/[id]). The old `/app/attendance/<id>/attendance` route redirects there.

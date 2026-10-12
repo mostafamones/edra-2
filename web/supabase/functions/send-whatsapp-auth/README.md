@@ -1,57 +1,25 @@
-# WhatsApp authentication hook setup
+# WhatsApp authentication hook
 
-The function accepts Supabase Send SMS Hook events and verifies their Standard Webhooks signature. With development mode off, it sends the OTP with the Meta WhatsApp authentication template `verify`. With development mode on, it redirects the OTP to the configured test recipient using the approved English (US) utility template `jaspers_market_order_confirmation_v1`.
+Current source: index.ts and ../_shared/whatsapp-auth.ts. This receives Supabase's Send SMS Hook and delivers the phone OTP through Meta WhatsApp; it is not the parent academic-notification worker.
 
-## Secrets
+## Authentication and configuration
 
-Set these as Supabase Edge Function secrets:
+Verify the hook signature against SEND_SMS_HOOK_SECRET before parsing/using the payload. The destination comes from sms.phone, falling back to user.phone. Valid payloads require the expected phone shape and six-digit OTP.
 
-- `SEND_SMS_HOOK_SECRET`: the hook secret shown by Supabase when the Send SMS Hook is created
-- `META_WHATSAPP_ACCESS_TOKEN`: a server-only Meta system-user token
-- `META_WHATSAPP_PHONE_NUMBER_ID`: the WhatsApp sender phone-number ID
-- `META_WHATSAPP_TEMPLATE_LANGUAGE`: the exact approved language code for `verify`; the development utility template always uses `en_US`
-- `META_WHATSAPP_GRAPH_API_VERSION`: optional version override; currently defaults to `v23.0`
+Required server-side values: SEND_SMS_HOOK_SECRET, META_WHATSAPP_ACCESS_TOKEN, META_WHATSAPP_PHONE_NUMBER_ID and META_WHATSAPP_TEMPLATE_LANGUAGE. META_WHATSAPP_GRAPH_API_VERSION optionally overrides the source default. Production template name is verify; the language and button/body payload must match the approved Authentication template. See the shared builder for the exact provider payload.
 
-Deploy the function without Supabase JWT verification because Supabase authenticates the request through the signed hook payload:
+Deploy this signed-hook function without gateway JWT verification; its request authority is the verified hook signature. Using the configured project, the existing deployment form is:
 
 ```sh
-npx supabase functions deploy send-whatsapp-auth --project-ref fgbcjlibwgxylfwmocgx --no-verify-jwt --use-api
+npx supabase functions deploy send-whatsapp-auth --project-ref <project-ref> --no-verify-jwt --use-api
 ```
 
-In Supabase Auth:
+Configure Supabase Phone confirmation and its Send SMS Hook URL/secret. Source retries transient delivery once, with no SMS fallback. A function deployment is not proof that the sender/template is production-ready.
 
-1. Enable the Phone provider and keep **Enable phone confirmations** on so signup requires an OTP.
-2. Create a Send SMS Hook pointing to the deployed function.
-3. Copy its generated secret into `SEND_SMS_HOOK_SECRET`.
-4. Configure rate limits and CAPTCHA or equivalent abuse protection.
-5. Keep email and OAuth enabled until `npm run audit:auth` reports that existing accounts have a migration path.
+## Development versus production
 
-The first release retries WhatsApp once for transient errors and does not fall back to SMS.
+WHATSAPP_DEVELOPMENT_MODE=true redirects to WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE and logs EDRA_DEV_AUTH_CODE. It uses jaspers_market_order_confirmation_v1, not the production verify template. Missing/invalid test recipient fails closed. This is fake-number/test delivery only.
 
-## Development recipient routing
+When development routing is off, EDRA_AUTH_DEV_LOG_PHONE plus a short EDRA_AUTH_DEV_LOG_UNTIL can enable a one-number log-only path. Remove those overrides and disable development mode for real users. Never log production OTPs or expose hook/provider secrets to clients.
 
-These Edge Function secrets are optional and default to routing to the phone supplied by Supabase:
-
-- `WHATSAPP_DEVELOPMENT_MODE`: set to the literal `true` only on the development Supabase project to redirect every authentication WhatsApp message to the configured test recipient. Any other value leaves routing unchanged.
-- `WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE`: the test recipient in E.164 format, such as `+201001234567`.
-
-When development mode is enabled, a missing or invalid test number makes the hook fail closed; it never sends to the account's real phone as a fallback. Every valid signed hook logs `EDRA_DEV_AUTH_CODE` with the original signup phone and OTP, then sends the `jaspers_market_order_confirmation_v1` utility template to the configured test recipient. Its body parameters are `{{1}}` = the user's `full_name` metadata (or `there` if unavailable), `{{2}}` = the OTP, and `{{3}}` = `Tomorrow at 12:34` followed by the last four digits of the original phone number being verified. The template reads as an order confirmation, so this is only for testing the WhatsApp delivery path; it is not a substitute for an approved authentication template. Use the received code to verify the test account. Set the mode to `false` before using the function for real users; this all-number OTP logging stops, and the function sends the OTP using `verify` to the phone submitted to Supabase.
-
-Set or change the secrets with the Supabase CLI:
-
-```sh
-npx supabase secrets set WHATSAPP_DEVELOPMENT_MODE=true WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE=+201001234567 --project-ref fgbcjlibwgxylfwmocgx
-npx supabase secrets set WHATSAPP_DEVELOPMENT_MODE=false --project-ref fgbcjlibwgxylfwmocgx
-```
-
-Do not set these development secrets on a production project.
-
-## Temporary development OTP log
-
-When development mode is disabled, the optional one-number log-only path remains available: set `EDRA_AUTH_DEV_LOG_PHONE` to one test phone in E.164 format and `EDRA_AUTH_DEV_LOG_UNTIL` to a near-term ISO 8601 UTC timestamp. That matching signed hook writes the code to Edge Function Logs and returns success without sending to Meta. Remove both secrets when testing ends. Do not use this path for real users.
-
-In Supabase, open **Edge Functions → send-whatsapp-auth → Logs**, retry signup, and find `EDRA_DEV_AUTH_CODE`. Enter its six-digit `code` on `/auth/verify`. Supabase's normal OTP expiry and rate limits still apply.
-
-## Production deployment
-
-Follow [the production deployment checklist](../../../docs/production-deployment-checklist.md) before deploying a production build.
+Use [deployment](../../../docs/technical/deployment.md) for the release sequence and controlled-phone verification. No sender configuration, function deployment or delivery was verified by this documentation update.

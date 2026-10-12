@@ -1,7 +1,7 @@
-# Group placement contract for the student milestone
+# Groups integration
 
-Groups are scoped by `(academy_id, academic_year_id)`. Annual student records should hold one nullable `primary_group_id` and use a composite foreign key from `(academy_id, academic_year_id, primary_group_id)` to `groups`. Placement must match the student's level and track. A student can have at most one current primary group because the annual record holds a single reference.
+Groups belong to an academy/year. queries.ts reads groups/structure and derives active dependency counts from annual records; actions.ts handles create/update/archive/restore. The public entry point is index.ts.
 
-`protect_group_dependencies` blocks program changes and archival while any annual student record (active or archived) references a group; student placement takes a share lock on the group so concurrent archival cannot interleave. Active student counts are derived from current annual records in `loadGroupDependencies`, rather than stored on `groups`. A later session roster should snapshot its expected students when the session is created so moving a student to another group does not rewrite past expectations.
+Current placement uses annual_student_records.primary_group_id with academy/year integrity checks and one nullable primary group. protect_group_dependencies guards changes/archive while dependent records remain. Placement locking prevents concurrent archival from invalidating a write. Current validation must be compared with the intended level-wide/track-specific compatibility and capacity rules in [teaching](../../../docs/product/domains/teaching.md); staff placement currently does not enforce booking capacity.
 
-Student placement lives in the students module (`src/modules/students/records/`); enrollment history is not modeled yet.
+A session snapshots its roster when started; later group/student edits do not rewrite that snapshot. Source Head Admin and midyear removed-track broadening are not inferred from the existing owner/admin implementation. Current group dependencies are an integration contract, not a speculative future-roster plan.

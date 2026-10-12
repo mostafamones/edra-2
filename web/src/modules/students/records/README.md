@@ -1,6 +1,6 @@
 # Staff student records
 
-Staff create and maintain academy student records from `/app/students`. Students do not onboard into an academy in this slice; no authentication account is created or linked.
+Current staff-record implementation at /<academySlug>/students on the staff host. Intended rules are in [students](../../../../docs/product/domains/students.md). This module does not create authentication accounts or implement academy joining.
 
 ## Model
 
@@ -8,15 +8,15 @@ Staff create and maintain academy student records from `/app/students`. Students
 - `annual_student_records` holds one record per profile per academic year: name, student phone, parent phone, level, track, optional primary group, participation type (`in_person` or `online_only`), archive state, and a `version` incremented by every write.
 - Creating a record inserts the profile and the annual record in one transaction.
 
-## Decisions for this slice
+## Current record validation
 
-These owner decisions govern this slice where older product documents differ:
+These describe source behavior. The product reference owns intended changes; current role checks use Owner/Admin/Instructor, not Head Admin.
 
 - **Groups are optional.** A record may be unassigned (`primary_group_id` is null). A placed group must be active, in the same academy and year, and match the record's level and track.
 - **Both phones are required and must be valid Egyptian mobiles** for every staff role. There is no empty-phone or validation-bypass path. Phones are stored as canonical `+201XXXXXXXXX`; neither requires OTP verification here.
 - The student phone is unique per academy and year, **including archived records**. Duplicate names and shared parent phones are allowed.
 - A track is required only when the chosen level has tracks. No synthetic "General" track exists.
-- Group capacity is not enforced by staff placement; capacity remains a booking concern.
+- Group capacity is not enforced by current staff placement. Intended booking capacity and manager over-capacity behavior are defined in the product reference.
 
 ## Permissions
 
@@ -46,7 +46,7 @@ Authenticated users can only `select` the tables (through RLS). Every write goes
 
 ## Importing
 
-The Import menu on the students page opens a dialog for CSV, JSON, or Excel, with instructions and templates. Choosing a file opens `/app/students/import?format=csv|json|xlsx` with a read-only entries table, search, and selection for deleting draft entries. Headers and columns are matched automatically. Mapping warnings open a sheet showing unmatched fields; matched fields and defaults stay tucked away. Fully matched files are staged automatically for server validation and confirmation. The selected file passes in memory, scoped to the academy; reloading before staging returns to the students list to choose it again.
+The Import menu on the students page opens a dialog for CSV, JSON, or Excel, with instructions and templates. Choosing a file opens `/<academySlug>/students/import?format=csv|json|xlsx` with a read-only entries table, search, and selection for deleting draft entries. Headers and columns are matched automatically. Mapping warnings open a sheet showing unmatched fields; matched fields and defaults stay tucked away. Fully matched files are staged automatically for server validation and confirmation. The selected file passes in memory, scoped to the academy; reloading before staging returns to the students list to choose it again.
 
 Code lives in `imports/`: `parsers/` (CSV with Papa Parse, JSON, XLSX with ExcelJS after an fflate expansion check) run in a Web Worker (`worker.ts`, `parse.ts`) with a 30-second timeout; `mapping.ts` suggests columns from English/Arabic header aliases and builds staged rows; `templates.ts` builds the templates.
 
@@ -58,9 +58,13 @@ CSV, JSON, and Excel templates include an example for every academy level/track,
 - Rows are staged in requests of at most 100 rows and 256 KiB (`stage_student_import_rows`, idempotent per ordinal). `finalize_student_import` resolves every row in the database: level by code or exact normalized name, track within the level, group within the level, track, and year; explicit values win over session defaults, which apply only where compatible. `Unassigned`/`none` or JSON null is an explicit empty group.
 - Corrections (`correct_student_import_row`) and exclusions change only the staged row and require the session's current `revision`.
 - `confirm_student_import` revalidates; if records or structure changed the outcome, it saves the refreshed preview and returns `confirmed: false`. Otherwise Ready rows get immutable batches of 100. `process_student_import_batch` creates one batch through `create_student_record`, one subtransaction per row: a concurrent duplicate phone becomes skipped, a placement or validation failure becomes failed, and anything unexpected rolls back the batch so it can be retried. A repeated batch returns its stored outcomes. Batches only run while the page submits them.
-- `/app/students/imports` lists only completed imports, their original staff member, completion date, and created/skipped/failed counts. Each session has a unique academy-specific number; its heading and breadcrumb use `Review Import #001`. Drafts are retained for review and recovery but do not appear in logs. Completed imports remain readable after the year closes. Only the original importer can resume or change a draft, and only owners/admins can view logs or import.
+- `/<academySlug>/students/imports` lists only completed imports, their original staff member, completion date, and created/skipped/failed counts. Each session has a unique academy-specific number; its heading and breadcrumb use `Review Import #001`. Drafts are retained for review and recovery but do not appear in logs. Completed imports remain readable after the year closes. Only the original importer can resume or change a draft, and only owners/admins can view logs or import.
 - `remove_student_import_entries` removes selected draft entries in one revision-checked transaction by excluding them. Removed rows remain in the log; the entries themselves have no editing controls. There is no cleanup schedule.
 
 ## Deferred
 
 Updating existing records through imports, general exports, bulk changes other than groups, deletion, account linking, returning-student workflows, booking, custom fields, and student academy onboarding.
+
+## Intended behavior awaiting implementation
+
+Current placement SQL compares group and student tracks exactly; the approved product allows level-wide groups to accept any track at that level. Head Admin, track-removal broadening, returning enrollment/account links and related access flows require their own implementation. Do not broaden permissions or change historical placement merely to match this reference.
