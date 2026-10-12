@@ -1,0 +1,611 @@
+openapi: 3.1.0
+info:
+  title: Edra sessions and attendance API
+  version: "1.0.0"
+  description: |
+    Bearer-token API for signed-in Edra staff (owner, admin, instructor), built for the future phone
+    attendance app. This document covers only the sessions/attendance endpoints added under `/api/v1`.
+
+    **Authentication.** Sign in with Supabase Auth (phone + password) and send the session's access
+    token as `Authorization: Bearer <access_token>`. Never send the Supabase publishable key as
+    authentication, and never send browser auth cookies with a bearer request (`400
+    AMBIGUOUS_AUTHENTICATION`). Membership is re-checked on every request: a removed staff member
+    gets `403`/`404` immediately even with an unexpired token.
+
+    **Writes** require an `Idempotency-Key` header: a UUID created once per user action and reused
+    on every retry of that action. A retry returns the stored result with `"replayed": true`. Reusing
+    a key for a different request returns `409 IDEMPOTENCY_CONFLICT`. Keys are scoped to the signed-in
+    user and are currently kept indefinitely (at least 24 hours is guaranteed). Conflict and
+    `REVIEW_REQUIRED` answers are not stored, so the same key can be retried after review.
+
+    **Responses** are JSON with snake_case fields, `Cache-Control: no-store`, and an `X-Request-Id`
+    header. Errors use the `Error` schema with a stable `code`.
+
+    **Throttling** is per user and has two layers: HTTP request buckets (300 reads and 120 writes
+    per 60-second window, shared across servers) and database operation quotas charged once per
+    committed mutation (600 check-ins, 240 attendance changes, 60 publications per 60 seconds).
+    `429 THROTTLED` includes `Retry-After` in seconds; retry with the same `Idempotency-Key`.
+
+    **Student codes.** An academy may enable optional student codes. They are management
+    operations in the Edra web app (assign, generate, replace, retire); this API exposes no
+    endpoint for them. Issued codes are reserved permanently: a retired code is never issued
+    again, to anyone. The sheet reports `student_codes_enabled` and each entry's current
+    `student_code` (null when the academy has codes disabled or the student has none).
+
+    **CORS** is only enabled for browser origins listed in the server's `EDRA_API_ALLOWED_ORIGINS`.
+    Native apps do not need CORS. `OPTIONS` preflight is unauthenticated and grants nothing.
+servers:
+  - url: http://app.lvh.me:3000
+    description: Local development (the staff origin; requires the lvh.me host, not localhost)
+  - url: http://mones.ddns.net:3000
+    description: Development server reachable over DDNS (for the mobile app and API clients)
+  - url: "{staffOrigin}"
+    description: Deployed staff origin (the value of EDRA_APP_ORIGIN; not yet decided for production)
+    variables:
+      staffOrigin:
+        default: https://app.example.invalid
+security:
+  - staffToken: []
+tags:
+  - name: Academies
+  - name: Sessions
+  - name: Attendance
+paths:
+  /api/v1/academies:
+    get:
+      tags: [Academies]
+      summary: Academies the signed-in staff member may access
+      operationId: listAcademies
+      responses:
+        "200":
+          description: Staff memberships (owner, admin, instructor), ordered by academy id.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [academies]
+                properties:
+                  academies:
+                    type: array
+                    items: { $ref: "#/components/schemas/Academy" }
+              example:
+                academies:
+                  - { id: 7c1e2d1a-0b0e-4a63-9a53-1f2f0c1d9e11, name: Magd Academy, slug: magd, icon: school, role: instructor }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/academies/{academyId}/sessions:
+    get:
+      tags: [Sessions]
+      summary: Live sessions in one academy, newest first
+      description: |
+        A session is live from the moment any staff member starts it until someone ends it or it
+        closes itself (`auto_end_at`, at least 90 minutes after the start). Sessions started outside
+        their scheduled time are included. Selecting a session does not create, claim, or lock it;
+        several staff can take attendance on the same session at once.
+      operationId: listLiveSessions
+      parameters:
+        - { name: academyId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: state, in: query, required: false, schema: { type: string, enum: [live], default: live } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: cursor, in: query, required: false, description: Opaque; pass `next_cursor` from the previous page., schema: { type: string } }
+      responses:
+        "200":
+          description: One page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sessions, next_cursor]
+                properties:
+                  sessions:
+                    type: array
+                    items: { $ref: "#/components/schemas/LiveSession" }
+                  next_cursor: { type: [string, "null"] }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/sessions/{sessionId}:
+    get:
+      tags: [Sessions]
+      summary: Session snapshot, lifecycle, and permitted actions
+      operationId: getSession
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: The session. Unknown sessions and sessions in other academies are 404.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [session, year_open, permitted_actions]
+                properties:
+                  session: { $ref: "#/components/schemas/Session" }
+                  year_open: { type: boolean }
+                  permitted_actions: { $ref: "#/components/schemas/PermittedActions" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/sessions/{sessionId}/attendance:
+    get:
+      tags: [Attendance]
+      summary: Versioned roster with draft and official attendance
+      operationId: getAttendance
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: The attendance sheet. Entries are ordered by name.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AttendanceSheet" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/sessions/{sessionId}/check-ins:
+    post:
+      tags: [Attendance]
+      summary: Positive check-in (scan) for one roster student
+      description: |
+        Only while the session is live. Unknown becomes draft Present (`recorded`). Present or Late
+        returns `already_recorded` and changes nothing (Late is kept, the first check-in time is kept).
+        Absent or Excused returns `409 REVIEW_REQUIRED` and changes nothing and stores no retry
+        receipt. A student outside the roster returns `422 NOT_ON_ROSTER`. Show success only after a
+        `200` response. Drafts stay unpublished; publishing is a separate explicit action.
+
+        **Identifier: send exactly one of**
+        - `student_id`: the academy-local student code as a string (for example the decoded text of a
+          scanned card). The server trims outer ASCII whitespace, uppercases ASCII letters, keeps
+          leading zeroes, and requires 1–20 characters from `A-Z`, `0-9`, `-`. Numbers, internal
+          spaces, control characters, non-ASCII look-alikes and longer values are `400
+          INVALID_REQUEST`. The database resolves the code and records the attendance in one
+          transaction using the session's academy; never resolve a code client-side. Requires the
+          academy to have student codes enabled; no formula is required, and codes issued earlier
+          keep working after a formula edit.
+        - `annual_student_record_id`: the permanent UUID (from the sheet). It works for every
+          student, with codes enabled or not, and is the manual fallback.
+
+        Both, neither, unknown properties, or an invalid identifier or option are `400
+        INVALID_REQUEST`.
+
+        **Late.** When `late_after_minutes` is above 0 and a first check-in happens more than that
+        many minutes after the session started, the server records the student as Late instead of
+        Present (`outcome` is still `recorded`). `0` or omitted never marks Late. This is a second,
+        versioned write after the check-in commits: if it fails, the student stays Present. For
+        `student_id` requests the option is part of the retry fingerprint (omitted equals 0).
+
+        **Retries and receipts.** Reuse the same `Idempotency-Key` and identical body to retry.
+        The stored acknowledgment is replayed (`replayed: true`) without writing again, without
+        resolving a new code holder, and without reapplying Late, even if the code was retired or
+        replaced, codes were disabled, or the session ended meanwhile (membership is still
+        re-checked). A replay shows the **original acknowledgment**, not the latest attendance:
+        refetch the sheet for current state. The original acknowledgment of a Late-marked check-in
+        may show Present. A different identifier, identifier type, session, or option under the
+        same key is `409 IDEMPOTENCY_CONFLICT`.
+
+        **Student code failures** (fresh requests only): `409 STUDENT_CODES_DISABLED`, `404
+        STUDENT_CODE_NOT_FOUND` (never issued in this academy), `409 STUDENT_CODE_RETIRED` (issued
+        but no longer active, including codes stale after a level or year change), `409
+        STUDENT_CODE_AMBIGUOUS` (the string was issued to more than one student in the past; use
+        `annual_student_record_id` and have staff issue a new code). Errors never reveal other
+        academies or ledger history.
+      operationId: checkIn
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              description: Exactly one of `student_id` or `annual_student_record_id`.
+              oneOf:
+                - required: [student_id]
+                - required: [annual_student_record_id]
+              properties:
+                student_id: { type: string, maxLength: 64, description: "Academy-local student code (string, leading zeroes kept). Normalized to 1-20 characters of A-Z, 0-9, '-'." }
+                annual_student_record_id: { type: string, format: uuid }
+                late_after_minutes: { type: integer, minimum: 0, maximum: 1440, description: "Minutes after the session start past which a first check-in is Late. 0 or omitted disables." }
+            examples:
+              byCode: { summary: Decoded student code, value: { student_id: "0042", late_after_minutes: 10 } }
+              byRecord: { summary: Permanent record UUID (manual fallback), value: { annual_student_record_id: 3f0f8a2e-5d1b-4f7e-9f61-0d8a4c2b7e10 } }
+      responses:
+        "200":
+          description: Saved (`recorded`) or nothing to do (`already_recorded`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckInResult" }
+              example:
+                outcome: recorded
+                entry:
+                  annual_student_record_id: 3f0f8a2e-5d1b-4f7e-9f61-0d8a4c2b7e10
+                  full_name: Amal Hassan
+                  archived: false
+                  origin: expected
+                  group_name: Nine A
+                  status: present
+                  version: 1
+                  source: check_in
+                  updated_at: "2026-10-05T14:03:11.204Z"
+                  updated_by: 0b9f2c6e-2a4d-4c55-8f62-0a7a1c3e5d21
+                  updated_by_name: Instructor One
+                  checked_in_at: "2026-10-05T14:03:11.204Z"
+                  published_status: null
+                  published_at: null
+                revision: 12
+                correction_pending: false
+                replayed: false
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409":
+          description: "`REVIEW_REQUIRED` (details is a CheckInResult), `SESSION_ENDED`, `YEAR_CLOSED`, `IDEMPOTENCY_CONFLICT`, `STUDENT_CODES_DISABLED`, `STUDENT_CODE_RETIRED`, or `STUDENT_CODE_AMBIGUOUS`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/sessions/{sessionId}/attendance/{annualRecordId}:
+    patch:
+      tags: [Attendance]
+      summary: Versioned manual draft change for one student
+      description: Allowed while live or ended, as long as the academic year is open.
+      operationId: setAttendance
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - { name: annualRecordId, in: path, required: true, schema: { type: string, format: uuid } }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [status, expected_version]
+              properties:
+                status: { $ref: "#/components/schemas/AttendanceStatus" }
+                expected_version: { type: integer, minimum: 0, description: The entry's `version` you saw (0 when unrecorded). }
+            example: { status: late, expected_version: 1 }
+      responses:
+        "200":
+          description: Saved (`changed` is 0 when the value was already this status).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [outcome, changed, entry, revision, replayed]
+                properties:
+                  outcome: { const: updated }
+                  changed: { type: integer }
+                  entry: { $ref: "#/components/schemas/AttendanceEntry" }
+                  revision: { type: integer }
+                  replayed: { type: boolean }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409":
+          description: "`ATTENDANCE_CONFLICT` (details: `{ current: AttendanceEntry, revision }`), `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/sessions/{sessionId}/attendance/bulk:
+    post:
+      tags: [Attendance]
+      summary: Reviewed draft changes, all or nothing
+      description: Up to 500 distinct students. If any version is stale nothing is applied.
+      operationId: bulkAttendance
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [changes]
+              properties:
+                changes:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [annual_student_record_id, status, expected_version]
+                    properties:
+                      annual_student_record_id: { type: string, format: uuid }
+                      status: { $ref: "#/components/schemas/AttendanceStatus" }
+                      expected_version: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Every change applied.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [outcome, changed, entries, revision, replayed]
+                properties:
+                  outcome: { const: updated }
+                  changed: { type: integer }
+                  entries: { type: array, items: { $ref: "#/components/schemas/AttendanceEntry" } }
+                  revision: { type: integer }
+                  replayed: { type: boolean }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409":
+          description: "`ATTENDANCE_CONFLICT` (details: `{ conflicts: AttendanceEntry[], revision }`), `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/sessions/{sessionId}/attendance/publications:
+    post:
+      tags: [Attendance]
+      summary: Publish the reviewed revision
+      description: |
+        Makes the drafts official. `expected_revision` is the sheet `revision` the publisher reviewed;
+        if anyone saved since, the answer is `409 PUBLICATION_STALE` and the client must refetch and
+        review again. Later edits become pending corrections until published again. Allowed while
+        live or ended, as long as the academic year is open.
+      operationId: publishAttendance
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expected_revision]
+              properties:
+                expected_revision: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: "`published` (new publication), `unchanged` (no differences from the official values), or `already_published`."
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [outcome, publication_id, revision, item_count, replayed]
+                properties:
+                  outcome: { type: string, enum: [published, unchanged, already_published] }
+                  publication_id: { type: [string, "null"], format: uuid }
+                  revision: { type: integer }
+                  item_count: { type: integer }
+                  replayed: { type: boolean }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409":
+          description: "`PUBLICATION_STALE`, `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+components:
+  securitySchemes:
+    staffToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: The Supabase Auth access token of a signed-in staff member.
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID created once per user action and reused on every retry of that action.
+      schema: { type: string, format: uuid }
+  responses:
+    Error:
+      description: Error with a stable code.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code:
+              type: string
+              enum:
+                - INVALID_REQUEST            # 400
+                - AMBIGUOUS_AUTHENTICATION   # 400 bearer token and auth cookie together
+                - UNAUTHENTICATED            # 401 missing, invalid, or expired token
+                - FORBIDDEN                  # 403 not (or no longer) a staff member of this academy
+                - NOT_FOUND                  # 404 unknown session, or one in another academy
+                - STUDENT_NOT_FOUND          # 404 no such student in this session's academy and year
+                - STUDENT_CODE_NOT_FOUND     # 404 the code was never issued in this academy
+                - ATTENDANCE_CONFLICT        # 409 stale expected_version
+                - REVIEW_REQUIRED            # 409 scan over Absent/Excused
+                - PUBLICATION_STALE          # 409 attendance changed after review
+                - SESSION_ENDED              # 409 check-in after the session ended
+                - YEAR_CLOSED                # 409 the academic year is closed (read-only)
+                - IDEMPOTENCY_CONFLICT       # 409 key reused for a different request
+                - STUDENT_CODES_DISABLED     # 409 the academy has student codes turned off
+                - STUDENT_CODE_RETIRED       # 409 issued but no longer active (retired, replaced, stale)
+                - STUDENT_CODE_AMBIGUOUS     # 409 issued to several students historically; use the record UUID
+                - NOT_ON_ROSTER              # 422 student exists but is not on the roster
+                - THROTTLED                  # 429 see Retry-After
+                - INTERNAL                   # 500 retry with the same Idempotency-Key
+            message: { type: string, description: Human-readable; may change. }
+            request_id: { type: string }
+            details: { description: Code-specific data (current rows for conflicts). }
+      example:
+        error: { code: NOT_ON_ROSTER, message: This student is not on the session's roster. A staff member must review it., request_id: 6d0c1e9b-3a1f-4a8c-9a8e-1b2c3d4e5f60 }
+    Academy:
+      type: object
+      required: [id, name, slug, icon, role]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        icon: { type: string }
+        role: { type: string, enum: [owner, admin, instructor] }
+    SessionSummary:
+      type: object
+      required: [id, academy_id, academic_year_id, schedule_id, schedule_title, schedule_kind, audience, level_id, mandatory, state, started_at, started_by, auto_end_at, metadata_version]
+      properties:
+        id: { type: string, format: uuid }
+        academy_id: { type: string, format: uuid }
+        academic_year_id: { type: string, format: uuid }
+        schedule_id: { type: string, format: uuid }
+        schedule_title: { type: string }
+        schedule_kind: { type: string, enum: [recurring, one_off] }
+        audience: { type: string, enum: [group, level, program] }
+        group_id: { type: [string, "null"], format: uuid }
+        group_name: { type: [string, "null"] }
+        level_id: { type: string }
+        level_name: { type: [string, "null"] }
+        track_id: { type: [string, "null"], format: uuid }
+        track_name: { type: [string, "null"] }
+        mandatory: { type: boolean }
+        location: { type: [string, "null"] }
+        state: { type: string, enum: [live, ended], description: A session past auto_end_at is reported as ended. }
+        started_at: { type: string, format: date-time }
+        started_by: { type: string, format: uuid }
+        started_by_name: { type: [string, "null"] }
+        auto_end_at: { type: string, format: date-time }
+        metadata_version: { type: integer, description: The session's own lifecycle version (not the attendance revision). }
+    LiveSession:
+      allOf:
+        - $ref: "#/components/schemas/SessionSummary"
+        - type: object
+          required: [academy_name, academy_slug, roster_count]
+          properties:
+            academy_name: { type: string }
+            academy_slug: { type: string }
+            roster_count: { type: integer }
+    Session:
+      allOf:
+        - $ref: "#/components/schemas/SessionSummary"
+        - type: object
+          required: [roster_count]
+          properties:
+            ended_at: { type: [string, "null"], format: date-time }
+            ended_by: { type: [string, "null"], format: uuid }
+            ended_by_name: { type: [string, "null"] }
+            end_reason: { type: [string, "null"], enum: [manual, auto, null] }
+            roster_count: { type: integer }
+    PermittedActions:
+      type: object
+      required: [check_in, edit, publish]
+      properties:
+        check_in: { type: boolean, description: Live session in an open year. }
+        edit: { type: boolean, description: Open year (live or ended). }
+        publish: { type: boolean, description: Open year (live or ended). }
+    AttendanceStatus:
+      type: string
+      enum: [unknown, present, late, absent, excused]
+    AttendanceEntry:
+      type: object
+      required: [annual_student_record_id, full_name, archived, origin, status, version]
+      properties:
+        annual_student_record_id: { type: string, format: uuid }
+        full_name: { type: string }
+        archived: { type: boolean }
+        origin: { type: string, enum: [expected, eligible], description: expected for mandatory classes, eligible for optional ones. }
+        group_name: { type: [string, "null"] }
+        student_code: { type: [string, "null"], description: The student's current code while the academy has codes enabled; otherwise null. Not returned by check-in or change acknowledgments. }
+        status: { $ref: "#/components/schemas/AttendanceStatus" }
+        version: { type: integer, description: 0 when unrecorded. Send as expected_version. }
+        source: { type: [string, "null"], enum: [manual, bulk, check_in, null] }
+        updated_at: { type: [string, "null"], format: date-time }
+        updated_by: { type: [string, "null"], format: uuid }
+        updated_by_name: { type: [string, "null"] }
+        checked_in_at: { type: [string, "null"], format: date-time, description: Server time of the first check-in. }
+        published_status: { oneOf: [{ $ref: "#/components/schemas/AttendanceStatus" }, { type: "null" }] }
+        published_at: { type: [string, "null"], format: date-time }
+    SheetEntry:
+      allOf:
+        - $ref: "#/components/schemas/AttendanceEntry"
+        - type: object
+          required: [correction_pending]
+          properties:
+            correction_pending: { type: boolean }
+    AttendanceSheet:
+      type: object
+      required: [session, student_codes_enabled, revision, published_revision, publication_count, publication, counts, permitted_actions, entries]
+      properties:
+        session:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            academy_id: { type: string, format: uuid }
+            academic_year_id: { type: string, format: uuid }
+            schedule_title: { type: string }
+            group_name: { type: [string, "null"] }
+            mandatory: { type: boolean }
+            location: { type: [string, "null"] }
+            started_at: { type: string, format: date-time }
+            auto_end_at: { type: string, format: date-time }
+            state: { type: string, enum: [live, ended] }
+            ended_at: { type: [string, "null"], format: date-time }
+            year_open: { type: boolean }
+        student_codes_enabled: { type: boolean, description: Whether `student_id` check-ins are available and entries carry `student_code`. }
+        revision: { type: integer, description: Monotonic; increases on every draft change. Code changes alone do not increase it. }
+        published_revision: { type: [integer, "null"] }
+        publication_count: { type: integer }
+        last_published_at: { type: [string, "null"], format: date-time }
+        last_published_by_name: { type: [string, "null"] }
+        publication: { type: string, enum: [unpublished, published, pending_corrections] }
+        counts:
+          type: object
+          required: [unknown, present, late, absent, excused, total]
+          properties:
+            unknown: { type: integer }
+            present: { type: integer }
+            late: { type: integer }
+            absent: { type: integer }
+            excused: { type: integer }
+            total: { type: integer }
+        permitted_actions: { $ref: "#/components/schemas/PermittedActions" }
+        entries: { type: array, items: { $ref: "#/components/schemas/SheetEntry" } }
+    CheckInResult:
+      type: object
+      required: [outcome, entry, revision, correction_pending, replayed]
+      properties:
+        outcome: { type: string, enum: [recorded, already_recorded, review_required] }
+        entry: { $ref: "#/components/schemas/AttendanceEntry" }
+        revision: { type: integer }
+        correction_pending: { type: boolean, description: Attendance was already published and this draft differs from the official value. }
+        replayed: { type: boolean }
