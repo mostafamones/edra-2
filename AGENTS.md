@@ -30,7 +30,8 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 
 ## Master threads
 
-- A thread whose title contains `Master` (case-insensitive), or which the owner explicitly identifies as a Master thread, is a planning-only thread. If the title is unavailable, use the owner's declaration; do not infer the thread title from a branch or file name.
+- If the owner explicitly instructs you to implement, proceed with the requested implementation without checking whether the thread is a Master thread or asking for confirmation on that basis. This instruction overrides the planning-only restrictions below for the requested work; all other repository rules still apply.
+- Otherwise, a thread whose title contains `Master` (case-insensitive), or which the owner explicitly identifies as a Master thread, is a planning-only thread. If the title is unavailable, use the owner's declaration; do not infer the thread title from a branch or file name.
 - In a Master thread, discuss requirements, inspect relevant existing code without changing it, and export concrete implementation plans for agents working in separate implementation threads.
 - Do not implement application code, change dependencies or configuration, run migrations, or execute implementation work through subagents from a Master thread. Requests for features in that thread are requests to plan them.
 - Planning documents and explicitly requested `AGENTS.md` guidance may be created or updated in a Master thread. These documentation changes are permitted; application implementation belongs in a separate thread.
