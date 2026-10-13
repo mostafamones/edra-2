@@ -23,11 +23,11 @@ struct SessionView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button { confirmPublish = true } label: { Image("tabler-check") }
                         .disabled(!model.canPublish)
-                        .accessibilityLabel("Publish attendance")
+                        .accessibilityLabel("Finalize attendance")
                 }
             }
-            .confirmationDialog("Publish attendance?", isPresented: $confirmPublish, titleVisibility: .visible) {
-                Button("Publish") { Task { await model.publish() } }
+            .confirmationDialog("Finalize attendance?", isPresented: $confirmPublish, titleVisibility: .visible) {
+                Button("Finalize") { Task { await model.publish() } }
             } message: {
                 Text("This makes the current attendance official. Later changes become pending corrections.")
             }
@@ -76,6 +76,20 @@ struct SessionView: View {
 
     private func loaded(_ sheet: AttendanceSheet) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            if model.isArchived {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Archived · not counted").font(.headline)
+                    Text("A manager archived this session. Its attendance is kept for reference, is read-only and doesn't count.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .accessibilityElement(children: .combine)
+            }
             stats(sheet).padding(.top, 24)
 
             Text(model.showAll ? "All students" : "Checked in students")

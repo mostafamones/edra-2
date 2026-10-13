@@ -21,6 +21,10 @@ final class SessionDetailModel {
 
     var canPublish: Bool { sheet?.permittedActions.publish == true && !isPublishing }
 
+    /// A manager archived the session: attendance is read-only and doesn't count until it is restored.
+    /// The server's permitted actions already turn every action off; this drives the banner.
+    var isArchived: Bool { sheet?.session.archivedAt != nil }
+
     /// Students who have checked in (Present or Late), newest first.
     var checkedIn: [AttendanceEntry] {
         (sheet?.entries ?? [])
@@ -86,17 +90,17 @@ final class SessionDetailModel {
             )
             publishKey = nil
             switch result.outcome {
-            case "published": Feedback.success.play(); publishMessage = "Attendance published (\(result.itemCount) records)."
-            case "unchanged": publishMessage = "Nothing to publish. Attendance already matches the official record."
-            default: publishMessage = "This attendance was already published."
+            case "published": Feedback.success.play(); publishMessage = "Attendance finalized (\(result.itemCount) records)."
+            case "unchanged": publishMessage = "Nothing to finalize. Attendance already matches the official record."
+            default: publishMessage = "This attendance was already finalized."
             }
             await load()
         } catch APIError.unauthenticated {
             await onUnauthenticated()
         } catch APIError.network {
-            publishMessage = "Couldn't reach the server. Tap Confirm again to retry; it won't publish twice."
+            publishMessage = "Couldn't reach the server. Tap Confirm again to retry; it won't finalize twice."
         } catch APIError.forbidden {
-            publishMessage = "You can't publish attendance for this session."
+            publishMessage = "You can't finalize attendance for this session."
             await forbidden()
         } catch APIError.server(let message) {
             publishKey = nil
@@ -224,6 +228,12 @@ final class SessionDetailModel {
         do {
             sheet = try await api.get("api/v1/sessions/\(session.id)/attendance")
             state = .loaded
+            if isArchived {
+                // Pending retries belong to actions the server now rejects; start fresh after a restore.
+                publishKey = nil
+                bulkKey = nil
+                statusKey = nil
+            }
         } catch APIError.unauthenticated {
             await onUnauthenticated()
         } catch APIError.forbidden {

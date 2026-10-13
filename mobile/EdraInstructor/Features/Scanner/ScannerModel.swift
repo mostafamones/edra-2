@@ -31,6 +31,7 @@ final class ScannerModel {
     /// Why scanning can't start at all, if so.
     var blockedReason: String? {
         guard let sheet = sheet() else { return "Attendance isn't loaded yet." }
+        if sheet.session.archivedAt != nil { return "This session was archived. Its attendance is read-only." }
         if sheet.session.state != "live" { return "This session has ended." }
         if !sheet.permittedActions.checkIn { return "You can't record attendance for this session." }
         if !sheet.studentCodesEnabled { return "Student codes are off for this academy." }

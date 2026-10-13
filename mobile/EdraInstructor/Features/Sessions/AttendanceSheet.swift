@@ -33,6 +33,9 @@ struct AttendanceSheet: Decodable, Equatable, Sendable {
     struct SessionInfo: Decodable, Equatable, Sendable {
         let mandatory: Bool
         let state: String
+        /// Set while the session itself is archived: read-only and not counted. Unrelated to a
+        /// student's `archived` flag. Absent from older servers, so optional.
+        let archivedAt: Date?
     }
 
     struct Permissions: Decodable, Equatable, Sendable {
