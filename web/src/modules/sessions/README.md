@@ -4,7 +4,7 @@ Current implementation reference; intended rules are in [teaching and attendance
 
 ## Current source behavior
 
-- Any owner, admin, or instructor may start a session from any active schedule (recurring or one-off) at any time. Planned weekday/time never gates starting.
+- Any active staff member (owner, head admin, admin, or instructor) may start a session from any active schedule (recurring or one-off) at any time. Planned weekday/time never gates starting.
 - At most one live session per schedule. Starting a schedule that already has a live session returns that session (`outcome: "existing"`). There is no per-day restriction.
 - Retries with the same `startKey` by the same actor return the same session (`outcome: "replayed"`); reusing a key for another schedule fails with `idempotency_conflict`.
 - Any staff member may end a live session. Ending is final (no reopen), never marks absence, and never publishes attendance. A live session can still be ended after its academic year closes.

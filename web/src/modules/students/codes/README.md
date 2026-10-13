@@ -6,8 +6,8 @@ Optional, academy-scoped student codes. A code is an extra identifier for an ann
 
 - `student_code_settings`: one row per academy with `enabled`, a draft `default_pattern` (may be empty only while disabled), and a monotonic `version`. A missing row reads as disabled at version 0.
 - `student_code_level_patterns`: optional overrides keyed by `(academy_id, level_id)`, with a foreign key to the academy's own `academy_levels`. The effective formula is the level override, otherwise the default.
-- `save_student_code_settings(academy, expected_version, enabled, default_pattern, levels)` replaces the configuration and overrides atomically for owners and admins. A changed version returns `stale_settings` and writes nothing. Foreign or unknown levels return `invalid_level`. Disabling keeps formulas, assignments, counters, and history.
-- Owners and admins configure. Instructors read through `get_student_code_settings` or RLS. Nonmembers get `forbidden`.
+- `save_student_code_settings(academy, expected_version, enabled, default_pattern, levels)` replaces the configuration and overrides atomically for owners, head admins and admins. A changed version returns `stale_settings` and writes nothing. Foreign or unknown levels return `invalid_level`. Disabling keeps formulas, assignments, counters, and history.
+- Owners, head admins and admins configure. Instructors read through `get_student_code_settings` or RLS. Nonmembers get `forbidden`.
 
 ## Grammar (`pattern.ts` ↔ SQL `normalize_student_code*`)
 

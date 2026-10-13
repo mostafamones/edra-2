@@ -8,7 +8,7 @@ The standalone lifecycle migration 20261009100000_assignment_standalone_lifecycl
 
 Current pre-activity saves refresh the recipient snapshot from matching active annual records; activity freezes recipients and structure. Empty audiences are allowed. This differs from the newly approved first-save required cohort and optional late-student eligibility, which still need implementation. Legacy published_at is provenance, not visibility.
 
-Owner/Admin close, reopen and archive; all current staff create/edit pre-activity setup and mark/announce received work. Closed blocks newly received work, not already received marking. Head Admin is not a source role yet. permissions.ts controls UI; database RPCs enforce authority/state/version.
+Owner/Head Admin/Admin close, reopen and archive; all active staff create/edit pre-activity setup and mark/announce received work. Closed blocks newly received work, not already received marking. A suspended member has no assignment authority in that academy. permissions.ts controls UI; database RPCs enforce authority/state/version.
 
 ## Parts, images and marks
 

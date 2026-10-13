@@ -10,7 +10,7 @@ Current staff-record implementation at /<academySlug>/students on the staff host
 
 ## Current record validation
 
-These describe source behavior. The product reference owns intended changes; current role checks use Owner/Admin/Instructor, not Head Admin.
+These describe source behavior. The product reference owns intended changes. Head Admins have the Owner/Admin permissions below; a suspended member has none in that academy.
 
 - **Groups are optional.** A record may be unassigned (`primary_group_id` is null). A placed group must be active, in the same academy and year, and match the record's level and track.
 - **Both phones are required and must be valid Egyptian mobiles** for every staff role. There is no empty-phone or validation-bypass path. Phones are stored as canonical `+201XXXXXXXXX`; neither requires OTP verification here.
@@ -20,7 +20,7 @@ These describe source behavior. The product reference owns intended changes; cur
 
 ## Permissions
 
-| Operation | Owner/Admin | Instructor |
+| Operation | Owner/Head Admin/Admin | Instructor |
 |---|---|---|
 | Read records and contacts | Allowed | Allowed |
 | Create a validated record (including placement) | Allowed | Allowed |
@@ -67,4 +67,4 @@ Updating existing records through imports, general exports, bulk changes other t
 
 ## Intended behavior awaiting implementation
 
-Current placement SQL compares group and student tracks exactly; the approved product allows level-wide groups to accept any track at that level. Head Admin, track-removal broadening, returning enrollment/account links and related access flows require their own implementation. Do not broaden permissions or change historical placement merely to match this reference.
+Current placement SQL compares group and student tracks exactly; the approved product allows level-wide groups to accept any track at that level. Track-removal broadening, returning enrollment/account links and related access flows require their own implementation. Do not broaden permissions or change historical placement merely to match this reference.

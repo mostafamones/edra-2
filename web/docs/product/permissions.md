@@ -1,6 +1,6 @@
 # Staff permissions
 
-These are intended product permissions. Current source still uses owner/admin/instructor and does not establish implemented Head Admin enforcement.
+These are intended product permissions. Current source enforces the Owner, Head Admin, Admin and Instructor roles, and academy-scoped staff suspension, for the features that exist; rows for features not built yet remain intended rules.
 
 | Action | Owner | Head Admin | Admin | Instructor |
 |---|---|---|---|---|
