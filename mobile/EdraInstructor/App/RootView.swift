@@ -61,8 +61,13 @@ private struct SignedInRoot: View {
     }
 
     var body: some View {
-        MainView(model: academies, sessions: sessions, makeSessionModel: { session in
-            SessionDetailModel(session: session, api: api) { await auth.signOut() }
+        MainView(model: academies, sessions: sessions, makeSessionModel: { [academies] session in
+            SessionDetailModel(
+                session: session,
+                api: api,
+                onUnauthenticated: { await auth.signOut() },
+                onForbidden: { await academies.load() }
+            )
         }) { Task { await auth.signOut() } }
     }
 }

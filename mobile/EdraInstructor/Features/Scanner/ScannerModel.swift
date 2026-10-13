@@ -43,6 +43,7 @@ final class ScannerModel {
     private let lateAfterMinutes: () -> Int
     private let refresh: () async -> Void
     private let onUnauthenticated: @MainActor () async -> Void
+    private let onForbidden: @MainActor () async -> Void
 
     /// Codes currently ignored because they haven't left the camera view since last handled.
     private var suppressed: Set<String> = []
@@ -55,7 +56,8 @@ final class ScannerModel {
         sheet: @escaping () -> AttendanceSheet?,
         lateAfterMinutes: @escaping () -> Int,
         refresh: @escaping () async -> Void,
-        onUnauthenticated: @escaping @MainActor () async -> Void
+        onUnauthenticated: @escaping @MainActor () async -> Void,
+        onForbidden: @escaping @MainActor () async -> Void
     ) {
         self.api = api
         self.sessionID = sessionID
@@ -63,6 +65,7 @@ final class ScannerModel {
         self.lateAfterMinutes = lateAfterMinutes
         self.refresh = refresh
         self.onUnauthenticated = onUnauthenticated
+        self.onForbidden = onForbidden
     }
 
     /// Called with every code currently visible to the camera (empty when none).
@@ -127,6 +130,7 @@ final class ScannerModel {
             idempotencyKey = nil
             Feedback.failure.play()
             state = .rejected(card, "You no longer have access to record attendance here.")
+            await onForbidden()
         } catch APIError.server(let message) {
             idempotencyKey = nil
             Feedback.failure.play()

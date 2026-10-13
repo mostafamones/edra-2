@@ -35,12 +35,29 @@ final class SessionDetailModel {
     private let api: APIClient
     private let defaults = UserDefaults.standard
     private let onUnauthenticated: @MainActor () async -> Void
+    /// Revalidates academy access after a 403. A suspended or removed membership drops the academy
+    /// from the list, which returns the app to academy selection and discards this screen.
+    private let onForbidden: @MainActor () async -> Void
 
-    init(session: LiveSession, api: APIClient, onUnauthenticated: @escaping @MainActor () async -> Void) {
+    init(
+        session: LiveSession,
+        api: APIClient,
+        onUnauthenticated: @escaping @MainActor () async -> Void,
+        onForbidden: @escaping @MainActor () async -> Void
+    ) {
         self.session = session
         lateAfterMinutes = UserDefaults.standard.integer(forKey: "lateAfterMinutes.\(session.id)")
         self.api = api
         self.onUnauthenticated = onUnauthenticated
+        self.onForbidden = onForbidden
+    }
+
+    /// Access may be gone: no retry key survives into a later, separately authorized action.
+    private func forbidden() async {
+        publishKey = nil
+        bulkKey = nil
+        statusKey = nil
+        await onForbidden()
     }
 
     func makeScannerModel() -> ScannerModel {
@@ -50,7 +67,8 @@ final class SessionDetailModel {
             sheet: { [weak self] in self?.sheet },
             lateAfterMinutes: { [weak self] in self?.lateAfterMinutes ?? 0 },
             refresh: { [weak self] in await self?.load() },
-            onUnauthenticated: onUnauthenticated
+            onUnauthenticated: onUnauthenticated,
+            onForbidden: onForbidden
         )
     }
 
@@ -78,8 +96,8 @@ final class SessionDetailModel {
         } catch APIError.network {
             publishMessage = "Couldn't reach the server. Tap Confirm again to retry; it won't publish twice."
         } catch APIError.forbidden {
-            publishKey = nil
             publishMessage = "You can't publish attendance for this session."
+            await forbidden()
         } catch APIError.server(let message) {
             publishKey = nil
             publishMessage = message
@@ -135,8 +153,8 @@ final class SessionDetailModel {
         } catch APIError.network {
             statusError = "Couldn't reach the server. Try again."
         } catch APIError.forbidden {
-            bulkKey = nil
             statusError = "You can't change attendance for this session."
+            await forbidden()
         } catch APIError.server(let message) {
             bulkKey = nil
             statusError = message
@@ -185,7 +203,7 @@ final class SessionDetailModel {
         } catch APIError.network {
             return "Couldn't reach the server. Try again."
         } catch APIError.forbidden {
-            statusKey = nil
+            await forbidden()
             return "You can't change attendance for this session."
         } catch APIError.server(let message) {
             statusKey = nil
@@ -211,6 +229,7 @@ final class SessionDetailModel {
         } catch APIError.forbidden {
             sheet = nil
             state = .failed("You no longer have access to this session.")
+            await forbidden()
         } catch APIError.network {
             // Keep showing the last good data when a background refresh fails.
             if sheet == nil { state = .failed("Can't reach the server. Check your connection and try again.") }
