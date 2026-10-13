@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, AlertTriangle, ArrowRight, FileUp, SlidersHorizontal } from "lucide-react";
 
+import { IconAdjustmentsHorizontal, IconAlertCircle, IconAlertTriangle, IconArrowRight, IconFileUpload } from "@tabler/icons-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
@@ -213,15 +213,15 @@ export function SourceStep({
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <input ref={inputRef} type="file" aria-label="Student import file" accept={ACCEPT[format]} className="sr-only" tabIndex={-1} disabled={busy} onChange={(event) => { choose(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} />
-      {!file && <Button variant="outline" className="w-fit" onClick={() => inputRef.current?.click()}><FileUp />Choose the {FORMAT_LABELS[format]} file</Button>}
+      {!file && <Button variant="outline" className="w-fit" onClick={() => inputRef.current?.click()}><IconFileUpload />Choose the {FORMAT_LABELS[format]} file</Button>}
       {parsing ? <div role="status" aria-label="Reading file"><Skeleton className="h-80 w-full rounded-lg" /></div> : source && <ImportPreviewTable rows={rows} onRemove={(ordinals) => setRemoved((current) => new Set([...current, ...ordinals]))} disabled={busy} actions={<>
         <Button variant="outline" size="sm" disabled={busy || !source} onClick={() => setMappingOpen(true)}>
-          {warnings ? <AlertTriangle className="text-amber-500" /> : <SlidersHorizontal />}
+          {warnings ? <IconAlertTriangle className="text-amber-500" /> : <IconAdjustmentsHorizontal />}
           {warnings ? `${warnings} mapping ${warnings === 1 ? "warning" : "warnings"}` : "Columns matched"}
         </Button>
-        <Button size="sm" disabled={busy || !rows.length} onClick={() => savedReview ? onPrepared(savedReview) : void prepare()}>{preparing ? "Checking entries…" : savedReview ? "Open saved review" : <>Next<ArrowRight /></>}</Button>
+        <Button size="sm" disabled={busy || !rows.length} onClick={() => savedReview ? onPrepared(savedReview) : void prepare()}>{preparing ? "Checking entries…" : savedReview ? "Open saved review" : <>Next<IconArrowRight /></>}</Button>
       </>} />}
-      {(error || (built && !built.ok)) && <Alert variant="destructive"><AlertCircle /><AlertTitle>Couldn’t prepare the import</AlertTitle><AlertDescription>{error || (built && !built.ok ? built.message : "")}</AlertDescription></Alert>}
+      {(error || (built && !built.ok)) && <Alert variant="destructive"><IconAlertCircle /><AlertTitle>Couldn’t prepare the import</AlertTitle><AlertDescription>{error || (built && !built.ok ? built.message : "")}</AlertDescription></Alert>}
       <Sheet open={mappingOpen} onOpenChange={setMappingOpen}>
         <SheetContent className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
           <SheetHeader><SheetTitle>Column mapping</SheetTitle><SheetDescription>Choose the column each field is read from.</SheetDescription></SheetHeader>

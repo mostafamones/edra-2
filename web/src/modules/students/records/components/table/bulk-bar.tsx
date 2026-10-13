@@ -1,9 +1,7 @@
 "use client";
 
-import { Archive, ArchiveRestore, FolderInput, X } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
-import { IconArchive, IconFolderCog, IconFolderUser, IconRestore, IconX } from "@tabler/icons-react";
+import { IconArchive, IconFolderCog, IconFolderShare, IconFolderUser, IconRestore, IconX } from "@tabler/icons-react";
 
 type Props = {
   selected: number;

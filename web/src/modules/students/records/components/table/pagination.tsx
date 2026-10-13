@@ -1,7 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-
+import { IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PAGE_SIZES, type PageSize } from "../../list-params";
@@ -42,10 +41,10 @@ export function StudentsPagination({ pageIndex, pageSize, total, onPageChange, o
         </div>
         <span className="tabular-nums text-muted-foreground">Page {number.format(pageIndex + 1)} of {number.format(pageCount)}</span>
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(0)} disabled={disabled || atStart} aria-label="First page"><ChevronsLeft /></Button>
-          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageIndex - 1)} disabled={disabled || atStart} aria-label="Previous page"><ChevronLeft /></Button>
-          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageIndex + 1)} disabled={disabled || atEnd} aria-label="Next page"><ChevronRight /></Button>
-          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageCount - 1)} disabled={disabled || atEnd} aria-label="Last page"><ChevronsRight /></Button>
+          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(0)} disabled={disabled || atStart} aria-label="First page"><IconChevronsLeft /></Button>
+          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageIndex - 1)} disabled={disabled || atStart} aria-label="Previous page"><IconChevronLeft /></Button>
+          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageIndex + 1)} disabled={disabled || atEnd} aria-label="Next page"><IconChevronRight /></Button>
+          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageCount - 1)} disabled={disabled || atEnd} aria-label="Last page"><IconChevronsRight /></Button>
         </div>
       </div>
     </nav>

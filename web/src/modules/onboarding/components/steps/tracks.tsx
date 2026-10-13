@@ -1,9 +1,9 @@
 "use client";
 
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { newUuid } from "@/lib/uuid";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,7 +103,7 @@ export function TracksStep({ draft, update }: {
             <div className={`flex min-h-14 items-center justify-between gap-3 px-4 py-2.5 ${tracks.length > 0 ? "border-b border-border/70" : ""}`}>
               <h3 className="font-semibold tracking-tight">{level.label}</h3>
               <Button type="button" variant="ghost" size="sm" onClick={() => addTrack(level.id)} className="h-9 rounded-lg px-3">
-                <Plus className="size-4" />{copy.add}
+                <IconPlus className="size-4" />{copy.add}
               </Button>
             </div>
 
@@ -146,7 +146,7 @@ export function TracksStep({ draft, update }: {
                         }}
                         className="size-10 shrink-0 rounded-lg text-muted-foreground hover:text-destructive"
                       >
-                        <Trash2 className="size-4" />
+                        <IconTrash className="size-4" />
                       </Button>
                     </motion.div>
                   ))}

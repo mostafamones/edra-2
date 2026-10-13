@@ -7,7 +7,6 @@ import {
   arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronDown, ChevronUp, Columns3, GripVertical, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ALWAYS_VISIBLE, COLUMN_LABELS, type DataColumnId } from "../../table/config";
 import { moveColumn } from "../../table/preferences";
-import { IconColumns, IconColumns2, IconColumns3 } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronUp, IconColumns, IconColumns2, IconColumns3, IconGripVertical, IconRotate } from "@tabler/icons-react";
 
 type Props = {
   order: DataColumnId[];
@@ -127,7 +126,7 @@ function ColumnItem({ id, visible, first, last, onVisibleChange, onMove }: ItemP
         aria-label={`Reorder ${COLUMN_LABELS[id]}`}
         className="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing"
       >
-        <GripVertical className="size-4" />
+        <IconGripVertical className="size-4" />
       </button>
       <Checkbox
         id={checkboxId}
@@ -139,10 +138,10 @@ function ColumnItem({ id, visible, first, last, onVisibleChange, onMove }: ItemP
         {COLUMN_LABELS[id]}
       </label>
       <Button variant="ghost" size="icon-xs" disabled={first} onClick={() => onMove(-1)} aria-label={`Move ${COLUMN_LABELS[id]} left`}>
-        <ChevronUp />
+        <IconChevronUp />
       </Button>
       <Button variant="ghost" size="icon-xs" disabled={last} onClick={() => onMove(1)} aria-label={`Move ${COLUMN_LABELS[id]} right`}>
-        <ChevronDown />
+        <IconChevronDown />
       </Button>
     </li>
   );

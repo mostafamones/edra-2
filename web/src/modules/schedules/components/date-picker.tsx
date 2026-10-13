@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 import { cn } from "cn";
 
+import { IconCalendar } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -31,7 +31,7 @@ export function DatePicker({ id, value, onChange, min, max, invalid, disabled, .
         <Button id={id} type="button" variant="outline" disabled={disabled} aria-invalid={invalid || undefined}
           aria-describedby={props["aria-describedby"]}
           className={cn("w-full justify-start font-normal aria-invalid:border-destructive", !selected && "text-muted-foreground")}>
-          <CalendarIcon className="text-muted-foreground" />
+          <IconCalendar className="text-muted-foreground" />
           {selected ? format(selected, "EEE, MMM d, yyyy") : "Pick a date"}
         </Button>
       </PopoverTrigger>

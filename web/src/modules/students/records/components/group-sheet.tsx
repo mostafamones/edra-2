@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertCircle, ArrowRight, RotateCcw } from "lucide-react";
 
+import { IconAlertCircle, IconArrowRight, IconRotate } from "@tabler/icons-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -177,7 +177,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
         {tooMany ? (
           <Alert variant="destructive">
-            <AlertCircle />
+            <IconAlertCircle />
             <AlertTitle>Too many students selected</AlertTitle>
             <AlertDescription>Change the group of at most {MAX_GROUP_CHANGE} students at a time. Clear some of the selection and try again.</AlertDescription>
           </Alert>
@@ -205,7 +205,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
 
             {preview.isError && (
               <Alert variant="destructive">
-                <AlertCircle />
+                <IconAlertCircle />
                 <AlertTitle>Couldn’t load the selected students</AlertTitle>
                 <AlertDescription className="flex flex-wrap items-center gap-3">
                   {preview.error.message}
@@ -216,7 +216,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
 
             {data && blocked && (
               <Alert variant="destructive">
-                <AlertCircle />
+                <IconAlertCircle />
                 <AlertTitle>Some selected students can’t be changed</AlertTitle>
                 <AlertDescription className="flex flex-col items-start gap-3">
                   <ul className="list-disc pl-4">
@@ -227,7 +227,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
                   </ul>
                   {reloadable && (
                     <Button variant="outline" size="sm" onClick={() => onReloadSelection(data.rows)} disabled={saving}>
-                      <RotateCcw />Reload selection
+                      <IconRotate />Reload selection
                     </Button>
                   )}
                 </AlertDescription>
@@ -259,7 +259,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
                             <CellText text={placement(row)} className="text-muted-foreground">{placement(row)}</CellText>
                             {destination !== undefined && (
                               <>
-                                <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" aria-label="to" />
+                                <IconArrowRight className="size-3.5 shrink-0 text-muted-foreground" aria-label="to" />
                                 <span className="shrink-0">{destinationName}</span>
                               </>
                             )}

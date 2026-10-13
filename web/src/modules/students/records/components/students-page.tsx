@@ -294,7 +294,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
               skeletonRows={Math.min(params.pageSize, 10)}
               isSelected={isSelected}
               empty={filtering ? (
-                <Empty className="min-h-48 py-14">
+                <Empty className="min-h-48 rounded-lg border py-14">
                   <EmptyHeader className="gap-1">
                     <EmptyMedia variant="icon"><SearchX aria-hidden="true" /></EmptyMedia>
                     <EmptyTitle>No matching students</EmptyTitle>
@@ -307,7 +307,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
                   </EmptyContent>
                 </Empty>
               ) : (
-                <Empty className="min-h-48 py-14">
+                <Empty className="min-h-48 rounded-lg border py-14">
                   <EmptyHeader className="gap-1">
                     <EmptyMedia variant="icon"><Archive aria-hidden="true" /></EmptyMedia>
                     <EmptyTitle>No active students</EmptyTitle>

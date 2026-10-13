@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Pause, Play } from "lucide-react";
 
+import { IconAlertCircle, IconPlayerPause, IconPlayerPlay } from "@tabler/icons-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -132,10 +132,10 @@ export function ProgressStep({ academyId, summary, autoStart }: Props) {
           <div className="flex flex-wrap gap-2">
             {summary.state === "importing" && editable && (running ? (
               <Button variant="outline" onClick={() => { stopRequested.current = true; setPausing(true); }} disabled={pausing}>
-                <Pause />{pausing ? "Pausing…" : "Pause"}
+                <IconPlayerPause />{pausing ? "Pausing…" : "Pause"}
               </Button>
             ) : (
-              <Button onClick={() => void run()}><Play />{processed > 0 ? "Resume import" : "Start import"}</Button>
+              <Button onClick={() => void run()}><IconPlayerPlay />{processed > 0 ? "Resume import" : "Start import"}</Button>
             ))}
           </div>
         </div>
@@ -153,7 +153,7 @@ export function ProgressStep({ academyId, summary, autoStart }: Props) {
 
       {summary.state === "blocked" && (
         <Alert variant="destructive">
-          <AlertCircle />
+          <IconAlertCircle />
           <AlertTitle>The academic year is closed</AlertTitle>
           <AlertDescription>
             {counts.pending.toLocaleString("en")} students weren’t imported because the year this import was prepared for closed. Students already created stay saved.
@@ -162,7 +162,7 @@ export function ProgressStep({ academyId, summary, autoStart }: Props) {
       )}
       {error && (
         <Alert variant="destructive">
-          <AlertCircle />
+          <IconAlertCircle />
           <AlertTitle>Import paused</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>

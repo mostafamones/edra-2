@@ -1,8 +1,8 @@
 "use client";
 
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
-import { Plus, Trash2 } from "lucide-react";
 
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldLabel } from "@/components/ui/field";
 import { MAX_SESSIONS, type ScheduleFormValues } from "../validation";
@@ -26,7 +26,7 @@ export function SessionFields({ minDate, maxDate, disabled }: Props) {
         <h4 className="text-base font-medium">Sessions</h4>
         <Button type="button" variant="outline" size="sm" onClick={() => append({ ...NEW_SESSION })}
           disabled={disabled || fields.length >= MAX_SESSIONS}>
-          <Plus />Add session
+          <IconPlus />Add session
         </Button>
       </div>
       <div className="flex flex-col gap-3 rounded-md border bg-card p-3">
@@ -78,7 +78,7 @@ export function SessionFields({ minDate, maxDate, disabled }: Props) {
                   onClick={() => remove(index)} disabled={disabled || fields.length === 1}
                   aria-label={`Remove ${label.toLowerCase()}`}
                   title={fields.length === 1 ? "A one-off schedule needs at least one session" : undefined}>
-                  <Trash2 />
+                  <IconTrash />
                 </Button>
               </div>
             </fieldset>

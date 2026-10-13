@@ -2,8 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { IconId } from "@tabler/icons-react";
-import { Archive, ArchiveRestore, Eye, MoreHorizontal, Pencil } from "lucide-react";
+import { IconArchive, IconDots, IconEye, IconId, IconPencil, IconRestore } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -126,12 +125,12 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label={`Actions for ${row.original.fullName}`}>
-              <MoreHorizontal />
+              <IconDots />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuItem onSelect={() => options.onOpen(row.original)}>
-              {archived ? <><Eye />View</> : <><Pencil />Edit</>}
+              {archived ? <><IconEye />View</> : <><IconPencil />Edit</>}
             </DropdownMenuItem>
             {options.onCode && !archived && (
               <DropdownMenuItem onSelect={() => options.onCode?.(row.original)}><IconId />Student code</DropdownMenuItem>
@@ -140,9 +139,9 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
               <>
                 <DropdownMenuSeparator />
                 {archived ? (
-                  <DropdownMenuItem onSelect={() => options.onArchive(row.original, false)}><ArchiveRestore />Restore</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => options.onArchive(row.original, false)}><IconRestore />Restore</DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem variant="destructive" onSelect={() => options.onArchive(row.original, true)}><Archive />Archive</DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive" onSelect={() => options.onArchive(row.original, true)}><IconArchive />Archive</DropdownMenuItem>
                 )}
               </>
             )}

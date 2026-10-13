@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Download } from "lucide-react";
 
+import { IconChevronDown, IconDownload } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { ImportFormat } from "../types";
@@ -40,11 +40,11 @@ export function ImportInstructions({ format, reference }: { format: ImportFormat
     <Collapsible open={open} onOpenChange={setOpen}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button variant="ghost" size="sm" onClick={() => void download()} disabled={!reference || downloading}>
-          <Download />{downloading ? "Preparing…" : `${FORMAT_NAMES[format]} template`}
+          <IconDownload />{downloading ? "Preparing…" : `${FORMAT_NAMES[format]} template`}
         </Button>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" size="sm">
-            File guidelines<ChevronDown className={open ? "rotate-180 transition-transform" : "transition-transform"} />
+            File guidelines<IconChevronDown className={open ? "rotate-180 transition-transform" : "transition-transform"} />
           </Button>
         </CollapsibleTrigger>
       </div>

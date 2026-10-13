@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, RotateCcw } from "lucide-react";
 
+import { IconAlertCircle, IconRotate } from "@tabler/icons-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -123,12 +123,12 @@ export function ReviewStep({ academyId, summary, levels, tracks, levelNames, gro
     <div className="flex flex-col gap-5">
       {failure && (
         <Alert variant={failure.code === "outcome_changed" ? "default" : "destructive"}>
-          <AlertCircle />
+          <IconAlertCircle />
           <AlertTitle>{failure.code === "outcome_changed" ? "The preview changed" : "Couldn’t update the import"}</AlertTitle>
           <AlertDescription className="flex flex-col items-start gap-3">
             <span>{failure.message}</span>
             {(failure.code === "stale_revision" || failure.code === "import_state") && (
-              <Button variant="outline" size="sm" disabled={correcting} onClick={() => { setFailure(null); void refresh(); }}><RotateCcw />Reload preview</Button>
+              <Button variant="outline" size="sm" disabled={correcting} onClick={() => { setFailure(null); void refresh(); }}><IconRotate />Reload preview</Button>
             )}
           </AlertDescription>
         </Alert>

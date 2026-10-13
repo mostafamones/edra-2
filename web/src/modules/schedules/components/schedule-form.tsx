@@ -5,8 +5,8 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertCircle, Info } from "lucide-react";
 
+import { IconAlertCircle, IconInfoCircle } from "@tabler/icons-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,7 +63,7 @@ export function ScheduleForm(props: Props) {
     return (
       <div className={padded}>
         <Alert variant="destructive">
-          <AlertCircle />
+          <IconAlertCircle />
           <AlertTitle>Couldn’t load the schedule form</AlertTitle>
           <AlertDescription className="flex flex-col items-start gap-3">
             <span>The academic year, levels, or groups failed to load.</span>
@@ -92,7 +92,7 @@ export function ScheduleForm(props: Props) {
     return (
       <div className={padded}>
         <Alert>
-          <AlertCircle />
+          <IconAlertCircle />
           <AlertTitle>No active academic year</AlertTitle>
           <AlertDescription>Schedules belong to an academic year. Open one for this academy to schedule classes.</AlertDescription>
         </Alert>
@@ -223,7 +223,7 @@ function ScheduleFields({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button type="button" aria-label="About attendance types" className="rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50">
-                        <Info className="size-4" />
+                        <IconInfoCircle className="size-4" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" align="start" className="max-w-xs">
@@ -243,7 +243,7 @@ function ScheduleFields({
 
             {formError && (
               <Alert variant="destructive">
-                <AlertCircle />
+                <IconAlertCircle />
                 <AlertTitle>Couldn’t save the schedule</AlertTitle>
                 <AlertDescription>{formError}</AlertDescription>
               </Alert>

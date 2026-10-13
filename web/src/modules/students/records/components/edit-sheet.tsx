@@ -3,8 +3,7 @@
 import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertCircle, ArchiveRestore } from "lucide-react";
-import { IconId } from "@tabler/icons-react";
+import { IconAlertCircle, IconId, IconRestore } from "@tabler/icons-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -147,7 +146,7 @@ function SheetBody({ academy, recordId, onSaved, onCancel, onStatusChange, onBus
         {query.isError ? (
           <div className="px-6 py-5">
             <Alert variant="destructive">
-              <AlertCircle />
+              <IconAlertCircle />
               <AlertTitle>{query.error instanceof StudentRequestError && query.error.status === 404 ? "Student not found" : "Couldn’t load the student"}</AlertTitle>
               <AlertDescription className="flex flex-col items-start gap-3">
                 {query.error instanceof StudentRequestError && query.error.status === 404
@@ -174,7 +173,7 @@ function SheetBody({ academy, recordId, onSaved, onCancel, onStatusChange, onBus
                 <Button type="button" variant="outline" onClick={onCancel} disabled={restoring}>Close</Button>
                 {canArchiveStudentRecords(academy.role) && (
                   <Button type="button" onClick={() => void restore(record)} disabled={restoring}>
-                    <ArchiveRestore />{restoring ? "Restoring…" : "Restore student"}
+                    <IconRestore />{restoring ? "Restoring…" : "Restore student"}
                   </Button>
                 )}
               </>

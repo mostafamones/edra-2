@@ -6,7 +6,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
-import { IconBrandGoogle } from "@tabler/icons-react";
+import { FcGoogle } from "react-icons/fc";
 import { IconInfoCircle } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,7 @@ export function SignupForm({ nextPath = "/" }: { nextPath?: string }) {
           <TooltipTrigger asChild>
             <span tabIndex={0} className="block w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <Button type="button" variant="outline" className="h-10 w-full gap-2" disabled>
-                <IconBrandGoogle aria-hidden="true" size={18} />
+                <FcGoogle aria-hidden="true" size={18} />
                 Sign up with Google
               </Button>
             </span>

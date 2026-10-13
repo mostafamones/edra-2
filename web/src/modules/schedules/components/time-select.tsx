@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Clock } from "lucide-react";
 import { cn } from "cn";
 
+import { IconClock } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -95,7 +95,7 @@ export function TimeSelect({ id, value, onChange, invalid, disabled, ...props }:
           <InputGroupAddon align="inline-end">
             <PopoverTrigger asChild>
               <InputGroupButton size="icon-xs" aria-label="Pick a time" disabled={disabled} onClick={() => setDraft(null)}>
-                <Clock />
+                <IconClock />
               </InputGroupButton>
             </PopoverTrigger>
           </InputGroupAddon>

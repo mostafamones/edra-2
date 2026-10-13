@@ -18,7 +18,7 @@ Use Tabler for ordinary application icons and existing shadcn foundations for UI
 
 Keep accessible loading/error/keyboard states. Empty tables are replaced entirely, including headers/body/scroll container; surrounding filters/search/permitted actions stay available. Use small focused components and avoid duplicate foundations.
 
-Current source still contains non-Tabler imports. That is a separate implementation gap; this documentation update does not migrate components or remove dependencies.
+Application source uses Tabler icons only; `lucide-react` and `react-icons` are no longer dependencies.
 
 ## Verification
 

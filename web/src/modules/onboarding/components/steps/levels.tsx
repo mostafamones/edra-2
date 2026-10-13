@@ -1,8 +1,8 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Check } from "lucide-react";
 
+import { IconCheck } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -44,7 +44,7 @@ export function LevelsStep({ draft, update }: {
               >
                 {level.label}
                 <span className={cn("grid size-5 place-items-center rounded border border-border text-xs", selected && "border-primary bg-primary text-primary-foreground")}>
-                  {selected && <Check className="size-3.5" aria-hidden="true" />}
+                  {selected && <IconCheck className="size-3.5" aria-hidden="true" />}
                 </span>
               </Button>
             </motion.div>

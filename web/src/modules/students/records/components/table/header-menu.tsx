@@ -1,7 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowDownUp, ArrowUp, EyeOff, ListPlus, MoveHorizontal, X } from "lucide-react";
-
+import { IconArrowDown, IconArrowUp, IconArrowsHorizontal, IconArrowsSort, IconEyeOff, IconPlaylistAdd, IconX } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub,
@@ -29,7 +28,7 @@ export function HeaderMenu({ columnId: column, label, sorts, onSortsChange, canH
   const sort = index >= 0 ? sorts[index] : undefined;
   const canAdd = sorts.length > 0 && !sort && sorts.length < MAX_SORTS;
   const direction = sort ? (sort.desc ? "descending" : "ascending") : null;
-  const SortIcon = sort ? (sort.desc ? ArrowDown : ArrowUp) : ArrowDownUp;
+  const SortIcon = sort ? (sort.desc ? IconArrowDown : IconArrowUp) : IconArrowsSort;
 
   return (
     <DropdownMenu>
@@ -50,28 +49,28 @@ export function HeaderMenu({ columnId: column, label, sorts, onSortsChange, canH
       <DropdownMenuContent align="start" className="w-56">
         {columnId && (
           <>
-            <DropdownMenuItem onSelect={() => onSortsChange([{ id: columnId, desc: false }])}><ArrowUp />Sort ascending</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onSortsChange([{ id: columnId, desc: true }])}><ArrowDown />Sort descending</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onSortsChange([{ id: columnId, desc: false }])}><IconArrowUp />Sort ascending</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onSortsChange([{ id: columnId, desc: true }])}><IconArrowDown />Sort descending</DropdownMenuItem>
             {sort && sorts.length > 1 && (
               <DropdownMenuItem onSelect={() => onSortsChange(sorts.map((item) => (item.id === columnId ? { ...item, desc: !item.desc } : item)))}>
-                <ArrowDownUp />Reverse this sort
+                <IconArrowsSort />Reverse this sort
               </DropdownMenuItem>
             )}
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger disabled={!canAdd}><ListPlus />Add to existing sort</DropdownMenuSubTrigger>
+              <DropdownMenuSubTrigger disabled={!canAdd}><IconPlaylistAdd />Add to existing sort</DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
-                <DropdownMenuItem onSelect={() => onSortsChange([...sorts, { id: columnId, desc: false }])}><ArrowUp />Ascending</DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onSortsChange([...sorts, { id: columnId, desc: true }])}><ArrowDown />Descending</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onSortsChange([...sorts, { id: columnId, desc: false }])}><IconArrowUp />Ascending</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onSortsChange([...sorts, { id: columnId, desc: true }])}><IconArrowDown />Descending</DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             {sort && (
-              <DropdownMenuItem onSelect={() => onSortsChange(sorts.filter((item) => item.id !== columnId))}><X />Remove sort</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onSortsChange(sorts.filter((item) => item.id !== columnId))}><IconX />Remove sort</DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
           </>
         )}
-        <DropdownMenuItem disabled={!resized} onSelect={onResetWidth}><MoveHorizontal />Reset width</DropdownMenuItem>
-        {canHide && <DropdownMenuItem onSelect={onHide}><EyeOff />Hide column</DropdownMenuItem>}
+        <DropdownMenuItem disabled={!resized} onSelect={onResetWidth}><IconArrowsHorizontal />Reset width</DropdownMenuItem>
+        {canHide && <DropdownMenuItem onSelect={onHide}><IconEyeOff />Hide column</DropdownMenuItem>}
       </DropdownMenuContent>
     </DropdownMenu>
   );

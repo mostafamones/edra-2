@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, RotateCcw } from "lucide-react";
 
+import { IconAlertCircle, IconRotate } from "@tabler/icons-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -140,12 +140,12 @@ function CorrectionBody({
               placementLocked={false} hints={hints} />
             {failure && (
               <Alert variant="destructive">
-                <AlertCircle />
+                <IconAlertCircle />
                 <AlertTitle>Couldn’t save the correction</AlertTitle>
                 <AlertDescription className="flex flex-col items-start gap-3">
                   <span>{failure.message}</span>
                   {(failure.code === "stale_revision" || failure.code === "import_state") && (
-                    <Button type="button" variant="outline" size="sm" onClick={onReload}><RotateCcw />Reload preview</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={onReload}><IconRotate />Reload preview</Button>
                   )}
                 </AlertDescription>
               </Alert>

@@ -1,8 +1,8 @@
 "use client";
 
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
-import { Plus, Trash2 } from "lucide-react";
 
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,7 +26,7 @@ export function SlotFields({ disabled }: { disabled?: boolean }) {
         <h4 className="text-base font-medium">Time slots</h4>
         <Button type="button" variant="outline" size="sm" onClick={() => append({ ...NEW_SLOT })}
           disabled={disabled || fields.length >= MAX_WEEKLY_SLOTS}>
-          <Plus />Add slot
+          <IconPlus />Add slot
         </Button>
       </div>
       <div className="flex flex-col gap-3 rounded-md border bg-card p-3">
@@ -76,7 +76,7 @@ export function SlotFields({ disabled }: { disabled?: boolean }) {
                   onClick={() => remove(index)} disabled={disabled || fields.length === 1}
                   aria-label={`Remove ${label.toLowerCase()}`}
                   title={fields.length === 1 ? "A recurring schedule needs at least one slot" : undefined}>
-                  <Trash2 />
+                  <IconTrash />
                 </Button>
               </div>
             </fieldset>
