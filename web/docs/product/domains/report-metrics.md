@@ -10,6 +10,8 @@ I recommend calculating mandatory attendance as:
 
 Use finalized records only. Show Excused and Unknown separately, excluding both from the denominator. If there are no qualifying records, show no rate rather than zero percent. Optional-session participation is separate.
 
+Confirmed session-archival rule, 2026-10-13: archived sessions are excluded from attendance totals, rates and absence counts. Restoration makes their existing finalized attendance count again. This exclusion is approved independently of the draft formula and historical-report recommendations in this document.
+
 Replacement attendance shows recovery of missed material without removing the original absence or changing the original attendance rate.
 
 ## Assessment performance

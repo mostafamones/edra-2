@@ -56,6 +56,8 @@ Suspension prevents protected learning access and coupon redemption. Restoring a
 
 Managers may revoke explanation access and, for invalid qualifying work, answer access. These actions retain their reason and history. Ordinary attendance corrections do not silently decide revocation; the correction policy must be settled before that workflow is implemented.
 
+Session archival follows the confirmed session rules: already issued learning access remains intact, while pending unprocessed access effects from the archived session are stopped. Restoring the session does not reissue a grant or restart its period. This archival policy does not settle the separate ordinary attendance-correction revocation policy.
+
 Closing the academic year ends its learning access while preserving academic history.
 
 ## Video playback

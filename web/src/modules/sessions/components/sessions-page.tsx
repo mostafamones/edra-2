@@ -4,15 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { useRouter } from "next/navigation";
-import { IconAlertCircle, IconBroadcast, IconHistory, IconPlayerPlay, IconSearch, IconSearchOff } from "@tabler/icons-react";
+import { IconAlertCircle, IconArchive, IconBroadcast, IconHistory, IconPlayerPlay, IconSearch, IconSearchOff } from "@tabler/icons-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { AcademyEntry } from "@/modules/academies";
+import { isAcademyManager, type AcademyEntry } from "@/modules/academies";
 import { AcademyGate } from "@/modules/auth";
+import type { HistoryArchiveFilter } from "../types";
 import { useCanonicalHref } from "@/modules/navigation";
 import { HistorySessionCard } from "./history-card";
 import { HistoryRange } from "./history-range";
@@ -37,6 +39,12 @@ function useDebounced(value: string, delay = 300) {
   return debounced;
 }
 
+const ARCHIVE_FILTER_LABELS: Record<HistoryArchiveFilter, string> = {
+  active: "Not archived",
+  archived: "Archived",
+  all: "All sessions",
+};
+
 function SectionHeading({ id, children }: { id: string; children: React.ReactNode }) {
   return <h2 id={id} className="text-sm font-semibold">{children}</h2>;
 }
@@ -48,11 +56,13 @@ function SessionsContent({ academy, startOpen }: { academy: AcademyEntry; startO
   const [searchText, setSearchText] = useState("");
   const search = useDebounced(searchText.trim());
   const [range, setRange] = useState<DateRange | undefined>();
+  const [archive, setArchive] = useState<HistoryArchiveFilter>("active");
   const filter = useMemo(() => ({
     search,
     from: range?.from ? format(range.from, "yyyy-MM-dd") : null,
     to: range?.from ? format(range.to ?? range.from, "yyyy-MM-dd") : null,
-  }), [search, range]);
+    archive,
+  }), [search, range, archive]);
   const filtered = search !== "" || filter.from !== null;
   const { live, liveSessions, liveBySchedule, history, pastSessions, upcoming, options } = useSessionsData(academy.id, filter);
   const { start, pendingId } = useStartSession(academy.id);
@@ -136,7 +146,15 @@ function SessionsContent({ academy, startOpen }: { academy: AcademyEntry; startO
       <section aria-labelledby="history-heading" className="flex flex-col gap-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SectionHeading id="history-heading">History</SectionHeading>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={archive} onValueChange={(value) => setArchive(value as HistoryArchiveFilter)}>
+              <SelectTrigger aria-label="Archived sessions" className="w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(Object.keys(ARCHIVE_FILTER_LABELS) as HistoryArchiveFilter[]).map((value) => (
+                  <SelectItem key={value} value={value}>{ARCHIVE_FILTER_LABELS[value]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <HistoryRange value={range} onChange={setRange} />
             <InputGroup className="sm:w-72">
             <InputGroupInput
@@ -179,6 +197,15 @@ function SessionsContent({ academy, startOpen }: { academy: AcademyEntry; startO
               </EmptyHeader>
               <EmptyContent><Button size="sm" variant="outline" onClick={() => { setSearchText(""); setRange(undefined); }}>Clear filters</Button></EmptyContent>
             </Empty>
+          ) : archive === "archived" ? (
+            <Empty className="min-h-40 rounded-xl border border-dashed border-border bg-card/20 py-10">
+              <EmptyHeader className="gap-1">
+                <EmptyMedia variant="icon"><IconArchive aria-hidden="true" /></EmptyMedia>
+                <EmptyTitle>No archived sessions</EmptyTitle>
+                <EmptyDescription>Archived sessions are kept here and don’t count toward attendance.</EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent><Button size="sm" variant="outline" onClick={() => setArchive("active")}>Show unarchived sessions</Button></EmptyContent>
+            </Empty>
           ) : (
             <Empty className="min-h-40 rounded-xl border border-dashed border-border bg-card/20 py-10">
               <EmptyHeader className="gap-1">
@@ -190,7 +217,9 @@ function SessionsContent({ academy, startOpen }: { academy: AcademyEntry; startO
           )
         ) : (
           <div className="grid gap-2">
-            {pastSessions.map((session) => <HistorySessionCard key={session.id} session={session} canDelete={academy.role === "owner" || academy.role === "admin"} />)}
+            {pastSessions.map((session) => (
+              <HistorySessionCard key={session.id} session={session} canManage={isAcademyManager(academy.role)} />
+            ))}
             {history.hasNextPage && (
               <Button variant="ghost" size="sm" className="justify-self-center" onClick={() => void history.fetchNextPage()} disabled={history.isFetchingNextPage}>
                 {history.isFetchingNextPage ? "Loading…" : "Show more"}

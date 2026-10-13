@@ -50,6 +50,9 @@ const sheetSchema = z.object({
     state: z.enum(["live", "ended"]),
     ended_at: z.string().nullable(),
     year_open: z.boolean(),
+    // Optional so a sheet still parses against a database without session archival.
+    archived_at: z.string().nullish(),
+    metadata_version: z.number().int().optional(),
   }),
   student_codes_enabled: z.boolean().optional(),
   revision: z.number().int().nonnegative(),
@@ -124,7 +127,8 @@ export async function getAttendance(academyId: string, sessionId: string, author
     const counts = { unknown: 0, present: 0, late: 0, absent: 0, excused: 0, total: entries.length };
     for (const entry of entries) counts[entry.status] += 1;
     const live = sheet.session.state === "live";
-    const open = sheet.session.year_open;
+    // An archived session is read-only like a closed year.
+    const open = sheet.session.year_open && !sheet.session.archived_at;
     return {
       ok: true,
       data: {
@@ -140,7 +144,9 @@ export async function getAttendance(academyId: string, sessionId: string, author
           autoEndAt: sheet.session.auto_end_at,
           state: sheet.session.state,
           endedAt: sheet.session.ended_at,
-          yearOpen: open,
+          yearOpen: sheet.session.year_open,
+          archivedAt: sheet.session.archived_at ?? null,
+          metadataVersion: sheet.session.metadata_version ?? 0,
         },
         studentCodesEnabled: sheet.student_codes_enabled ?? false,
         revision: sheet.revision,

@@ -18,8 +18,8 @@ import { STATUS_LABELS } from "./labels";
 type Props = { sheet: AttendanceSheet; onClose: () => void };
 
 /**
- * Reviews and publishes the attendance revision shown when the dialog opened. Mount it only while
- * open. If anyone saves in the meantime, publishing that review is rejected as stale and the dialog
+ * Reviews and finalizes the attendance revision shown when the dialog opened. Mount it only while
+ * open. If anyone saves in the meantime, finalizing that review is rejected as stale and the dialog
  * asks for a fresh review of the latest values.
  */
 export function PublishDialog({ sheet, onClose }: Props) {
@@ -47,11 +47,11 @@ export function PublishDialog({ sheet, onClose }: Props) {
       if (!isCurrentAcademy(academyId)) return;
       if (!result.ok) { setError(result.message); return; }
       toast.success(result.outcome === "published"
-        ? correction ? "Corrections published." : "Attendance published."
+        ? correction ? "Corrections finalized." : "Attendance finalized."
         : "Attendance was already up to date.");
       onClose();
     } catch {
-      if (isCurrentAcademy(academyId)) setError("Could not publish. Check your connection and try again.");
+      if (isCurrentAcademy(academyId)) setError("Could not finalize. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -67,10 +67,10 @@ export function PublishDialog({ sheet, onClose }: Props) {
     <AlertDialog open onOpenChange={(next) => { if (!next && !busy) { setError(""); onClose(); } }}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{correction ? "Publish corrections?" : "Publish attendance?"}</AlertDialogTitle>
+          <AlertDialogTitle>{correction ? "Finalize corrections?" : "Finalize attendance?"}</AlertDialogTitle>
           <AlertDialogDescription>
             {correction
-              ? `${changes} ${changes === 1 ? "student has" : "students have"} a change since the last publication. Published values stay official until you publish.`
+              ? `${changes} ${changes === 1 ? "student has" : "students have"} a change since attendance was last finalized. Finalized values stay official until you finalize again.`
               : "These values become official. Unknown stays Unknown; nobody is marked absent automatically."}
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -96,7 +96,7 @@ export function PublishDialog({ sheet, onClose }: Props) {
             </AlertDialogAction>
           ) : (
             <AlertDialogAction onClick={(event) => { event.preventDefault(); void publish(); }} disabled={busy}>
-              {busy ? "Publishing…" : "Publish"}
+              {busy ? "Finalizing…" : "Finalize"}
             </AlertDialogAction>
           )}
         </AlertDialogFooter>

@@ -13,6 +13,8 @@ The initial communication flows cover:
 
 Draft attendance, private marks and unshared notes do not send messages. Optional-session nonattendance does not generate a mandatory-absence message. Assessment messages follow the announced result rather than every individual saved mark.
 
+Confirmed session-archival rule, 2026-10-13: stop pending unprocessed parent-message effects from an archived session, preserving sent messages and delivery history. Requests already sent to a provider retain their actual or uncertain outcome; archival cannot recall them. Restoration does not resend previous messages or create another attendance announcement. This rule does not settle the remaining provider/retry/contact policies below.
+
 ### Message content and recipients
 
 Messages identify the relevant academy, student and academic event. Result corrections retain the previously announced and newly announced marks so the parent can understand the change. Message content is preserved for the event rather than rebuilt later from academic data that may have changed again.

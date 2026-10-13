@@ -69,7 +69,7 @@ export function SheetTable({ total, rows, editable, pending, selected, onSelect,
             )}
             <TableHead className={editable ? undefined : "pl-4"}>Student</TableHead>
             <TableHead>Attendance</TableHead>
-            <TableHead className="w-90 pr-4">Published</TableHead>
+            <TableHead className="w-90 pr-4">Finalized</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -114,7 +114,7 @@ export function SheetTable({ total, rows, editable, pending, selected, onSelect,
                 <div className="flex flex-wrap items-center gap-1.5">
                   {entry.publishedStatus
                     ? <Badge variant="outline" className="gap-1.5"><span className={cn("size-1.5 rounded-full", STATUS_DOTS[entry.publishedStatus])} aria-hidden="true" />{STATUS_LABELS[entry.publishedStatus]}</Badge>
-                    : <span className="text-muted-foreground" aria-label="Not published">—</span>}
+                    : <span className="text-muted-foreground" aria-label="Not finalized">—</span>}
                   {entry.correctionPending && <Badge variant="secondary">Correction pending</Badge>}
                 </div>
               </TableCell>

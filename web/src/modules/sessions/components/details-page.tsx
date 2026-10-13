@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { IconAlertCircle, IconArrowLeft, IconPlayerStop, IconQuestionMark } from "@tabler/icons-react";
+import { IconAlertCircle, IconArchive, IconArchiveOff, IconArrowLeft, IconPlayerStop, IconQuestionMark } from "@tabler/icons-react";
 
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -16,9 +16,10 @@ import { AcademyGate } from "@/modules/auth";
 import { useCanonicalHref } from "@/modules/navigation";
 import { fetchSession, SessionRequestError, sessionQueryKey } from "../queries";
 import type { SessionDetail } from "../types";
+import { ArchiveSessionDialog } from "./archive-dialog";
 import { EndSessionDialog } from "./end-dialog";
 import { SessionFacts } from "./facts";
-import { formatDayMonth } from "./format";
+import { formatDayMonth, formatMoment, startedByLabel } from "./format";
 
 /** Refreshes so a session ended on another device stops looking live here. */
 const DETAIL_REFRESH_MS = 30_000;
@@ -81,9 +82,44 @@ function DetailsContent({ academy, sessionId, attendance }: { academy: AcademyEn
   );
 }
 
+/** Why an archived session looks the way it does, and who archived or restored it. */
+function ArchivedNotice({ session }: { session: SessionDetail }) {
+  return (
+    <Alert>
+      <IconArchive />
+      <AlertTitle>Archived · not counted</AlertTitle>
+      <AlertDescription className="flex flex-col gap-1">
+        <span>
+          Archived {session.sessionArchivedAt ? formatMoment(session.sessionArchivedAt) : ""} by {startedByLabel(session.sessionArchivedByName)}.
+          Its roster and attendance are kept for reference but don’t count toward attendance totals, and attendance is read-only.
+        </span>
+        {session.archiveNote && <span>Note: {session.archiveNote}</span>}
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/** The session's archive and restore history, oldest first. */
+function ArchiveHistory({ session }: { session: SessionDetail }) {
+  if (session.archiveEvents.length === 0) return null;
+  return (
+    <div className="text-xs text-muted-foreground">
+      <span className="font-medium">Archive history: </span>
+      {session.archiveEvents.map((event, index) => (
+        <span key={`${event.occurredAt}-${index}`}>
+          {index > 0 && " · "}
+          {event.action === "archived" ? (event.endedLive ? "Ended and archived" : "Archived") : "Restored"} by {startedByLabel(event.actorName)}, {formatMoment(event.occurredAt)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function Details({ academyId, session }: { academyId: string; session: SessionDetail }) {
   const [ending, setEnding] = useState(false);
+  const [changing, setChanging] = useState(false);
   const live = session.state === "live";
+  const archived = session.sessionArchivedAt !== null;
   return (
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -91,16 +127,28 @@ function Details({ academyId, session }: { academyId: string; session: SessionDe
           <h1 className="font-heading text-2xl font-bold tracking-tight">{session.scheduleTitle}</h1>
           <div className="flex flex-wrap items-center gap-2">
             {live ? <Badge>Live</Badge> : <Badge variant="destructive">Ended</Badge>}
+            {archived && <Badge variant="outline"><IconArchive aria-hidden="true" />Archived</Badge>}
             <Badge variant="secondary">{session.mandatory ? "Mandatory" : "Optional"}</Badge>
             <Badge variant="secondary">{session.scheduleKind === "one_off" ? "One-off" : "Weekly"}</Badge>
           </div>
         </div>
-        {live && (
-          <Button variant="outline" className="text-destructive" onClick={() => setEnding(true)}><IconPlayerStop />End session</Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {live && (
+            <Button variant="outline" className="text-destructive" onClick={() => setEnding(true)}><IconPlayerStop />End session</Button>
+          )}
+          {session.permittedActions.archive && (
+            <Button variant="outline" onClick={() => setChanging(true)}><IconArchive />{live ? "End and archive" : "Archive"}</Button>
+          )}
+          {session.permittedActions.restore && (
+            <Button variant="outline" onClick={() => setChanging(true)}><IconArchiveOff />Restore</Button>
+          )}
+        </div>
       </div>
 
+      {archived && <ArchivedNotice session={session} />}
+
       <SessionFacts session={session} />
+      <ArchiveHistory session={session} />
 
       <EndSessionDialog
         academyId={academyId}
@@ -109,6 +157,15 @@ function Details({ academyId, session }: { academyId: string; session: SessionDe
         open={ending}
         onClose={() => setEnding(false)}
       />
+      {(session.permittedActions.archive || session.permittedActions.restore) && (
+        <ArchiveSessionDialog
+          academyId={academyId}
+          sessionId={session.id}
+          mode={archived ? "restore" : "archive"}
+          open={changing}
+          onClose={() => setChanging(false)}
+        />
+      )}
     </>
   );
 }

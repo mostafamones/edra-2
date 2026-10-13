@@ -42,6 +42,11 @@ export function useStartSession(academyId: string) {
       await queryClient.invalidateQueries({ queryKey: sessionsRootKey(targetAcademyId) });
       if (!isCurrentAcademy(targetAcademyId)) return;
       if (result.outcome === "existing") toast.info("This class is already live. Opened its session.");
+      // A retried start returns the session it made, even if someone archived it since; that session
+      // stays archived and read-only. Starting the class again uses a new key.
+      if (result.outcome === "replayed" && result.archived) {
+        toast.info("This start already opened a session that has since been archived. Showing it read-only; start the class again for a new session.");
+      }
       router.push(href(`/app/attendance/${result.sessionId}`));
     } catch {
       if (isCurrentAcademy(targetAcademyId)) toast.error("Could not start the session. Check your connection and try again.");

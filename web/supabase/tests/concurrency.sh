@@ -437,4 +437,86 @@ expect_ok 17b "a simultaneous scan failed"
 psqlx -tA -c "select version || ':' || status from public.attendance_records where session_id = '$SESSION_SCAN' and annual_student_record_id = '$R16'" | grep -qx '1:present' \
   || fail "simultaneous scans wrote the student more than once"
 
+# 18-21. Session archival races. Archival locks the session row first, like every attendance write.
+new_session() { # $1 title; prints the session id of a fresh live session on a fresh schedule
+  local sched
+  sched="$(psqlx -tA <<SQL | grep -E '^[0-9a-f-]{36}$' | tail -1
+begin; $as_admin
+select public.create_schedule('$ACADEMY','$YEAR','$1','recurring','group','$GROUP_SCAN',null,null,true,null,
+  '[{"weekday":2,"startsAt":"17:00","endsAt":"18:30"}]'::jsonb, '[]'::jsonb);
+commit;
+SQL
+)"
+  echo "$sched" >"$OUT/schedule-$1"
+  psqlx -tA <<SQL | grep -E '^[0-9a-f-]{36}$' | tail -1
+begin; $as_admin
+select session_id from public.start_session('$ACADEMY', '$sched', '$(uuid)');
+commit;
+SQL
+}
+archive_now() { echo "$as_admin select public.archive_session('$ACADEMY','$1',(select metadata_version from public.sessions where id = '$1'),gen_random_uuid());"; }
+uuid_check_in() { echo "$as_admin select public.check_in_attendance('$ACADEMY','$1','$2',gen_random_uuid());"; }
+archived() { psqlx -tA -c "select archived_at is not null from public.sessions where id = '$1'" | grep -qx t; }
+
+# 18. Archive holds the session lock; a concurrent check-in waits and is rejected as archived.
+S18="$(new_session 'Archive race 18')"
+[ -n "$S18" ] || fail "could not start the archive race session 18"
+hold 18a 18b "$(archive_now "$S18")"
+start 18b "$(uuid_check_in "$S18" "$R15")"
+wait
+expect_ok 18a "the archive holding the session lock failed"
+expect_rejected 18b "a check-in was written to a session archived concurrently" session_archived
+psqlx -tA -c "select count(*) from public.attendance_records where session_id = '$S18'" | grep -qx 0 \
+  || fail "attendance was written after archival"
+
+# 19. Finalization holds the session lock; a concurrent archive waits, then archives and stops the
+#     effects that finalization created. No effect stays deliverable.
+S19="$(new_session 'Archive race 19')"
+[ -n "$S19" ] || fail "could not start the archive race session 19"
+psqlx -c "begin; $(uuid_check_in "$S19" "$R15") commit;" >/dev/null
+hold 19a 19b "$as_admin select public.publish_attendance('$ACADEMY','$S19',1,gen_random_uuid());"
+start 19b "$(archive_now "$S19")"
+wait
+expect_ok 19a "the finalization holding the session lock failed"
+expect_ok 19b "the archive waiting on finalization failed"
+archived "$S19" || fail "the session was not archived after finalization"
+psqlx -tA -c "select count(*) from public.attendance_effects e where e.session_id = '$S19'
+  and not exists (select 1 from public.attendance_effect_suppressions x where x.effect_id = e.id)" | grep -qx 0 \
+  || fail "an effect created by a concurrent finalization escaped archival"
+
+# 20. Archive holds the live session; a concurrent end reports already ended and a concurrent start
+#     with a new key waits and starts a new live session instead of returning the archived one.
+S20="$(new_session 'Archive race 20')"
+[ -n "$S20" ] || fail "could not start the archive race session 20"
+SCHED20="$(cat "$OUT/schedule-Archive race 20")"
+hold 20a 20b "$(archive_now "$S20")"
+start 20b "$as_admin select public.end_session('$ACADEMY','$S20');"
+start 20c "$as_admin select session_id, outcome from public.start_session('$ACADEMY','$SCHED20','$(uuid)');"
+wait
+expect_ok 20a "the archive holding the session lock failed"
+expect_ok 20b "a concurrent end failed"
+expect_ok 20c "a concurrent start failed"
+grep -q already_ended "$OUT/20b" || fail "a concurrent end did not see the archived session as ended: $(out 20b)"
+grep -q started "$OUT/20c" && ! grep -q "$S20" "$OUT/20c" || fail "a concurrent start returned the archived session: $(out 20c)"
+psqlx -tA -c "select count(*) from public.sessions where schedule_id = '$SCHED20' and state = 'live'" | grep -qx 1 \
+  || fail "the schedule does not have exactly one new live session"
+
+# 21. A future effect consumer holds its claim (session share lock); a concurrent archive waits,
+#     then stops nothing that was already claimed and dispatched, and a later claim gets nothing.
+S21="$(new_session 'Archive race 21')"
+[ -n "$S21" ] || fail "could not start the archive race session 21"
+psqlx -c "begin; $(uuid_check_in "$S21" "$R15") $as_admin select public.publish_attendance('$ACADEMY','$S21',1,gen_random_uuid()); commit;" >/dev/null
+E21="$(psqlx -tA -c "select id from public.attendance_effects where session_id = '$S21' limit 1")"
+[ -n "$E21" ] || fail "no effect to claim for race 21"
+hold 21a 21b "select (edra_private.claim_attendance_effect('$E21')).id; update public.attendance_effects set processed_at = now() where id = '$E21';"
+start 21b "$(archive_now "$S21")"
+wait
+expect_ok 21a "the claim holding the session share lock failed"
+expect_ok 21b "the archive waiting on a claim failed"
+grep -q "$E21" "$OUT/21a" || fail "the in-flight claim did not get the pending effect: $(out 21a)"
+psqlx -tA -c "select count(*) from public.attendance_effect_suppressions where effect_id = '$E21'" | grep -qx 0 \
+  || fail "archival suppressed an effect that was already dispatched"
+psqlx -tA -c "select edra_private.claim_attendance_effect('$E21') is null" | grep -qx t \
+  || fail "a dispatched effect could be claimed again"
+
 echo "concurrency checks passed"

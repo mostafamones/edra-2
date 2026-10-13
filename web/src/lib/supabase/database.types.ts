@@ -1082,6 +1082,45 @@ export type Database = {
           },
         ]
       }
+      attendance_effect_suppressions: {
+        Row: {
+          academy_id: string
+          archive_event_id: number
+          effect_id: string
+          session_id: string
+          suppressed_at: string
+        }
+        Insert: {
+          academy_id: string
+          archive_event_id: number
+          effect_id: string
+          session_id: string
+          suppressed_at?: string
+        }
+        Update: {
+          academy_id?: string
+          archive_event_id?: number
+          effect_id?: string
+          session_id?: string
+          suppressed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_effect_suppressions_archive_event_id_fkey"
+            columns: ["archive_event_id"]
+            isOneToOne: false
+            referencedRelation: "session_archive_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_effect_suppressions_effect_id_fkey"
+            columns: ["effect_id"]
+            isOneToOne: true
+            referencedRelation: "attendance_effects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_effects: {
         Row: {
           academic_year_id: string
@@ -1719,6 +1758,108 @@ export type Database = {
           },
         ]
       }
+      session_archive_events: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          action: string
+          actor_id: string
+          actor_name: string | null
+          ended_live: boolean
+          id: number
+          metadata_version: number
+          note: string | null
+          occurred_at: string
+          session_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          action: string
+          actor_id: string
+          actor_name?: string | null
+          ended_live?: boolean
+          id?: never
+          metadata_version: number
+          note?: string | null
+          occurred_at?: string
+          session_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          action?: string
+          actor_id?: string
+          actor_name?: string | null
+          ended_live?: boolean
+          id?: never
+          metadata_version?: number
+          note?: string | null
+          occurred_at?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_archive_events_academy_id_academic_year_id_session_fkey"
+            columns: ["academy_id", "academic_year_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "session_archive_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_archive_requests: {
+        Row: {
+          academy_id: string
+          actor_id: string
+          created_at: string
+          fingerprint: string
+          idempotency_key: string
+          response: Json
+          session_id: string
+        }
+        Insert: {
+          academy_id: string
+          actor_id: string
+          created_at?: string
+          fingerprint: string
+          idempotency_key: string
+          response: Json
+          session_id: string
+        }
+        Update: {
+          academy_id?: string
+          actor_id?: string
+          created_at?: string
+          fingerprint?: string
+          idempotency_key?: string
+          response?: Json
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_archive_requests_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_archive_requests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_roster_entries: {
         Row: {
           academic_year_id: string
@@ -1781,6 +1922,10 @@ export type Database = {
         Row: {
           academic_year_id: string
           academy_id: string
+          archive_note: string | null
+          archived_at: string | null
+          archived_by: string | null
+          archived_by_name: string | null
           audience: Database["public"]["Enums"]["schedule_audience"]
           auto_end_at: string
           end_reason: Database["public"]["Enums"]["session_end_reason"] | null
@@ -1808,6 +1953,10 @@ export type Database = {
         Insert: {
           academic_year_id: string
           academy_id: string
+          archive_note?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          archived_by_name?: string | null
           audience: Database["public"]["Enums"]["schedule_audience"]
           auto_end_at: string
           end_reason?: Database["public"]["Enums"]["session_end_reason"] | null
@@ -1835,6 +1984,10 @@ export type Database = {
         Update: {
           academic_year_id?: string
           academy_id?: string
+          archive_note?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          archived_by_name?: string | null
           audience?: Database["public"]["Enums"]["schedule_audience"]
           auto_end_at?: string
           end_reason?: Database["public"]["Enums"]["session_end_reason"] | null
@@ -1873,6 +2026,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "schedules"
             referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "sessions_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "sessions_ended_by_fkey"
@@ -2599,7 +2759,55 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      counted_attendance: {
+        Row: {
+          academic_year_id: string | null
+          academy_id: string | null
+          annual_student_record_id: string | null
+          mandatory: boolean | null
+          origin: Database["public"]["Enums"]["session_roster_origin"] | null
+          publication_id: string | null
+          published_at: string | null
+          schedule_id: string | null
+          session_id: string | null
+          session_started_at: string | null
+          status: Database["public"]["Enums"]["attendance_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_academy_id_academic_year_id_annual_stud_fkey"
+            columns: [
+              "academy_id",
+              "academic_year_id",
+              "annual_student_record_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "attendance_records_academy_id_academic_year_id_session_id_fkey"
+            columns: ["academy_id", "academic_year_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "attendance_records_publication_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_session_id_annual_student_record_id_fkey"
+            columns: ["session_id", "annual_student_record_id"]
+            isOneToOne: true
+            referencedRelation: "session_roster_entries"
+            referencedColumns: ["session_id", "annual_student_record_id"]
+          },
+        ]
+      }
     }
     Functions: {
       academy_role_for: {
@@ -2621,6 +2829,16 @@ export type Database = {
           p_changes: Json
           p_key: string
           p_operation: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      archive_session: {
+        Args: {
+          p_academy_id: string
+          p_expected_version: number
+          p_key: string
+          p_note?: string
           p_session_id: string
         }
         Returns: Json
@@ -2883,6 +3101,7 @@ export type Database = {
       list_past_sessions: {
         Args: {
           p_academy_id: string
+          p_archive?: string
           p_before_id: string
           p_before_started_at: string
           p_from: string
@@ -2941,6 +3160,10 @@ export type Database = {
         Returns: {
           academic_year_id: string
           academy_id: string
+          archive_note: string | null
+          archived_at: string | null
+          archived_by: string | null
+          archived_by_name: string | null
           audience: Database["public"]["Enums"]["schedule_audience"]
           auto_end_at: string
           end_reason: Database["public"]["Enums"]["session_end_reason"] | null
@@ -3155,6 +3378,15 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      restore_session: {
+        Args: {
+          p_academy_id: string
+          p_expected_version: number
+          p_key: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       restore_staff_member: {
         Args: { p_academy_id: string; p_user_id: string }
         Returns: Json
@@ -3187,6 +3419,10 @@ export type Database = {
         Returns: Json
       }
       session_academy: { Args: { p_session_id: string }; Returns: string }
+      session_archive_impact: {
+        Args: { p_academy_id: string; p_session_id: string }
+        Returns: Json
+      }
       session_auto_end_at: {
         Args: { p_now: string; p_schedule_id: string }
         Returns: string

@@ -31,10 +31,15 @@ export async function liveSessionsResponse(context: StaffApiContext, academyId: 
   return apiJson(context, snakeKeys(result.data));
 }
 
-/** Session snapshot and lifecycle without roster contact details; attendance has its own endpoint. */
+/**
+ * Session snapshot, lifecycle and archival state without roster contact details; attendance has its
+ * own endpoint. Archive management is web-only, so its trail and capabilities are not included.
+ */
+const WEB_ONLY = new Set<string>(["roster", "archiveEvents", "archiveImpact", "permittedActions", "yearOpen"] satisfies (keyof SessionDetail)[]);
+
 export function sessionV1(detail: SessionDetail) {
-  const { roster, ...session } = detail;
-  return snakeKeys({ ...session, rosterCount: roster.length });
+  const session = Object.fromEntries(Object.entries(detail).filter(([key]) => !WEB_ONLY.has(key)));
+  return snakeKeys({ ...session, rosterCount: detail.roster.length });
 }
 
 /**

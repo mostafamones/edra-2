@@ -54,6 +54,12 @@ export type AttendanceSheet = {
     state: Enums["session_state"];
     endedAt: string | null;
     yearOpen: boolean;
+    /**
+     * When the session itself was archived (not a student's `archived`): read-only and excluded from
+     * counted attendance, including finalized values. Null when not archived.
+     */
+    archivedAt: string | null;
+    metadataVersion: number;
   };
   /** The academy has student codes enabled, so entries may carry `studentCode`. */
   studentCodesEnabled: boolean;
@@ -80,6 +86,7 @@ export type AttendanceErrorCode =
   | "student_code_not_found"
   | "student_code_ambiguous"
   | "session_ended"
+  | "session_archived"
   | "year_unavailable"
   | "publication_stale"
   | "idempotency_conflict"

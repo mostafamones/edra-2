@@ -22,11 +22,11 @@ function useMinuteClock() {
   return now;
 }
 
-const UNFILTERED: HistoryFilter = { search: "", from: null, to: null };
+const UNFILTERED: HistoryFilter = { search: "", from: null, to: null, archive: "active" };
 
 /** Live sessions, today's upcoming classes, and searchable history for the Sessions page. */
 export function useSessionsData(academyId: string, filter: HistoryFilter) {
-  const filtered = filter.search !== "" || filter.from !== null || filter.to !== null;
+  const filtered = filter.search !== "" || filter.from !== null || filter.to !== null || filter.archive !== "active";
   const now = useMinuteClock();
   const live = useInfiniteQuery({
     queryKey: liveSessionsQueryKey(academyId),
@@ -41,7 +41,7 @@ export function useSessionsData(academyId: string, filter: HistoryFilter) {
     initialPageParam: null as string | null,
     getNextPageParam: (page) => page.nextCursor,
   });
-  // Unsearched history, newest first, tells which schedules already ran today.
+  // Unsearched, unarchived history, newest first, tells which schedules already ran today.
   const recent = useInfiniteQuery({
     queryKey: historyQueryKey(academyId, UNFILTERED),
     queryFn: ({ pageParam, signal }) => fetchSessionHistory(academyId, UNFILTERED, pageParam, signal),
@@ -64,7 +64,9 @@ export function useSessionsData(academyId: string, filter: HistoryFilter) {
     const finished = (filtered ? recent.data : history.data)?.pages.flatMap((page) => page.sessions) ?? [];
     const taken = new Set([
       ...liveSessions.map((session) => session.scheduleId),
-      ...finished.filter((session) => academyDate(session.startedAt) === today).map((session) => session.scheduleId),
+      // An archived (mistaken) session does not count as the schedule having run.
+      ...finished.filter((session) => !session.sessionArchivedAt && academyDate(session.startedAt) === today)
+        .map((session) => session.scheduleId),
     ]);
     return upcomingToday(data.schedules, data.slots, data.sessions, academyNow(now), taken);
   }, [options.schedules.data, live.data, liveSessions, history.data, recent.data, filtered, now]);

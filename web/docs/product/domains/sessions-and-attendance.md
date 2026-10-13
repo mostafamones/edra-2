@@ -1,6 +1,6 @@
 # Edra — sessions and attendance
 
-Approved by the owner, 2026-10-11. Access-correction and cancellation/rescheduling policies remain for their separate reviews.
+Approved by the owner, 2026-10-11. Session archival decisions confirmed 2026-10-13. Other access-correction and cancellation/rescheduling policies remain for their separate reviews.
 
 ## Sessions
 
@@ -69,3 +69,19 @@ The original absence and both attendance events remain in history. “Attended t
 Owners, Head Admins, Admins and Instructors can review attendance, record it, finalize it and make ordinary corrections within the academy.
 
 Closed-year attendance is read-only. Sessions, roster snapshots and official attendance are preserved rather than deleted. Cancellation, rescheduling and exceptional repair require their separately agreed workflow rules.
+
+## Session archival and restoration
+
+Owners, Head Admins and Admins may archive a mistaken session or one whose attendance should not count. Instructors may inspect its preserved history but do not archive or restore sessions. Archival and restoration are current-year management actions; closed-year academic records remain read-only.
+
+Archiving a live session ends and archives it together. It stops check-ins without marking anyone Absent or finalizing draft attendance. Archiving an ended session preserves its original end information. The academy may start a new session from the schedule using the ordinary start flow.
+
+An archived session is excluded from ordinary live/history lists by default. Staff can find it through an archived-session filter and inspect its roster, attendance and finalization history. Archival never deletes those records or changes stored attendance marks.
+
+Archived sessions do not contribute to attendance totals, rates, absence counts or derived attendance summaries, including when their attendance was already finalized. Historical inspection identifies the session as archived and excluded; it must not present its marks as counted attendance.
+
+Archived sessions are read-only for attendance entry, check-ins, finalization and corrections. Restoring a session removes its archive exclusion and makes its existing finalized attendance count again. Its drafts remain drafts, and ordinary ended-session attendance review becomes available while the year is open. Restoration does not reopen the session or permit check-ins.
+
+Archival preserves learning access already issued from that session and the history of parent messages already sent. Pending, unprocessed access or parent-message effects from the archived session are stopped rather than delivered later by a background consumer. An external request already sent to a provider cannot be recalled; its actual outcome remains in delivery history.
+
+Restoration is not another attendance finalization. It does not issue the same access again, restart an existing access period or resend previous messages. Any future processing of effects must retain their original identity and honor the session's current archival status. Archive/restore actions retain who performed them and when, independently of the preserved attendance history.

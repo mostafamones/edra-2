@@ -1,10 +1,11 @@
-import type { LiveSessionPage, PastSessionPage, SessionDetail } from "./types";
+import type { HistoryArchiveFilter, LiveSessionPage, PastSessionPage, SessionDetail } from "./types";
 
 // Every key is prefixed by ["sessions", academyId] so one invalidation covers an academy's session data.
 export const sessionsRootKey = (academyId: string) => ["sessions", academyId] as const;
 export const liveSessionsQueryKey = (academyId: string) => [...sessionsRootKey(academyId), "live"] as const;
-export type HistoryFilter = { search: string; from: string | null; to: string | null };
-export const historyQueryKey = (academyId: string, filter: HistoryFilter) => [...sessionsRootKey(academyId), "history", filter.search, filter.from, filter.to] as const;
+export type HistoryFilter = { search: string; from: string | null; to: string | null; archive: HistoryArchiveFilter };
+export const historyQueryKey = (academyId: string, filter: HistoryFilter) =>
+  [...sessionsRootKey(academyId), "history", filter.archive, filter.search, filter.from, filter.to] as const;
 export const sessionQueryKey = (academyId: string, sessionId: string) =>
   [...sessionsRootKey(academyId), "detail", sessionId] as const;
 
@@ -27,12 +28,13 @@ export function fetchLiveSessions(academyId: string, cursor: string | null, sign
   return getJson<LiveSessionPage>(`/api/sessions?${query}`, signal);
 }
 
-/** One page of ended sessions, optionally searched and limited to a range of days. */
+/** One page of ended sessions, optionally searched, limited to a range of days, and filtered by archival. */
 export function fetchSessionHistory(academyId: string, filter: HistoryFilter, cursor: string | null, signal?: AbortSignal) {
   const query = new URLSearchParams({ academy: academyId });
   if (filter.search) query.set("q", filter.search);
   if (filter.from) query.set("from", filter.from);
   if (filter.to) query.set("to", filter.to);
+  if (filter.archive !== "active") query.set("archive", filter.archive);
   if (cursor) query.set("cursor", cursor);
   return getJson<PastSessionPage>(`/api/sessions/history?${query}`, signal);
 }

@@ -15,6 +15,7 @@ export type ApiErrorCode =
   | "REVIEW_REQUIRED"
   | "PUBLICATION_STALE"
   | "SESSION_ENDED"
+  | "SESSION_ARCHIVED"
   | "YEAR_CLOSED"
   | "IDEMPOTENCY_CONFLICT"
   | "NOT_ON_ROSTER"
@@ -45,6 +46,7 @@ const STATUS: Record<ApiErrorCode, number> = {
   REVIEW_REQUIRED: 409,
   PUBLICATION_STALE: 409,
   SESSION_ENDED: 409,
+  SESSION_ARCHIVED: 409,
   YEAR_CLOSED: 409,
   IDEMPOTENCY_CONFLICT: 409,
   NOT_ON_ROSTER: 422,
@@ -74,8 +76,9 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   STUDENT_NOT_FOUND: "No student with this identifier exists for this session's academy and year.",
   ATTENDANCE_CONFLICT: "Someone else changed this attendance first. Review the current values and try again.",
   REVIEW_REQUIRED: "This student is marked absent or excused. A staff member must review the change.",
-  PUBLICATION_STALE: "Attendance changed after you reviewed it. Refresh and review again before publishing.",
+  PUBLICATION_STALE: "Attendance changed after you reviewed it. Refresh and review again before finalizing.",
   SESSION_ENDED: "This session has ended. Check-ins are only accepted while it is live.",
+  SESSION_ARCHIVED: "This session is archived. Its attendance is read-only and does not count.",
   YEAR_CLOSED: "This academic year is closed. Attendance is read-only.",
   IDEMPOTENCY_CONFLICT: "This Idempotency-Key was already used for a different request.",
   NOT_ON_ROSTER: "This student is not on the session's roster. A staff member must review it.",

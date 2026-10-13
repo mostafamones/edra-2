@@ -62,6 +62,9 @@ do $$ begin
     raise exception 'An active password session lost access';
   end if;
 end $$;
+-- It reaches the session workflow itself: an unknown session is not_found, not forbidden.
+select pg_temp.expect_error($s$ select public.end_session('88888888-8888-4888-8888-888888888888',
+  '8e111111-1111-4111-8111-111111111111') $s$, 'not_found');
 
 -- A phone-code session (recovery or direct verifyOtp) of an existing session row has none.
 select pg_temp.act('8b111111-1111-4111-8111-111111111111', 'otp');
@@ -74,7 +77,7 @@ do $$ begin
     raise exception 'A phone-code session has application authority';
   end if;
 end $$;
-select pg_temp.expect_error($s$ select public.delete_session('88888888-8888-4888-8888-888888888888',
+select pg_temp.expect_error($s$ select public.end_session('88888888-8888-4888-8888-888888888888',
   '8e111111-1111-4111-8111-111111111111') $s$, 'forbidden');
 
 -- Expired (time-boxed) sessions, unknown sessions, another user's session, and a missing

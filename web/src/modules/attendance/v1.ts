@@ -24,6 +24,7 @@ const API_CODES: Record<AttendanceErrorCode, ApiErrorCode> = {
   student_code_not_found: "STUDENT_CODE_NOT_FOUND",
   student_code_ambiguous: "STUDENT_CODE_AMBIGUOUS",
   session_ended: "SESSION_ENDED",
+  session_archived: "SESSION_ARCHIVED",
   year_unavailable: "YEAR_CLOSED",
   publication_stale: "PUBLICATION_STALE",
   idempotency_conflict: "IDEMPOTENCY_CONFLICT",

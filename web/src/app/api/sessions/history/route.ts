@@ -3,8 +3,9 @@ import type { NextRequest } from "next/server";
 import { listSessionHistory, readSessionHistoryQuery } from "@/modules/sessions/server";
 
 /**
- * GET /api/sessions/history?academy=<id>&q=…&cursor=…&limit=… — ended and auto-closed sessions,
- * newest first, optionally searched by schedule, group, level, program, or who started them.
+ * GET /api/sessions/history?academy=<id>&q=…&archive=…&cursor=…&limit=… — ended and auto-closed
+ * sessions, newest first, optionally searched by schedule, group, level, program, or who started
+ * them. `archive` is active (default, unarchived), archived, or all.
  */
 export async function GET(request: NextRequest) {
   const query = readSessionHistoryQuery(request.nextUrl.searchParams);

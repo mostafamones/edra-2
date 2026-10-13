@@ -5,7 +5,7 @@ import { z } from "zod";
 import { cookieAuthority, type Authority, type Db } from "@/lib/supabase/authority";
 import type { Database } from "@/lib/supabase/database.types";
 import { decodeCursor, DEFAULT_PAGE_SIZE, encodeCursor, MAX_PAGE_SIZE } from "./cursor";
-import type { LiveSessionPage, PastSessionPage, ReadResult, SessionDetail } from "./types";
+import { HISTORY_ARCHIVE_FILTERS, type HistoryArchiveFilter, type LiveSessionPage, type PastSessionPage, type ReadResult, type SessionDetail } from "./types";
 
 /**
  * Server-only session reads. Every read runs through the caller's Supabase session, so RLS limits
@@ -74,6 +74,9 @@ const pastRowSchema = liveRowSchema.extend({
   ended_at: z.string(),
   ended_by_name: z.string().nullable(),
   end_reason: enumOf<Enums["session_end_reason"]>(["manual", "auto"]),
+  // Archival fields are optional so reads still parse against a database without them.
+  archived_at: z.string().nullish(),
+  archived_by_name: z.string().nullish(),
 });
 const rosterRowSchema = z.object({
   annual_student_record_id: z.string(),
@@ -98,8 +101,23 @@ const detailSchema = z.object({
     ended_by: z.string().nullable(),
     ended_by_name: z.string().nullable(),
     end_reason: enumOf<Enums["session_end_reason"]>(["manual", "auto"]).nullable(),
+    archived_at: z.string().nullish(),
+    archived_by_name: z.string().nullish(),
+    archive_note: z.string().nullish(),
+    year_open: z.boolean().optional(),
+    can_manage_archive: z.boolean().optional(),
   }),
   roster: z.array(rosterRowSchema),
+  archive_impact: z.object({
+    roster_count: z.number().int(), official_count: z.number().int(), draft_count: z.number().int(), pending_effects: z.number().int(),
+  }).nullish(),
+  archive_events: z.array(z.object({
+    action: z.enum(["archived", "restored"]),
+    ended_live: z.boolean(),
+    note: z.string().nullable(),
+    actor_name: z.string().nullable(),
+    occurred_at: z.string(),
+  })).optional(),
 });
 
 const toSummary = (row: z.infer<z.ZodObject<typeof summaryShape>>) => ({
@@ -186,21 +204,28 @@ export async function listLiveSessions(query: LiveSessionQuery = {}, authority?:
   }
 }
 
-/** `from` and `to` are inclusive academy-time days, "YYYY-MM-DD". */
-export type SessionHistoryQuery = LiveSessionQuery & { search?: string | null; from?: string | null; to?: string | null };
+/** `from` and `to` are inclusive academy-time days, "YYYY-MM-DD". `archive` defaults to "active". */
+export type SessionHistoryQuery = LiveSessionQuery & {
+  search?: string | null; from?: string | null; to?: string | null; archive?: HistoryArchiveFilter | null;
+};
 
-/** Reads the live-list parameters plus `q` (search text, up to 100 characters) and `from`/`to` days. */
+/**
+ * Reads the live-list parameters plus `q` (search text, up to 100 characters), `from`/`to` days and
+ * `archive` (active, archived or all).
+ */
 export function readSessionHistoryQuery(params: URLSearchParams): SessionHistoryQuery | null {
   const base = readLiveSessionQuery(params);
   const search = params.get("q");
   const from = params.get("from");
   const to = params.get("to");
+  const archive = params.get("archive");
   const isDay = (value: string | null) => value === null || z.iso.date().safeParse(value).success;
   if (!base || (search !== null && search.length > 100) || !isDay(from) || !isDay(to) || (from && to && from > to)) return null;
-  return { ...base, search, from, to };
+  if (archive !== null && !(HISTORY_ARCHIVE_FILTERS as readonly string[]).includes(archive)) return null;
+  return { ...base, search, from, to, archive: archive as HistoryArchiveFilter | null };
 }
 
-/** Ended and auto-closed sessions, newest first, optionally searched, with keyset pagination. */
+/** Ended and auto-closed sessions, newest first, optionally searched, with keyset pagination. Unarchived only unless `archive` says otherwise. */
 export async function listSessionHistory(query: SessionHistoryQuery = {}, authority?: Authority | null): Promise<ReadResult<PastSessionPage>> {
   const cursor = query.cursor ? decodeCursor(query.cursor) : null;
   if (query.cursor && !cursor) return { ok: false, status: 400 };
@@ -224,6 +249,7 @@ export async function listSessionHistory(query: SessionHistoryQuery = {}, author
       p_before_started_at: cursor?.startedAt ?? null,
       p_before_id: cursor?.id ?? null,
       p_limit: limit + 1,
+      p_archive: query.archive ?? "active",
     } as unknown as Database["public"]["Functions"]["list_past_sessions"]["Args"]);
     if (error) return { ok: false, status: 500 };
     const rows = z.array(pastRowSchema).parse(data);
@@ -235,6 +261,7 @@ export async function listSessionHistory(query: SessionHistoryQuery = {}, author
         sessions: page.map((row) => ({
           ...toSummary(row), academyName: row.academy_name, academySlug: row.academy_slug, rosterCount: row.roster_count,
           endedAt: row.ended_at, endedByName: row.ended_by_name, endReason: row.end_reason,
+          sessionArchivedAt: row.archived_at ?? null, sessionArchivedByName: row.archived_by_name ?? null,
         })),
         nextCursor: rows.length > limit && last ? encodeCursor({ startedAt: last.started_at, id: last.id }) : null,
       },
@@ -253,7 +280,10 @@ export async function getSession(academyId: string, sessionId: string, authority
     const { data, error } = await actor.db.rpc("get_session", { p_academy_id: academyId, p_session_id: sessionId });
     if (error) return { ok: false, status: 500 };
     if (data === null) return { ok: false, status: 404 };
-    const { session, roster } = detailSchema.parse(data);
+    const { session, roster, archive_events: events, archive_impact: impact } = detailSchema.parse(data);
+    const archived = Boolean(session.archived_at);
+    const yearOpen = session.year_open ?? false;
+    const manage = (session.can_manage_archive ?? false) && yearOpen;
     return {
       ok: true,
       data: {
@@ -262,6 +292,17 @@ export async function getSession(academyId: string, sessionId: string, authority
         endedBy: session.ended_by,
         endedByName: session.ended_by_name,
         endReason: session.end_reason,
+        sessionArchivedAt: session.archived_at ?? null,
+        sessionArchivedByName: session.archived_by_name ?? null,
+        archiveNote: session.archive_note ?? null,
+        archiveEvents: (events ?? []).map((event) => ({
+          action: event.action, endedLive: event.ended_live, note: event.note, actorName: event.actor_name, occurredAt: event.occurred_at,
+        })),
+        archiveImpact: impact ? {
+          rosterCount: impact.roster_count, officialCount: impact.official_count, draftCount: impact.draft_count, pendingEffects: impact.pending_effects,
+        } : null,
+        yearOpen,
+        permittedActions: { archive: manage && !archived, restore: manage && archived },
         roster: roster.map((row) => ({
           annualStudentRecordId: row.annual_student_record_id,
           academyStudentProfileId: row.academy_student_profile_id,

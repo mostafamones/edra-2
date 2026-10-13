@@ -1,5 +1,5 @@
-export { deleteSession, endSession, startSession } from "./actions";
+export { archiveSession, endSession, restoreSession, startSession } from "./actions";
 export { fetchLiveSessions, fetchSession, fetchSessionHistory, historyQueryKey, liveSessionsQueryKey, sessionQueryKey, sessionsRootKey, SessionRequestError } from "./queries";
 export type {
-  EndResult, LiveSession, LiveSessionPage, PastSession, PastSessionPage, RosterEntry, RosterOrigin, SessionDetail, SessionState, StartOutcome, StartResult,
+  ArchiveOutcome, ArchiveResult, EndResult, HistoryArchiveFilter, LiveSession, LiveSessionPage, PastSession, PastSessionPage, RosterEntry, RosterOrigin, SessionArchiveEvent, SessionArchiveState, SessionDetail, SessionState, StartOutcome, StartResult,
 } from "./types";

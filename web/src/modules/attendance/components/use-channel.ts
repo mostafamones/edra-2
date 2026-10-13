@@ -19,6 +19,8 @@ type Options = {
   name: string;
   /** Called (coalesced) when another save may have changed attendance, and after every (re)join. */
   onInvalidate: (revision: number | null) => void;
+  /** Called when the session itself changed (ended, archived or restored); the attendance sheet is invalidated too. */
+  onSessionChange?: () => void;
 };
 
 /**
@@ -26,12 +28,14 @@ type Options = {
  * commit-backed invalidations; the caller refetches authoritative data. Presence shows which staff
  * are viewing and never locks anything.
  */
-export function useAttendanceChannel({ academyId, sessionId, userId, name, onInvalidate }: Options) {
+export function useAttendanceChannel({ academyId, sessionId, userId, name, onInvalidate, onSessionChange }: Options) {
   const [status, setStatus] = useState<ChannelStatus>("connecting");
   const [peers, setPeers] = useState<Peer[]>([]);
   const [generation, setGeneration] = useState(0);
   const invalidate = useRef(onInvalidate);
   useEffect(() => { invalidate.current = onInvalidate; }, [onInvalidate]);
+  const sessionChanged = useRef(onSessionChange);
+  useEffect(() => { sessionChanged.current = onSessionChange; }, [onSessionChange]);
 
   useEffect(() => {
     const timer = setTimeout(() => setGeneration((value) => value + 1), CHANNEL_LIFETIME_MS);
@@ -57,6 +61,11 @@ export function useAttendanceChannel({ academyId, sessionId, userId, name, onInv
       .on("broadcast", { event: "attendance_changed" }, ({ payload }) => {
         const revision = typeof payload?.revision === "number" ? payload.revision : null;
         schedule(revision);
+      })
+      .on("broadcast", { event: "session_changed" }, () => {
+        // Lifecycle or archival changes what may be edited: refetch the sheet and the session.
+        schedule(null);
+        sessionChanged.current?.();
       })
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState<{ name?: string }>();

@@ -28,6 +28,15 @@ info:
     committed mutation (600 check-ins, 240 attendance changes, 60 publications per 60 seconds).
     `429 THROTTLED` includes `Retry-After` in seconds; retry with the same `Idempotency-Key`.
 
+    **Archived sessions.** Owners, Head Admins and Admins can archive a session on the web (archive
+    management is not part of this API). An archived session is always ended, keeps its roster and
+    attendance, and is excluded from counted attendance. Its attendance is read-only: every write
+    returns `409 SESSION_ARCHIVED` (a stored retry still replays its original result) and
+    `permitted_actions` are all false. `session_archived_at` (session) or `archived_at` (attendance
+    sheet session) is non-null while archived; an entry's `archived` is about the student record and
+    is unrelated. A restored session is ended and editable again while the year is open. Archived
+    sessions never appear in the live list.
+
     **Student codes.** An academy may enable optional student codes. They are management
     operations in the Edra web app (assign, generate, replace, retire); this API exposes no
     endpoint for them. Issued codes are reserved permanently: a retired code is never issued
@@ -254,7 +263,7 @@ paths:
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "409":
-          description: "`REVIEW_REQUIRED` (details is a CheckInResult), `SESSION_ENDED`, `YEAR_CLOSED`, `IDEMPOTENCY_CONFLICT`, `STUDENT_CODES_DISABLED`, `STUDENT_CODE_RETIRED`, or `STUDENT_CODE_AMBIGUOUS`."
+          description: "`REVIEW_REQUIRED` (details is a CheckInResult), `SESSION_ENDED`, `SESSION_ARCHIVED`, `YEAR_CLOSED`, `IDEMPOTENCY_CONFLICT`, `STUDENT_CODES_DISABLED`, `STUDENT_CODE_RETIRED`, or `STUDENT_CODE_AMBIGUOUS`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -302,7 +311,7 @@ paths:
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "409":
-          description: "`ATTENDANCE_CONFLICT` (details: `{ current: AttendanceEntry, revision }`), `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`."
+          description: "`ATTENDANCE_CONFLICT` (details: `{ current: AttendanceEntry, revision }`), `SESSION_ARCHIVED`, `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -358,7 +367,7 @@ paths:
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "409":
-          description: "`ATTENDANCE_CONFLICT` (details: `{ conflicts: AttendanceEntry[], revision }`), `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`."
+          description: "`ATTENDANCE_CONFLICT` (details: `{ conflicts: AttendanceEntry[], revision }`), `SESSION_ARCHIVED`, `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -407,7 +416,7 @@ paths:
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "409":
-          description: "`PUBLICATION_STALE`, `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`."
+          description: "`PUBLICATION_STALE`, `SESSION_ARCHIVED`, `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -461,6 +470,7 @@ components:
                 - REVIEW_REQUIRED            # 409 scan over Absent/Excused
                 - PUBLICATION_STALE          # 409 attendance changed after review
                 - SESSION_ENDED              # 409 check-in after the session ended
+                - SESSION_ARCHIVED           # 409 the session is archived (attendance read-only)
                 - YEAR_CLOSED                # 409 the academic year is closed (read-only)
                 - IDEMPOTENCY_CONFLICT       # 409 key reused for a different request
                 - STUDENT_CODES_DISABLED     # 409 the academy has student codes turned off
@@ -527,14 +537,17 @@ components:
             ended_by: { type: [string, "null"], format: uuid }
             ended_by_name: { type: [string, "null"] }
             end_reason: { type: [string, "null"], enum: [manual, auto, null] }
+            session_archived_at: { type: [string, "null"], format: date-time, description: Set while the session is archived (read-only, not counted). Not the student `archived` flag. }
+            session_archived_by_name: { type: [string, "null"] }
+            archive_note: { type: [string, "null"], description: Optional note recorded when it was archived. }
             roster_count: { type: integer }
     PermittedActions:
       type: object
       required: [check_in, edit, publish]
       properties:
-        check_in: { type: boolean, description: Live session in an open year. }
-        edit: { type: boolean, description: Open year (live or ended). }
-        publish: { type: boolean, description: Open year (live or ended). }
+        check_in: { type: boolean, description: Live, unarchived session in an open year. }
+        edit: { type: boolean, description: Unarchived session (live or ended) in an open year. }
+        publish: { type: boolean, description: Unarchived session (live or ended) in an open year. }
     AttendanceStatus:
       type: string
       enum: [unknown, present, late, absent, excused]
@@ -583,6 +596,8 @@ components:
             state: { type: string, enum: [live, ended] }
             ended_at: { type: [string, "null"], format: date-time }
             year_open: { type: boolean }
+            archived_at: { type: [string, "null"], format: date-time, description: Set while the session itself is archived. }
+            metadata_version: { type: integer, description: The session's lifecycle/archival version. }
         student_codes_enabled: { type: boolean, description: Whether `student_id` check-ins are available and entries carry `student_code`. }
         revision: { type: integer, description: Monotonic; increases on every draft change. Code changes alone do not increase it. }
         published_revision: { type: [integer, "null"] }

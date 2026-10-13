@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { IconCalendar, IconClipboardList, IconClock, IconDots, IconTrash, IconUser, IconUsers } from "@tabler/icons-react";
+import { IconArchive, IconArchiveOff, IconCalendar, IconClipboardList, IconClock, IconDots, IconUser, IconUsers } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useCanonicalHref } from "@/modules/navigation";
 import type { PastSession } from "../types";
-import { DeleteSessionDialog } from "./delete-dialog";
+import { ArchiveSessionDialog } from "./archive-dialog";
 import { formatClock, formatDay, sessionAudience, startedByLabel } from "./format";
 
-/** One finished session; the card opens its details page, the menu views attendance or deletes it. */
-export function HistorySessionCard({ session, canDelete }: { session: PastSession; canDelete: boolean }) {
+/**
+ * One finished session; the card opens its details page, the menu views its attendance and, for
+ * managers, archives or restores it (the server re-checks role and year).
+ */
+export function HistorySessionCard({ session, canManage }: { session: PastSession; canManage: boolean }) {
   const href = useCanonicalHref();
-  const [deleting, setDeleting] = useState(false);
+  const [changing, setChanging] = useState(false);
+  const archived = session.sessionArchivedAt !== null;
   const detailsHref = href(`/app/attendance/${session.id}`);
   return (
     <Card size="sm" className="bg-card/40 py-4 px-2 shadow-sm border-l-3 border-foreground/20 ring-0 transition-colors hover:bg-muted/30">
@@ -27,6 +31,7 @@ export function HistorySessionCard({ session, canDelete }: { session: PastSessio
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="truncate text-base font-medium">{session.scheduleTitle}</h3>
               <Badge variant="secondary" className="text-[11px]">{session.endReason === "auto" ? "Auto-closed" : "Ended"}</Badge>
+              {archived && <Badge variant="outline" className="text-[11px]"><IconArchive aria-hidden="true" />Archived · not counted</Badge>}
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <span>{sessionAudience(session)}</span>
@@ -49,18 +54,26 @@ export function HistorySessionCard({ session, canDelete }: { session: PastSessio
             <DropdownMenuItem asChild className="whitespace-nowrap">
               <Link href={href(`/app/attendance/${session.id}`)}><IconClipboardList />View attendance</Link>
             </DropdownMenuItem>
-            {canDelete && (
+            {canManage && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive!" onSelect={() => setDeleting(true)}><IconTrash />Delete</DropdownMenuItem>
+                <DropdownMenuItem className="whitespace-nowrap" onSelect={() => setChanging(true)}>
+                  {archived ? <><IconArchiveOff />Restore…</> : <><IconArchive />Archive…</>}
+                </DropdownMenuItem>
               </>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
         </div>
       </CardContent>
-      {canDelete && (
-        <DeleteSessionDialog academyId={session.academyId} sessionId={session.id} title={session.scheduleTitle} open={deleting} onClose={() => setDeleting(false)} />
+      {canManage && (
+        <ArchiveSessionDialog
+          academyId={session.academyId}
+          sessionId={session.id}
+          mode={archived ? "restore" : "archive"}
+          open={changing}
+          onClose={() => setChanging(false)}
+        />
       )}
     </Card>
   );

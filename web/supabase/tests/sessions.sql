@@ -25,12 +25,26 @@ do $$ begin
     or not has_function_privilege('authenticated', 'public.end_session(uuid, uuid)', 'execute') then
     raise exception 'Session RPC grants are wrong';
   end if;
-  if has_function_privilege('anon', 'public.delete_session(uuid, uuid)', 'execute')
-    or not has_function_privilege('authenticated', 'public.delete_session(uuid, uuid)', 'execute')
+  -- The retired deletion RPCs: nobody but their owner may execute them, directly or through PUBLIC.
+  if exists (
+      select 1 from pg_proc p
+      cross join (values ('public'), ('anon'), ('authenticated'), ('service_role')) r(role)
+      where p.oid in ('public.delete_session(uuid, uuid)'::regprocedure, 'public.force_delete_session(uuid, uuid)'::regprocedure)
+        and (p.prosecdef
+          or (r.role = 'public' and exists (select 1 from aclexplode(p.proacl) a where a.grantee = 0 and a.privilege_type = 'EXECUTE'))
+          or (r.role <> 'public' and has_function_privilege(r.role, p.oid, 'execute'))))
+    or exists (select 1 from pg_proc where proname = 'reject_published_attendance_delete' and pronamespace = 'public'::regnamespace)
+    or has_function_privilege('authenticated', 'public.reject_session_delete()', 'execute')
+    or has_function_privilege('service_role', 'public.reject_session_delete()', 'execute')
+    or has_function_privilege('service_role', 'public.reject_attendance_history_change()', 'execute')
+    or has_table_privilege('service_role', 'public.sessions', 'delete')
+    or has_table_privilege('service_role', 'public.sessions', 'truncate')
+    or has_table_privilege('service_role', 'public.session_roster_entries', 'delete')
+    or has_table_privilege('service_role', 'public.session_roster_entries', 'truncate')
     or has_function_privilege('anon', 'public.academy_role_for(uuid)', 'execute')
     or has_function_privilege('anon', 'public.is_academy_member(uuid)', 'execute')
     or has_function_privilege('anon', 'public.shares_academy_with(uuid)', 'execute') then
-    raise exception 'Session deletion or membership helper grants are wrong';
+    raise exception 'Session history or membership helper grants are wrong';
   end if;
 end $$;
 
@@ -53,6 +67,7 @@ insert into auth.users (id) values
   ('51111111-1111-4111-8111-111111111111'),  -- owner of S
   ('53333333-3333-4333-8333-333333333333'),  -- instructor of S
   ('54444444-4444-4444-8444-444444444444'),  -- second instructor of S
+  ('52222222-2222-4222-8222-222222222222'),  -- admin of S
   ('61111111-1111-4111-8111-111111111111'),  -- owner of T
   ('71111111-1111-4111-8111-111111111111');  -- no membership
 update public.profiles set full_name = 'Instructor One' where id = '53333333-3333-4333-8333-333333333333';
@@ -69,6 +84,7 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('55555555-5555-4555-8555-555555555555', '51111111-1111-4111-8111-111111111111', 'owner', '51111111-1111-4111-8111-111111111111'),
   ('55555555-5555-4555-8555-555555555555', '53333333-3333-4333-8333-333333333333', 'instructor', '51111111-1111-4111-8111-111111111111'),
   ('55555555-5555-4555-8555-555555555555', '54444444-4444-4444-8444-444444444444', 'instructor', '51111111-1111-4111-8111-111111111111'),
+  ('55555555-5555-4555-8555-555555555555', '52222222-2222-4222-8222-222222222222', 'admin', '51111111-1111-4111-8111-111111111111'),
   ('66666666-6666-4666-8666-666666666666', '61111111-1111-4111-8111-111111111111', 'owner', '61111111-1111-4111-8111-111111111111');
 
 insert into public.academy_levels (academy_id, level_id, sort_order) values
@@ -413,40 +429,70 @@ end $$;
 reset role;
 
 -- ---------------------------------------------------------------------------------------------
--- Deleting an ended, unpublished session: Owner/Admin of that academy only. Instructors,
--- signed-in non-members, and other academies' staff are rejected and nothing is removed.
-set local role authenticated;
-set local request.jwt.claim.sub = '53333333-3333-4333-8333-333333333333';
-select pg_temp.expect_error($s$ select public.delete_session('55555555-5555-4555-8555-555555555555',
-  current_setting('test.s1')::uuid) $s$, 'forbidden');
-set local request.jwt.claim.sub = '71111111-1111-4111-8111-111111111111';
-select pg_temp.expect_error($s$ select public.delete_session('55555555-5555-4555-8555-555555555555',
-  current_setting('test.s1')::uuid) $s$, 'forbidden');
-set local request.jwt.claim.sub = '61111111-1111-4111-8111-111111111111';
-select pg_temp.expect_error($s$ select public.delete_session('55555555-5555-4555-8555-555555555555',
-  current_setting('test.s1')::uuid) $s$, 'forbidden');
--- Substituting the caller's own academy does not reach another academy's session.
-select pg_temp.expect_error($s$ select public.delete_session('66666666-6666-4666-8666-666666666666',
-  current_setting('test.s1')::uuid) $s$, 'not_found');
-reset role;
+-- Sessions are history. The retired deletion RPCs are denied to every actor (Owner, Admin,
+-- Instructor, signed-in non-member, another academy's Owner, anonymous) for an ended session, and
+-- the session and its roster stay. Direct deletes are rejected even for a privileged role.
+create function pg_temp.snapshot(p_session uuid) returns text language sql as $$
+  select (select row(s.*)::text from public.sessions s where s.id = p_session)
+    || (select coalesce(string_agg(row(r.*)::text, ',' order by r.annual_student_record_id), '')
+        from public.session_roster_entries r where r.session_id = p_session);
+$$;
+select set_config('test.s1_before', pg_temp.snapshot(current_setting('test.s1')::uuid), true);
 do $$ begin
-  if not exists (select 1 from public.sessions where id = current_setting('test.s1')::uuid)
+  if (select state from public.sessions where id = current_setting('test.s1')::uuid) <> 'ended'
     or not exists (select 1 from public.session_roster_entries where session_id = current_setting('test.s1')::uuid) then
-    raise exception 'A rejected deletion removed session data';
+    raise exception 'The deletion fixture is not an ended session with a roster';
   end if;
 end $$;
 
 set local role authenticated;
-set local request.jwt.claim.sub = '51111111-1111-4111-8111-111111111111';
-select public.delete_session('55555555-5555-4555-8555-555555555555', current_setting('test.s1')::uuid);
-select pg_temp.expect_error($s$ select public.delete_session('55555555-5555-4555-8555-555555555555',
-  current_setting('test.s1')::uuid) $s$, 'not_found');
+do $$
+declare actor text; fn text;
+begin
+  foreach actor in array array['51111111-1111-4111-8111-111111111111', '52222222-2222-4222-8222-222222222222',
+    '53333333-3333-4333-8333-333333333333', '71111111-1111-4111-8111-111111111111', '61111111-1111-4111-8111-111111111111'] loop
+    perform set_config('request.jwt.claim.sub', actor, true);
+    foreach fn in array array['delete_session', 'force_delete_session'] loop
+      perform pg_temp.expect_error(format('select public.%I(%L, %L)', fn,
+        '55555555-5555-4555-8555-555555555555', current_setting('test.s1')), 'permission denied%');
+      perform pg_temp.expect_error(format('select public.%I(%L, %L)', fn,
+        '66666666-6666-4666-8666-666666666666', current_setting('test.s1')), 'permission denied%');
+    end loop;
+  end loop;
+end $$;
 reset role;
+set local role anon;
+select pg_temp.expect_error($s$ select public.delete_session('55555555-5555-4555-8555-555555555555',
+  current_setting('test.s1')::uuid) $s$, 'permission denied%');
+select pg_temp.expect_error($s$ select public.force_delete_session('55555555-5555-4555-8555-555555555555',
+  current_setting('test.s1')::uuid) $s$, 'permission denied%');
+reset role;
+
+-- An accidental future grant still deletes nothing: the bodies always refuse.
+grant execute on function public.delete_session(uuid, uuid), public.force_delete_session(uuid, uuid) to authenticated;
+set local role authenticated;
+set local request.jwt.claim.sub = '51111111-1111-4111-8111-111111111111';
+select pg_temp.expect_error($s$ select public.delete_session('55555555-5555-4555-8555-555555555555',
+  current_setting('test.s1')::uuid) $s$, 'forbidden');
+select pg_temp.expect_error($s$ select public.force_delete_session('55555555-5555-4555-8555-555555555555',
+  current_setting('test.s1')::uuid) $s$, 'forbidden');
+reset role;
+revoke execute on function public.delete_session(uuid, uuid), public.force_delete_session(uuid, uuid) from authenticated;
+
+-- The former bypass setting no longer lifts the guards, even for the table owner.
+select set_config('edra.force_delete_session', 'on', true);
+select pg_temp.expect_error($s$ delete from public.session_roster_entries where session_id = current_setting('test.s1')::uuid $s$, 'validation');
+select pg_temp.expect_error($s$ delete from public.sessions where id = current_setting('test.s1')::uuid $s$, 'validation');
+select set_config('edra.force_delete_session', 'off', true);
+set local role service_role;
+select pg_temp.expect_error($s$ delete from public.sessions where id = current_setting('test.s1')::uuid $s$, 'permission denied%');
+select pg_temp.expect_error($s$ truncate public.session_roster_entries $s$, 'permission denied%');
+reset role;
+
 do $$ begin
-  if exists (select 1 from public.sessions where id = current_setting('test.s1')::uuid)
-    or exists (select 1 from public.session_roster_entries where session_id = current_setting('test.s1')::uuid)
+  if pg_temp.snapshot(current_setting('test.s1')::uuid) is distinct from current_setting('test.s1_before')
     or not exists (select 1 from public.sessions where id = current_setting('test.s2')::uuid) then
-    raise exception 'Owner deletion removed the wrong sessions';
+    raise exception 'A rejected deletion changed session history';
   end if;
 end $$;
 

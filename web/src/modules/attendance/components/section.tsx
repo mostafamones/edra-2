@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Toggle } from "@/components/ui/toggle";
 import type { AcademyEntry } from "@/modules/academies";
 import { AcademyGate, useAuth } from "@/modules/auth";
+import { sessionsRootKey } from "@/modules/sessions";
 import { AttendanceRequestError, attendanceQueryKey, fetchAttendance } from "../queries";
 import type { AttendanceSheet, AttendanceStatus, PublicationState } from "../types";
 import { CheckIn } from "./check-in";
@@ -42,12 +43,12 @@ const DEGRADED_POLL_MS = 15_000;
 type StatusFilter = "all" | AttendanceStatus | "correction";
 
 const PUBLICATION_LABELS: Record<PublicationState, string> = {
-  unpublished: "Not published",
-  published: "Published",
+  unpublished: "Not finalized",
+  published: "Finalized",
   pending_corrections: "Corrections pending",
 };
 
-/** The attendance section of `/app/attendance/<id>`: take, review, and publish one session's attendance. */
+/** The attendance section of `/app/attendance/<id>`: take, review, and finalize one session's attendance. */
 export function AttendanceSection({ sessionId }: { sessionId: string }) {
   return <AcademyGate>{(academy) => <SheetContent academy={academy} sessionId={sessionId} />}</AcademyGate>;
 }
@@ -64,9 +65,13 @@ function SheetContent({ academy, sessionId }: { academy: AcademyEntry; sessionId
     if (revision !== null && cached && revision < cached.revision) return;
     void queryClient.invalidateQueries({ queryKey: sheetKey });
   }, [queryClient, academy.id, sessionId]);
+  // Session lists and details (state, archival) for this academy refetch too.
+  const onSessionChange = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: sessionsRootKey(academy.id) });
+  }, [queryClient, academy.id]);
   const metadata = user?.user_metadata as { full_name?: string } | undefined;
   const channel = useAttendanceChannel({
-    academyId: academy.id, sessionId, userId: user?.id ?? null, name: metadata?.full_name || "Staff member", onInvalidate,
+    academyId: academy.id, sessionId, userId: user?.id ?? null, name: metadata?.full_name || "Staff member", onInvalidate, onSessionChange,
   });
 
   const query = useQuery({
@@ -211,8 +216,8 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
               </TooltipTrigger>
               <TooltipContent>
                 {sheet.lastPublishedAt
-                  ? <>Last published {formatMoment(sheet.lastPublishedAt)}{sheet.lastPublishedByName ? ` by ${sheet.lastPublishedByName}` : ""}.</>
-                  : "Drafts stay private until you publish them."}
+                  ? <>Last finalized {formatMoment(sheet.lastPublishedAt)}{sheet.lastPublishedByName ? ` by ${sheet.lastPublishedByName}` : ""}.</>
+                  : "Drafts stay private until you finalize them."}
               </TooltipContent>
             </Tooltip>
           </CardTitle>
@@ -220,13 +225,14 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
             <SyncStatus status={channelStatus} syncedAt={syncedAt} peers={peers} />
             {sheet.permittedActions.publish && (
               <Button onClick={() => setPublishing(true)} disabled={!canPublish}>
-                <IconChecklist />{sheet.publicationCount > 0 ? "Save" : "Publish"}
+                <IconChecklist />{sheet.publicationCount > 0 ? "Finalize corrections" : "Finalize attendance"}
               </Button>
             )}
           </CardAction>
         </CardHeader>
 
-        {(!session.yearOpen || !live) && <SheetNotice sessionId={session.id} kind={!session.yearOpen ? "read-only" : "ended"} />}
+        {session.archivedAt ? <SheetNotice sessionId={session.id} kind="archived" />
+          : (!session.yearOpen || !live) && <SheetNotice sessionId={session.id} kind={!session.yearOpen ? "read-only" : "ended"} />}
 
         {sheet.entries.length > 0 && (
           <div className="px-4 pt-4 pb-3">
@@ -318,7 +324,7 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Mark {unrecorded.length} untracked {unrecorded.length === 1 ? "student" : "students"} absent?</AlertDialogTitle>
-            <AlertDialogDescription>Nothing is official until you publish.</AlertDialogDescription>
+            <AlertDialogDescription>Nothing is official until you finalize attendance.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={edits.bulkBusy}>Cancel</AlertDialogCancel>

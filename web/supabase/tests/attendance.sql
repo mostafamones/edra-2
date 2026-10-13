@@ -434,18 +434,53 @@ set local request.jwt.claim.sub = '51111111-1111-4111-8111-111111111111';
 select pg_temp.expect_error($s$ select pg_temp.change(pg_temp.one('test.a3', 'late', 0), 'set', 'dddddddd-0000-4000-8000-000000000099') $s$, 'year_unavailable');
 reset role;
 
--- Published sessions cannot be deleted, even by the Owner; history stays intact.
+-- A finalized session cannot be deleted, even by the Owner, and its history stays byte for byte:
+-- the retired deletion RPCs are denied, and the history guards ignore the former bypass setting.
+create function pg_temp.history(p_session uuid) returns text language sql as $$
+  select concat_ws('|',
+    (select row(s.*)::text from public.sessions s where s.id = p_session),
+    (select string_agg(row(r.*)::text, ',' order by r.annual_student_record_id) from public.session_roster_entries r where r.session_id = p_session),
+    (select row(h.*)::text from public.attendance_sheets h where h.session_id = p_session),
+    (select string_agg(row(a.*)::text, ',' order by a.annual_student_record_id) from public.attendance_records a where a.session_id = p_session),
+    (select string_agg(row(p.*)::text, ',' order by p.sequence) from public.attendance_publications p where p.session_id = p_session),
+    (select string_agg(row(i.*)::text, ',' order by i.publication_id, i.annual_student_record_id)
+      from public.attendance_publication_items i where i.session_id = p_session),
+    (select string_agg(row(e.*)::text, ',' order by e.id) from public.attendance_effects e where e.session_id = p_session));
+$$;
+select set_config('test.history_before', pg_temp.history(current_setting('test.s1')::uuid), true);
+do $$ begin
+  if not exists (select 1 from public.attendance_publications where session_id = current_setting('test.s1')::uuid)
+    or not exists (select 1 from public.attendance_effects where session_id = current_setting('test.s1')::uuid) then
+    raise exception 'The deletion fixture has no finalized attendance';
+  end if;
+end $$;
+
 set local role authenticated;
 set local request.jwt.claim.sub = '51111111-1111-4111-8111-111111111111';
 select pg_temp.expect_error($s$ select public.delete_session('55555555-5555-4555-8555-555555555555',
-  current_setting('test.s1')::uuid) $s$, 'session_published');
+  current_setting('test.s1')::uuid) $s$, 'permission denied%');
+select pg_temp.expect_error($s$ select public.force_delete_session('55555555-5555-4555-8555-555555555555',
+  current_setting('test.s1')::uuid) $s$, 'permission denied%');
 reset role;
-select pg_temp.expect_error($s$ delete from public.attendance_records
-  where session_id = current_setting('test.s1')::uuid $s$, 'validation');
+
+select set_config('edra.force_delete_session', 'on', true);
+select pg_temp.expect_error($s$ delete from public.attendance_effects where session_id = current_setting('test.s1')::uuid $s$, 'validation');
+select pg_temp.expect_error($s$ delete from public.attendance_publication_items where session_id = current_setting('test.s1')::uuid $s$, 'validation');
+select pg_temp.expect_error($s$ update public.attendance_publication_items set status = 'present' where session_id = current_setting('test.s1')::uuid $s$, 'validation');
+select pg_temp.expect_error($s$ delete from public.attendance_publications where session_id = current_setting('test.s1')::uuid $s$, 'validation');
+select pg_temp.expect_error($s$ delete from public.attendance_records where session_id = current_setting('test.s1')::uuid $s$, 'validation');
+select pg_temp.expect_error($s$ delete from public.attendance_sheets where session_id = current_setting('test.s1')::uuid $s$, 'validation');
+select pg_temp.expect_error($s$ delete from public.session_roster_entries where session_id = current_setting('test.s1')::uuid $s$, 'validation');
+select pg_temp.expect_error($s$ delete from public.sessions where id = current_setting('test.s1')::uuid $s$, 'validation');
+select set_config('edra.force_delete_session', 'off', true);
+set local role service_role;
+select pg_temp.expect_error($s$ truncate public.attendance_effects $s$, 'permission denied%');
+select pg_temp.expect_error($s$ delete from public.attendance_records where session_id = current_setting('test.s1')::uuid $s$, 'permission denied%');
+reset role;
+
 do $$ begin
-  if not exists (select 1 from public.sessions where id = current_setting('test.s1')::uuid)
-    or not exists (select 1 from public.attendance_records where session_id = current_setting('test.s1')::uuid) then
-    raise exception 'A published session lost history';
+  if pg_temp.history(current_setting('test.s1')::uuid) is distinct from current_setting('test.history_before') then
+    raise exception 'A finalized session lost or changed history';
   end if;
 end $$;
 
