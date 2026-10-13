@@ -21,7 +21,7 @@ type Props = {
   /** Rows are shown while newer results load. */
   fetching: boolean;
   skeletonRows: number;
-  /** Rendered across the table when there are no rows. */
+  /** Rendered instead of the whole table (headers and scroll container included) when a loaded page has no rows. */
   empty: ReactNode;
   isSelected: (id: string) => boolean;
 };
@@ -32,7 +32,13 @@ type Props = {
  * with fixed table layout. Resizing moves the boundary between a column and its right neighbour, so no
  * other column moves. It commits on release; while dragging only the handle and guide move.
  */
-export function StudentsDataTable({ table, sorts, onSortsChange, loading, fetching, skeletonRows, empty, isSelected }: Props) {
+export function StudentsDataTable({ empty, ...props }: Props) {
+  if (!props.loading && props.table.getRowModel().rows.length === 0) return empty;
+  return <PopulatedTable {...props} />;
+}
+
+/** Owns the container measurement so the observer attaches whenever the table mounts after an empty state. */
+function PopulatedTable({ table, sorts, onSortsChange, loading, fetching, skeletonRows, isSelected }: Omit<Props, "empty">) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const [available, setAvailable] = useState(0);
@@ -119,12 +125,6 @@ export function StudentsDataTable({ table, sorts, onSortsChange, loading, fetchi
                 ))}
               </TableRow>
             ))}
-          </TableBody>
-        ) : rows.length === 0 ? (
-          <TableBody>
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={columns.length} className="p-0 whitespace-normal">{empty}</TableCell>
-            </TableRow>
           </TableBody>
         ) : (
           <Body
