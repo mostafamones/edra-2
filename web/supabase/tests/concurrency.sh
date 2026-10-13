@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Separate-session race tests for schedule/group/slot, student-record, import, student-code and
-# check-in locking. Run only through `npm run test:db`, which validates the isolated target and
+# Separate-session race tests for staff access, schedule/group/slot, student-record, import,
+# student-code and check-in locking. Run only through `npm run test:db`, which validates the isolated target and
 # exports its connection. Races need real concurrent transactions, so fixtures are committed under a
 # run-specific academy, admin and ids. They are retained: preserved history (sessions, attendance,
 # code ledger) cannot be removed through normal flows. Fresh identities keep reruns collision-free.
@@ -128,6 +128,74 @@ expect_ok 2a "the schedule holding the group lock failed"
 expect_rejected 2b "group archived despite a concurrently created schedule"
 psqlx -tA -c "select count(*) from public.groups where id = '$GROUP_SCHED' and archived_at is null" | grep -qx 1 \
   || fail "group with a schedule ended up archived"
+
+# S1-S4. Staff access races. Membership changes take the target advisory lock, then the actor and
+# target rows in user_id order; acceptance takes the recipient advisory lock, then the creator row.
+as_user() { echo "set local role authenticated; set local request.jwt.claim.sub = '$1';"; }
+phone() { echo "2010$(od -An -N4 -tu4 /dev/urandom | tr -d ' ' | tail -c 9 | sed -e :a -e 's/^.\{1,7\}$/0&/;ta')"; }
+token() { od -An -N22 -tx1 /dev/urandom | tr -d ' \n' | cut -c1-43; }
+HEAD1="$(uuid)"; HEAD2="$(uuid)"; STAFF_ADMIN="$(uuid)"; STAFF_INST="$(uuid)"; RECIPIENT1="$(uuid)"; RECIPIENT2="$(uuid)"
+RPHONE1="$(phone)"; RPHONE2="$(phone)"; TOKEN1="$(token)"; TOKEN2="$(token)"
+psqlx <<SQL
+insert into auth.users (id) values ('$HEAD1'), ('$HEAD2'), ('$STAFF_ADMIN'), ('$STAFF_INST');
+insert into auth.users (id, phone, phone_confirmed_at) values ('$RECIPIENT1', '$RPHONE1', now()), ('$RECIPIENT2', '$RPHONE2', now());
+insert into public.academy_memberships (academy_id, user_id, role, created_by) values
+  ('$ACADEMY', '$HEAD1', 'head_admin', '$ADMIN'), ('$ACADEMY', '$HEAD2', 'head_admin', '$ADMIN'),
+  ('$ACADEMY', '$STAFF_ADMIN', 'admin', '$ADMIN'), ('$ACADEMY', '$STAFF_INST', 'instructor', '$ADMIN');
+SQL
+psqlx -c "begin; $(as_user "$STAFF_ADMIN") select public.create_staff_invitation('$ACADEMY', '+$RPHONE1', 'instructor', '$TOKEN1', 'race-1'); commit;" | grep -q created \
+  || fail "could not create the race invitation for S1"
+psqlx -c "begin; $(as_user "$HEAD1") select public.create_staff_invitation('$ACADEMY', '+$RPHONE2', 'instructor', '$TOKEN2', 'race-2'); commit;" | grep -q created \
+  || fail "could not create the race invitation for S2"
+member_state() { psqlx -tA -c "select role || ':' || (suspended_at is not null) from public.academy_memberships where academy_id = '$ACADEMY' and user_id = '$1'"; }
+
+# S1. Suspending the creator holds their row; a concurrent acceptance of their invitation waits and
+#     then finds the creator without authority. No membership is created.
+hold s1a s1b "$as_admin select public.suspend_staff_member('$ACADEMY', '$STAFF_ADMIN');"
+start s1b "$(as_user "$RECIPIENT1") select public.accept_staff_invitation('$TOKEN1');"
+wait
+expect_ok s1a "the suspension holding the creator row failed"
+expect_ok s1b "an acceptance waiting on the creator failed"
+grep -q inviter_unavailable "$OUT/s1b" || fail "an invitation from a creator suspended concurrently was accepted: $(out s1b)"
+[ -z "$(member_state "$RECIPIENT1")" ] || fail "acceptance created a membership from a suspended creator"
+psqlx -c "begin; $as_admin select public.restore_staff_member('$ACADEMY', '$STAFF_ADMIN'); commit;" | grep -q restored \
+  || fail "could not restore the S1 creator"
+
+# S2. Acceptance holds the creator row; a concurrent suspension of the creator waits, then applies.
+#     The completed acceptance stands.
+hold s2a s2b "$(as_user "$RECIPIENT2") select public.accept_staff_invitation('$TOKEN2');"
+start s2b "$as_admin select public.suspend_staff_member('$ACADEMY', '$HEAD1');"
+wait
+expect_ok s2a "the acceptance holding the creator row failed"
+expect_ok s2b "a suspension waiting on an acceptance failed"
+grep -q joined "$OUT/s2a" || fail "the acceptance did not join: $(out s2a)"
+grep -q suspended "$OUT/s2b" || fail "the creator was not suspended after the acceptance: $(out s2b)"
+[ "$(member_state "$RECIPIENT2")" = "instructor:false" ] || fail "the accepted membership is wrong: $(member_state "$RECIPIENT2")"
+psqlx -c "begin; $as_admin select public.restore_staff_member('$ACADEMY', '$HEAD1'); commit;" | grep -q restored \
+  || fail "could not restore the S2 creator"
+
+# S3. Two Head Admins target each other at once. Both are refused (peers), and the opposing row
+#     locks are taken in one order, so neither deadlocks.
+hold s3a s3b "$(as_user "$HEAD1") select public.suspend_staff_member('$ACADEMY', '$HEAD2');"
+start s3b "$(as_user "$HEAD2") select public.suspend_staff_member('$ACADEMY', '$HEAD1');"
+wait
+expect_ok s3a "a peer suspension attempt failed instead of being refused"
+expect_ok s3b "an opposing peer suspension attempt failed instead of being refused"
+grep -q forbidden "$OUT/s3a" && grep -q forbidden "$OUT/s3b" || fail "a Head Admin managed a peer: $(out s3a) $(out s3b)"
+[ "$(member_state "$HEAD1"),$(member_state "$HEAD2")" = "head_admin:false,head_admin:false" ] \
+  || fail "peer Head Admins changed: $(member_state "$HEAD1"),$(member_state "$HEAD2")"
+
+# S4. The Owner demotes an Admin while a Head Admin suspends them: the suspension waits, then
+#     applies to the demoted member. The role change does not restore access and nothing is lost.
+hold s4a s4b "$as_admin select public.change_staff_member_role('$ACADEMY', '$STAFF_ADMIN', 'instructor');"
+start s4b "$(as_user "$HEAD2") select public.suspend_staff_member('$ACADEMY', '$STAFF_ADMIN');"
+start s4c "$(as_user "$STAFF_ADMIN") select public.suspend_staff_member('$ACADEMY', '$STAFF_INST');"
+wait
+expect_ok s4a "the role change holding the member row failed"
+expect_ok s4b "a suspension waiting on a role change failed"
+expect_ok s4c "an action by the member being changed failed instead of being decided"
+grep -q suspended "$OUT/s4b" || fail "the demoted member was not suspended: $(out s4b)"
+[ "$(member_state "$STAFF_ADMIN")" = "instructor:true" ] || fail "role change and suspension did not both apply: $(member_state "$STAFF_ADMIN")"
 
 # 3. Two sessions each delete a different slot of a two-slot schedule; one must be rejected.
 psqlx >/dev/null <<SQL

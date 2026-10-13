@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -132,6 +132,8 @@ export type Database = {
           created_at: string
           created_by: string
           role: Database["public"]["Enums"]["academy_role"]
+          suspended_at: string | null
+          suspended_by: string | null
           user_id: string
         }
         Insert: {
@@ -139,6 +141,8 @@ export type Database = {
           created_at?: string
           created_by: string
           role: Database["public"]["Enums"]["academy_role"]
+          suspended_at?: string | null
+          suspended_by?: string | null
           user_id: string
         }
         Update: {
@@ -146,6 +150,8 @@ export type Database = {
           created_at?: string
           created_by?: string
           role?: Database["public"]["Enums"]["academy_role"]
+          suspended_at?: string | null
+          suspended_by?: string | null
           user_id?: string
         }
         Relationships: [
@@ -159,6 +165,13 @@ export type Database = {
           {
             foreignKeyName: "academy_memberships_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_memberships_suspended_by_fkey"
+            columns: ["suspended_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2835,6 +2848,10 @@ export type Database = {
         Args: { p_academy_id: string; p_record_ids: string[] }
         Returns: Json
       }
+      is_academy_manager: {
+        Args: { target_academy_id: string }
+        Returns: boolean
+      }
       is_academy_member: {
         Args: { target_academy_id: string }
         Returns: boolean
@@ -3004,6 +3021,15 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      own_suspended_staff_academies: {
+        Args: never
+        Returns: {
+          icon: string
+          id: string
+          name: string
+          slug: string
+        }[]
+      }
       peek_next_student_code: {
         Args: { p_academy_id: string; p_record_id: string }
         Returns: string
@@ -3128,6 +3154,10 @@ export type Database = {
           p_source: Json
         }
         Returns: Record<string, unknown>
+      }
+      restore_staff_member: {
+        Args: { p_academy_id: string; p_user_id: string }
+        Returns: Json
       }
       revoke_staff_invitation: {
         Args: { p_academy_id: string; p_invitation_id: string }
@@ -3371,6 +3401,10 @@ export type Database = {
         Returns: string
       }
       student_import_summary: { Args: { p_session_id: string }; Returns: Json }
+      suspend_staff_member: {
+        Args: { p_academy_id: string; p_user_id: string }
+        Returns: Json
+      }
       unretire_student_code: {
         Args: { p_academy_id: string; p_assignment_id: string }
         Returns: Json
@@ -3436,7 +3470,7 @@ export type Database = {
       }
     }
     Enums: {
-      academy_role: "owner" | "admin" | "instructor"
+      academy_role: "owner" | "head_admin" | "admin" | "instructor"
       assignment_audience: "level" | "program" | "groups"
       assignment_mark_kind: "mark" | "excused"
       assignment_part_kind: "online_questions" | "answer_sheet" | "file_upload"
@@ -3602,7 +3636,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      academy_role: ["owner", "admin", "instructor"],
+      academy_role: ["owner", "head_admin", "admin", "instructor"],
       assignment_audience: ["level", "program", "groups"],
       assignment_mark_kind: ["mark", "excused"],
       assignment_part_kind: ["online_questions", "answer_sheet", "file_upload"],
