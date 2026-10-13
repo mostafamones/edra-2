@@ -7,7 +7,7 @@ const at = (state: "active" | "closed" | "archived", extra: { yearOpen?: boolean
 
 describe("assignmentPermissions", () => {
   it("lets every staff role edit the whole setup until marking starts", () => {
-    for (const role of ["owner", "admin", "instructor"] as const) {
+    for (const role of ["owner", "head_admin", "admin", "instructor"] as const) {
       expect(assignmentPermissions(role, at("active"))).toMatchObject({ edit: true, editStructure: true });
     }
   });
@@ -20,13 +20,15 @@ describe("assignmentPermissions", () => {
     expect(assignmentPermissions("admin", at("closed"))).toMatchObject({ edit: true, editStructure: false, reopen: true, archive: true });
   });
 
-  it("keeps lifecycle actions for Owner/Admin", () => {
+  it("keeps lifecycle actions for Owner/Head Admin/Admin", () => {
     expect(assignmentPermissions("instructor", at("active"))).toMatchObject({ close: false, archive: false });
+    expect(assignmentPermissions("head_admin", at("active", { hasActivity: true }))).toMatchObject({ edit: true, close: true });
+    expect(assignmentPermissions("head_admin", at("closed"))).toMatchObject({ reopen: true, archive: true });
     expect(assignmentPermissions("admin", at("active"))).toMatchObject({ close: true, archive: true, reopen: false });
   });
 
   it("lets every staff role mark and announce results without publishing, once every part is complete", () => {
-    for (const role of ["owner", "admin", "instructor"] as const) {
+    for (const role of ["owner", "head_admin", "admin", "instructor"] as const) {
       expect(assignmentPermissions(role, at("active")).mark).toBe(true);
       expect(assignmentPermissions(role, at("closed")).mark).toBe(true);
       expect(assignmentPermissions(role, at("active", { ready: false })).mark).toBe(false);

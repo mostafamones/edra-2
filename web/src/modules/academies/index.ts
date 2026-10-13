@@ -3,6 +3,8 @@ export { listUserAcademies } from "./queries";
 export { checkAcademySlugAvailability, createAcademySetup } from "./actions";
 export type { AcademySetupResult } from "./actions";
 export { GLOBAL_LEVELS, GLOBAL_LEVEL_IDS, globalLevelIdSchema } from "./levels";
+export { ACADEMY_ROLES, ACADEMY_ROLE_LABELS, academyRoleRank, academyRoleSchema, isAcademyManager, isAcademyRole } from "./roles";
+export type { AcademyRole } from "./roles";
 export { academySlugSchema, RESERVED_ACADEMY_SLUGS } from "./slug";
 export { ACADEMY_ICON_IDS, createAcademySchema, createAcademySetupSchema } from "./validation";
 export type { AcademyEntry } from "./queries";

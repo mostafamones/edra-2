@@ -28,7 +28,7 @@ export async function staffContext(academyId: string): Promise<StaffContext | nu
   const { data: auth } = await db.auth.getClaims();
   if (!auth?.claims) return null;
   const { data } = await db.from("academy_memberships").select("role")
-    .eq("academy_id", academyId).eq("user_id", auth.claims.sub).maybeSingle();
+    .eq("academy_id", academyId).eq("user_id", auth.claims.sub).is("suspended_at", null).maybeSingle();
   return data ? { db, userId: auth.claims.sub, role: data.role } : null;
 }
 

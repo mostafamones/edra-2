@@ -23,7 +23,7 @@ vi.mock("@/lib/supabase/authority", () => ({
   bearerAuthority: async (token: string) => {
     if (!state.authorized || token !== "aaa.bbb.ccc") return null;
     const membership = { data: state.member ? { role: "instructor" } : null };
-    const chain = { select: () => chain, eq: () => chain, maybeSingle: async () => membership };
+    const chain = { select: () => chain, eq: () => chain, is: () => chain, maybeSingle: async () => membership };
     return {
       userId: "user-1",
       db: {

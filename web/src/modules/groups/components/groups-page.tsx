@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AcademyGate } from "@/modules/auth";
-import type { AcademyEntry } from "@/modules/academies";
+import { isAcademyManager, type AcademyEntry } from "@/modules/academies";
 import { archiveGroup, restoreGroup } from "../actions";
 import {
   groupDependencyQueryKey, groupListQueryKey, groupsRootKey, loadGroupDependencies, loadGroups,
@@ -43,7 +43,7 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
   const [levelFilter, setLevelFilter] = useState(ALL_LEVELS);
   const [editing, setEditing] = useState<Group | null>(null);
   const [archiving, setArchiving] = useState<Group | null>(null);
-  const canManage = academy.role === "owner" || academy.role === "admin";
+  const canManage = isAcademyManager(academy.role);
   const groupsQuery = useQuery({ queryKey: groupListQueryKey(academyId, showArchived), queryFn: () => loadGroups(academyId, { archived: showArchived }) });
   const structureQuery = useQuery({ queryKey: structureQueryKey(academyId), queryFn: () => loadStructure(academyId) });
   const dependencyQuery = useQuery({ queryKey: groupDependencyQueryKey(academyId), queryFn: () => loadGroupDependencies(academyId) });

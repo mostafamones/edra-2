@@ -10,7 +10,7 @@ import {
 } from "./types";
 
 /**
- * Server-only reads for student imports. Every read checks that the caller is an owner or admin
+ * Server-only reads for student imports. Every read checks that the caller is an owner, head admin or admin
  * of the academy and runs through the caller's session, so RLS applies as well.
  */
 

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AcademyGate } from "@/modules/auth";
-import type { AcademyEntry } from "@/modules/academies";
+import { isAcademyManager, type AcademyEntry } from "@/modules/academies";
 import { loadStructure, structureQueryKey } from "../queries";
 import { GroupForm } from "./group-form";
 
@@ -20,14 +20,14 @@ export function NewGroupPage() {
 function NewGroupContent({ academy }: { academy: AcademyEntry }) {
   const href = useCanonicalHref();
   const router = useRouter();
-  const canManage = academy.role === "owner" || academy.role === "admin";
+  const canManage = isAcademyManager(academy.role);
   const query = useQuery({ queryKey: structureQueryKey(academy.id), queryFn: () => loadStructure(academy.id), enabled: canManage });
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-8 md:px-8">
       <h1 className="font-heading text-2xl font-semibold">Create group</h1>
       <p className="mt-1 mb-8 text-sm text-muted-foreground">Set up a class group for your students.</p>
 
-      {!canManage && <p role="alert">Only academy Owners and Admins can create groups.</p>}
+      {!canManage && <p role="alert">Only academy Owners, Head Admins and Admins can create groups.</p>}
 
       {canManage && query.isPending && (
         <div role="status" aria-live="polite" className="space-y-5">

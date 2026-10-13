@@ -13,7 +13,7 @@ vi.mock("@/lib/supabase/authority", () => ({ cookieAuthority: async () => null }
 import type { StaffApiContext } from "@/lib/api/handler";
 import { patchMarksResponse, resolutionResponse } from "./v1";
 
-const chain = { select: () => chain, eq: () => chain, maybeSingle: async () => ({ data: { role: "instructor" } }) };
+const chain = { select: () => chain, eq: () => chain, is: () => chain, maybeSingle: async () => ({ data: { role: "instructor" } }) };
 const context = {
   requestId: "req-1", origin: null, methods: "PATCH",
   authority: {

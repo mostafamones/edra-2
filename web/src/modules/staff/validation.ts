@@ -2,9 +2,11 @@ import { z } from "zod";
 
 import { phoneSchema } from "../../lib/phone";
 
+import { invitationRoleSchema } from "./types";
+
 export const staffInvitationSchema = z.object({
   phone: phoneSchema,
-  role: z.enum(["admin", "instructor"]),
+  role: invitationRoleSchema,
 });
 
 export const createStaffInvitationSchema = staffInvitationSchema.extend({ academyId: z.uuid() });

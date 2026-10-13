@@ -20,7 +20,7 @@ import { importTitle } from "../types";
 const STATES = { staging: "Draft", reviewing: "In review", importing: "Importing", completed: "Completed", cancelled: "Discarded", blocked: "Blocked" };
 
 export function ImportLogsPage() {
-  return <AcademyGate>{(academy) => canImportStudents(academy.role) ? <Logs academyId={academy.id} /> : <p role="alert" className="p-8">Import logs are available to owners and admins.</p>}</AcademyGate>;
+  return <AcademyGate>{(academy) => canImportStudents(academy.role) ? <Logs academyId={academy.id} /> : <p role="alert" className="p-8">Import logs are available to owners, head admins and admins.</p>}</AcademyGate>;
 }
 
 function Logs({ academyId }: { academyId: string }) {

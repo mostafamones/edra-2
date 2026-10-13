@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { IconAlertCircle, IconCalendar, IconDots, IconPhone, IconShieldCheck, IconUserMinus, IconUsers } from "@tabler/icons-react";
+import { IconAlertCircle, IconCalendar, IconDots, IconPhone, IconShieldCheck, IconUserCheck, IconUserMinus, IconUserOff, IconUsers } from "@tabler/icons-react";
 
 import type { AcademyEntry } from "@/modules/academies";
 import { FilterPopover } from "@/components/shared/filter-popover";
@@ -13,12 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import { ROLE_LABELS, formatDate } from "../format";
 import { fetchAllInvitations, fetchTeamMembers, staffQueryKeys } from "../queries";
 import type { InvitationRow } from "../types";
-import { canDemoteMember, canPromoteMember, canRemoveMember } from "../permissions";
+import { canManageMember, roleChoices } from "../permissions";
 import type { InvitationStatusFilter } from "../validation";
 import { InvitationCard } from "./invitation-card";
 import { InviteDialog } from "./invite-dialog";
@@ -107,23 +107,36 @@ export function TeamMembers({ academy, userId, canManage }: {
           {members.map((member) => {
             const name = member.profiles.full_name?.trim() || "Team member";
             const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+            const suspended = Boolean(member.suspended_at);
+            const choices = roleChoices(academy.role, member.role, userId, member.user_id);
             return (
               <li key={member.user_id} className="min-w-0">
                 <Card size="sm" className="h-full gap-0 rounded-lg py-0 transition-colors hover:bg-muted/30">
                   <div className="flex h-20 items-center gap-3 px-4">
-                    <Avatar size="lg" aria-hidden="true"><AvatarFallback>{initials}</AvatarFallback></Avatar>
+                    <Avatar size="lg" aria-hidden="true" className={suspended ? "opacity-60" : undefined}><AvatarFallback>{initials}</AvatarFallback></Avatar>
                     <div className="min-w-0 flex-1">
                       <h3 dir="auto" className="truncate font-medium text-foreground">
                         {name}{member.user_id === userId && <span className="ml-1.5 text-xs font-normal text-muted-foreground">You</span>}
                       </h3>
                     </div>
-                    <Badge variant={member.role === "owner" ? "default" : "secondary"}>{ROLE_LABELS[member.role]}</Badge>
-                    {canRemoveMember(academy.role, member.role, userId, member.user_id) && <DropdownMenu>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <Badge variant={member.role === "owner" ? "default" : "secondary"}>{ROLE_LABELS[member.role]}</Badge>
+                      {suspended && <Badge variant="destructive">Suspended</Badge>}
+                    </div>
+                    {canManageMember(academy.role, member.role, userId, member.user_id) && <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" className="-mr-1.5 text-muted-foreground" aria-label={`Actions for ${name}`}><IconDots /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {canPromoteMember(academy.role, member.role, userId, member.user_id) && <DropdownMenuItem onSelect={() => setMemberAction({ member, kind: "promote" })}><IconShieldCheck />Promote</DropdownMenuItem>}
-                        {canDemoteMember(academy.role, member.role, userId, member.user_id) && <DropdownMenuItem onSelect={() => setMemberAction({ member, kind: "demote" })}><IconShieldCheck />Demote</DropdownMenuItem>}
-                        <DropdownMenuItem className="text-destructive! hover:text-destructive! focus:text-destructive! data-highlighted:text-destructive! **:text-destructive! hover:**:text-destructive! focus:**:text-destructive! data-highlighted:**:text-destructive!" onSelect={() => setMemberAction({ member, kind: "remove" })}><IconUserMinus />Remove</DropdownMenuItem>
+                        {choices.length > 0 && <DropdownMenuSub>
+                          <DropdownMenuSubTrigger><IconShieldCheck />Change role</DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            {choices.map((role) => <DropdownMenuItem key={role} onSelect={() => setMemberAction({ member, kind: "role", role })}>{ROLE_LABELS[role]}</DropdownMenuItem>)}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>}
+                        {suspended
+                          ? <DropdownMenuItem onSelect={() => setMemberAction({ member, kind: "restore" })}><IconUserCheck />Restore access</DropdownMenuItem>
+                          : <DropdownMenuItem onSelect={() => setMemberAction({ member, kind: "suspend" })}><IconUserOff />Suspend access</DropdownMenuItem>}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={() => setMemberAction({ member, kind: "remove" })}><IconUserMinus />Remove</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>}
                   </div>
@@ -136,6 +149,10 @@ export function TeamMembers({ academy, userId, canManage }: {
                       <IconCalendar className="size-3.5 shrink-0" aria-hidden="true" />
                       Joined {formatDate(member.created_at)}
                     </p>
+                    {member.suspended_at && <p className="flex items-center gap-2 text-destructive">
+                      <IconUserOff className="size-3.5 shrink-0" aria-hidden="true" />
+                      Suspended {formatDate(member.suspended_at)}
+                    </p>}
                   </div>
                 </Card>
               </li>

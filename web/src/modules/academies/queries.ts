@@ -2,10 +2,12 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/client";
 
+import { academyRoleSchema, type AcademyRole } from "./roles";
+
 const membershipRowsSchema = z.array(
   z.object({
     academy_id: z.uuid(),
-    role: z.enum(["owner", "admin", "instructor"]),
+    role: academyRoleSchema,
     academies: z.object({ name: z.string(), slug: z.string(), icon: z.string() }),
   }),
 );
@@ -15,15 +17,16 @@ export type AcademyEntry = {
   name: string;
   slug: string;
   icon: string;
-  role: "owner" | "admin" | "instructor";
+  role: AcademyRole;
 };
 
-/** RLS limits the result to memberships visible to the signed-in user. */
+/** Active memberships only. RLS also hides a suspended membership from its own member. */
 export async function listUserAcademies(userId: string): Promise<AcademyEntry[]> {
   const { data, error } = await createClient()
     .from("academy_memberships")
     .select("academy_id, role, academies!inner(name, slug, icon)")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .is("suspended_at", null);
 
   if (error) throw error;
 

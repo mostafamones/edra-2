@@ -3,14 +3,16 @@ info:
   title: Edra sessions and attendance API
   version: "1.0.0"
   description: |
-    Bearer-token API for signed-in Edra staff (owner, admin, instructor), built for the future phone
+    Bearer-token API for signed-in Edra staff (owner, head_admin, admin, instructor), built for the future phone
     attendance app. This document covers only the sessions/attendance endpoints added under `/api/v1`.
 
     **Authentication.** Sign in with Supabase Auth (phone + password) and send the session's access
     token as `Authorization: Bearer <access_token>`. Never send the Supabase publishable key as
     authentication, and never send browser auth cookies with a bearer request (`400
-    AMBIGUOUS_AUTHENTICATION`). Membership is re-checked on every request: a removed staff member
-    gets `403`/`404` immediately even with an unexpired token.
+    AMBIGUOUS_AUTHENTICATION`). Membership is re-checked on every request: a removed or suspended
+    staff member gets `403`/`404` immediately even with an unexpired token. Suspension is
+    academy-scoped: the token keeps working for the person's other active academies, and the
+    suspended academy is omitted from `/api/v1/academies` until access is restored.
 
     **Writes** require an `Idempotency-Key` header: a UUID created once per user action and reused
     on every retry of that action. A retry returns the stored result with `"replayed": true`. Reusing
@@ -58,7 +60,7 @@ paths:
       operationId: listAcademies
       responses:
         "200":
-          description: Staff memberships (owner, admin, instructor), ordered by academy id.
+          description: Active staff memberships (owner, head_admin, admin, instructor), ordered by academy id. Suspended memberships are omitted.
           content:
             application/json:
               schema:
@@ -480,7 +482,7 @@ components:
         name: { type: string }
         slug: { type: string }
         icon: { type: string }
-        role: { type: string, enum: [owner, admin, instructor] }
+        role: { type: string, enum: [owner, head_admin, admin, instructor] }
     SessionSummary:
       type: object
       required: [id, academy_id, academic_year_id, schedule_id, schedule_title, schedule_kind, audience, level_id, mandatory, state, started_at, started_by, auto_end_at, metadata_version]

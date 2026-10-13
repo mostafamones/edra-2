@@ -1,4 +1,5 @@
 import { createClient } from "../../lib/supabase/client";
+import { academyRoleRank } from "@/modules/academies/roles";
 
 import { getStaffInvitationLinks } from "./actions";
 import { invitationPageSchema, teamMemberRowsSchema, type TeamMember } from "./types";
@@ -16,14 +17,17 @@ export const staffQueryKeys = {
     [...staffQueryKeys.invitations(userId, academyId), status, page] as const,
 };
 
-/** Uses the signed-in client: membership and profile RLS enforce academy visibility. */
+/**
+ * Uses the signed-in client: membership and profile RLS enforce academy visibility. Suspended
+ * members stay listed for active staff; a suspended caller sees nothing in this academy.
+ */
 export async function fetchTeamMembers(academyId: string, signal?: AbortSignal): Promise<TeamMember[]> {
   const members: TeamMember[] = [];
   const batchSize = 500;
   // Read every page so the Data API's row limit cannot silently hide part of the team.
   for (let offset = 0; ; offset += batchSize) {
     let request = createClient().from("academy_memberships")
-      .select("user_id, role, created_at, profiles!academy_memberships_user_id_fkey(full_name, phone)")
+      .select("user_id, role, created_at, suspended_at, profiles!academy_memberships_user_id_fkey(full_name, phone)")
       .eq("academy_id", academyId)
       .order("user_id")
       .range(offset, offset + batchSize - 1);
@@ -34,8 +38,12 @@ export async function fetchTeamMembers(academyId: string, signal?: AbortSignal):
     members.push(...rows);
     if (rows.length < batchSize) break;
   }
-  const roleOrder = { owner: 0, admin: 1, instructor: 2 };
-  return members.sort((a, b) => roleOrder[a.role] - roleOrder[b.role]
+  return sortTeamMembers(members);
+}
+
+/** Owner first, then Head Admins, Admins and Instructors, each by name. */
+export function sortTeamMembers(members: TeamMember[]) {
+  return members.sort((a, b) => academyRoleRank(a.role) - academyRoleRank(b.role)
     || (a.profiles.full_name ?? "").localeCompare(b.profiles.full_name ?? "")
     || a.user_id.localeCompare(b.user_id));
 }

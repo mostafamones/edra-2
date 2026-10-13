@@ -26,7 +26,7 @@ async function member(academyId: string, authority?: Authority | null): Promise<
   const caller = authority ?? await cookieAuthority();
   if (!caller) return null;
   const { data } = await caller.db.from("academy_memberships").select("role")
-    .eq("academy_id", academyId).eq("user_id", caller.userId).maybeSingle();
+    .eq("academy_id", academyId).eq("user_id", caller.userId).is("suspended_at", null).maybeSingle();
   return data ? caller : null;
 }
 
@@ -84,7 +84,7 @@ const updateInput = z.object({ academyId: z.uuid(), assignmentId: z.uuid(), expe
 /**
  * Saves an edit made against `expectedVersion`; a stale version writes nothing (assignment_conflict).
  * Until marking starts the whole setup is replaced and recipients are refreshed from the audience.
- * Afterwards (or once closed) only Owner/Admin may save, and only text details.
+ * Afterwards (or once closed) only Owner/Head Admin/Admin may save, and only text details.
  */
 export async function updateAssignment(input: z.input<typeof updateInput>, authority?: Authority | null): Promise<AssignmentResult> {
   const parsed = updateInput.safeParse(input);
@@ -99,7 +99,7 @@ export async function updateAssignment(input: z.input<typeof updateInput>, autho
 
 const stateInput = z.object({ academyId: z.uuid(), assignmentId: z.uuid(), expectedVersion: z.number().int().min(1), action: z.enum(ASSIGNMENT_ACTIONS) });
 
-/** Owner/Admin lifecycle actions: close, reopen, archive. */
+/** Owner/Head Admin/Admin lifecycle actions: close, reopen, archive. */
 export async function changeAssignmentState(
   input: { academyId: string; assignmentId: string; expectedVersion: number; action: AssignmentAction }, authority?: Authority | null,
 ): Promise<AssignmentResult> {

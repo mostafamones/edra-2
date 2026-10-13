@@ -10,6 +10,15 @@ describe("join responses", () => {
       .toEqual({ kind: "valid", role: "admin", expiresAt: "2030-01-01T00:00:00Z", academy });
   });
 
+  it("accepts Head Admin invitations and rejects unsupported roles", () => {
+    expect(parseJoinResponse({ result: "valid", role: "head_admin", expiresAt: "2030-01-01T00:00:00Z", academy }))
+      .toMatchObject({ kind: "valid", role: "head_admin" });
+    expect(parseJoinResponse({ result: "valid", role: "owner", expiresAt: "2030-01-01T00:00:00Z", academy }))
+      .toEqual({ kind: "error" });
+    expect(parseJoinResponse({ result: "valid", role: "manager", expiresAt: "2030-01-01T00:00:00Z", academy }))
+      .toEqual({ kind: "error" });
+  });
+
   it("drops any extra detail from generic states", () => {
     expect(parseJoinResponse({ result: "wrong_account", academy })).toEqual({ kind: "wrong_account" });
     expect(parseJoinResponse({ result: "unavailable" })).toEqual({ kind: "unavailable" });

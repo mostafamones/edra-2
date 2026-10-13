@@ -191,7 +191,7 @@ function StudentFields({
             levelNames={levelNames}
             groups={groups}
             placementLocked={placementLocked}
-            placementNote={placementLocked && !readOnly ? "Only owners and admins can change a student’s level, track, group, or type." : undefined}
+            placementNote={placementLocked && !readOnly ? "Only owners, head admins and admins can change a student’s level, track, group, or type." : undefined}
           />
 
           {failure && (

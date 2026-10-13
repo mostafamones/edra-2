@@ -1,13 +1,13 @@
-import type { AcademyEntry } from "@/modules/academies";
+import { isAcademyManager, isAcademyRole, type AcademyRole } from "@/modules/academies/roles";
 
-type Role = AcademyEntry["role"];
+type Role = AcademyRole;
 
 /** Mirrors save_student_code_settings; the database decides, this only shapes the UI. */
 export function canConfigureStudentCodes(role: Role) {
-  return role === "owner" || role === "admin";
+  return isAcademyManager(role);
 }
 
 /** Every staff role reads the effective configuration. */
 export function canViewStudentCodeSettings(role: Role) {
-  return role === "owner" || role === "admin" || role === "instructor";
+  return isAcademyRole(role);
 }

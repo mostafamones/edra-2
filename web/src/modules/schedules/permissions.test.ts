@@ -8,8 +8,8 @@ const oneOff = (createdBy: string, archived = false) => ({ kind: "one_off" as co
 const recurring = { kind: "recurring" as const, created_by: OTHER, archived_at: null };
 
 describe("schedule permissions", () => {
-  it("lets owners and admins manage every active schedule", () => {
-    for (const role of ["owner", "admin"] as const) {
+  it("lets owners, head admins and admins manage every active schedule", () => {
+    for (const role of ["owner", "head_admin", "admin"] as const) {
       expect(creatableKinds(role)).toEqual(["recurring", "one_off"]);
       expect(canEditSchedule(role, recurring)).toBe(true);
       expect(canArchiveSchedule(role, recurring, ME)).toBe(true);

@@ -1,11 +1,17 @@
 import { z } from "zod";
 
-const roleSchema = z.enum(["admin", "instructor"]);
+import { academyRoleSchema } from "@/modules/academies/roles";
+
+/** Roles an invitation can carry. Ownership is never invited. */
+export const invitationRoleSchema = z.enum(["head_admin", "admin", "instructor"]);
+const roleSchema = invitationRoleSchema;
 
 export const teamMemberRowsSchema = z.array(z.object({
   user_id: z.uuid(),
-  role: z.enum(["owner", "admin", "instructor"]),
+  role: academyRoleSchema,
   created_at: z.string(),
+  /** Set while the member's access to this academy is suspended; the role is retained. */
+  suspended_at: z.string().nullable(),
   profiles: z.object({ full_name: z.string().nullable(), phone: z.string().nullable() }),
 }));
 

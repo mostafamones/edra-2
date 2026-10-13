@@ -1,3 +1,5 @@
+import { isAcademyManager } from "@/modules/academies/roles";
+
 import type { Assignment, StaffRole } from "./types";
 
 /**
@@ -7,13 +9,13 @@ import type { Assignment, StaffRole } from "./types";
  * - Every staff role creates assignments and edits the whole setup (structure and audience) of an
  *   active assignment until marking starts. There is no Publish step.
  * - Once work, marks, or results exist (or the assignment is closed), the structure and recipients
- *   are frozen and only Owner/Admin edit the text details.
- * - Owner/Admin close, reopen, and archive (active without activity, or closed).
+ *   are frozen and only Owner/Head Admin/Admin edit the text details.
+ * - Owner/Head Admin/Admin close, reopen, and archive (active without activity, or closed).
  * - Every staff role records work, enters marks, and announces individual results of an active or
  *   closed assignment whose parts are all complete.
  * - A closed academic year makes everything read-only.
  */
-export const isManager = (role: StaffRole) => role === "owner" || role === "admin";
+export const isManager = (role: StaffRole) => isAcademyManager(role);
 
 export type AssignmentPermissions = {
   edit: boolean;

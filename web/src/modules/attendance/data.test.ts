@@ -19,7 +19,7 @@ const entry = (status: string, version: number) => ({
 });
 
 const table = (row: unknown) => {
-  const chain: Record<string, unknown> = { select: () => chain, eq: () => chain, maybeSingle: async () => ({ data: row }) };
+  const chain: Record<string, unknown> = { select: () => chain, eq: () => chain, is: () => chain, maybeSingle: async () => ({ data: row }) };
   return chain;
 };
 const authority = {

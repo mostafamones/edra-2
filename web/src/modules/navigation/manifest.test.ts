@@ -34,6 +34,8 @@ describe("portal navigation manifest", () => {
       expect(item).toBeDefined();
       expect(canViewStaffItem(item!, "instructor")).toBe(false);
       expect(canViewStaffItem(item!, "owner")).toBe(true);
+      expect(canViewStaffItem(item!, "head_admin")).toBe(true);
+      expect(canViewStaffItem(item!, "admin")).toBe(true);
     }
   });
 });

@@ -3,7 +3,10 @@ const state = vi.hoisted(() => ({ user: { id: "user" } as { id: string } | null,
 vi.mock("server-only", () => ({}));
 vi.mock("../../lib/supabase/server", () => ({ createClient: async () => ({
   auth: { getUser: async () => ({ data: { user: state.user }, error: null }) },
-  from: () => ({ select: () => ({ eq: (name: string, value: string) => { state.filters.push([name, value]); return { order: async () => ({ data: state.rows, error: null }) }; } }) }),
+  from: () => ({ select: () => ({ eq: (name: string, value: string) => {
+    state.filters.push([name, value]);
+    return { is: (column: string, value: null) => { state.filters.push([column, value]); return { order: async () => ({ data: state.rows, error: null }) }; } };
+  } }) }),
 }) }));
 import { resolveStaffAcademy } from "./server";
 beforeEach(() => { state.user = { id: "user" }; state.rows = []; state.filters = []; });
@@ -16,8 +19,12 @@ describe("URL academy authorization", () => {
   it("returns null for an inaccessible slug without selecting another membership", async () => {
     state.rows = [{ academy_id: "a", role: "owner", academies: { name: "A", slug: "magd", icon: "school" } }];
     expect(await resolveStaffAcademy("private")).toBeNull();
-    expect(state.filters).toEqual([["user_id", "user"]]);
+    expect(state.filters).toEqual([["user_id", "user"], ["suspended_at", null]]);
     expect(await resolveStaffAcademy("magd")).toMatchObject({ id: "a", slug: "magd", role: "owner" });
+  });
+  it("resolves a Head Admin membership", async () => {
+    state.rows = [{ academy_id: "a", role: "head_admin", academies: { name: "A", slug: "magd", icon: "school" } }];
+    expect(await resolveStaffAcademy("magd")).toMatchObject({ id: "a", role: "head_admin" });
   });
   it("does not treat unrelated roles as staff authority", async () => {
     state.rows = [{ academy_id: "a", role: "student", academies: { name: "A", slug: "magd", icon: "school" } }];

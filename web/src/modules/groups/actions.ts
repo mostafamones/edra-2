@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
+import { isAcademyManager } from "@/modules/academies/roles";
 import { groupInputSchema } from "./validation";
 
 type Result = { ok: true } | { ok: false; message: string };
@@ -13,8 +14,8 @@ async function manager(academyId: string) {
   const { data: auth } = await db.auth.getClaims();
   if (!auth?.claims) return null;
   const { data, error } = await db.from("academy_memberships")
-    .select("role").eq("academy_id", academyId).eq("user_id", auth.claims.sub).single();
-  if (error || !data || !["owner", "admin"].includes(data.role)) return null;
+    .select("role").eq("academy_id", academyId).eq("user_id", auth.claims.sub).is("suspended_at", null).single();
+  if (error || !data || !isAcademyManager(data.role)) return null;
   return db;
 }
 

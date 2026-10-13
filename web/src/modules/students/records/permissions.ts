@@ -1,14 +1,16 @@
+import { isAcademyManager, type AcademyRole } from "@/modules/academies/roles";
+
 /**
  * Student-record permissions shared by the UI and the server actions. The database RPCs enforce
  * the same rules; these helpers only decide what to offer and what to reject before a write.
  *
  * - Every staff role reads records and contacts, creates records, and edits names and phones.
- * - Owners and admins also change placement (level, track, group) and student type, archive or restore,
+ * - Owners, Head Admins and Admins also change placement (level, track, group) and student type, archive or restore,
  *   import students, and change groups in bulk.
  */
-export type StaffRole = "owner" | "admin" | "instructor";
+export type StaffRole = AcademyRole;
 
-const isManager = (role: StaffRole) => role === "owner" || role === "admin";
+const isManager = isAcademyManager;
 
 export const canCreateStudentRecord = (role: StaffRole) => Boolean(role);
 export const canEditStudentContact = (role: StaffRole) => Boolean(role);

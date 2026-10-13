@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { isAcademyManager } from "@/modules/academies";
 import { useAuth } from "@/modules/auth";
 
 export function AccountMenu({ portal }: { portal: "staff" | "student" }) {
@@ -52,7 +53,7 @@ export function AccountMenu({ portal }: { portal: "staff" | "student" }) {
                 <IconUser className="size-4" />Account
               </Link>
             </DropdownMenuItem>
-            {portal === "staff" && activeAcademy?.role !== "instructor" ? (
+            {portal === "staff" && activeAcademy && isAcademyManager(activeAcademy.role) ? (
               <DropdownMenuItem asChild>
                 <Link href={href("/app/manage/notifications")} className="gap-2 py-2">
                   <IconBell className="size-4" />Notifications

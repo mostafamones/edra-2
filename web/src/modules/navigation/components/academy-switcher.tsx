@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { onboardingHref } from "@/lib/routing";
 import { academySwitchHref } from "../switch-destination";
-import type { AcademyEntry } from "@/modules/academies";
+import { ACADEMY_ROLE_LABELS, type AcademyEntry } from "@/modules/academies";
 import { IconBook as BookOpen, IconCheck as Check, IconSelector as ChevronsUpDown, IconCode as Code2, IconWorld as Globe2, IconSchool as GraduationCap, IconMicroscope as Microscope, IconMusic as Music2, IconPalette as Palette, IconPlus as Plus, IconBuildingCommunity as School, IconTrophy as Trophy, type Icon as TablerIcon } from "@tabler/icons-react";
 
 import {
@@ -95,7 +95,7 @@ export function AcademySwitcher() {
                 </span>
                 <span className="grid min-w-0 flex-1 leading-tight">
                   <span className="truncate font-medium">{academy.name}</span>
-                  <span className="truncate text-xs capitalize text-muted-foreground">{academy.role}</span>
+                  <span className="truncate text-xs text-muted-foreground">{ACADEMY_ROLE_LABELS[academy.role]}</span>
                 </span>
                 {activeAcademy?.id === academy.id ? (
                   <Check className="size-4" aria-label="Current academy" />

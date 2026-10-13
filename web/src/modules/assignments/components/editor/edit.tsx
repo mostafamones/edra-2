@@ -15,7 +15,7 @@ import { assignmentQueryKey, loadAssignment } from "../../queries";
 import { AssignmentFormPage } from "./page";
 import { NotFound } from "../shared/not-found";
 
-/** `/app/assignments/<id>/edit`: the whole setup until marking starts, then only text details (Owner/Admin). */
+/** `/app/assignments/<id>/edit`: the whole setup until marking starts, then only text details (Owner/Head Admin/Admin). */
 export function EditAssignmentPage({ id }: { id: string }) {
   return <AcademyGate>{(academy) => <EditContent academy={academy} assignmentId={id} />}</AcademyGate>;
 }

@@ -71,7 +71,7 @@ function ImportContent({ academy }: { academy: AcademyEntry }) {
         <Alert>
           <AlertCircle />
           <AlertTitle>Importing isn’t available</AlertTitle>
-          <AlertDescription>Only owners and admins can import students.</AlertDescription>
+          <AlertDescription>Only owners, head admins and admins can import students.</AlertDescription>
         </Alert>
       </Shell>
     );

@@ -102,7 +102,7 @@ async function member(academyId: string, authority?: Authority | null): Promise<
   const caller = authority ?? await cookieAuthority();
   if (!caller) return null;
   const { data } = await caller.db.from("academy_memberships").select("role")
-    .eq("academy_id", academyId).eq("user_id", caller.userId).maybeSingle();
+    .eq("academy_id", academyId).eq("user_id", caller.userId).is("suspended_at", null).maybeSingle();
   return data ? caller : null;
 }
 

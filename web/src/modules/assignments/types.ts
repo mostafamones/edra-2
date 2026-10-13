@@ -1,3 +1,5 @@
+import type { AcademyRole } from "@/modules/academies/roles";
+
 /** Operational states. Structure readiness (`ready`) and student visibility are separate properties. */
 export const ASSIGNMENT_STATES = ["active", "closed", "archived"] as const;
 export const ASSIGNMENT_AUDIENCES = ["level", "program", "groups"] as const;
@@ -6,7 +8,7 @@ export const ASSIGNMENT_ACTIONS = ["close", "reopen", "archive"] as const;
 export type AssignmentState = (typeof ASSIGNMENT_STATES)[number];
 export type AssignmentAudience = (typeof ASSIGNMENT_AUDIENCES)[number];
 export type AssignmentAction = (typeof ASSIGNMENT_ACTIONS)[number];
-export type StaffRole = "owner" | "admin" | "instructor";
+export type StaffRole = AcademyRole;
 
 export const PART_KINDS = ["online_questions", "answer_sheet", "file_upload"] as const;
 /** The submission type of a part. A null kind marks a legacy maximum-only part (never creatable). */

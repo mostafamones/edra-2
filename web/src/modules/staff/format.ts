@@ -1,6 +1,8 @@
+import { ACADEMY_ROLE_LABELS } from "@/modules/academies/roles";
+
 import type { InvitationRow } from "./types";
 
-export const ROLE_LABELS = { owner: "Owner", admin: "Admin", instructor: "Instructor" } as const;
+export const ROLE_LABELS = ACADEMY_ROLE_LABELS;
 
 export const STATUS_LABELS: Record<InvitationRow["status"], string> = {
   pending: "Pending",

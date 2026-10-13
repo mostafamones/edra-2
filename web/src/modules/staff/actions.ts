@@ -9,36 +9,63 @@ import { parseStaffInviteLink } from "./link";
 import { PENDING_STAFF_INVITE_COOKIE, pendingStaffInviteCookie } from "./pending";
 import { appOrigin, decryptInviteToken, encryptInviteToken, generateInviteToken, staffInviteLink } from "./secret";
 import { getStaffJoinState, verifyJoinedMembership } from "./server";
-import { isTerminalJoinState, parseJoinResponse, type CreatedInvitation, type StaffJoinState } from "./types";
+import type { InvitableRole } from "./permissions";
+import { invitationRoleSchema, isTerminalJoinState, parseJoinResponse, type CreatedInvitation, type StaffJoinState } from "./types";
 import { createStaffInvitationSchema } from "./validation";
 
 type Failure = { ok: false; message: string };
+/** `unchanged` reports a retry or concurrent change that left the member as requested. */
+type MemberResult = { ok: true; unchanged: boolean } | Failure;
 
-export async function changeStaffMemberRole(academyId: string, userId: string, role: "admin" | "instructor"): Promise<{ ok: true } | Failure> {
-  if (!z.uuid().safeParse(academyId).success || !z.uuid().safeParse(userId).success || !z.enum(["admin", "instructor"]).safeParse(role).success) {
+const uuid = z.uuid();
+
+const MEMBER_MESSAGES: Record<string, string> = {
+  forbidden: "You don’t have permission to manage this member.",
+  not_found: "This member no longer belongs to the academy.",
+};
+
+async function memberCommand(
+  name: "change_staff_member_role" | "suspend_staff_member" | "restore_staff_member" | "remove_staff_member",
+  args: { p_academy_id: string; p_user_id: string; p_role?: InvitableRole },
+  done: string,
+  failure: string,
+  /** Outcomes that already satisfy the request, e.g. removing a member who is already gone. */
+  satisfied: string[] = ["unchanged"],
+): Promise<MemberResult> {
+  if (!uuid.safeParse(args.p_academy_id).success || !uuid.safeParse(args.p_user_id).success) {
     return { ok: false, message: "Invalid member." };
   }
   const db = await createClient();
-  const { data, error } = await db.rpc("change_staff_member_role", { p_academy_id: academyId, p_user_id: userId, p_role: role });
-  const result = (data as { result?: string } | null)?.result;
-  if (!error && (result === "role_changed" || result === "unchanged")) return { ok: true };
-  return { ok: false, message: result === "forbidden"
-    ? "Only the academy owner can change staff roles."
-    : result === "not_found" ? "This member no longer belongs to the academy."
-    : "Couldn’t change this member’s role. Please try again." };
+  const { data, error } = name === "change_staff_member_role"
+    ? await db.rpc(name, { p_academy_id: args.p_academy_id, p_user_id: args.p_user_id, p_role: args.p_role! })
+    : await db.rpc(name, { p_academy_id: args.p_academy_id, p_user_id: args.p_user_id });
+  const result = (data as { result?: string } | null)?.result ?? "";
+  if (!error && (result === done || satisfied.includes(result))) return { ok: true, unchanged: result !== done };
+  return { ok: false, message: (!error && MEMBER_MESSAGES[result]) || failure };
 }
 
-export async function removeStaffMember(academyId: string, userId: string): Promise<{ ok: true } | Failure> {
-  if (!z.uuid().safeParse(academyId).success || !z.uuid().safeParse(userId).success) {
-    return { ok: false, message: "Invalid member." };
-  }
-  const db = await createClient();
-  const { data, error } = await db.rpc("remove_staff_member", { p_academy_id: academyId, p_user_id: userId });
-  const result = (data as { result?: string } | null)?.result;
-  if (!error && (result === "removed" || result === "not_found")) return { ok: true };
-  return { ok: false, message: result === "forbidden"
-    ? "You don’t have permission to remove this member."
-    : "Couldn’t remove this member. Please try again." };
+/** Both the member's current role and the new role must be within the actor's authority. */
+export async function changeStaffMemberRole(academyId: string, userId: string, role: InvitableRole): Promise<MemberResult> {
+  if (!invitationRoleSchema.safeParse(role).success) return { ok: false, message: "Choose a valid role." };
+  return memberCommand("change_staff_member_role", { p_academy_id: academyId, p_user_id: userId, p_role: role },
+    "role_changed", "Couldn’t change this member’s role. Please try again.");
+}
+
+/** Blocks the member's access to this academy while keeping their membership and role. */
+export async function suspendStaffMember(academyId: string, userId: string): Promise<MemberResult> {
+  return memberCommand("suspend_staff_member", { p_academy_id: academyId, p_user_id: userId },
+    "suspended", "Couldn’t suspend this member. Please try again.");
+}
+
+/** Reinstates a suspended member with their retained role. A removed member needs a new invitation. */
+export async function restoreStaffMember(academyId: string, userId: string): Promise<MemberResult> {
+  return memberCommand("restore_staff_member", { p_academy_id: academyId, p_user_id: userId },
+    "restored", "Couldn’t restore this member’s access. Please try again.");
+}
+
+export async function removeStaffMember(academyId: string, userId: string): Promise<MemberResult> {
+  return memberCommand("remove_staff_member", { p_academy_id: academyId, p_user_id: userId },
+    "removed", "Couldn’t remove this member. Please try again.", ["not_found"]);
 }
 
 const CREATE_MESSAGES: Record<string, string> = {
@@ -58,10 +85,8 @@ const REVOKE_MESSAGES: Record<string, string> = {
 
 const createdSchema = z.object({
   result: z.literal("created"),
-  invitation: z.object({ id: z.uuid(), phone: z.string(), role: z.enum(["admin", "instructor"]), expiresAt: z.string() }),
+  invitation: z.object({ id: z.uuid(), phone: z.string(), role: invitationRoleSchema, expiresAt: z.string() }),
 });
-
-const uuid = z.uuid();
 
 function encryptOrNull(token: string, academyId: string) {
   try {

@@ -1,5 +1,7 @@
 import { IconChartBar as BarChart3, IconBell as Bell, IconBook as BookOpen, IconBuilding as Building2, IconCalendar as CalendarDays, IconCalendarClock as CalendarClock, IconClipboardCheck as ClipboardCheck, IconClipboardList as ClipboardList, IconFilePencil as FilePenLine, IconFileText as FileText, IconSchool as GraduationCap, IconHome as House, IconId as IdCard, IconBooks as Library, IconListCheck as ListChecks, IconMessageCircle as MessageCircle, IconSitemap as Network, IconPlug as Plug, IconZoomCheck as SearchCheck, IconSettings as Settings, IconTicket as Ticket, IconUserCog as UserCog, IconUser as UserRound, IconUsers as Users, IconUsersGroup as UsersRound, type Icon as TablerIcon } from "@tabler/icons-react";
 
+import type { AcademyRole } from "@/modules/academies/roles";
+
 export const NAV_ICONS = {
   overview: House,
   calendar: CalendarDays,
@@ -31,7 +33,10 @@ export const NAV_ICONS = {
   learning: GraduationCap,
 } satisfies Record<string, TablerIcon>;
 
-export type StaffRole = "owner" | "admin" | "instructor";
+export type StaffRole = AcademyRole;
+
+/** Ordinary academy management roles (Owner, Head Admin and Admin). */
+const MANAGERS: readonly StaffRole[] = ["owner", "head_admin", "admin"];
 export type NavIcon = keyof typeof NAV_ICONS;
 
 export type PagePreview = {
@@ -152,14 +157,14 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             "Capacity checks, returning-student recognition, and account-matching status.",
             "Submissions requiring explicit review before a student record is finalized.",
           ],
-          actions: ["Owners and Admins resolve or reject submissions; Instructors can view their status."],
+          actions: ["Owners, Head Admins and Admins resolve or reject submissions; Instructors can view their status."],
         },
       },
       {
         label: "Duplicate review",
         href: "/app/manage/bookings/review",
         icon: "review",
-        roles: ["owner", "admin"],
+        roles: MANAGERS,
         preview: {
           title: "Duplicate review",
           purpose: "Resolve booking submissions that may refer to an existing student or sibling.",
@@ -203,7 +208,7 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             "Level and optional track audience, published explanation assets, and availability state.",
             "Connections to attendance access, coupons, and student entitlement status.",
           ],
-          actions: ["Instructors prepare drafts; Owners and Admins publish student-facing releases."],
+          actions: ["Instructors prepare drafts; Owners, Head Admins and Admins publish student-facing releases."],
         },
       },
       {
@@ -298,14 +303,14 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             "Queued, sent, failed, and retried delivery states.",
             "Provider diagnostics shown only to authorized staff.",
           ],
-          actions: ["Owners and Admins retry eligible failures; Instructors see simple delivery status."],
+          actions: ["Owners, Head Admins and Admins retry eligible failures; Instructors see simple delivery status."],
         },
       },
       {
         label: "Access and coupons",
         href: "/app/manage/access",
         icon: "access",
-        roles: ["owner", "admin"],
+        roles: MANAGERS,
         preview: {
           title: "Access and coupons",
           purpose: "Manage release access while preserving the source of every entitlement.",
@@ -402,7 +407,7 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             label: "Notifications",
             href: "/app/manage/notifications",
             icon: "notifications",
-            roles: ["owner", "admin"],
+            roles: MANAGERS,
             preview: {
               title: "Notifications",
               purpose: "Set academy rules for proactive parent communication.",
@@ -417,7 +422,7 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             label: "Integrations",
             href: "/app/manage/integrations",
             icon: "integrations",
-            roles: ["owner", "admin"],
+            roles: MANAGERS,
             preview: {
               title: "Integrations",
               purpose: "Inspect the services used for parent delivery and protected video.",
@@ -454,7 +459,7 @@ export const STAFF_CREATE_ITEMS: readonly NavItem[] = [
     label: "Create group",
     href: "/app/groups/new",
     icon: "groups",
-    roles: ["owner", "admin"],
+    roles: MANAGERS,
   },
   {
     label: "Add student",

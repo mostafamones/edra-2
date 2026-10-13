@@ -229,6 +229,7 @@ export function ScopedAcademyProvider({ academy, children }: { academy: AcademyE
   // This provider mounts only after server membership validation. Rendering it
   // with a key prevents local forms and in-flight features crossing URL scopes.
   return <AuthContext.Provider key={`${parent.user?.id ?? "pending"}:${academy.id}`} value={{ ...parent, activeAcademy: academy }}>
-    <MembershipGuard key={`${parent.user?.id ?? "pending"}:${academy.id}`} academyId={academy.id} userId={parent.user?.id} role={academy.role}>{children}</MembershipGuard>
+    <MembershipGuard key={`${parent.user?.id ?? "pending"}:${academy.id}`} academy={academy} userId={parent.user?.id} role={academy.role}
+      otherAcademies={parent.academies.some((entry) => entry.id !== academy.id)}>{children}</MembershipGuard>
   </AuthContext.Provider>;
 }

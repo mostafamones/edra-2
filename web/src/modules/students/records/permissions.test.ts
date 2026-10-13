@@ -6,8 +6,8 @@ import {
 } from "./permissions";
 
 describe("student record permissions", () => {
-  it("lets owners and admins do everything in this slice", () => {
-    for (const role of ["owner", "admin"] as const) {
+  it("lets owners, head admins and admins do everything in this slice", () => {
+    for (const role of ["owner", "head_admin", "admin"] as const) {
       expect(canCreateStudentRecord(role)).toBe(true);
       expect(canEditStudentContact(role)).toBe(true);
       expect(canEditStudentPlacement(role)).toBe(true);

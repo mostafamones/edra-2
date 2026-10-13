@@ -63,7 +63,7 @@ function EditScheduleContent({ academy, id }: { academy: AcademyEntry; id: strin
   if (found.schedule.archived_at)
     return <Notice title="This schedule is archived"><span>Archived schedules can’t be edited.</span>{backLink}</Notice>;
   if (!canEditSchedule(academy.role, found.schedule))
-    return <Notice title="You can’t edit this schedule"><span>Only owners and admins can change recurring schedules.</span>{backLink}</Notice>;
+    return <Notice title="You can’t edit this schedule"><span>Only owners, head admins and admins can change recurring schedules.</span>{backLink}</Notice>;
 
   return (
     <ScheduleFormPage

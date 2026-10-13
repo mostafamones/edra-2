@@ -19,7 +19,7 @@ export async function getStaffJoinState(): Promise<StaffJoinState> {
   return error ? { kind: "error" } : verifyJoinedMembership(parseJoinResponse(data), db);
 }
 
-/** An accepted invitation is history, not authority to access a removed membership. */
+/** An accepted invitation is history, not authority to access a removed or suspended membership. */
 export async function verifyJoinedMembership(
   state: StaffJoinState,
   db: Awaited<ReturnType<typeof createClient>>,
@@ -29,7 +29,7 @@ export async function verifyJoinedMembership(
   if (authError) return { kind: "error" };
   if (!user) return { kind: "unauthenticated" };
   const { data: membership, error } = await db.from("academy_memberships")
-    .select("user_id").eq("academy_id", state.academy.id).eq("user_id", user.id).maybeSingle();
+    .select("user_id").eq("academy_id", state.academy.id).eq("user_id", user.id).is("suspended_at", null).maybeSingle();
   if (error) return { kind: "error" };
   return membership ? state : { kind: "unavailable" };
 }

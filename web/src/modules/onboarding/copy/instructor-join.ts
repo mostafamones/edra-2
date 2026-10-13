@@ -4,7 +4,7 @@ export const instructorJoinCopy = {
   description: "Don't have an invite? Ask your academy admins for one.",
   inviteLabel: "Invitation token",
   invitePlaceholder: "Paste invitation link or token here",
-  roles: { admin: "Admin", instructor: "Instructor" },
+  roles: { head_admin: "Head Admin", admin: "Admin", instructor: "Instructor" },
   states: {
     valid: {
       title: "Join",

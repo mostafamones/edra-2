@@ -35,7 +35,7 @@ const COPY: Record<AssignmentAction, { title: string; body: string; confirm: str
   },
 };
 
-/** Owner/Admin lifecycle controls in a menu, each confirmed. */
+/** Owner/Head Admin/Admin lifecycle controls in a menu, each confirmed. */
 export function LifecycleActions({ assignment, permissions }: { assignment: Assignment; permissions: AssignmentPermissions }) {
   const queryClient = useQueryClient();
   const isCurrentAcademy = useAcademyScope();
