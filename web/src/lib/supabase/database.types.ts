@@ -1592,6 +1592,1082 @@ export type Database = {
         }
         Relationships: []
       }
+      quiz_attempts: {
+        Row: {
+          academy_id: string
+          annual_student_record_id: string
+          answers_version: number
+          deadline_at: string | null
+          departure_count: number
+          finalization_reason:
+            | Database["public"]["Enums"]["quiz_finalization_reason"]
+            | null
+          finalized_at: string | null
+          id: string
+          last_saved_at: string | null
+          quiz_id: string
+          started_at: string
+          superseded_at: string | null
+        }
+        Insert: {
+          academy_id: string
+          annual_student_record_id: string
+          answers_version?: number
+          deadline_at?: string | null
+          departure_count?: number
+          finalization_reason?:
+            | Database["public"]["Enums"]["quiz_finalization_reason"]
+            | null
+          finalized_at?: string | null
+          id?: string
+          last_saved_at?: string | null
+          quiz_id: string
+          started_at: string
+          superseded_at?: string | null
+        }
+        Update: {
+          academy_id?: string
+          annual_student_record_id?: string
+          answers_version?: number
+          deadline_at?: string | null
+          departure_count?: number
+          finalization_reason?:
+            | Database["public"]["Enums"]["quiz_finalization_reason"]
+            | null
+          finalized_at?: string | null
+          id?: string
+          last_saved_at?: string | null
+          quiz_id?: string
+          started_at?: string
+          superseded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_academy_id_quiz_id_fkey"
+            columns: ["academy_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_attempts_quiz_id_annual_student_record_id_fkey"
+            columns: ["quiz_id", "annual_student_record_id"]
+            isOneToOne: true
+            referencedRelation: "quiz_work"
+            referencedColumns: ["quiz_id", "annual_student_record_id"]
+          },
+        ]
+      }
+      quiz_audience_groups: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          group_id: string
+          quiz_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          group_id: string
+          quiz_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          group_id?: string
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_audience_groups_academy_id_academic_year_id_group_id_fkey"
+            columns: ["academy_id", "academic_year_id", "group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_audience_groups_academy_id_academic_year_id_quiz_id_fkey"
+            columns: ["academy_id", "academic_year_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+        ]
+      }
+      quiz_choices: {
+        Row: {
+          academy_id: string
+          id: string
+          is_correct: boolean
+          label: string
+          position: number
+          question_id: string
+          quiz_id: string
+        }
+        Insert: {
+          academy_id: string
+          id?: string
+          is_correct?: boolean
+          label?: string
+          position: number
+          question_id: string
+          quiz_id: string
+        }
+        Update: {
+          academy_id?: string
+          id?: string
+          is_correct?: boolean
+          label?: string
+          position?: number
+          question_id?: string
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_choices_academy_id_quiz_id_fkey"
+            columns: ["academy_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_choices_quiz_id_question_id_fkey"
+            columns: ["quiz_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["quiz_id", "id"]
+          },
+        ]
+      }
+      quiz_closures: {
+        Row: {
+          academy_id: string
+          closed_at: string
+          quiz_id: string
+          settled_at: string
+        }
+        Insert: {
+          academy_id: string
+          closed_at: string
+          quiz_id: string
+          settled_at: string
+        }
+        Update: {
+          academy_id?: string
+          closed_at?: string
+          quiz_id?: string
+          settled_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_closures_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: true
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_corrections: {
+        Row: {
+          academy_id: string
+          choice_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          kind: Database["public"]["Enums"]["quiz_correction_kind"]
+          previous_choice_id: string | null
+          question_id: string
+          quiz_id: string
+          revision: number
+        }
+        Insert: {
+          academy_id: string
+          choice_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          kind: Database["public"]["Enums"]["quiz_correction_kind"]
+          previous_choice_id?: string | null
+          question_id: string
+          quiz_id: string
+          revision: number
+        }
+        Update: {
+          academy_id?: string
+          choice_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["quiz_correction_kind"]
+          previous_choice_id?: string | null
+          question_id?: string
+          quiz_id?: string
+          revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_corrections_academy_id_quiz_id_fkey"
+            columns: ["academy_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_corrections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_corrections_quiz_id_question_id_fkey"
+            columns: ["quiz_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["quiz_id", "id"]
+          },
+        ]
+      }
+      quiz_departures: {
+        Row: {
+          attempt_id: string
+          event_id: string
+          recorded_at: string
+        }
+        Insert: {
+          attempt_id: string
+          event_id: string
+          recorded_at: string
+        }
+        Update: {
+          attempt_id?: string
+          event_id?: string
+          recorded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_departures_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_marks: {
+        Row: {
+          academy_id: string
+          annual_student_record_id: string
+          question_id: string
+          quiz_id: string
+          score: number
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          academy_id: string
+          annual_student_record_id: string
+          question_id: string
+          quiz_id: string
+          score: number
+          updated_at: string
+          updated_by: string
+        }
+        Update: {
+          academy_id?: string
+          annual_student_record_id?: string
+          question_id?: string
+          quiz_id?: string
+          score?: number
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_marks_quiz_id_annual_student_record_id_fkey"
+            columns: ["quiz_id", "annual_student_record_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_work"
+            referencedColumns: ["quiz_id", "annual_student_record_id"]
+          },
+          {
+            foreignKeyName: "quiz_marks_quiz_id_question_id_fkey"
+            columns: ["quiz_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["quiz_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_marks_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_online_answers: {
+        Row: {
+          academy_id: string
+          attempt_id: string
+          choice_id: string | null
+          question_id: string
+          quiz_id: string
+          saved_at: string
+          text_answer: string | null
+        }
+        Insert: {
+          academy_id: string
+          attempt_id: string
+          choice_id?: string | null
+          question_id: string
+          quiz_id: string
+          saved_at: string
+          text_answer?: string | null
+        }
+        Update: {
+          academy_id?: string
+          attempt_id?: string
+          choice_id?: string | null
+          question_id?: string
+          quiz_id?: string
+          saved_at?: string
+          text_answer?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_online_answers_question_id_choice_id_fkey"
+            columns: ["question_id", "choice_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_choices"
+            referencedColumns: ["question_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_online_answers_quiz_id_attempt_id_fkey"
+            columns: ["quiz_id", "attempt_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_attempts"
+            referencedColumns: ["quiz_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_online_answers_quiz_id_question_id_fkey"
+            columns: ["quiz_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["quiz_id", "id"]
+          },
+        ]
+      }
+      quiz_parts: {
+        Row: {
+          academy_id: string
+          id: string
+          instructions: string
+          kind: Database["public"]["Enums"]["quiz_part_kind"]
+          position: number
+          quiz_id: string
+          title: string
+        }
+        Insert: {
+          academy_id: string
+          id?: string
+          instructions?: string
+          kind: Database["public"]["Enums"]["quiz_part_kind"]
+          position: number
+          quiz_id: string
+          title: string
+        }
+        Update: {
+          academy_id?: string
+          id?: string
+          instructions?: string
+          kind?: Database["public"]["Enums"]["quiz_part_kind"]
+          position?: number
+          quiz_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_parts_academy_id_quiz_id_fkey"
+            columns: ["academy_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
+      quiz_physical_answers: {
+        Row: {
+          academy_id: string
+          annual_student_record_id: string
+          choice_id: string | null
+          question_id: string
+          quiz_id: string
+        }
+        Insert: {
+          academy_id: string
+          annual_student_record_id: string
+          choice_id?: string | null
+          question_id: string
+          quiz_id: string
+        }
+        Update: {
+          academy_id?: string
+          annual_student_record_id?: string
+          choice_id?: string | null
+          question_id?: string
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_physical_answers_question_id_choice_id_fkey"
+            columns: ["question_id", "choice_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_choices"
+            referencedColumns: ["question_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_physical_answers_quiz_id_annual_student_record_id_fkey"
+            columns: ["quiz_id", "annual_student_record_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_physical_drafts"
+            referencedColumns: ["quiz_id", "annual_student_record_id"]
+          },
+          {
+            foreignKeyName: "quiz_physical_answers_quiz_id_question_id_fkey"
+            columns: ["quiz_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["quiz_id", "id"]
+          },
+        ]
+      }
+      quiz_physical_drafts: {
+        Row: {
+          academy_id: string
+          annual_student_record_id: string
+          quiz_id: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          academy_id: string
+          annual_student_record_id: string
+          quiz_id: string
+          updated_at: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          academy_id?: string
+          annual_student_record_id?: string
+          quiz_id?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_physical_drafts_academy_id_quiz_id_fkey"
+            columns: ["academy_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_physical_drafts_quiz_id_annual_student_record_id_fkey"
+            columns: ["quiz_id", "annual_student_record_id"]
+            isOneToOne: true
+            referencedRelation: "quiz_work"
+            referencedColumns: ["quiz_id", "annual_student_record_id"]
+          },
+          {
+            foreignKeyName: "quiz_physical_drafts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_questions: {
+        Row: {
+          academy_id: string
+          excluded_at: string | null
+          excluded_by: string | null
+          excluded_revision: number | null
+          id: string
+          max_score: number
+          model_answer: string
+          part_id: string
+          position: number
+          prompt: string
+          quiz_id: string
+        }
+        Insert: {
+          academy_id: string
+          excluded_at?: string | null
+          excluded_by?: string | null
+          excluded_revision?: number | null
+          id?: string
+          max_score: number
+          model_answer?: string
+          part_id: string
+          position: number
+          prompt?: string
+          quiz_id: string
+        }
+        Update: {
+          academy_id?: string
+          excluded_at?: string | null
+          excluded_by?: string | null
+          excluded_revision?: number | null
+          id?: string
+          max_score?: number
+          model_answer?: string
+          part_id?: string
+          position?: number
+          prompt?: string
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_questions_academy_id_quiz_id_fkey"
+            columns: ["academy_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_questions_excluded_by_fkey"
+            columns: ["excluded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_questions_quiz_id_part_id_fkey"
+            columns: ["quiz_id", "part_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_parts"
+            referencedColumns: ["quiz_id", "id"]
+          },
+        ]
+      }
+      quiz_requests: {
+        Row: {
+          academy_id: string
+          actor_id: string
+          created_at: string
+          fingerprint: string
+          idempotency_key: string
+          operation: string
+          quiz_id: string
+          response: Json
+        }
+        Insert: {
+          academy_id: string
+          actor_id: string
+          created_at?: string
+          fingerprint: string
+          idempotency_key: string
+          operation: string
+          quiz_id: string
+          response: Json
+        }
+        Update: {
+          academy_id?: string
+          actor_id?: string
+          created_at?: string
+          fingerprint?: string
+          idempotency_key?: string
+          operation?: string
+          quiz_id?: string
+          response?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_requests_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_result_effects: {
+        Row: {
+          academy_id: string
+          annual_student_record_id: string
+          created_at: string
+          effect_type: Database["public"]["Enums"]["quiz_effect_type"]
+          id: string
+          processed_at: string | null
+          publication_id: string | null
+          quiz_id: string
+        }
+        Insert: {
+          academy_id: string
+          annual_student_record_id: string
+          created_at?: string
+          effect_type: Database["public"]["Enums"]["quiz_effect_type"]
+          id?: string
+          processed_at?: string | null
+          publication_id?: string | null
+          quiz_id: string
+        }
+        Update: {
+          academy_id?: string
+          annual_student_record_id?: string
+          created_at?: string
+          effect_type?: Database["public"]["Enums"]["quiz_effect_type"]
+          id?: string
+          processed_at?: string | null
+          publication_id?: string | null
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_result_effects_academy_id_publication_id_fkey"
+            columns: ["academy_id", "publication_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_result_publications"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_result_effects_quiz_id_annual_student_record_id_fkey"
+            columns: ["quiz_id", "annual_student_record_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_work"
+            referencedColumns: ["quiz_id", "annual_student_record_id"]
+          },
+        ]
+      }
+      quiz_result_publications: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          annual_student_record_id: string
+          automatic: boolean
+          content_hash: string
+          feedback: string
+          id: string
+          items: Json
+          max_score: number
+          previous_publication_id: string | null
+          published_at: string
+          published_by: string | null
+          quiz_id: string
+          revision: number
+          scoring_revision: number
+          total: number
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          annual_student_record_id: string
+          automatic: boolean
+          content_hash: string
+          feedback: string
+          id?: string
+          items: Json
+          max_score: number
+          previous_publication_id?: string | null
+          published_at?: string
+          published_by?: string | null
+          quiz_id: string
+          revision: number
+          scoring_revision: number
+          total: number
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          annual_student_record_id?: string
+          automatic?: boolean
+          content_hash?: string
+          feedback?: string
+          id?: string
+          items?: Json
+          max_score?: number
+          previous_publication_id?: string | null
+          published_at?: string
+          published_by?: string | null
+          quiz_id?: string
+          revision?: number
+          scoring_revision?: number
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_result_publications_academy_id_academic_year_id_quiz__fkey"
+            columns: ["academy_id", "academic_year_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_result_publications_previous_publication_id_fkey"
+            columns: ["previous_publication_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_result_publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_result_publications_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_result_publications_quiz_id_annual_student_record_id_fkey"
+            columns: ["quiz_id", "annual_student_record_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_work"
+            referencedColumns: ["quiz_id", "annual_student_record_id"]
+          },
+        ]
+      }
+      quiz_submission_answers: {
+        Row: {
+          academy_id: string
+          choice_id: string | null
+          question_id: string
+          quiz_id: string
+          submission_id: string
+          text_answer: string | null
+        }
+        Insert: {
+          academy_id: string
+          choice_id?: string | null
+          question_id: string
+          quiz_id: string
+          submission_id: string
+          text_answer?: string | null
+        }
+        Update: {
+          academy_id?: string
+          choice_id?: string | null
+          question_id?: string
+          quiz_id?: string
+          submission_id?: string
+          text_answer?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_submission_answers_question_id_choice_id_fkey"
+            columns: ["question_id", "choice_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_choices"
+            referencedColumns: ["question_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_submission_answers_quiz_id_question_id_fkey"
+            columns: ["quiz_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["quiz_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_submission_answers_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_submissions: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          annual_student_record_id: string
+          attempt_id: string | null
+          confirmed_by: string | null
+          id: string
+          original_deadline_at: string | null
+          processed_at: string
+          quiz_id: string
+          reason: Database["public"]["Enums"]["quiz_finalization_reason"]
+          scoring_revision: number
+          source: Database["public"]["Enums"]["quiz_source"]
+          submitted_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          annual_student_record_id: string
+          attempt_id?: string | null
+          confirmed_by?: string | null
+          id?: string
+          original_deadline_at?: string | null
+          processed_at: string
+          quiz_id: string
+          reason: Database["public"]["Enums"]["quiz_finalization_reason"]
+          scoring_revision: number
+          source: Database["public"]["Enums"]["quiz_source"]
+          submitted_at: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          annual_student_record_id?: string
+          attempt_id?: string | null
+          confirmed_by?: string | null
+          id?: string
+          original_deadline_at?: string | null
+          processed_at?: string
+          quiz_id?: string
+          reason?: Database["public"]["Enums"]["quiz_finalization_reason"]
+          scoring_revision?: number
+          source?: Database["public"]["Enums"]["quiz_source"]
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_submissions_academy_id_academic_year_id_quiz_id_fkey"
+            columns: ["academy_id", "academic_year_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_submissions_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_submissions_quiz_id_annual_student_record_id_fkey"
+            columns: ["quiz_id", "annual_student_record_id"]
+            isOneToOne: true
+            referencedRelation: "quiz_work"
+            referencedColumns: ["quiz_id", "annual_student_record_id"]
+          },
+          {
+            foreignKeyName: "quiz_submissions_quiz_id_attempt_id_fkey"
+            columns: ["quiz_id", "attempt_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_attempts"
+            referencedColumns: ["quiz_id", "id"]
+          },
+        ]
+      }
+      quiz_work: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          accepted_source: Database["public"]["Enums"]["quiz_source"] | null
+          accepted_submission_id: string | null
+          annual_student_record_id: string
+          created_at: string
+          feedback: string
+          published_revision: number
+          quiz_id: string
+          solutions_qualified_at: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          accepted_source?: Database["public"]["Enums"]["quiz_source"] | null
+          accepted_submission_id?: string | null
+          annual_student_record_id: string
+          created_at?: string
+          feedback?: string
+          published_revision?: number
+          quiz_id: string
+          solutions_qualified_at?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          accepted_source?: Database["public"]["Enums"]["quiz_source"] | null
+          accepted_submission_id?: string | null
+          annual_student_record_id?: string
+          created_at?: string
+          feedback?: string
+          published_revision?: number
+          quiz_id?: string
+          solutions_qualified_at?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_work_academy_id_academic_year_id_annual_student_recor_fkey"
+            columns: [
+              "academy_id",
+              "academic_year_id",
+              "annual_student_record_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_work_academy_id_academic_year_id_quiz_id_fkey"
+            columns: ["academy_id", "academic_year_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_work_submission_fk"
+            columns: ["quiz_id", "accepted_submission_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_submissions"
+            referencedColumns: ["quiz_id", "id"]
+          },
+        ]
+      }
+      quizzes: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          actual_closes_at: string | null
+          archived_at: string | null
+          archived_by: string | null
+          audience: Database["public"]["Enums"]["quiz_audience"] | null
+          availability_updated_at: string | null
+          availability_updated_by: string | null
+          closes_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          instructions: string
+          level_id: string | null
+          max_score: number
+          opens_at: string | null
+          question_count: number
+          scoring_revision: number
+          solution_notes: string
+          structure_locked_at: string | null
+          time_limit_minutes: number | null
+          title: string
+          track_id: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+          work_started_at: string | null
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          actual_closes_at?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          audience?: Database["public"]["Enums"]["quiz_audience"] | null
+          availability_updated_at?: string | null
+          availability_updated_by?: string | null
+          closes_at?: string | null
+          created_at?: string
+          created_by: string
+          id: string
+          instructions?: string
+          level_id?: string | null
+          max_score?: number
+          opens_at?: string | null
+          question_count?: number
+          scoring_revision?: number
+          solution_notes?: string
+          structure_locked_at?: string | null
+          time_limit_minutes?: number | null
+          title: string
+          track_id?: string | null
+          updated_at?: string
+          updated_by: string
+          version?: number
+          work_started_at?: string | null
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          actual_closes_at?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          audience?: Database["public"]["Enums"]["quiz_audience"] | null
+          availability_updated_at?: string | null
+          availability_updated_by?: string | null
+          closes_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          instructions?: string
+          level_id?: string | null
+          max_score?: number
+          opens_at?: string | null
+          question_count?: number
+          scoring_revision?: number
+          solution_notes?: string
+          structure_locked_at?: string | null
+          time_limit_minutes?: number | null
+          title?: string
+          track_id?: string | null
+          updated_at?: string
+          updated_by?: string
+          version?: number
+          work_started_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_academy_id_academic_year_id_fkey"
+            columns: ["academy_id", "academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "quizzes_academy_id_level_id_fkey"
+            columns: ["academy_id", "level_id"]
+            isOneToOne: false
+            referencedRelation: "academy_levels"
+            referencedColumns: ["academy_id", "level_id"]
+          },
+          {
+            foreignKeyName: "quizzes_academy_id_level_id_track_id_fkey"
+            columns: ["academy_id", "level_id", "track_id"]
+            isOneToOne: false
+            referencedRelation: "academy_tracks"
+            referencedColumns: ["academy_id", "level_id", "id"]
+          },
+          {
+            foreignKeyName: "quizzes_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quizzes_availability_updated_by_fkey"
+            columns: ["availability_updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quizzes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quizzes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedule_sessions: {
         Row: {
           academic_year_id: string
@@ -2823,6 +3899,16 @@ export type Database = {
         Args: { p_academy_id: string; p_level_id: string }
         Returns: string
       }
+      announce_quiz_results: {
+        Args: {
+          p_academy_id: string
+          p_expected_scoring_revision: number
+          p_items: Json
+          p_key: string
+          p_quiz_id: string
+        }
+        Returns: Json
+      }
       apply_attendance_changes: {
         Args: {
           p_academy_id: string
@@ -2830,6 +3916,14 @@ export type Database = {
           p_key: string
           p_operation: string
           p_session_id: string
+        }
+        Returns: Json
+      }
+      archive_quiz: {
+        Args: {
+          p_academy_id: string
+          p_expected_version: number
+          p_quiz_id: string
         }
         Returns: Json
       }
@@ -2921,12 +4015,43 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      configure_quiz_availability: {
+        Args: {
+          p_academy_id: string
+          p_closes_at: string
+          p_expected_version: number
+          p_opens_at: string
+          p_quiz_id: string
+        }
+        Returns: Json
+      }
+      confirm_quiz_physical: {
+        Args: {
+          p_academy_id: string
+          p_expected_version: number
+          p_key: string
+          p_quiz_id: string
+          p_record_id: string
+        }
+        Returns: Json
+      }
       confirm_student_import: {
         Args: { p_expected_revision: number; p_session_id: string }
         Returns: Json
       }
       consume_api_quota: {
         Args: { p_bucket: string; p_limit: number; p_window_seconds: number }
+        Returns: Json
+      }
+      correct_quiz_key: {
+        Args: {
+          p_academy_id: string
+          p_choice_id: string
+          p_expected_scoring_revision: number
+          p_key: string
+          p_question_id: string
+          p_quiz_id: string
+        }
         Returns: Json
       }
       correct_student_import_row: {
@@ -2956,6 +4081,15 @@ export type Database = {
           p_academy_id: string
           p_assignment_id: string
           p_draft: Json
+        }
+        Returns: Json
+      }
+      create_quiz: {
+        Args: {
+          p_academic_year_id: string
+          p_academy_id: string
+          p_draft: Json
+          p_quiz_id: string
         }
         Returns: Json
       }
@@ -3015,6 +4149,16 @@ export type Database = {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: string
       }
+      exclude_quiz_question: {
+        Args: {
+          p_academy_id: string
+          p_expected_scoring_revision: number
+          p_key: string
+          p_question_id: string
+          p_quiz_id: string
+        }
+        Returns: Json
+      }
       expire_sessions: { Args: { p_schedule_id: string }; Returns: undefined }
       finalize_student_import: {
         Args: { p_session_id: string }
@@ -3048,6 +4192,15 @@ export type Database = {
       }
       get_attendance: {
         Args: { p_academy_id: string; p_session_id: string }
+        Returns: Json
+      }
+      get_my_quiz: { Args: { p_quiz_id: string }; Returns: Json }
+      get_quiz: {
+        Args: { p_academy_id: string; p_quiz_id: string }
+        Returns: Json
+      }
+      get_quiz_student: {
+        Args: { p_academy_id: string; p_quiz_id: string; p_record_id: string }
         Returns: Json
       }
       get_session: {
@@ -3108,6 +4261,23 @@ export type Database = {
           p_limit: number
           p_search: string
           p_to: string
+        }
+        Returns: Json
+      }
+      list_quiz_students: {
+        Args: { p_academy_id: string; p_quiz_id: string }
+        Returns: Json
+      }
+      list_quizzes: {
+        Args: {
+          p_academic_year_id: string
+          p_academy_id: string
+          p_audience: Database["public"]["Enums"]["quiz_audience"]
+          p_include_archived: boolean
+          p_limit: number
+          p_offset: number
+          p_phase: string
+          p_search: string
         }
         Returns: Json
       }
@@ -3268,6 +4438,17 @@ export type Database = {
         }
         Returns: Json
       }
+      preview_quiz_audience: {
+        Args: {
+          p_academic_year_id: string
+          p_academy_id: string
+          p_audience: Database["public"]["Enums"]["quiz_audience"]
+          p_group_ids: string[]
+          p_level_id: string
+          p_track_id: string
+        }
+        Returns: Json
+      }
       preview_staff_invitation: { Args: { p_token: string }; Returns: Json }
       preview_student_code_generation: {
         Args: {
@@ -3312,6 +4493,10 @@ export type Database = {
           p_record_id: string
           p_status: Database["public"]["Enums"]["assignment_work_status"]
         }
+        Returns: Json
+      }
+      record_quiz_departure: {
+        Args: { p_event_id: string; p_quiz_id: string }
         Returns: Json
       }
       refresh_student_import: {
@@ -3404,6 +4589,37 @@ export type Database = {
           p_expected_record_id?: string
           p_expected_version: number
           p_key: string
+          p_record_id: string
+        }
+        Returns: Json
+      }
+      save_quiz_answers: {
+        Args: {
+          p_answers: Json
+          p_expected_version: number
+          p_key: string
+          p_quiz_id: string
+        }
+        Returns: Json
+      }
+      save_quiz_marks: {
+        Args: {
+          p_academy_id: string
+          p_changes: Json
+          p_expected_version: number
+          p_key: string
+          p_quiz_id: string
+          p_record_id: string
+        }
+        Returns: Json
+      }
+      save_quiz_physical_draft: {
+        Args: {
+          p_academy_id: string
+          p_answers: Json
+          p_expected_version: number
+          p_key: string
+          p_quiz_id: string
           p_record_id: string
         }
         Returns: Json
@@ -3501,6 +4717,7 @@ export type Database = {
         Args: { p_rows: Json; p_session_id: string }
         Returns: number
       }
+      start_quiz_attempt: { Args: { p_quiz_id: string }; Returns: Json }
       start_session: {
         Args: {
           p_academy_id: string
@@ -3637,6 +4854,10 @@ export type Database = {
         Returns: string
       }
       student_import_summary: { Args: { p_session_id: string }; Returns: Json }
+      submit_quiz_attempt: {
+        Args: { p_key: string; p_quiz_id: string }
+        Returns: Json
+      }
       suspend_staff_member: {
         Args: { p_academy_id: string; p_user_id: string }
         Returns: Json
@@ -3651,6 +4872,15 @@ export type Database = {
           p_assignment_id: string
           p_draft: Json
           p_expected_version: number
+        }
+        Returns: Json
+      }
+      update_quiz: {
+        Args: {
+          p_academy_id: string
+          p_draft: Json
+          p_expected_version: number
+          p_quiz_id: string
         }
         Returns: Json
       }
@@ -3725,6 +4955,20 @@ export type Database = {
       attendance_publication_kind: "initial" | "correction"
       attendance_source: "manual" | "bulk" | "check_in"
       attendance_status: "unknown" | "present" | "late" | "absent" | "excused"
+      quiz_audience: "level" | "program" | "groups"
+      quiz_correction_kind: "key" | "exclusion"
+      quiz_effect_type:
+        | "result_published"
+        | "result_corrected"
+        | "solutions_qualified"
+      quiz_finalization_reason:
+        | "submitted"
+        | "timer"
+        | "departure"
+        | "window_closed"
+        | "physical"
+      quiz_part_kind: "question_sheet" | "written_work"
+      quiz_source: "online" | "physical"
       schedule_audience: "group" | "level" | "program"
       schedule_kind: "recurring" | "one_off"
       session_end_reason: "manual" | "auto"
@@ -3893,6 +5137,22 @@ export const Constants = {
       attendance_publication_kind: ["initial", "correction"],
       attendance_source: ["manual", "bulk", "check_in"],
       attendance_status: ["unknown", "present", "late", "absent", "excused"],
+      quiz_audience: ["level", "program", "groups"],
+      quiz_correction_kind: ["key", "exclusion"],
+      quiz_effect_type: [
+        "result_published",
+        "result_corrected",
+        "solutions_qualified",
+      ],
+      quiz_finalization_reason: [
+        "submitted",
+        "timer",
+        "departure",
+        "window_closed",
+        "physical",
+      ],
+      quiz_part_kind: ["question_sheet", "written_work"],
+      quiz_source: ["online", "physical"],
       schedule_audience: ["group", "level", "program"],
       schedule_kind: ["recurring", "one_off"],
       session_end_reason: ["manual", "auto"],
