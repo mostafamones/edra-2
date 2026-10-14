@@ -2,9 +2,12 @@
 
 - [Sessions and attendance OpenAPI](sessions-attendance.openapi.yaml).
 - [Assignments OpenAPI](assignments.openapi.yaml).
+- [Quizzes OpenAPI](quizzes.openapi.yaml).
 
 Contracts were checked against current route handlers, v1 builders, shared HTTP authority/errors and relevant domain types. This is source verification, not deployment or cloud verification. Bearer authentication is separate from cookie web actions; mixed cookie/bearer requests are rejected. Native clients do not need CORS; browser callers use configured origins.
 
 Assignment source uses active/closed/archived and ready, with no assignment Publish step. Current v1 supports staff reads, part marks and code resolution; student submissions, question-answer writes and result announcement are not added to this HTTP contract by product approval. Part kinds retain source identifiers online_questions/answer_sheet/file_upload while product labels are Question Sheet/Answer Sheet/Written Work.
 
 Current role enforcement uses owner/head_admin/admin/instructor; Head Admin has the Owner/Admin authority of these endpoints. Every request requires an active membership: a suspended or removed staff member is denied in that academy (403/404) with an otherwise valid token, and `/api/v1/academies` omits suspended memberships. Late optional eligibility and controlled exclusions/key corrections require their implementation work. Read [product assessments](../product/domains/assessments.md) for intended behavior and [module integration](../../src/modules/assignments/README.md) for current source limits.
+
+Quizzes v1 is staff reads only (list, detail with key, students with work and result state). Staff quiz commands are cookie web actions. The student quiz contract is deployed in the database but denied (`student_link_unavailable`, `content_unavailable`) and has no HTTP route; see [quiz module integration](../../src/modules/quizzes/README.md).

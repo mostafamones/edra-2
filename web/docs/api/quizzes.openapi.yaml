@@ -1,0 +1,368 @@
+openapi: 3.1.0
+info:
+  title: Edra quizzes API (staff)
+  version: "1.0.0"
+  description: |
+    Bearer-token reads for signed-in Edra staff (owner, head_admin, admin, instructor): list quizzes,
+    read one quiz (including its key), and read its students' work and result state. It shares
+    authentication, response, throttling and CORS conventions with `sessions-attendance.openapi.yaml`;
+    only what differs is stated here.
+
+    **Operational now (source-checked 2026-10-13).** The three `GET` paths below. Staff commands
+    (preparation, window, archive, physical entry and confirmation, private marks, announcement, key
+    corrections and exclusions) are cookie web actions over the same database operations; they are not
+    part of this HTTP contract.
+
+    **Not operational: the student contract.** The trusted student operations exist in the database
+    (`edra_private.start_quiz_attempt_for`, `save_quiz_answers_for`, `record_quiz_departure_for`,
+    `submit_quiz_attempt_for`, `quiz_student_state`) and their public wrappers (`get_my_quiz`,
+    `start_quiz_attempt`, `save_quiz_answers`, `record_quiz_departure`, `submit_quiz_attempt`) are
+    deployed, but every wrapper is denied with `student_link_unavailable` because there is no
+    authoritative student-account-to-annual-record link, and online access additionally needs released
+    content (`content_unavailable`). No HTTP route exposes them. They are documented under
+    `components.schemas.StudentQuizState` and `x-edra-student-operations` as the EDRA-82 handoff; an
+    annual record id or phone number supplied by a student is never ownership.
+
+    **Rules.** A quiz has ordered Question Sheet (choices, one correct, scored automatically) and
+    Written Work (staff-marked) parts; Answer Sheet parts do not exist. Scores are decimal **strings**
+    with at most two fractional digits; unsupported precision is rejected, never rounded. A blank
+    manual mark is unmarked; `"0"` is a mark. Eligibility is live: the students currently matching the
+    target, plus every historical participant in the student list.
+
+    **Timing.** `opens_at <= server_now < closes_at` allows a new online attempt. `actual_closes_at` is
+    always `closes_at + 2 minutes`. A started attempt continues until the earlier of its original
+    `deadline_at` and `actual_closes_at`; at that cutoff its saved answers are submitted (`timer` when
+    the deadline is at or before actual closure, otherwise `window_closed`). A second departure submits
+    with `departure`. `submitted_at` is the effective time; `processed_at` when the database settled it.
+    A database worker settles deadlines every 30 seconds and every read settles due work first. Physical
+    confirmation stops at actual closure. Nothing reopens after actual closure.
+
+    **Acceptance.** Online and physical drafts may coexist; the first online final submission or
+    physical confirmation is the single accepted submission (`submission.source`). The other draft is
+    kept as history and never merged.
+
+    **Results.** `result` is the private current result (staff only). `publication` is the latest
+    official revision; `publication_state` is `pending_correction` when the private result differs
+    from it (for example after a key correction or exclusion). Fully automatic online work is announced
+    in its acceptance transaction; everything else is announced by staff.
+servers:
+  - url: http://app.lvh.me:3000
+    description: Local development (the staff origin; requires the lvh.me host, not localhost)
+  - url: "{staffOrigin}"
+    description: Deployed staff origin (the value of EDRA_APP_ORIGIN)
+    variables:
+      staffOrigin:
+        default: https://app.example.invalid
+security:
+  - staffToken: []
+tags:
+  - name: Quizzes
+paths:
+  /api/v1/academies/{academyId}/quizzes:
+    get:
+      tags: [Quizzes]
+      summary: The academy's quizzes, newest first, with derived phase
+      operationId: listQuizzes
+      parameters:
+        - name: academyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: academic_year_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: phase
+          in: query
+          description: One derived phase. Archived quizzes are omitted unless `phase=archived`.
+          schema: { $ref: "#/components/schemas/Phase" }
+        - name: audience
+          in: query
+          schema: { type: string, enum: [level, program, groups] }
+        - name: search
+          in: query
+          description: Case-insensitive title substring (at most 200 characters).
+          schema: { type: string, maxLength: 200 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 100000, default: 0 }
+      responses:
+        "200":
+          description: One page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total, quizzes, server_now]
+                properties:
+                  total: { type: integer }
+                  server_now: { type: string, format: date-time }
+                  quizzes:
+                    type: array
+                    items: { $ref: "#/components/schemas/QuizSummary" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/quizzes/{quizId}:
+    get:
+      tags: [Quizzes]
+      summary: One quiz with its parts, questions, key, window, counts and corrections (staff)
+      operationId: getQuiz
+      parameters:
+        - { $ref: "#/components/parameters/QuizId" }
+      responses:
+        "200":
+          description: The quiz.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Quiz" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/quizzes/{quizId}/students:
+    get:
+      tags: [Quizzes]
+      summary: Eligible and historical students with attempts, accepted work and result state
+      operationId: listQuizStudents
+      parameters:
+        - { $ref: "#/components/parameters/QuizId" }
+      responses:
+        "200":
+          description: Every student, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total, students]
+                properties:
+                  total: { type: integer }
+                  students:
+                    type: array
+                    items: { $ref: "#/components/schemas/Student" }
+              examples:
+                windowClosed:
+                  summary: Window closure submitted saved work; written question still unmarked
+                  value:
+                    total: 1
+                    students:
+                      - annual_student_record_id: 3d1e5a4c-0000-4000-8000-000000000001
+                        full_name: Amal Hassan
+                        archived: false
+                        group_name: Nine A
+                        student_code: "0042"
+                        eligible: true
+                        version: 2
+                        attempt: { started_at: "2026-10-14T16:05:00Z", deadline_at: null, departure_count: 0, answers_version: 7, last_saved_at: "2026-10-14T16:59:40Z", finalized_at: "2026-10-14T17:02:00Z", finalization_reason: window_closed, superseded: false }
+                        physical_draft: null
+                        submission: { id: 7b0e0000-0000-4000-8000-000000000001, source: online, reason: window_closed, submitted_at: "2026-10-14T17:02:00Z", processed_at: "2026-10-14T17:02:21Z", original_deadline_at: null, scoring_revision: 1 }
+                        result: { complete: false, total: "4.00", max_score: "10.00", marked: 0, required: 1 }
+                        feedback: ""
+                        publication: null
+                        publication_state: unpublished
+                        solutions_qualified: true
+                        updated_at: "2026-10-14T17:02:21Z"
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+x-edra-student-operations:
+  status: not-operational
+  reason: No authoritative student-account link (student_link_unavailable) and no released-content authorization (content_unavailable).
+  operations:
+    - name: get_my_quiz(quiz_id)
+      returns: StudentQuizState
+    - name: start_quiz_attempt(quiz_id)
+      returns: StudentQuizState
+      notes: Creates the single attempt or resumes it (same started_at, deadline_at and departure_count). Errors not_open, not_eligible.
+    - name: save_quiz_answers(quiz_id, expected_version, answers[{question_id, choice_id?|text_answer?}], key)
+      returns: "{outcome: saved | conflict | finalized, state: StudentQuizState}"
+      notes: Stale expected_version writes nothing (conflict). Past the cutoff the attempt is settled and reported (finalized); late answers are never saved. Changed answers to excluded questions are rejected (question_excluded).
+    - name: record_quiz_departure(quiz_id, event_id)
+      returns: "{outcome: warned | duplicate | submitted | finalized, state: StudentQuizState}"
+      notes: Event ids are deduplicated; the second distinct departure submits with reason departure. Detection belongs to the client and is not proof of anti-cheating enforcement.
+    - name: submit_quiz_attempt(quiz_id, key)
+      returns: "{outcome: submitted | finalized | source_conflict, state: StudentQuizState}"
+      notes: A retry with the same key replays. source_conflict when physical work was confirmed first.
+components:
+  securitySchemes:
+    staffToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: The Supabase Auth access token of a signed-in staff member.
+  parameters:
+    QuizId:
+      name: quizId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Error:
+      description: Error with a stable code (see sessions-attendance.openapi.yaml for the shape).
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: object
+                required: [code, message, request_id]
+                properties:
+                  code: { type: string, enum: [INVALID_REQUEST, AMBIGUOUS_AUTHENTICATION, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, THROTTLED, INTERNAL] }
+                  message: { type: string }
+                  request_id: { type: string }
+  schemas:
+    Phase:
+      type: string
+      description: Derived from readiness, window and archive. headroom is between the scheduled close and actual closure.
+      enum: [preparing, ready, scheduled, open, headroom, closed, archived]
+    Reason:
+      type: string
+      enum: [submitted, timer, departure, window_closed, physical]
+    Decimal:
+      type: string
+      pattern: "^\\d{1,5}(\\.\\d{1,2})?$"
+    QuizSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        academic_year_id: { type: string, format: uuid }
+        title: { type: string }
+        audience: { type: [string, "null"], enum: [level, program, groups, null] }
+        level_id: { type: [string, "null"] }
+        track_id: { type: [string, "null"], format: uuid }
+        group_ids: { type: array, items: { type: string, format: uuid } }
+        time_limit_minutes: { type: [integer, "null"] }
+        opens_at: { type: [string, "null"], format: date-time }
+        closes_at: { type: [string, "null"], format: date-time }
+        actual_closes_at: { type: [string, "null"], format: date-time }
+        max_score: { $ref: "#/components/schemas/Decimal" }
+        effective_max_score: { $ref: "#/components/schemas/Decimal" }
+        question_count: { type: integer }
+        phase: { $ref: "#/components/schemas/Phase" }
+        updated_at: { type: string, format: date-time }
+        submitted: { type: integer }
+        in_progress: { type: integer }
+        announced: { type: integer }
+    Quiz:
+      type: object
+      description: Staff document. Includes the key (`is_correct`), model answers and solution notes.
+      properties:
+        id: { type: string, format: uuid }
+        academy_id: { type: string, format: uuid }
+        academic_year_id: { type: string, format: uuid }
+        title: { type: string }
+        instructions: { type: string }
+        solution_notes: { type: string }
+        audience: { type: [string, "null"], enum: [level, program, groups, null] }
+        level_id: { type: [string, "null"] }
+        track_id: { type: [string, "null"] }
+        group_ids: { type: array, items: { type: string } }
+        time_limit_minutes: { type: [integer, "null"], minimum: 1, maximum: 600 }
+        opens_at: { type: [string, "null"], format: date-time }
+        closes_at: { type: [string, "null"], format: date-time }
+        actual_closes_at: { type: [string, "null"], format: date-time }
+        max_score: { $ref: "#/components/schemas/Decimal" }
+        effective_max_score: { $ref: "#/components/schemas/Decimal" }
+        question_count: { type: integer }
+        version: { type: integer }
+        scoring_revision: { type: integer, description: Incremented by each key correction or exclusion. }
+        work_started_at: { type: [string, "null"], description: Audience and timer are locked from here. }
+        structure_locked_at: { type: [string, "null"], description: Parts, questions, choices, maxima and key are locked from here. }
+        closure_settled_at: { type: [string, "null"] }
+        year_open: { type: boolean }
+        ready: { type: boolean }
+        issues: { type: array, items: { type: object } }
+        phase: { $ref: "#/components/schemas/Phase" }
+        server_now: { type: string, format: date-time }
+        fully_automatic: { type: boolean }
+        counts: { type: object }
+        corrections: { type: array, items: { type: object } }
+        parts: { type: array, items: { type: object } }
+    Student:
+      type: object
+      properties:
+        annual_student_record_id: { type: string, format: uuid }
+        full_name: { type: string }
+        eligible: { type: boolean, description: Currently matches the target. Historical participants may not. }
+        version: { type: integer }
+        attempt: { type: [object, "null"] }
+        physical_draft: { type: [object, "null"] }
+        submission:
+          type: [object, "null"]
+          properties:
+            source: { type: string, enum: [online, physical] }
+            reason: { $ref: "#/components/schemas/Reason" }
+            submitted_at: { type: string, format: date-time }
+            processed_at: { type: string, format: date-time }
+        result:
+          type: [object, "null"]
+          description: Private current result. complete is false while a non-excluded Written Work question is unmarked.
+        publication: { type: [object, "null"], description: Latest official revision. }
+        publication_state: { type: string, enum: [unpublished, published, pending_correction] }
+        solutions_qualified: { type: boolean }
+    StudentQuizState:
+      type: object
+      description: |
+        Student-safe projection (EDRA-82 handoff; not exposed over HTTP yet). Never contains the key,
+        model answers, solution notes or private marks before `solutions` is present, and no score
+        before `result` (an announced revision) exists.
+      properties:
+        quiz_id: { type: string, format: uuid }
+        server_now: { type: string, format: date-time }
+        opens_at: { type: [string, "null"] }
+        closes_at: { type: [string, "null"] }
+        actual_closes_at: { type: [string, "null"] }
+        time_limit_minutes: { type: [integer, "null"] }
+        phase: { $ref: "#/components/schemas/Phase" }
+        eligible: { type: boolean }
+        excluded_question_ids: { type: array, items: { type: string }, description: Skip these when navigating. }
+        parts: { type: array, items: { type: object }, description: Stable order; choices without correctness. }
+        attempt:
+          type: [object, "null"]
+          properties:
+            started_at: { type: string }
+            deadline_at: { type: [string, "null"], description: Original timer deadline; never changes. }
+            cutoff_at: { type: [string, "null"], description: Earlier of deadline_at and actual_closes_at. }
+            answers_version: { type: integer }
+            departure_count: { type: integer }
+            finalized_at: { type: [string, "null"] }
+            finalization_reason: { oneOf: [{ $ref: "#/components/schemas/Reason" }, { type: "null" }] }
+            superseded: { type: boolean, description: Physical work was accepted first. }
+        submission: { type: [object, "null"] }
+        result: { type: [object, "null"], description: Latest announced revision only. }
+        solutions: { type: [object, "null"], description: Present once qualified (online at actual closure; physical at closure plus announcement). }
+      examples:
+        - summary: Timed attempt in headroom (scheduled close passed; deadline after actual closure, so window_closed will apply)
+          server_now: "2026-10-14T17:01:10Z"
+          opens_at: "2026-10-14T16:00:00Z"
+          closes_at: "2026-10-14T17:00:00Z"
+          actual_closes_at: "2026-10-14T17:02:00Z"
+          time_limit_minutes: 20
+          phase: headroom
+          attempt: { started_at: "2026-10-14T16:55:00Z", deadline_at: "2026-10-14T17:15:00Z", cutoff_at: "2026-10-14T17:02:00Z", answers_version: 4, departure_count: 1, finalized_at: null, finalization_reason: null, superseded: false }
+          submission: null
+          result: null
+          solutions: null
+        - summary: Timer tie at actual closure (deadline equals actual closure, so reason timer)
+          phase: closed
+          attempt: { started_at: "2026-10-14T16:42:00Z", deadline_at: "2026-10-14T17:02:00Z", cutoff_at: "2026-10-14T17:02:00Z", finalized_at: "2026-10-14T17:02:00Z", finalization_reason: timer, superseded: false }
+          submission: { source: online, reason: timer, submitted_at: "2026-10-14T17:02:00Z" }
+        - summary: Losing online draft after physical confirmation
+          attempt: { started_at: "2026-10-14T16:10:00Z", deadline_at: null, finalized_at: null, finalization_reason: null, superseded: true }
+          submission: { source: physical, reason: physical, submitted_at: "2026-10-14T16:30:00Z" }
+          result: null
+        - summary: Untimed attempt submitted by the student, manual review incomplete (no score shown)
+          time_limit_minutes: null
+          attempt: { deadline_at: null, finalization_reason: submitted }
+          submission: { source: online, reason: submitted }
+          result: null
+          solutions: null
