@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Separate-session race tests for staff access, schedule/group/slot, student-record, import,
-# student-code and check-in locking. Run only through `npm run test:db`, which validates the isolated target and
+# student-code, check-in and quiz locking. Run only through `npm run test:db`, which validates the isolated target and
 # exports its connection. Races need real concurrent transactions, so fixtures are committed under a
 # run-specific academy, admin and ids. They are retained: preserved history (sessions, attendance,
 # code ledger) cannot be removed through normal flows. Fresh identities keep reruns collision-free.
@@ -518,5 +518,68 @@ psqlx -tA -c "select count(*) from public.attendance_effect_suppressions where e
   || fail "archival suppressed an effect that was already dispatched"
 psqlx -tA -c "select edra_private.claim_attendance_effect('$E21') is null" | grep -qx t \
   || fail "a dispatched effect could be claimed again"
+
+# 22-25. Quiz races. Per-student commands take the quiz key-share lock and the student's work row;
+#     quiz-wide commands (corrections, closure settlement) take the quiz exclusively.
+QUIZ="$(uuid)"
+QR1="$(new_student 'Quiz race 1' 01088880001 null)"
+QR2="$(new_student 'Quiz race 2' 01088880002 null)"
+[ -n "$QR1" ] && [ -n "$QR2" ] || fail "could not create quiz race students"
+psqlx >/dev/null <<SQL
+begin; $as_admin
+select public.create_quiz('$ACADEMY','$YEAR','$QUIZ','{"title":"Race quiz","audience":"level","level_id":"grade-10","parts":[{"title":"P","kind":"question_sheet","questions":[{"max_score":"1","choices":[{"label":"A","is_correct":true},{"label":"B"}]}]}]}');
+select public.configure_quiz_availability('$ACADEMY','$QUIZ',1,now() - interval '1 minute',now() + interval '1 hour');
+commit;
+SQL
+QQ="$(psqlx -tA -c "select id from public.quiz_questions where quiz_id = '$QUIZ'")"
+QCA="$(psqlx -tA -c "select id from public.quiz_choices where question_id = '$QQ' and position = 1")"
+QCB="$(psqlx -tA -c "select id from public.quiz_choices where question_id = '$QQ' and position = 2")"
+[ -n "$QQ" ] && [ -n "$QCA" ] && [ -n "$QCB" ] || fail "could not create the race quiz"
+
+# 22. Two students start at once: both record work-start on the quiz row without deadlocking.
+hold 22a 22b "select edra_private.start_quiz_attempt_for('$QUIZ','$QR1');"
+start 22b "select edra_private.start_quiz_attempt_for('$QUIZ','$QR2');"
+wait
+expect_ok 22a "the first concurrent quiz start failed"
+expect_ok 22b "the second concurrent quiz start failed"
+psqlx -tA -c "select count(*) from public.quiz_attempts where quiz_id = '$QUIZ'" | grep -qx 2 || fail "concurrent starts did not create one attempt each"
+
+# 23. Physical confirmation holds the student's work row; the student's concurrent final online
+#     submission waits and reports source_conflict. Exactly one (physical) submission exists.
+hold 23a 23b "$as_admin select public.confirm_quiz_physical('$ACADEMY','$QUIZ','$QR1',0,gen_random_uuid());"
+start 23b "select edra_private.submit_quiz_attempt_for('$QUIZ','$QR1',gen_random_uuid());"
+wait
+expect_ok 23a "the physical confirmation holding the work row failed"
+expect_ok 23b "the concurrent online submission failed"
+grep -q source_conflict "$OUT/23b" || fail "the losing online submission did not report source_conflict: $(out 23b)"
+psqlx -tA -c "select string_agg(source::text, ',') from public.quiz_submissions where quiz_id = '$QUIZ' and annual_student_record_id = '$QR1'" \
+  | grep -qx physical || fail "the student does not have exactly one physical submission"
+
+# 24. A key correction holds the quiz; an announcement prepared at the old scoring revision waits and
+#     is rejected, so no result is published on a stale basis.
+psqlx >/dev/null -c "select edra_private.save_quiz_answers_for('$QUIZ','$QR2',0,'[{\"question_id\":\"$QQ\",\"choice_id\":\"$QCA\"}]',gen_random_uuid());"
+V24="$(psqlx -tA -c "select version from public.quiz_work where quiz_id = '$QUIZ' and annual_student_record_id = '$QR1'")"
+hold 24a 24b "$as_admin select public.correct_quiz_key('$ACADEMY','$QUIZ','$QQ','$QCB',1,gen_random_uuid());"
+start 24b "$as_admin select public.announce_quiz_results('$ACADEMY','$QUIZ',1,'[{\"annual_student_record_id\":\"$QR1\",\"expected_version\":$V24}]',gen_random_uuid());"
+wait
+expect_ok 24a "the correction holding the quiz failed"
+expect_rejected 24b "an announcement on a stale scoring basis was accepted" stale_basis
+psqlx -tA -c "select count(*) from public.quiz_result_publications where quiz_id = '$QUIZ' and annual_student_record_id = '$QR1'" | grep -qx 0 \
+  || fail "a result was published on a stale scoring basis"
+
+# 25. The worker settles actual closure while holding the quiz; a late answer save waits, then
+#     reports finalized. The saved answer is unchanged and the effective time is the closure.
+psqlx >/dev/null -c "update public.quizzes set opens_at = now() - interval '2 hours', closes_at = now() - interval '3 minutes', actual_closes_at = now() - interval '1 minute' where id = '$QUIZ';"
+hold 25a 25b "select edra_private.settle_quiz_closure('$QUIZ');"
+start 25b "select edra_private.save_quiz_answers_for('$QUIZ','$QR2',1,'[{\"question_id\":\"$QQ\",\"choice_id\":\"$QCB\"}]',gen_random_uuid());"
+wait
+expect_ok 25a "the closure settlement holding the quiz failed"
+expect_ok 25b "the late answer save failed"
+grep -q finalized "$OUT/25b" || fail "the late save did not report finalized: $(out 25b)"
+psqlx -tA -c "select s.reason = 'window_closed' and s.submitted_at = z.actual_closes_at and a.choice_id = '$QCA'
+  from public.quiz_submissions s join public.quizzes z on z.id = s.quiz_id
+  join public.quiz_submission_answers a on a.submission_id = s.id
+  where s.quiz_id = '$QUIZ' and s.annual_student_record_id = '$QR2'" | grep -qx t \
+  || fail "the late save crossed the cutoff or the effective time is wrong"
 
 echo "concurrency checks passed"
