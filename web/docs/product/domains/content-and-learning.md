@@ -32,6 +32,8 @@ Assignments, quizzes and exams can be attached to content units, with at most on
 
 Students reach attached online assessments through the released unit, subject to their assessment availability rules. Assignment visibility does not require a separate assignment-release action. Results are announced separately and become part of the student’s performance.
 
+An attached assessment and its annual content release must share academy and academic year. The release's audience must cover the entire configured assessment audience; attachment cannot broaden assessment eligibility. Standalone exams remain available through their own assessment flow.
+
 Answer material belongs to the assessment it explains. A release’s explanation access does not by itself unlock homework or quiz answer videos.
 
 ## Student experience

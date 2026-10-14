@@ -17,6 +17,7 @@ These are intended product permissions. Current source enforces the Owner, Head 
 | Release/archive content | Yes | Yes | Yes | No |
 | Correct shared answer keys/exclude questions after work begins | Yes | Yes | Yes | No |
 | Assignment submission availability/archive | Yes | Yes | Yes | No |
+| Quiz/exam availability windows/archive | Yes | Yes | Yes | No |
 | Manual learning grants/revocation/suspension; manage coupon codes | Yes | Yes | Yes | Inspect student access only |
 | Manage parent report links | Yes | Yes | Yes | Preview only; no secret access |
 | Notes | Manage | Manage | Manage | Create; manage own notes under sharing rules |
