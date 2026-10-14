@@ -23,6 +23,13 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 - Master threads use product context and current technical evidence. Before exporting an implementation plan, settle relevant open decisions with the owner and update the affected documentation to the latest agreed terms. Do not invent restrictions or workflows to fill gaps.
 - Implementation plans are self-contained. Implementation agents read the engineering/API references and only the final product sections assigned by their plan; unresolved discussions and review queues are not requirements. Ask about genuine consequential conflicts, not routine factual documentation corrections.
 
+## Commit runs
+
+- When the owner requests a "commit run", review the current changes, run the relevant verification checks, and create Git commits for the requested scope.
+- Group related changes into focused, coherent commits. Stage each group separately, using partial staging when a file contains changes belonging to different groups. Create as many commits as needed to represent the work clearly.
+- Give each commit a clear subject and a detailed message explaining what changed and why. Include relevant verification results and material limitations.
+- Do not push commits unless the owner explicitly requests it.
+
 ## Table empty states
 
 - All tables must have an empty state that replaces the table and does not sit inside it. This applies both to datasets with no records and to filters or searches with no results.
