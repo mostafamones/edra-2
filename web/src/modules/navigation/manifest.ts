@@ -232,13 +232,13 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         icon: "quizzes",
         preview: {
           title: "Quizzes",
-          purpose: "Prepare and review weekly quizzes and separate retakes.",
+          purpose: "Prepare quizzes, record physical work, mark and announce results.",
           sections: [
-            "Quiz audience, original attempt window, questions, and publication state.",
-            "Student attempts, granted retakes, and the effective highest score.",
-            "Eligibility details, including the rule that a video extension does not reopen a quiz.",
+            "Quiz audience, questions and key, timer, and the opening and closing window.",
+            "One attempt per student, accepted online or physical work, private marks and announced results.",
+            "Key corrections and exclusions, with earlier announced results kept as history.",
           ],
-          actions: ["Prepare quiz drafts and review attempts; publication follows role permissions."],
+          actions: ["All staff prepare, enter, mark and announce; Owners, Head Admins and Admins set windows, archive and correct keys."],
         },
       },
       {
@@ -280,7 +280,7 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
           purpose: "See assessment outcomes across students and correct official results.",
           sections: [
             "Marks by student, assessment, part, and publication state.",
-            "Feedback, averages, effective retake scores, and result history.",
+            "Feedback, averages, and result history.",
             "Corrections to published results and the parent notice those changes require.",
           ],
           actions: ["Open a result, publish complete marks, or correct a published result."],
@@ -563,11 +563,11 @@ export const STUDENT_GROUPS: readonly NavGroup[] = [
         icon: "quizzes",
         preview: {
           title: "Quizzes",
-          purpose: "See weekly quiz windows, attempts, and available retakes.",
+          purpose: "See quiz windows and take each quiz once.",
           sections: [
-            "Current quizzes and their original attempt windows.",
-            "Attempt status, separately granted retakes, and effective highest score.",
-            "Published feedback and the rule that extending video access does not reopen the quiz.",
+            "Current quizzes, their windows, and any individual time limit.",
+            "Your single attempt, its submission time, and how it was submitted.",
+            "Announced results and feedback; solutions after the quiz closes.",
           ],
         },
       },
@@ -599,7 +599,7 @@ export const STUDENT_GROUPS: readonly NavGroup[] = [
           purpose: "See published assessment outcomes and feedback.",
           sections: [
             "Published assignment, quiz, and exam marks.",
-            "Part scores, feedback, retake outcome, and result history.",
+            "Part scores, feedback, and result history.",
             "Corrections made after publication; staff drafts remain private.",
           ],
         },

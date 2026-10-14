@@ -1,0 +1,107 @@
+"use client";
+
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { IconAlertCircle, IconCalendarClock, IconLoader2 } from "@tabler/icons-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { academyDateTime, academyInstant, ACADEMY_TIME_ZONE, formatAcademyDateTime } from "@/lib/academy-time";
+import { useAcademyScope } from "@/modules/auth";
+import { setQuizAvailability } from "../../actions";
+import { quizzesRootKey } from "../../queries";
+import type { Quiz } from "../../types";
+
+const ACTUAL_CLOSE_MS = 2 * 60 * 1000;
+
+/**
+ * Owner/Head Admin/Admin: the opening and scheduled closing times, entered in academy time and saved
+ * as UTC. Actual closure is always two minutes after the scheduled close.
+ */
+export function AvailabilityDialog({ quiz }: { quiz: Quiz }) {
+  const queryClient = useQueryClient();
+  const isCurrentAcademy = useAcademyScope();
+  const [open, setOpen] = useState(false);
+  const opens = quiz.opensAt ? academyDateTime(quiz.opensAt) : null;
+  const closes = quiz.closesAt ? academyDateTime(quiz.closesAt) : null;
+  const [values, setValues] = useState({ opensDate: opens?.date ?? "", opensTime: opens?.time ?? "", closesDate: closes?.date ?? "", closesTime: closes?.time ?? "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const opened = quiz.opensAt !== null && Date.parse(quiz.serverNow) >= Date.parse(quiz.opensAt);
+  const started = quiz.workStartedAt !== null;
+
+  const opensAt = academyInstant(values.opensDate, values.opensTime);
+  const closesAt = academyInstant(values.closesDate, values.closesTime);
+  const invalid = !opensAt || !closesAt || Date.parse(opensAt) >= Date.parse(closesAt);
+
+  async function submit(clear: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await setQuizAvailability({
+        academyId: quiz.academyId, quizId: quiz.id, expectedVersion: quiz.version,
+        opensAt: clear ? null : opensAt, closesAt: clear ? null : closesAt,
+      });
+      if (!isCurrentAcademy(quiz.academyId)) return;
+      if (!result.ok) { setError(result.message); return; }
+      toast.success(clear ? "Online window removed." : "Online window saved.");
+      void queryClient.invalidateQueries({ queryKey: quizzesRootKey(quiz.academyId) });
+      setOpen(false);
+    } catch {
+      if (isCurrentAcademy(quiz.academyId)) setError("Could not reach the server. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { setOpen(next); setError(null); }}>
+      <DialogTrigger asChild><Button variant="outline"><IconCalendarClock />{quiz.opensAt ? "Window" : "Set window"}</Button></DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Online window</DialogTitle>
+          <DialogDescription>
+            Students can start between opening and the scheduled close. Attempts already started may finish until actual closure, two minutes later. Times are in academy time ({ACADEMY_TIME_ZONE}).
+          </DialogDescription>
+        </DialogHeader>
+        {error && <Alert variant="destructive"><IconAlertCircle /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="quiz-opens-date">Opens</FieldLabel>
+            <div className="flex gap-2">
+              <Input id="quiz-opens-date" type="date" value={values.opensDate} disabled={opened} aria-label="Opening date"
+                onChange={(event) => setValues({ ...values, opensDate: event.target.value })} />
+              <Input type="time" value={values.opensTime} disabled={opened} aria-label="Opening time" className="w-32"
+                onChange={(event) => setValues({ ...values, opensTime: event.target.value })} />
+            </div>
+            {opened && <FieldDescription>The quiz has opened, so its opening time is fixed.</FieldDescription>}
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="quiz-closes-date">Scheduled close</FieldLabel>
+            <div className="flex gap-2">
+              <Input id="quiz-closes-date" type="date" value={values.closesDate} aria-label="Closing date"
+                onChange={(event) => setValues({ ...values, closesDate: event.target.value })} />
+              <Input type="time" value={values.closesTime} aria-label="Closing time" className="w-32"
+                onChange={(event) => setValues({ ...values, closesTime: event.target.value })} />
+            </div>
+            <FieldDescription>
+              {closesAt ? `Actual closure: ${formatAcademyDateTime(new Date(Date.parse(closesAt) + ACTUAL_CLOSE_MS).toISOString())}. ` : ""}
+              {started ? "Students have started, so the close can only move later. " : ""}
+              After actual closure the quiz can’t reopen; a later sitting needs a new quiz.
+            </FieldDescription>
+          </Field>
+        </FieldGroup>
+        <DialogFooter className="gap-2">
+          {quiz.opensAt && !opened && !started && (
+            <Button variant="ghost" className="sm:mr-auto" disabled={busy} onClick={() => void submit(true)}>Remove window</Button>
+          )}
+          <Button disabled={busy || invalid} onClick={() => void submit(false)}>{busy && <IconLoader2 className="animate-spin" />}Save window</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

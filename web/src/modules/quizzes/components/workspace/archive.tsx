@@ -1,0 +1,54 @@
+"use client";
+
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { IconArchive } from "@tabler/icons-react";
+
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { useAcademyScope } from "@/modules/auth";
+import { archiveExistingQuiz } from "../../actions";
+import { quizzesRootKey } from "../../queries";
+import type { Quiz } from "../../types";
+
+/** Owner/Head Admin/Admin. Waits for running attempts; keeps work, results and solution rules. */
+export function ArchiveQuiz({ quiz }: { quiz: Quiz }) {
+  const queryClient = useQueryClient();
+  const isCurrentAcademy = useAcademyScope();
+  const [busy, setBusy] = useState(false);
+  async function archive() {
+    setBusy(true);
+    try {
+      const result = await archiveExistingQuiz({ academyId: quiz.academyId, quizId: quiz.id, expectedVersion: quiz.version });
+      if (!isCurrentAcademy(quiz.academyId)) return;
+      if (!result.ok) { toast.error(result.message); return; }
+      toast.success("Quiz archived.");
+      void queryClient.invalidateQueries({ queryKey: quizzesRootKey(quiz.academyId) });
+    } catch {
+      toast.error("Could not reach the server. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild><Button variant="outline" disabled={busy}><IconArchive />Archive</Button></AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Archive this quiz?</AlertDialogTitle>
+          <AlertDialogDescription>
+            New work stops and the quiz becomes read-only. Attempts, submissions, marks and announced results are kept, and solutions still release at actual closure to students who submitted. Archiving isn’t possible while students are still answering.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={() => void archive()}>Archive</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
