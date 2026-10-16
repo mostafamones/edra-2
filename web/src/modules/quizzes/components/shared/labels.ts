@@ -19,9 +19,12 @@ export const PHASE_HINTS: Record<QuizPhase, string> = {
   scheduled: "Opens at the scheduled time.",
   open: "Students can start online attempts.",
   headroom: "Scheduled close has passed. Started attempts may finish until actual closure.",
-  closed: "Actual closure has passed. Unfinished attempts were submitted and solutions released to qualifying students.",
+  closed: "Actual closure has passed; nothing can start or reopen. Unfinished attempts are submitted with their saved answers, and solutions release to qualifying students, when closure is processed.",
   archived: "Archived. Work and results are kept.",
 };
+
+/** Shown beside a closed quiz whose due work has not been processed yet. */
+export const PROCESSING_PENDING_HINT = "Closure is being processed. Saved answers are submitted with the original cutoff time; counts update once it finishes.";
 
 export const PHASE_BADGE: Record<QuizPhase, BadgeVariant> = {
   preparing: "outline",

@@ -29,7 +29,7 @@ export function ArchiveQuiz({ quiz }: { quiz: Quiz }) {
       toast.success("Quiz archived.");
       void queryClient.invalidateQueries({ queryKey: quizzesRootKey(quiz.academyId) });
     } catch {
-      toast.error("Could not reach the server. Try again.");
+      toast.error("The connection dropped, so we couldn’t confirm whether this was saved. Reload to see the current state before trying again.");
     } finally {
       setBusy(false);
     }

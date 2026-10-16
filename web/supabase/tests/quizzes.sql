@@ -542,6 +542,110 @@ do $$ declare run record; begin
 end $$;
 
 -- ---------------------------------------------------------------------------------------------
+-- Refinement: live eligibility for new physical work (even with a draft), the structure lock at
+-- acceptance, and truthful processing status. Each case uses a fresh quiz so no earlier lock hides it.
+
+set local role authenticated;
+select pg_temp.as_user('e3333333-3333-4333-8333-333333333333');
+do $$ declare paper jsonb := jsonb_build_object(
+  'title', 'Paper quiz', 'audience', 'level', 'level_id', 'grade-9',
+  'parts', jsonb_build_array(jsonb_build_object('title', 'Choices', 'kind', 'question_sheet', 'questions', jsonb_build_array(
+    jsonb_build_object('prompt', 'One?', 'max_score', '2', 'choices', '[{"label":"A","is_correct":true},{"label":"B"}]'::jsonb),
+    jsonb_build_object('prompt', 'Two?', 'max_score', '2', 'choices', '[{"label":"A"},{"label":"B","is_correct":true}]'::jsonb)))));
+begin
+  perform public.create_quiz(pg_temp.academy(), pg_temp.year(), 'ec000000-0000-4000-8000-000000000004', paper);
+  perform public.create_quiz(pg_temp.academy(), pg_temp.year(), 'ec000000-0000-4000-8000-000000000005', paper);
+  perform public.create_quiz(pg_temp.academy(), pg_temp.year(), 'ec000000-0000-4000-8000-000000000006', paper);
+end $$;
+
+-- A draft saved while eligible survives a move out of the audience, but new work is refused.
+do $$ declare out jsonb; begin
+  out := public.save_quiz_physical_draft(pg_temp.academy(), 'ec000000-0000-4000-8000-000000000004', pg_temp.rec('s6'), 0, jsonb_build_array(
+    jsonb_build_object('question_id', pg_temp.question('ec000000-0000-4000-8000-000000000004', 1)->>'id',
+      'choice_id', pg_temp.choice('ec000000-0000-4000-8000-000000000004', 1, 1))), gen_random_uuid());
+  perform pg_temp.check(out->>'outcome' = 'saved', 'draft saved while eligible');
+end $$;
+reset role;
+update public.annual_student_records set level_id = 'grade-10', primary_group_id = null where id = pg_temp.rec('s6');
+set local role authenticated;
+select pg_temp.as_user('e3333333-3333-4333-8333-333333333333');
+select pg_temp.expect_error(format($f$ select public.save_quiz_physical_draft(%L, 'ec000000-0000-4000-8000-000000000004', %L, 1, '[]', gen_random_uuid()) $f$,
+  pg_temp.academy(), pg_temp.rec('s6')), 'not_eligible');
+select pg_temp.expect_error(format($f$ select public.confirm_quiz_physical(%L, 'ec000000-0000-4000-8000-000000000004', %L, 1, gen_random_uuid()) $f$,
+  pg_temp.academy(), pg_temp.rec('s6')), 'not_eligible');
+select pg_temp.check((pg_temp.student('ec000000-0000-4000-8000-000000000004', 's6')->'physical_draft'->>'version')::integer = 1
+  and not (pg_temp.student('ec000000-0000-4000-8000-000000000004', 's6')->>'eligible')::boolean, 'draft stays readable and the change is visible');
+select pg_temp.check((select count(*) from public.quiz_submissions where quiz_id = 'ec000000-0000-4000-8000-000000000004') = 0, 'nothing was accepted');
+-- Back in the audience: confirmation works; moving out afterwards keeps the accepted work announceable.
+reset role;
+update public.annual_student_records set level_id = 'grade-9', primary_group_id = 'ea888888-0000-4000-8000-000000000001' where id = pg_temp.rec('s6');
+set local role authenticated;
+select pg_temp.as_user('e3333333-3333-4333-8333-333333333333');
+do $$ declare out jsonb; begin
+  out := public.confirm_quiz_physical(pg_temp.academy(), 'ec000000-0000-4000-8000-000000000004', pg_temp.rec('s6'), 1, 'ed000000-0000-4000-8000-0000000000d1');
+  perform pg_temp.check(out->>'outcome' = 'confirmed', 'confirmed once eligible again');
+end $$;
+reset role;
+update public.annual_student_records set level_id = 'grade-10', primary_group_id = null where id = pg_temp.rec('s6');
+set local role authenticated;
+select pg_temp.as_user('e3333333-3333-4333-8333-333333333333');
+do $$ declare out jsonb; begin
+  -- A historical idempotent retry replays; it is not a fresh submission.
+  out := public.confirm_quiz_physical(pg_temp.academy(), 'ec000000-0000-4000-8000-000000000004', pg_temp.rec('s6'), 1, 'ed000000-0000-4000-8000-0000000000d1');
+  perform pg_temp.check((out->>'replayed')::boolean, 'retry replays after the move');
+  out := public.announce_quiz_results(pg_temp.academy(), 'ec000000-0000-4000-8000-000000000004',
+    (pg_temp.quiz('ec000000-0000-4000-8000-000000000004')->>'scoring_revision')::integer, jsonb_build_array(
+    jsonb_build_object('annual_student_record_id', pg_temp.rec('s6'), 'expected_version',
+      (pg_temp.student('ec000000-0000-4000-8000-000000000004', 's6')->>'version')::integer)), gen_random_uuid());
+  perform pg_temp.check(out->>'outcome' = 'published', 'accepted work of a moved-out student is still announceable');
+end $$;
+reset role;
+update public.annual_student_records set level_id = 'grade-9', primary_group_id = 'ea888888-0000-4000-8000-000000000001' where id = pg_temp.rec('s6');
+
+-- A blank confirmation locks the scoring structure before any result exists.
+set local role authenticated;
+select pg_temp.as_user('e3333333-3333-4333-8333-333333333333');
+do $$ declare out jsonb; q jsonb; begin
+  perform pg_temp.check(pg_temp.quiz('ec000000-0000-4000-8000-000000000005')->>'structure_locked_at' is null, 'fresh quiz is unlocked');
+  out := public.confirm_quiz_physical(pg_temp.academy(), 'ec000000-0000-4000-8000-000000000005', pg_temp.rec('s2'), 0, gen_random_uuid());
+  perform pg_temp.check(out->>'outcome' = 'confirmed', 'blank physical work confirmed');
+  q := pg_temp.quiz('ec000000-0000-4000-8000-000000000005');
+  perform pg_temp.check(q->>'structure_locked_at' is not null, 'acceptance locked the structure');
+  perform pg_temp.expect_error(format($f$ select public.update_quiz(%L, %L, %s, %L) $f$, pg_temp.academy(), 'ec000000-0000-4000-8000-000000000005', q->>'version',
+    jsonb_set(jsonb_build_object('title', 'Paper quiz', 'audience', 'level', 'level_id', 'grade-9',
+      'parts', jsonb_build_array(jsonb_build_object('id', q->'parts'->0->'id', 'title', 'Choices', 'kind', 'question_sheet', 'questions', jsonb_build_array(
+        jsonb_build_object('id', q->'parts'->0->'questions'->0->'id', 'prompt', 'One?', 'max_score', '5',
+          'choices', '[{"label":"A","is_correct":true},{"label":"B"}]'::jsonb),
+        jsonb_build_object('id', q->'parts'->0->'questions'->1->'id', 'prompt', 'Two?', 'max_score', '2',
+          'choices', '[{"label":"A"},{"label":"B","is_correct":true}]'::jsonb))))),
+      '{title}', '"Paper quiz"')), 'structure_locked');
+end $$;
+
+-- A due attempt nobody has processed is reported as pending by the reads; the detail read settles it.
+select pg_temp.as_user('e2222222-2222-4222-8222-222222222222');
+do $$ begin
+  perform public.configure_quiz_availability(pg_temp.academy(), 'ec000000-0000-4000-8000-000000000006', 1, now() - interval '1 minute', now() + interval '1 hour');
+end $$;
+reset role;
+select edra_private.start_quiz_attempt_for('ec000000-0000-4000-8000-000000000006', pg_temp.rec('s3'));
+update public.quizzes set opens_at = now() - interval '3 hours', closes_at = now() - interval '1 hour', actual_closes_at = now() - interval '58 minutes'
+where id = 'ec000000-0000-4000-8000-000000000006';
+select pg_temp.check((edra_private.quiz_json('ec000000-0000-4000-8000-000000000006')->>'processing_pending')::boolean
+  and edra_private.quiz_json('ec000000-0000-4000-8000-000000000006')->>'phase' = 'closed', 'closed by time, still pending processing');
+set local role authenticated;
+select pg_temp.as_user('e2222222-2222-4222-8222-222222222222');
+do $$ declare listed jsonb; detail jsonb; begin
+  listed := public.list_quizzes(pg_temp.academy(), null, null, null, null, true, 50, 0);
+  perform pg_temp.check((select (i->>'processing_pending')::boolean from jsonb_array_elements(listed->'items') i
+    where i->>'id' = 'ec000000-0000-4000-8000-000000000006'), 'list reports pending processing');
+  detail := public.get_quiz(pg_temp.academy(), 'ec000000-0000-4000-8000-000000000006');
+  perform pg_temp.check(not (detail->>'processing_pending')::boolean and detail->>'closure_settled_at' is not null, 'detail settles and reports it');
+end $$;
+reset role;
+select pg_temp.check((select reason = 'window_closed' and submitted_at < processed_at from public.quiz_submissions
+  where quiz_id = 'ec000000-0000-4000-8000-000000000006'), 'saved work submitted with the original cutoff and a later processing time');
+
+-- ---------------------------------------------------------------------------------------------
 -- Year closure settles due work and refuses while an attempt still runs; afterwards everything is read-only.
 
 set local role authenticated;

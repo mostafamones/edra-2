@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { formatScore } from "@/lib/score";
 import type { QuizPermissions } from "../../permissions";
 import type { Quiz, QuizQuestion } from "../../types";
-import { choiceLetter, KIND_LABELS, PHASE_HINTS } from "../shared/labels";
+import { choiceLetter, KIND_LABELS, PHASE_HINTS, PROCESSING_PENDING_HINT } from "../shared/labels";
 import { QuizTime } from "../shared/time";
 import { CorrectionDialog } from "./correction";
 
@@ -44,7 +44,7 @@ export function QuizOverview({ quiz, permissions }: { quiz: Quiz; permissions: Q
           <div><span className="block text-xs text-muted-foreground">Actual closure</span><QuizTime value={quiz.actualClosesAt} fallback="Not set" /></div>
           <div><span className="block text-xs text-muted-foreground">Timer</span>{quiz.timeLimitMinutes ? `${quiz.timeLimitMinutes} minutes per attempt` : "Untimed"}</div>
           <p className="text-muted-foreground sm:col-span-2 lg:col-span-4">
-            {PHASE_HINTS[quiz.phase]} {quiz.fullyAutomatic ? "Every scored question is automatic, so accepted online work is announced as soon as it’s submitted; physical work is announced by staff." : "Written Work needs marking before results can be announced."}
+            {PHASE_HINTS[quiz.phase]} {quiz.processingPending ? `${PROCESSING_PENDING_HINT} ` : ""}{quiz.fullyAutomatic ? "Every scored question is automatic, so accepted online work is announced as soon as it’s submitted; physical work is announced by staff." : "Written Work needs marking before results can be announced."}
           </p>
         </CardContent>
       </Card>

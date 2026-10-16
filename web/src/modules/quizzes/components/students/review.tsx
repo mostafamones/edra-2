@@ -33,15 +33,29 @@ export function WorkReview({ quiz, student, detail, permissions }: { quiz: Quiz;
   const questions = new Map<string, QuizQuestion>(quiz.parts.flatMap((part) => part.questions).map((question) => [question.id, question]));
   const savedMarks = Object.fromEntries(detail.questions.filter((question) => question.kind === "written_work")
     .map((question) => [question.questionId, question.mark === null ? "" : formatScore(question.mark)]));
+  // What the form is based on. Newer server data never replaces local input silently: it is adopted
+  // only when the staff member has no edits of their own (or their edits already match it).
+  const incoming = { version: student.version, scoring: quiz.scoringRevision, marks: savedMarks, feedback: student.feedback };
+  const [base, setBase] = useState(incoming);
   const [marks, setMarks] = useState<Record<string, string>>(savedMarks);
   const [feedback, setFeedback] = useState(student.feedback);
+  const sameMarks = (left: Record<string, string>, right: Record<string, string>) => JSON.stringify(Object.entries(left).sort()) === JSON.stringify(Object.entries(right).sort());
+  const newerAvailable = base.version !== incoming.version || base.scoring !== incoming.scoring;
+  if (newerAvailable) {
+    const untouched = sameMarks(marks, base.marks) && feedback === base.feedback;
+    const matchesIncoming = sameMarks(marks, incoming.marks) && feedback === incoming.feedback;
+    if (untouched || matchesIncoming) {
+      setBase(incoming); setMarks(incoming.marks); setFeedback(incoming.feedback);
+    }
+  }
+  const discardAndReload = () => { setBase(incoming); setMarks(incoming.marks); setFeedback(incoming.feedback); setError(null); };
   const [busy, setBusy] = useState<"marks" | "announce" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const changes = Object.entries(marks).filter(([id, value]) => value.trim() !== savedMarks[id])
+  const changes = Object.entries(marks).filter(([id, value]) => value.trim() !== base.marks[id])
     .map(([questionId, value]) => ({ questionId, score: value.trim() === "" ? null : value.trim() }));
   const invalid = changes.filter((change) => change.score !== null && !isValidScoreText(change.score, questions.get(change.questionId)?.maxScore ?? "0"));
-  const feedbackChanged = feedback !== student.feedback;
+  const feedbackChanged = feedback !== base.feedback;
   const dirty = changes.length > 0 || feedbackChanged;
   const refresh = () => void queryClient.invalidateQueries({ queryKey: quizzesRootKey(quiz.academyId) });
 
@@ -51,8 +65,8 @@ export function WorkReview({ quiz, student, detail, permissions }: { quiz: Quiz;
     const payload = { marks: changes, ...(feedbackChanged ? { feedback } : {}) };
     try {
       const result = await saveQuizMarks({
-        academyId: quiz.academyId, quizId: quiz.id, recordId: student.recordId, expectedVersion: student.version, ...payload,
-        key: marksKey.keyFor(JSON.stringify([student.version, payload])),
+        academyId: quiz.academyId, quizId: quiz.id, recordId: student.recordId, expectedVersion: base.version, ...payload,
+        key: marksKey.keyFor(JSON.stringify([base.version, payload])),
       });
       if (!isCurrentAcademy(quiz.academyId)) return;
       if (!result.ok) { setError(result.message); return; }
@@ -61,7 +75,7 @@ export function WorkReview({ quiz, student, detail, permissions }: { quiz: Quiz;
       else toast.success("Marks saved privately. Students see them once the result is announced.");
       refresh();
     } catch {
-      if (isCurrentAcademy(quiz.academyId)) setError("Could not reach the server. Your marks are kept; try again.");
+      if (isCurrentAcademy(quiz.academyId)) setError("The connection dropped, so we couldn’t confirm whether this saved. Your marks are kept; trying again repeats the same request.");
     } finally {
       setBusy(null);
     }
@@ -70,11 +84,11 @@ export function WorkReview({ quiz, student, detail, permissions }: { quiz: Quiz;
   async function announce() {
     setBusy("announce");
     setError(null);
-    const items = [{ recordId: student.recordId, expectedVersion: student.version }];
+    const items = [{ recordId: student.recordId, expectedVersion: base.version }];
     try {
       const result = await announceQuizResults({
-        academyId: quiz.academyId, quizId: quiz.id, expectedScoringRevision: quiz.scoringRevision, items,
-        key: announceKey.keyFor(JSON.stringify([quiz.scoringRevision, items])),
+        academyId: quiz.academyId, quizId: quiz.id, expectedScoringRevision: base.scoring, items,
+        key: announceKey.keyFor(JSON.stringify([base.scoring, items])),
       });
       if (!isCurrentAcademy(quiz.academyId)) return;
       if (!result.ok) { setError(result.message); return; }
@@ -84,7 +98,7 @@ export function WorkReview({ quiz, student, detail, permissions }: { quiz: Quiz;
       toast.success(outcome === "corrected" ? "Corrected result announced." : outcome === "unchanged" ? "This result was already announced." : "Result announced.");
       refresh();
     } catch {
-      if (isCurrentAcademy(quiz.academyId)) setError("Could not reach the server. Nothing was announced; try again.");
+      if (isCurrentAcademy(quiz.academyId)) setError("We couldn’t confirm whether this was announced. Nothing was changed on your screen; retrying uses the same request, so it can’t announce twice.");
     } finally {
       setBusy(null);
     }
@@ -93,6 +107,16 @@ export function WorkReview({ quiz, student, detail, permissions }: { quiz: Quiz;
   return (
     <section aria-labelledby="work-review" className="flex flex-col gap-4">
       <h3 id="work-review" className="font-heading font-semibold">{student.submission?.source === "physical" ? "Physical work" : "Online submission"}</h3>
+      {newerAvailable && (
+        <Alert>
+          <IconAlertCircle />
+          <AlertTitle>This work changed elsewhere</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            Your unsaved marks are kept. Saving checks them against the version you started from, so a newer change is never overwritten without you seeing it.
+            <Button variant="outline" size="sm" onClick={discardAndReload}>Discard mine and load latest</Button>
+          </AlertDescription>
+        </Alert>
+      )}
       {error && <Alert variant="destructive"><IconAlertCircle /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
       <ol className="flex flex-col gap-2">
         {detail.questions.map((entry) => {

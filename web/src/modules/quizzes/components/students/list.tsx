@@ -84,7 +84,7 @@ export function QuizStudents({ academy, quiz, permissions }: Props) {
       const changed = result.results.filter((entry) => entry.outcome !== "unchanged").length;
       toast.success(changed === 0 ? "These results were already announced." : `${changed} result${changed === 1 ? "" : "s"} announced.`);
     } catch {
-      if (isCurrentAcademy(academy.id)) toast.error("Could not reach the server. Nothing was announced; try again.");
+      if (isCurrentAcademy(academy.id)) toast.error("We couldn’t confirm whether this was announced. Nothing was changed on your screen; retrying uses the same request, so it can’t announce twice.");
     } finally {
       setAnnouncing(false);
       void queryClient.invalidateQueries({ queryKey: quizzesRootKey(academy.id) });

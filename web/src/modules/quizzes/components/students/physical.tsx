@@ -37,11 +37,18 @@ export function PhysicalEntry({ quiz, student, detail, permissions }: { quiz: Qu
   const hasWritten = quiz.parts.some((part) => part.kind === "written_work");
   const saved = Object.fromEntries(detail.questions.filter((question) => question.physicalAnswer)
     .map((question) => [question.questionId, question.physicalAnswer?.choiceId ?? BLANK]));
+  const incoming = { version: student.physicalDraft?.version ?? 0, entries: saved };
+  const [base, setBase] = useState(incoming);
   const [entries, setEntries] = useState<Record<string, string>>(saved);
+  const sameEntries = (left: Record<string, string>, right: Record<string, string>) => JSON.stringify(Object.entries(left).sort()) === JSON.stringify(Object.entries(right).sort());
+  const newerAvailable = base.version !== incoming.version;
+  if (newerAvailable && (sameEntries(entries, base.entries) || sameEntries(entries, incoming.entries))) {
+    setBase(incoming); setEntries(incoming.entries);
+  }
   const [busy, setBusy] = useState<"save" | "confirm" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const version = student.physicalDraft?.version ?? 0;
-  const dirty = JSON.stringify(entries) !== JSON.stringify(saved);
+  const version = base.version;
+  const dirty = !sameEntries(entries, base.entries);
   const answering = student.attempt && !student.attempt.finalizedAt && !student.attempt.superseded;
 
   const refresh = () => void queryClient.invalidateQueries({ queryKey: quizzesRootKey(quiz.academyId) });
@@ -68,7 +75,7 @@ export function PhysicalEntry({ quiz, student, detail, permissions }: { quiz: Qu
       if (!isCurrentAcademy(quiz.academyId)) return;
       if (report(result, "Physical answers saved as a draft.")) draftKey.reset();
     } catch {
-      if (isCurrentAcademy(quiz.academyId)) setError("Could not reach the server. Your entries are kept; try again.");
+      if (isCurrentAcademy(quiz.academyId)) setError("The connection dropped, so we couldn’t confirm whether this saved. Your entries are kept; trying again repeats the same request.");
     } finally {
       setBusy(null);
     }
@@ -84,7 +91,7 @@ export function PhysicalEntry({ quiz, student, detail, permissions }: { quiz: Qu
       if (!isCurrentAcademy(quiz.academyId)) return;
       if (report(result, hasWritten ? "Physical work confirmed. Mark the written questions, then announce the result." : "Physical work confirmed. Announce the result when ready.")) confirmKey.reset();
     } catch {
-      if (isCurrentAcademy(quiz.academyId)) setError("Could not reach the server. Try again.");
+      if (isCurrentAcademy(quiz.academyId)) setError("The connection dropped, so we couldn’t confirm whether this was saved. Reload to see the current state before trying again.");
     } finally {
       setBusy(null);
     }
@@ -101,8 +108,17 @@ export function PhysicalEntry({ quiz, student, detail, permissions }: { quiz: Qu
       </Alert>
     );
   }
-  if (!student.eligible && !student.physicalDraft) {
-    return <Alert><IconInfoCircle /><AlertTitle>Not in the audience</AlertTitle><AlertDescription>This student left the quiz audience and has no physical entry, so new work can’t be recorded.</AlertDescription></Alert>;
+  if (!student.eligible) {
+    return (
+      <Alert>
+        <IconInfoCircle />
+        <AlertTitle>Not in the audience now</AlertTitle>
+        <AlertDescription>
+          This student is no longer in the quiz audience, so new physical answers can’t be saved or confirmed.
+          {student.physicalDraft ? " The saved draft is kept for the record." : ""}
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   return (
@@ -113,6 +129,16 @@ export function PhysicalEntry({ quiz, student, detail, permissions }: { quiz: Qu
           <IconInfoCircle />
           <AlertTitle>Also answering online</AlertTitle>
           <AlertDescription>The first final submission wins: if you confirm physical work first, the online attempt stops and its answers are kept as history.</AlertDescription>
+        </Alert>
+      )}
+      {newerAvailable && (
+        <Alert>
+          <IconAlertCircle />
+          <AlertTitle>This entry changed elsewhere</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            Your unsaved answers are kept and checked against the version you started from.
+            <Button variant="outline" size="sm" onClick={() => { setBase(incoming); setEntries(incoming.entries); setError(null); }}>Discard mine and load latest</Button>
+          </AlertDescription>
         </Alert>
       )}
       {error && <Alert variant="destructive"><IconAlertCircle /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}

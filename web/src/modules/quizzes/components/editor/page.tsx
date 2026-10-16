@@ -57,8 +57,8 @@ function EditContent({ academy, quizId }: { academy: AcademyEntry; quizId: strin
       </main>
     );
   }
-  // Re-mount on each saved version so the form starts from the latest preparation.
-  return <FormPage key={query.data.version} title="Edit quiz" academy={academy} quiz={query.data} />;
+  // The form keeps its own unsaved input across background refreshes and offers a choice when a newer version arrives.
+  return <FormPage title="Edit quiz" academy={academy} quiz={query.data} />;
 }
 
 function FormPage({ title, academy, quiz }: { title: string; academy: AcademyEntry; quiz?: Quiz }) {

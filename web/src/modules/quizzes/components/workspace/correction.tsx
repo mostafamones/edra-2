@@ -52,7 +52,7 @@ export function CorrectionDialog({ quiz, question, mode, onClose }: Props) {
       void queryClient.invalidateQueries({ queryKey: quizzesRootKey(quiz.academyId) });
       onClose();
     } catch {
-      if (isCurrentAcademy(quiz.academyId)) setError("Could not reach the server. Try again.");
+      if (isCurrentAcademy(quiz.academyId)) setError("The connection dropped, so we couldn’t confirm whether this was saved. Reload to see the current state before trying again.");
     } finally {
       setBusy(false);
     }

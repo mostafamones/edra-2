@@ -82,8 +82,20 @@ type BodyProps = Props & {
 function FormBody({ academy, quiz, onSaved, onCancel, academicYearId, structure, groups }: BodyProps) {
   const queryClient = useQueryClient();
   const isCurrentAcademy = useAcademyScope();
-  const initial = useMemo(() => (quiz ? quizToValues(quiz) : emptyQuizValues()), [quiz]);
-  const [values, setValues] = useState<QuizFormValues>(initial);
+  const incoming = useMemo(() => (quiz ? quizToValues(quiz) : emptyQuizValues()), [quiz]);
+  // The saved basis the entered values started from. A newer server version never replaces local input
+  // silently, and a save is always checked against this version.
+  const [basis, setBasis] = useState({ version: quiz?.version ?? 0, values: incoming });
+  const initial = basis.values;
+  const [values, setValues] = useState<QuizFormValues>(incoming);
+  const newerAvailable = quiz !== undefined && quiz.version !== basis.version;
+  if (newerAvailable) {
+    const same = (left: QuizFormValues, right: QuizFormValues) => JSON.stringify(left) === JSON.stringify(right);
+    if (same(values, basis.values) || same(values, incoming)) {
+      setBasis({ version: quiz.version, values: incoming });
+      setValues(incoming);
+    }
+  }
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,7 +122,7 @@ function FormBody({ academy, quiz, onSaved, onCancel, academicYearId, structure,
     setSaving(true);
     try {
       const result = quiz
-        ? await saveQuiz({ academyId: academy.id, quizId: quiz.id, expectedVersion: quiz.version, draft })
+        ? await saveQuiz({ academyId: academy.id, quizId: quiz.id, expectedVersion: basis.version, draft })
         : await createNewQuiz({ academyId: academy.id, academicYearId, quizId: createId.current, draft });
       if (!isCurrentAcademy(academy.id)) return;
       if (!result.ok) { setError(result.message); return; }
@@ -118,7 +130,7 @@ function FormBody({ academy, quiz, onSaved, onCancel, academicYearId, structure,
       toast.success(result.quiz.ready ? "Quiz saved. It’s ready to receive work." : "Quiz saved. Finish setup before it can receive work.");
       onSaved(result.quiz);
     } catch {
-      if (isCurrentAcademy(academy.id)) setError("Could not reach the server. Your changes are kept; try again.");
+      if (isCurrentAcademy(academy.id)) setError("The connection dropped, so we couldn’t confirm whether this saved. Your changes are kept; trying again repeats the same request.");
     } finally {
       setSaving(false);
     }
@@ -130,6 +142,18 @@ function FormBody({ academy, quiz, onSaved, onCancel, academicYearId, structure,
 
   return (
     <form className="flex flex-col gap-8" onSubmit={(event) => { event.preventDefault(); void save(); }} noValidate>
+      {newerAvailable && (
+        <Alert>
+          <IconAlertCircle />
+          <AlertTitle>This quiz changed elsewhere</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            Your unsaved changes are kept. Saving checks them against the version you started from, so the newer change is not overwritten without you seeing it.
+            <Button type="button" variant="outline" size="sm" onClick={() => { setBasis({ version: quiz.version, values: incoming }); setValues(incoming); setError(null); }}>
+              Discard mine and load latest
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       {error && (
         <Alert variant="destructive">
           <IconAlertCircle />

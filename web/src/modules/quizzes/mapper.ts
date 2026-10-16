@@ -33,6 +33,7 @@ const quizSchema = z.object({
   work_started_at: timestamp.nullable(),
   structure_locked_at: timestamp.nullable(),
   closure_settled_at: timestamp.nullable().default(null),
+  processing_pending: z.boolean().default(false),
   created_at: timestamp,
   updated_at: timestamp,
   archived_at: timestamp.nullable(),
@@ -87,6 +88,7 @@ export function toQuiz(value: unknown): Quiz {
     workStartedAt: row.work_started_at,
     structureLockedAt: row.structure_locked_at,
     closureSettledAt: row.closure_settled_at,
+    processingPending: row.processing_pending,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     archivedAt: row.archived_at,
@@ -121,6 +123,7 @@ const summarySchema = z.object({
   time_limit_minutes: z.number().int().nullable(), opens_at: timestamp.nullable(), closes_at: timestamp.nullable(),
   actual_closes_at: timestamp.nullable(), max_score: decimal, effective_max_score: decimal, question_count: z.number().int(),
   phase: z.enum(QUIZ_PHASES), updated_at: timestamp, submitted: z.number().int(), in_progress: z.number().int(), announced: z.number().int(),
+  processing_pending: z.boolean().default(false), closure_settled_at: timestamp.nullable().default(null),
 });
 
 export function toQuizPage(value: unknown): { total: number; quizzes: QuizSummary[]; serverNow: string } {
@@ -133,6 +136,7 @@ export function toQuizPage(value: unknown): { total: number; quizzes: QuizSummar
       groupIds: row.group_ids, timeLimitMinutes: row.time_limit_minutes, opensAt: row.opens_at, closesAt: row.closes_at,
       actualClosesAt: row.actual_closes_at, maxScore: row.max_score, effectiveMaxScore: row.effective_max_score, questionCount: row.question_count,
       phase: row.phase, updatedAt: row.updated_at, submitted: row.submitted, inProgress: row.in_progress, announced: row.announced,
+      processingPending: row.processing_pending, closureSettledAt: row.closure_settled_at,
     })),
   };
 }

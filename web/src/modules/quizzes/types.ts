@@ -77,6 +77,8 @@ export type Quiz = {
   workStartedAt: string | null;
   structureLockedAt: string | null;
   closureSettledAt: string | null;
+  /** Work is due (an attempt past its cutoff or closure not yet settled) and not yet processed. Detail reads settle it. */
+  processingPending: boolean;
   createdAt: string;
   updatedAt: string;
   archivedAt: string | null;
@@ -123,6 +125,9 @@ export type QuizSummary = {
   effectiveMaxScore: string;
   questionCount: number;
   phase: QuizPhase;
+  /** Due work still awaiting processing; the list read never settles it. */
+  processingPending: boolean;
+  closureSettledAt: string | null;
   updatedAt: string;
   submitted: number;
   inProgress: number;

@@ -31,19 +31,32 @@ export function AvailabilityDialog({ quiz }: { quiz: Quiz }) {
   const [values, setValues] = useState({ opensDate: opens?.date ?? "", opensTime: opens?.time ?? "", closesDate: closes?.date ?? "", closesTime: closes?.time ?? "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The version the entered values were based on; submitting never silently adopts a newer one.
+  const [baseVersion, setBaseVersion] = useState(quiz.version);
+  const newerAvailable = quiz.version !== baseVersion;
   const opened = quiz.opensAt !== null && Date.parse(quiz.serverNow) >= Date.parse(quiz.opensAt);
   const started = quiz.workStartedAt !== null;
 
   const opensAt = academyInstant(values.opensDate, values.opensTime);
   const closesAt = academyInstant(values.closesDate, values.closesTime);
   const invalid = !opensAt || !closesAt || Date.parse(opensAt) >= Date.parse(closesAt);
+  const entered = values.opensDate && values.opensTime && values.closesDate && values.closesTime;
+  const timeProblem = entered && (!opensAt || !closesAt)
+    ? "That date or time doesn’t exist in academy time (a real calendar day is needed, and the hour skipped when daylight saving starts is not valid)."
+    : null;
+
+  function reload() {
+    setValues({ opensDate: opens?.date ?? "", opensTime: opens?.time ?? "", closesDate: closes?.date ?? "", closesTime: closes?.time ?? "" });
+    setBaseVersion(quiz.version);
+    setError(null);
+  }
 
   async function submit(clear: boolean) {
     setBusy(true);
     setError(null);
     try {
       const result = await setQuizAvailability({
-        academyId: quiz.academyId, quizId: quiz.id, expectedVersion: quiz.version,
+        academyId: quiz.academyId, quizId: quiz.id, expectedVersion: baseVersion,
         opensAt: clear ? null : opensAt, closesAt: clear ? null : closesAt,
       });
       if (!isCurrentAcademy(quiz.academyId)) return;
@@ -52,7 +65,7 @@ export function AvailabilityDialog({ quiz }: { quiz: Quiz }) {
       void queryClient.invalidateQueries({ queryKey: quizzesRootKey(quiz.academyId) });
       setOpen(false);
     } catch {
-      if (isCurrentAcademy(quiz.academyId)) setError("Could not reach the server. Try again.");
+      if (isCurrentAcademy(quiz.academyId)) setError("The connection dropped, so we couldn’t confirm whether this was saved. Reload to see the current state before trying again.");
     } finally {
       setBusy(false);
     }
@@ -68,6 +81,17 @@ export function AvailabilityDialog({ quiz }: { quiz: Quiz }) {
             Students can start between opening and the scheduled close. Attempts already started may finish until actual closure, two minutes later. Times are in academy time ({ACADEMY_TIME_ZONE}).
           </DialogDescription>
         </DialogHeader>
+        {newerAvailable && (
+          <Alert>
+            <IconAlertCircle />
+            <AlertTitle>The window changed elsewhere</AlertTitle>
+            <AlertDescription className="flex flex-wrap items-center gap-3">
+              Your entries are kept and will be checked against the version you started from.
+              <Button variant="outline" size="sm" onClick={reload}>Discard mine and reload</Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        {timeProblem && <Alert variant="destructive"><IconAlertCircle /><AlertTitle>Check the time</AlertTitle><AlertDescription>{timeProblem}</AlertDescription></Alert>}
         {error && <Alert variant="destructive"><IconAlertCircle /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
         <FieldGroup>
           <Field>

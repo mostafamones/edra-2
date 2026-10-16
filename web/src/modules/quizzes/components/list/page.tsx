@@ -175,7 +175,10 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
                           {quiz.timeLimitMinutes ? ` · ${quiz.timeLimitMinutes} min` : ""}
                         </span>
                       </TableCell>
-                      <TableCell><Badge variant={PHASE_BADGE[quiz.phase]}>{PHASE_LABELS[quiz.phase]}</Badge></TableCell>
+                      <TableCell>
+                        <Badge variant={PHASE_BADGE[quiz.phase]}>{PHASE_LABELS[quiz.phase]}</Badge>
+                        {quiz.processingPending && <span className="mt-0.5 block text-xs text-muted-foreground">Processing closure</span>}
+                      </TableCell>
                       <TableCell className="text-xs">
                         {quiz.opensAt ? (
                           <span className="flex flex-col">

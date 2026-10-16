@@ -252,6 +252,14 @@ components:
         submitted: { type: integer }
         in_progress: { type: integer }
         announced: { type: integer }
+        processing_pending:
+          type: boolean
+          description: >-
+            Due work (an attempt past its cutoff, or actual closure not yet settled) has not been processed.
+            The list is a read-only snapshot and never settles; `GET /quizzes/{quizId}` and staff commands
+            settle it, and the deadline worker does so within about a minute. `phase` is derived from time
+            and stays `closed` regardless; this flag is the separate processing fact.
+        closure_settled_at: { type: [string, "null"], format: date-time }
     Quiz:
       type: object
       description: Staff document. Includes the key (`is_correct`), model answers and solution notes.
@@ -278,6 +286,7 @@ components:
         work_started_at: { type: [string, "null"], description: Audience and timer are locked from here. }
         structure_locked_at: { type: [string, "null"], description: Parts, questions, choices, maxima and key are locked from here. }
         closure_settled_at: { type: [string, "null"] }
+        processing_pending: { type: boolean, description: Always false after this read, which settles due work first. }
         year_open: { type: boolean }
         ready: { type: boolean }
         issues: { type: array, items: { type: object } }

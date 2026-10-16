@@ -27,8 +27,8 @@ type Props = {
 
 /**
  * One student's quiz work. Before a source is accepted: physical entry and confirmation. Afterwards:
- * the accepted answers, private marks, announcement and official history. Sections re-mount on every
- * new version so they always start from saved values.
+ * the accepted answers, private marks, announcement and official history. Sections keep unsaved input across
+ * background refreshes and show a choice when newer saved data arrives.
  */
 export function StudentSheet({ academy, quiz, permissions, recordId, name, onClose }: Props) {
   const query = useQuery({
@@ -60,9 +60,9 @@ export function StudentSheet({ academy, quiz, permissions, recordId, name, onClo
             <>
               <WorkTimeline quiz={quiz} student={data.student} />
               {data.student.submission ? (
-                <WorkReview key={`${data.student.version}-${quiz.scoringRevision}`} quiz={quiz} student={data.student} detail={data.detail} permissions={permissions} />
+                <WorkReview key={data.student.recordId} quiz={quiz} student={data.student} detail={data.detail} permissions={permissions} />
               ) : (
-                <PhysicalEntry key={data.student.physicalDraft?.version ?? 0} quiz={quiz} student={data.student} detail={data.detail} permissions={permissions} />
+                <PhysicalEntry key={data.student.recordId} quiz={quiz} student={data.student} detail={data.detail} permissions={permissions} />
               )}
               <WorkHistory quiz={quiz} detail={data.detail} />
             </>
