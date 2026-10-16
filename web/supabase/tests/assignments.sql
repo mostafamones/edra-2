@@ -1,5 +1,5 @@
 -- Assignments, checkpoint 1: grants, roles, tenant isolation, exact part maxima, stale edits,
--- audience validation, the publication snapshot, structure locking, lifecycle, and closed years.
+-- audience validation, save-time recipient snapshots, activity locking, lifecycle, and closed years.
 -- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back.
 
@@ -124,9 +124,9 @@ select pg_temp.expect_error($s$ select public.create_assignment('a5555555-5555-4
 do $$ declare made jsonb; again jsonb; begin
   made := public.create_assignment('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555',
     'a9999999-0000-4000-8000-000000000001', pg_temp.draft('{"audience":"level","level_id":"grade-9"}'));
-  if made->>'state' <> 'draft' or made->>'max_score' <> '25.00' or (made->>'part_count')::int <> 2 or (made->>'version')::int <> 1
-    or (made->>'recipient_count')::int <> 0 or (made->>'replayed')::boolean or made->'parts'->0->>'title' <> 'A' then
-    raise exception 'Draft is wrong: %', made;
+  if made->>'state' <> 'active' or made->>'max_score' <> '25.00' or (made->>'part_count')::int <> 2 or (made->>'version')::int <> 1
+    or (made->>'recipient_count')::int <> 3 or not (made->>'ready')::boolean or (made->>'replayed')::boolean or made->'parts'->0->>'title' <> 'A' then
+    raise exception 'New assignment is wrong: %', made;
   end if;
   -- A retried create returns the same draft and creates nothing.
   again := public.create_assignment('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555',
@@ -148,7 +148,7 @@ end $$;
 set local request.jwt.claim.sub = 'a2222222-2222-4222-8222-222222222222';
 select pg_temp.expect_error($s$ select public.create_assignment('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', 'a9999999-0000-4000-8000-000000000001', pg_temp.draft('{"audience":"level","level_id":"grade-9"}')) $s$, 'idempotency_conflict');
 
--- The instructor cannot publish, even by calling the RPC directly.
+-- Instructors cannot use manager-only lifecycle actions, even by calling the RPC directly.
 set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
 select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 1, 'publish') $s$, 'forbidden');
 select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 1, 'archive') $s$, 'forbidden');
@@ -181,21 +181,24 @@ do $$ declare preview jsonb; begin
   if (preview->>'recipient_count')::int <> 3 or (preview->>'uncoded_count')::int <> 2 then raise exception 'Preview is wrong: %', preview; end if;
 end $$;
 
--- An audience with no active students cannot be published, and nothing changes.
-select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000002', 1, 'publish') $s$, 'empty_audience');
+-- Empty audiences are allowed; the retired Publish action is rejected without changes.
+select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000002', 1, 'publish') $s$, 'validation');
 do $$ begin
-  if (select state from public.assignments where id = 'a9999999-0000-4000-8000-000000000002') <> 'draft'
+  if (select state from public.assignments where id = 'a9999999-0000-4000-8000-000000000002') <> 'active'
     or exists (select 1 from public.assignment_recipients where assignment_id = 'a9999999-0000-4000-8000-000000000002') then
-    raise exception 'Failed publication left changes';
+    raise exception 'Empty assignment or rejected lifecycle action left unexpected recipients';
   end if;
 end $$;
-select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 1, 'publish') $s$, 'assignment_conflict');
 
--- The admin publishes: the snapshot is the active grade-9 records (uncoded included, archived excluded).
-do $$ declare published jsonb; begin
-  published := public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 2, 'publish');
-  if published->>'state' <> 'published' or (published->>'recipient_count')::int <> 3 or (published->>'version')::int <> 3 then
-    raise exception 'Publication is wrong: %', published;
+-- Saving refreshes the snapshot from active matching records, including uncoded students.
+do $$ declare saved jsonb; begin
+  saved := public.update_assignment('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 2,
+    pg_temp.draft('{"audience":"level","level_id":"grade-9","title":"Unit 3 v2"}', jsonb_build_array(
+      pg_temp.fp(current_setting('test.part_b'), 'B first', '15', current_setting('test.q_b')),
+      pg_temp.fp(current_setting('test.part_a'), 'A second', '10.5', current_setting('test.q_a')))));
+  if saved->>'state' <> 'active' or (saved->>'recipient_count')::int <> 3 or (saved->>'version')::int <> 3
+    or saved->>'published_at' is not null or (saved->>'has_activity')::boolean then
+    raise exception 'Save-time snapshot is wrong: %', saved;
   end if;
   if (select array_agg(annual_student_record_id order by annual_student_record_id) from public.assignment_recipients
       where assignment_id = 'a9999999-0000-4000-8000-000000000001')
@@ -206,19 +209,34 @@ do $$ declare published jsonb; begin
     raise exception 'Recipient list is wrong';
   end if;
 end $$;
-select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 3, 'publish') $s$, 'invalid_state');
+select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 3, 'publish') $s$, 'validation');
 
--- A student enrolled after publication is not added.
+-- Receiving work starts activity and freezes the structure and recipients.
+select public.record_assignment_work('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001',
+  current_setting('test.s1')::uuid, 1, 'submitted', now(), '');
+
+-- A student enrolled after activity starts is not added.
+select public.create_assignment('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555',
+  'a9999999-0000-4000-8000-000000000003', pg_temp.draft('{"audience":"level","level_id":"grade-9"}'));
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
 select public.create_student_record('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555',
   'Late Joiner', '01000000188', '01100000000', 'grade-9', null, 'a8888888-0000-4000-8000-000000000001', 'in_person');
 do $$ begin
   if (select count(*) from public.assignment_recipients where assignment_id = 'a9999999-0000-4000-8000-000000000001') <> 3 then
-    raise exception 'Recipients changed after publication';
+    raise exception 'Recipients changed after activity';
   end if;
 end $$;
 
--- After publication: the instructor cannot edit; structure is locked; text details stay editable by Owner/Admin.
+-- The same enrollment is picked up by the next save while an assignment has no activity.
+do $$ declare saved jsonb; begin
+  saved := public.update_assignment('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000003', 1,
+    pg_temp.draft('{"audience":"level","level_id":"grade-9"}'));
+  if (saved->>'recipient_count')::int <> 4 or (saved->>'has_activity')::boolean then
+    raise exception 'Pre-activity save did not refresh recipients: %', saved;
+  end if;
+end $$;
+
+-- After activity: the instructor cannot edit; structure is locked; text details stay editable by Owner/Admin.
 set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
 select pg_temp.expect_error(format($s$ select public.update_assignment('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 3, pg_temp.draft('{"audience":"level","level_id":"grade-9","title":"Typo fix"}', '[{"id":"%s","title":"B","kind":"file_upload","questions":[{"id":"%s","prompt":"","max_score":"15"}]},{"id":"%s","title":"A","kind":"file_upload","questions":[{"id":"%s","prompt":"","max_score":"10.5"}]}]')) $s$, current_setting('test.part_b'), current_setting('test.q_b'), current_setting('test.part_a'), current_setting('test.q_a')), 'forbidden');
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
@@ -234,28 +252,25 @@ do $$ declare saved jsonb; begin
         pg_temp.fp(current_setting('test.part_a'), 'Sheet A', '10.50', current_setting('test.q_a')))));
   if saved->>'title' <> 'Unit 3 (corrected)' or saved->'parts'->0->>'title' <> 'Sheet B' or (saved->>'version')::int <> 4
     or saved->>'max_score' <> '25.50' or saved->>'due_at' is null then
-    raise exception 'Published text edit is wrong: %', saved;
+    raise exception 'Post-activity text edit is wrong: %', saved;
   end if;
 end $$;
 
--- Lifecycle: unpublish (no activity) clears the snapshot; republish rebuilds it from current data.
+-- Close/reopen preserve the frozen snapshot; a repeated close is rejected.
 do $$ declare result jsonb; begin
-  result := public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 4, 'unpublish');
-  if result->>'state' <> 'draft' or (result->>'recipient_count')::int <> 0
-    or exists (select 1 from public.assignment_recipients where assignment_id = 'a9999999-0000-4000-8000-000000000001') then
-    raise exception 'Unpublish is wrong: %', result;
-  end if;
-  result := public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 5, 'publish');
-  if (result->>'recipient_count')::int <> 4 then raise exception 'Republish must include the late joiner: %', result; end if;
+  result := public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 4, 'close');
+  if result->>'state' <> 'closed' or (result->>'recipient_count')::int <> 3 then raise exception 'Close is wrong: %', result; end if;
+  result := public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 5, 'reopen');
+  if result->>'state' <> 'active' or (result->>'recipient_count')::int <> 3 then raise exception 'Reopen changed the snapshot: %', result; end if;
   result := public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 6, 'close');
   if result->>'state' <> 'closed' then raise exception 'Close is wrong: %', result; end if;
 end $$;
-select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 7, 'unpublish') $s$, 'invalid_state');
+select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 7, 'unpublish') $s$, 'validation');
 select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 7, 'close') $s$, 'invalid_state');
 select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 7, 'bogus') $s$, 'validation');
 do $$ declare result jsonb; begin
   result := public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 7, 'reopen');
-  if result->>'state' <> 'published' or (result->>'recipient_count')::int <> 4 then raise exception 'Reopen is wrong: %', result; end if;
+  if result->>'state' <> 'active' or (result->>'recipient_count')::int <> 3 then raise exception 'Reopen is wrong: %', result; end if;
 end $$;
 select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 8, 'archive') $s$, 'invalid_state');
 select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000002', 1, 'archive');
@@ -280,8 +295,8 @@ set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
 select pg_temp.expect_error($s$ update public.assignments set max_score = 1 where id = 'a9999999-0000-4000-8000-000000000001' $s$, 'permission denied%');
 select pg_temp.expect_error($s$ insert into public.assignment_recipients (assignment_id, annual_student_record_id, academy_id, academic_year_id) values ('a9999999-0000-4000-8000-000000000001', gen_random_uuid(), 'a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555') $s$, 'permission denied%');
 
--- Typed parts (marks per question): maxima are derived, answer keys stay private, publishing needs
--- complete parts, and a published scheme is locked.
+-- Typed parts (marks per question): maxima are derived, answer keys stay private, readiness needs
+-- complete parts, and activity locks a scheme.
 do $$ declare made jsonb; begin
   made := public.create_assignment('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555',
     'a9999999-0000-4000-8000-0000000000a1', pg_temp.draft('{"audience":"level","level_id":"grade-9","title":"Mixed"}', $p$[
@@ -307,7 +322,7 @@ do $$ declare made jsonb; begin
       jsonb_build_object('id', current_setting('test.mixed_part'), 'title', 'Quiz', 'kind', 'online_questions', 'questions', jsonb_build_array(
         jsonb_build_object('id', current_setting('test.mixed_q'), 'prompt', '2+2?', 'max_score', '2.5', 'choices', jsonb_build_array(
           jsonb_build_object('id', current_setting('test.mixed_c'), 'label', '3', 'is_correct', true),
-          jsonb_build_object('label', '4')))))));
+          jsonb_build_object('label', '4'))))))));
   if made->>'max_score' <> '2.50' or made->>'part_count' <> '1' then raise exception 'Typed edit is wrong: %', made; end if;
 end $$;
 
@@ -321,7 +336,7 @@ select pg_temp.expect_error(format($s$ select public.update_assignment('a5555555
 -- A new legacy (maximum-only) part cannot be created.
 select pg_temp.expect_error($s$ select public.create_assignment('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', gen_random_uuid(), pg_temp.draft('{"audience":"level","level_id":"grade-9"}', '[{"title":"Legacy-like","max_score":"10"}]')) $s$, 'validation');
 
--- An unfinished draft saves; publishing refuses it until the scheme is complete.
+-- An unfinished assignment saves as active but is not ready for work.
 do $$ declare saved jsonb; begin
   saved := public.update_assignment('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-0000000000a1', 2,
     pg_temp.draft('{"audience":"level","level_id":"grade-9"}', jsonb_build_array(
@@ -335,9 +350,15 @@ do $$ declare saved jsonb; begin
     raise exception 'Unfinished draft is wrong: %', saved;
   end if;
 end $$;
-select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-0000000000a1', 3, 'publish') $s$, 'incomplete');
+do $$ begin
+  if (public.get_assignment('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-0000000000a1')->>'ready')::boolean then
+    raise exception 'An unfinished assignment must not be ready';
+  end if;
+end $$;
+select pg_temp.expect_error($s$ select public.record_assignment_work('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-0000000000a1', current_setting('test.s1')::uuid, 1, 'submitted', now(), '') $s$, 'incomplete');
 
 -- Answer keys are private: no table grants, no private function access, none in the student projection.
+reset role;
 do $$ begin
   if has_table_privilege('authenticated', 'public.assignment_part_questions', 'select')
     or has_table_privilege('authenticated', 'public.assignment_question_choices', 'select')
@@ -347,6 +368,7 @@ do $$ begin
     raise exception 'Answer key tables or functions are exposed';
   end if;
 end $$;
+set local role authenticated;
 select pg_temp.expect_error($s$ select * from public.assignment_question_choices $s$, 'permission denied%');
 select pg_temp.expect_error($s$ update public.assignment_part_questions set max_score = 99 $s$, 'permission denied%');
 reset role;
@@ -356,27 +378,29 @@ do $$ declare projection jsonb; begin
     or projection->'parts'->0->'questions'->0->'choices'->0 ? 'is_correct' then
     raise exception 'Student projection leaks the key: %', projection;
   end if;
-  -- Even a privileged writer cannot change a published scheme (trigger-level lock): checked after publishing below.
+  -- Even a privileged writer cannot change a scheme with activity (trigger-level lock): checked below.
 end $$;
 set local role authenticated;
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
 
--- A complete scheme publishes and then locks (kinds, questions, choices, marks).
+-- A complete scheme becomes ready; receiving work locks kinds, questions, choices, and marks.
 do $$ declare saved jsonb; begin
   saved := public.update_assignment('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-0000000000a1', 3,
     pg_temp.draft('{"audience":"level","level_id":"grade-9"}', jsonb_build_array(
       jsonb_build_object('id', current_setting('test.mixed_part'), 'title', 'Quiz', 'kind', 'online_questions', 'questions', jsonb_build_array(
         jsonb_build_object('id', current_setting('test.mixed_q'), 'prompt', '2+2?', 'max_score', '2.5', 'choices', jsonb_build_array(
           jsonb_build_object('id', current_setting('test.mixed_c'), 'label', '3', 'is_correct', true),
-          jsonb_build_object('label', '4')))))));
+          jsonb_build_object('label', '4'))))))));
   if jsonb_array_length(saved->'parts'->0->'issues') <> 0 then raise exception 'Complete scheme still has issues: %', saved; end if;
-  perform public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-0000000000a1', (saved->>'version')::int, 'publish');
+  if not (saved->>'ready')::boolean then raise exception 'Complete scheme must be ready'; end if;
+  perform public.record_assignment_work('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-0000000000a1',
+    current_setting('test.s1')::uuid, 1, 'submitted', now(), '');
 end $$;
-select pg_temp.expect_error(format($s$ select public.update_assignment('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-0000000000a1', 5, pg_temp.draft('{"audience":"level","level_id":"grade-9"}', '[{"id":"%s","title":"Quiz","kind":"online_questions","questions":[{"id":"%s","prompt":"Changed?","max_score":"2.5","choices":[{"id":"%s","label":"3","is_correct":true},{"label":"4"}]}]}]')) $s$,
+select pg_temp.expect_error(format($s$ select public.update_assignment('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-0000000000a1', 4, pg_temp.draft('{"audience":"level","level_id":"grade-9"}', '[{"id":"%s","title":"Quiz","kind":"online_questions","questions":[{"id":"%s","prompt":"Changed?","max_score":"2.5","choices":[{"id":"%s","label":"3","is_correct":true},{"label":"4"}]}]}]')) $s$,
   current_setting('test.mixed_part'), current_setting('test.mixed_q'), current_setting('test.mixed_c')), 'structure_locked');
 reset role;
 select pg_temp.expect_error(format($s$ update public.assignment_part_questions set max_score = 9 where id = '%s' $s$, current_setting('test.mixed_q')), 'structure_locked');
--- A legacy maximum-only part stays readable and publishable but is never online-ready, and cannot be created or reverted to.
+-- A legacy maximum-only part stays readable and physically markable but is never online-ready, and cannot be created or reverted to.
 insert into public.assignments (id, academy_id, academic_year_id, title, audience, level_id, created_by, updated_by)
 values ('a9999999-0000-4000-8000-0000000000b1', 'a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', 'Legacy', 'level', 'grade-9',
   'a1111111-1111-4111-8111-111111111111', 'a1111111-1111-4111-8111-111111111111');

@@ -111,7 +111,7 @@ create function pg_temp.mark(n text, marks jsonb, feedback text default null) re
 create function pg_temp.pa(score text) returns jsonb language sql as $$ select jsonb_build_array(jsonb_build_object('part_id', current_setting('test.part_a'), 'score', score)) $$;
 create function pg_temp.pb(score text) returns jsonb language sql as $$ select jsonb_build_array(jsonb_build_object('part_id', current_setting('test.part_b'), 'score', score)) $$;
 
--- The admin creates and publishes a two-part (10 + 15) assignment for grade 9: s1 (coded), s2, s3.
+-- The admin creates an active two-part (10 + 15) assignment for grade 9: s1 (coded), s2, s3.
 set local request.jwt.claim.sub = 'a2222222-2222-4222-8222-222222222222';
 do $$ declare made jsonb; begin
   made := public.create_assignment('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', 'a9999999-0000-4000-8000-000000000001',
@@ -120,9 +120,14 @@ do $$ declare made jsonb; begin
   perform set_config('test.part_a', made->'parts'->0->>'id', true);
   perform set_config('test.part_b', made->'parts'->1->>'id', true);
 end $$;
--- Marking needs a published assignment.
-select pg_temp.expect_error($s$ select public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', pg_temp.rec('s1'), null, 1, jsonb_build_object('marks', pg_temp.pa('5')), gen_random_uuid()) $s$, 'invalid_state');
-select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 1, 'publish');
+-- Active, ready assignments can be marked without a Publish action.
+do $$ declare target jsonb; begin
+  target := public.get_assignment('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001');
+  if target->>'state' <> 'active' or not (target->>'ready')::boolean or (target->>'recipient_count')::int <> 3 then
+    raise exception 'New assignment must be ready with its recipient snapshot: %', target;
+  end if;
+end $$;
+select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 1, 'publish') $s$, 'validation');
 
 -- Outsiders and other academies get nothing: no writes, no reads.
 set local request.jwt.claim.sub = 'c1111111-1111-4111-8111-111111111111';
@@ -256,9 +261,9 @@ do $$ declare saved jsonb; begin
   if saved->>'outcome' <> 'conflict' then raise exception 'Stale work status accepted: %', saved; end if;
 end $$;
 
--- The structure is locked once work is recorded, and the assignment cannot be unpublished.
+-- The structure is locked once work is recorded; active assignments with history cannot be archived.
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
-select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 2, 'unpublish') $s$, 'has_activity');
+select pg_temp.expect_error($s$ select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 1, 'archive') $s$, 'invalid_state');
 
 -- Filters.
 do $$ declare listed jsonb; begin
@@ -329,7 +334,7 @@ select pg_temp.expect_error($s$ update public.assignment_result_publications set
 
 -- Close: no newly received work, but received work stays markable; republishing is still allowed.
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
-select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 2, 'close');
+select public.change_assignment_state('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 1, 'close');
 set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
 do $$ begin
   if (pg_temp.mark('s2', pg_temp.pa('6'))->>'outcome') <> 'saved' then raise exception 'Received work must stay markable'; end if;
