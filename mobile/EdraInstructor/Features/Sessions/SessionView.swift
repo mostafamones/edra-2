@@ -77,18 +77,11 @@ struct SessionView: View {
     private func loaded(_ sheet: AttendanceSheet) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             if model.isArchived {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Archived · not counted").font(.headline)
-                    Text("A manager archived this session. Its attendance is kept for reference, is read-only and doesn't count.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .accessibilityElement(children: .combine)
+                banner("Archived · not counted",
+                       "A manager archived this session. Its attendance is kept for reference, is read-only and doesn't count.")
+            } else if sheet.session.state != "live" {
+                // e.g. a retried start whose original session has ended since.
+                banner("Ended", "This session has ended, so check-ins are closed.")
             }
             stats(sheet).padding(.top, 24)
 
@@ -126,6 +119,21 @@ struct SessionView: View {
                 .refreshable { await model.load() }
             }
         }
+    }
+
+    private func banner(_ title: String, _ message: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.headline)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .accessibilityElement(children: .combine)
     }
 
     /// Compact tiles: three fit the screen width, the rest scroll sideways.

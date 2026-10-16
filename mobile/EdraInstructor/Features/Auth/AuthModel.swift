@@ -13,6 +13,8 @@ final class AuthModel {
     private(set) var state: State = .restoring
     private(set) var errorMessage: String?
     private(set) var phoneError: String?
+    /// The current account's scope while authenticated; ended before any sign-out clears state.
+    private(set) var scope: AccountScope?
 
     let service: AuthService
 
@@ -22,7 +24,13 @@ final class AuthModel {
 
     func restore() async {
         guard state == .restoring else { return }
-        state = await service.restoreSession() ? .authenticated : .signedOut
+        if await service.restoreSession() { authenticated() } else { state = .signedOut }
+    }
+
+    private func authenticated() {
+        scope?.end()
+        scope = AccountScope()
+        state = .authenticated
     }
 
     func signIn(phone: String, password: String) async {
@@ -42,7 +50,7 @@ final class AuthModel {
         state = .signingIn
         do {
             try await service.signIn(phone: normalized, password: password)
-            state = .authenticated
+            authenticated()
         } catch {
             state = .signedOut
             errorMessage = switch error {
@@ -53,7 +61,17 @@ final class AuthModel {
         }
     }
 
+    /// Signs out only if `scope` is still the current account: a late 401 from an earlier account
+    /// must not sign out the one now using the app.
+    func signOut(from scope: AccountScope) async {
+        guard scope.isActive, scope === self.scope else { return }
+        await signOut()
+    }
+
     func signOut() async {
+        // Invalidate in-flight work first, so nothing it completes can touch the next account.
+        scope?.end()
+        scope = nil
         await service.signOut()
         AcademiesModel.clearRememberedSelection()
         errorMessage = nil

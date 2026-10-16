@@ -33,7 +33,12 @@ private struct AuthenticatedRoot: View {
             case .signedOut, .signingIn:
                 SignInView(model: model)
             case .authenticated:
-                SignedInRoot(config: config, auth: model)
+                if let scope = model.scope {
+                    // A new account scope gets fresh models; nothing carries over between accounts.
+                    SignedInRoot(config: config, auth: model, scope: scope).id(ObjectIdentifier(scope))
+                } else {
+                    ProgressView("Signing out…")
+                }
             }
         }
         .task { await model.restore() }
@@ -42,30 +47,43 @@ private struct AuthenticatedRoot: View {
 
 private struct SignedInRoot: View {
     let auth: AuthModel
+    let scope: AccountScope
     @State private var academies: AcademiesModel
     @State private var sessions: SessionsModel
+    @State private var schedules: SchedulesModel
+    @State private var start: StartSessionModel
     private let api: APIClient
 
-    init(config: AppConfiguration, auth: AuthModel) {
+    init(config: AppConfiguration, auth: AuthModel, scope: AccountScope) {
         self.auth = auth
+        self.scope = scope
         let service = auth.service
         let api = APIClient(origin: config.apiOrigin) { try await service.accessToken(forceRefresh: $0) }
         self.api = api
-        let academies = AcademiesModel(api: api) { await auth.signOut() }
+        // Every callback is bound to this account: a late 401 from it can't sign out the next one.
+        let signOut: @MainActor () async -> Void = { await auth.signOut(from: scope) }
+        let academies = AcademiesModel(api: api, scope: scope, onUnauthenticated: signOut)
+        let revalidate: @MainActor () async -> Void = { await academies.load() }
+        let isCurrent: @MainActor (AcademyContext) -> Bool = { academies.isCurrent($0) }
+        let sessions = SessionsModel(api: api, isCurrent: isCurrent, onUnauthenticated: signOut, onForbidden: revalidate)
         _academies = State(initialValue: academies)
-        _sessions = State(initialValue: SessionsModel(
-            api: api,
-            onUnauthenticated: { await auth.signOut() },
-            onForbidden: { await academies.load() }
+        _sessions = State(initialValue: sessions)
+        _schedules = State(initialValue: SchedulesModel(
+            api: api, isCurrent: isCurrent, onUnauthenticated: signOut, onForbidden: revalidate
+        ))
+        _start = State(initialValue: StartSessionModel(
+            api: api, isCurrent: isCurrent,
+            onStarted: { await sessions.load(context: $0) },
+            onUnauthenticated: signOut, onForbidden: revalidate
         ))
     }
 
     var body: some View {
-        MainView(model: academies, sessions: sessions, makeSessionModel: { [academies] session in
+        MainView(model: academies, sessions: sessions, schedules: schedules, start: start, makeSessionModel: { [academies, scope] session in
             SessionDetailModel(
                 session: session,
                 api: api,
-                onUnauthenticated: { await auth.signOut() },
+                onUnauthenticated: { await auth.signOut(from: scope) },
                 onForbidden: { await academies.load() }
             )
         }) { Task { await auth.signOut() } }

@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// Main screen: academy switcher on top, live sessions below (list UI comes later).
+/// Main screen: live sessions of the selected academy, a start action, and the academy switcher.
 struct MainView: View {
     let model: AcademiesModel
     let sessions: SessionsModel
+    let schedules: SchedulesModel
+    let start: StartSessionModel
     let makeSessionModel: (LiveSession) -> SessionDetailModel
     let onSignOut: () -> Void
 
@@ -26,13 +28,19 @@ struct MainView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
             if model.selected != nil {
-                Text("Live sessions")
-                    .font(.title2.bold())
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 28)
-                    .padding(.bottom, 12)
-                    .accessibilityAddTraits(.isHeader)
+                HStack {
+                    Text("Live sessions")
+                        .font(.title2.bold())
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    Button { start.presentPicker() } label: {
+                        Label { Text("Start session") } icon: { Image("tabler-plus") }
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 28)
+                .padding(.bottom, 12)
             }
             content
         }
@@ -42,21 +50,36 @@ struct MainView: View {
                 .padding(.bottom, 4)
         }
         .task { await model.load() }
-        .task(id: model.selectedID) { await sessions.load(academyID: model.selectedID) }
-        // Losing an academy (suspension, removal) changes the selection: leave its screens, which
-        // cancels their tasks and discards pending edits and scan confirmations.
-        .onChange(of: model.selectedID) { path.removeAll() }
+        .task(id: model.context) { await sessions.load(context: model.context) }
+        // Switching or losing an academy (suspension, removal) changes the context: leave its
+        // screens, which cancels their tasks and discards pending edits, scan confirmations and
+        // any unacknowledged start.
+        .onChange(of: model.context) {
+            path.removeAll()
+            start.reset()
+        }
         // Back from a session: it may have ended or been archived meanwhile, so refresh the live list.
         .onChange(of: path.isEmpty) { _, isEmpty in
-            if isEmpty { Task { await sessions.load(academyID: model.selectedID) } }
+            if isEmpty { Task { await sessions.load(context: model.context) } }
+        }
+        // A started (or opened) session: its identity comes from the server acknowledgment.
+        .onChange(of: start.destination) { _, destination in
+            guard let destination else { return }
+            start.destination = nil
+            path = [destination]
+        }
+        .sheet(isPresented: Bindable(start).isPickerPresented) {
+            if let academy = model.selected, let context = model.context {
+                StartSessionView(academy: academy, context: context, schedules: schedules, start: start)
+            }
         }
         // Revalidate access when returning to the app; missed changes surface here or as a 403.
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task {
-                let selected = model.selectedID
+                let context = model.context
                 await model.load()
-                if model.selectedID == selected { await sessions.load(academyID: selected) }
+                if model.context == context { await sessions.load(context: context) }
             }
         }
     }
@@ -74,13 +97,13 @@ struct MainView: View {
                 switch sessions.state {
                 case .failed(let message):
                     unavailable("Couldn't load live sessions", message) {
-                        await sessions.load(academyID: model.selectedID)
+                        await sessions.load(context: model.context)
                     }
                 case .loaded where sessions.sessions.isEmpty:
-                    unavailable("No live sessions", "Sessions appear here when staff start them.") {
-                        await sessions.load(academyID: model.selectedID)
+                    unavailable("No live sessions", "Start a session from a schedule, or pull to refresh when staff start one.") {
+                        await sessions.load(context: model.context)
                     }
-                case .loaded:
+                case .loaded, .loading where !sessions.sessions.isEmpty:
                     ScrollView {
                         LazyVStack(spacing: 12) {
                             ForEach(sessions.sessions) { session in
@@ -90,7 +113,7 @@ struct MainView: View {
                         }
                         .padding(.horizontal, 16)
                     }
-                    .refreshable { await sessions.load(academyID: model.selectedID) }
+                    .refreshable { await sessions.load(context: model.context) }
                 default:
                     ProgressView("Loading live sessions…").frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
