@@ -368,6 +368,7 @@ begin
   -- Archived parent: every slot write is rejected.
   update public.schedules set archived_at = now() where id = sched;
   select id into slot_id from public.schedule_slots where schedule_id = sched;
+  if slot_id is null then raise exception 'archived schedule slot is not visible to admin'; end if;
   begin
     insert into public.schedule_slots (academy_id, academic_year_id, schedule_id, weekday, starts_at, ends_at)
       values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, sched, 1, '08:00', '09:00');
@@ -387,6 +388,9 @@ begin
   exception when raise_exception then
     if sqlerrm = 'archived slot delete accepted' then raise; end if;
   end;
+  if not exists (select 1 from public.schedule_slots where id = slot_id) then
+    raise exception 'archived slot was removed';
+  end if;
 end $$;
 
 -- Timing shape and slot limits (as admin).
@@ -500,7 +504,12 @@ begin
     insert into public.schedule_slots (academy_id, academic_year_id, schedule_id, weekday, starts_at, ends_at)
       select academy_id, academic_year_id, id, 1, '08:00', '09:00' from public.schedules where title = 'Other slot';
     raise exception 'instructor inserted slot';
-  exception when insufficient_privilege then null; end;
+  exception when insufficient_privilege then null;
+  when raise_exception then
+    -- BEFORE INSERT validates the parent before the slot's INSERT policy is checked.
+    -- The instructor cannot lock a recurring parent through its UPDATE policy.
+    if sqlerrm <> 'Slots require an active recurring schedule' then raise; end if;
+  end;
   delete from public.schedule_slots;
 end $$;
 set local request.jwt.claim.sub = '44444444-4444-4444-8444-444444444444';
