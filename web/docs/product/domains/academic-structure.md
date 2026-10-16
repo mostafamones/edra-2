@@ -19,6 +19,8 @@ The release catalog follows the Egyptian school system:
 
 The current Grade 9–12 catalog is a development placeholder and will be replaced before the MVP is ready for release. Level names should be consistent across applications.
 
+For the replacement, existing Grade 9 references map to Third Preparatory, Grade 10 to First Secondary, Grade 11 to Second Secondary, and Grade 12 to Third Secondary (owner-approved 2026-10-16). This corrects the catalog; it does not advance students, enroll them in another year, or change their tracks or groups. Preserve all records, issued student codes, recorded work and official history. Existing stored historical labels and snapshots remain as recorded; current catalog labels use the replacement names.
+
 ## Tracks
 
 A track is an academy-defined specialization within one of its offered levels, such as Scientific or Literature. Tracks belong to the academy and level in which they are created.
