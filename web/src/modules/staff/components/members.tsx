@@ -125,18 +125,18 @@ export function TeamMembers({ academy, userId, canManage }: {
                     </div>
                     {canManageMember(academy.role, member.role, userId, member.user_id) && <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" className="-mr-1.5 text-muted-foreground" aria-label={`Actions for ${name}`}><IconDots /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="w-fit">
                         {choices.length > 0 && <DropdownMenuSub>
                           <DropdownMenuSubTrigger><IconShieldCheck />Change role</DropdownMenuSubTrigger>
                           <DropdownMenuSubContent>
                             {choices.map((role) => <DropdownMenuItem key={role} onSelect={() => setMemberAction({ member, kind: "role", role })}>{ROLE_LABELS[role]}</DropdownMenuItem>)}
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>}
+                        <DropdownMenuSeparator />
                         {suspended
                           ? <DropdownMenuItem onSelect={() => setMemberAction({ member, kind: "restore" })}><IconUserCheck />Restore access</DropdownMenuItem>
                           : <DropdownMenuItem onSelect={() => setMemberAction({ member, kind: "suspend" })}><IconUserOff />Suspend access</DropdownMenuItem>}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive" onSelect={() => setMemberAction({ member, kind: "remove" })}><IconUserMinus />Remove</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onSelect={() => setMemberAction({ member, kind: "remove" })}><IconUserMinus />Remove</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>}
                   </div>
