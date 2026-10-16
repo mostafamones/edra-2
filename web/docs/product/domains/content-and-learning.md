@@ -8,6 +8,8 @@ A content unit organizes a portion of learning material. It brings together expl
 
 Content units belong to the academy’s reusable library. Staff can prepare material before it is ready for students and use it across groups, sessions and academic years.
 
+Creation details confirmed by the owner, 2026-10-16: a unit requires a title; its description is optional. Staff can save a unit before adding any learning material. Each unit is tied to one specific grade (level), with an optional track within that grade. Creation is primarily within a specific program; when that program supplies a grade and optional track, the unit inherits that placement automatically. Program retains its existing meaning of a level or level plus track, rather than a separate academic entity. The existing track-removal and historical-preservation rules still apply.
+
 ## Learning releases
 
 A release makes a content unit available within one academic year to a level or a level and track. A level-wide release serves eligible students across that level’s tracks and groups.
@@ -23,6 +25,8 @@ Owners, Head Admins, Admins and Instructors can create content units, prepare dr
 Owners, Head Admins and Admins release content, manage its published audience and archive units or releases. Instructors prepare learning material but do not release it to students.
 
 Materials can be arranged in a teaching order within the unit. Adding an assignment or quiz makes it part of the unit’s learning experience; assessment rules still govern submissions, marking and results.
+
+Confirmed by the owner, 2026-10-16: the unit editor supports adding explanation videos, attaching assessments and their answer videos, and attaching documents and supporting resources. Staff can both select an existing assessment and create a new assessment from the unit editor. Both paths follow the same assessment ownership, audience, attachment and history rules.
 
 ## Assessments within content
 
