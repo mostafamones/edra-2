@@ -148,7 +148,10 @@ export const assignmentFormSchema = z.object({
 }).superRefine((value, context) => {
   checkAudience({ ...value, levelId: value.levelId || null, trackId: value.trackId || null }, context);
   if (value.dueDate && !academyInstant(value.dueDate, value.dueTime)) {
-    context.addIssue({ code: "custom", path: ["dueTime"], message: "Enter a time such as 23:59." });
+    context.addIssue({
+      code: "custom", path: ["dueTime"],
+      message: "Enter a real date and a time that exists in the academy time zone, such as 23:59.",
+    });
   }
 }).transform((value): AssignmentDraft => ({
   title: value.title.trim(),
