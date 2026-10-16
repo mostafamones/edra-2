@@ -423,6 +423,8 @@ do $$ declare result jsonb; begin
   result := pg_temp.restore('test.s1', current_setting('test.v2')::int + 1, 'e9cccccc-0000-4000-8000-000000000023');
   if result->>'outcome' <> 'not_archived' then raise exception 'Restoring twice was not a no-op: %', result; end if;
   -- Retrying the original Archive after the Restore replays history and does not archive again.
+  -- Idempotency keys are scoped to the actor who issued the original request.
+  set local request.jwt.claim.sub = 'e9222222-2222-4222-8222-222222222222';
   result := pg_temp.archive('test.s1', current_setting('test.v1')::int, 'e9cccccc-0000-4000-8000-000000000011', 'Started on the wrong schedule');
   if (result->>'replayed')::boolean is not true or result->>'outcome' <> 'archived' then
     raise exception 'An old archive retry did not replay: %', result;
@@ -456,11 +458,12 @@ reset role;
 
 -- A correction finalized after restoration is ordinary: one new publication; the stopped absence
 -- effect stays stopped and is not recreated.
+select set_config('test.restored_revision', public.current_attendance_revision(current_setting('test.s1')::uuid)::text, true);
 set local role authenticated;
 set local request.jwt.claim.sub = 'e9333333-3333-4333-8333-333333333333';
 do $$ declare result jsonb; begin
   result := public.publish_attendance('e9555555-5555-4555-8555-555555555555', current_setting('test.s1')::uuid,
-    public.current_attendance_revision(current_setting('test.s1')::uuid), 'e9bbbbbb-0000-4000-8000-000000000022');
+    current_setting('test.restored_revision')::integer, 'e9bbbbbb-0000-4000-8000-000000000022');
   if result->>'outcome' <> 'published' then raise exception 'Finalizing after restoration failed: %', result; end if;
 end $$;
 reset role;

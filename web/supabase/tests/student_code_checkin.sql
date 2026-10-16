@@ -84,8 +84,8 @@ set local request.jwt.claim.sub = 'd3333333-3333-4333-8333-333333333333';
 select pg_temp.expect_error($s$ select pg_temp.scan('0007', 'dddddddd-0000-4000-8000-0000000000a1') $s$, 'student_codes_disabled');
 set local request.jwt.claim.sub = 'd1111111-1111-4111-8111-111111111111';
 select public.save_student_code_settings('d5555555-5555-4555-8555-555555555555', 0, true, '####', '[]');
-select public.save_student_code_settings('e6666666-6666-4666-8666-666666666666', 0, true, '####', '[]');
 set local request.jwt.claim.sub = 'e1111111-1111-4111-8111-111111111111';
+select public.save_student_code_settings('e6666666-6666-4666-8666-666666666666', 0, true, '####', '[]');
 select public.change_student_code('e6666666-6666-4666-8666-666666666666', current_setting('test.t1')::uuid, 'assign', '0007', 0, gen_random_uuid());
 set local request.jwt.claim.sub = 'd3333333-3333-4333-8333-333333333333';
 select pg_temp.assign('test.a1', 'assign', '0007', 0);   -- same string as academy T's student
@@ -222,7 +222,7 @@ reset role;
 -- Lifecycle: a contact edit keeps the code; a real level change retires it (reason level_changed),
 -- clears the pointer, bumps the version, and keeps history.
 do $$ declare version_before integer; begin
-  update public.annual_student_records set student_phone = '01099999999' where id = current_setting('test.a1')::uuid;
+  update public.annual_student_records set student_phone = '+201099999999' where id = current_setting('test.a1')::uuid;
   if not exists (select 1 from public.student_code_assignments where annual_student_record_id = current_setting('test.a1')::uuid and retired_at is null) then
     raise exception 'A contact edit must not retire a code';
   end if;

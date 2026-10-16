@@ -79,7 +79,9 @@ select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa
 -- Input validation.
 select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'assign', 'A B', 0, gen_random_uuid()) $s$, 'validation');
 select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'assign', '   ', 0, gen_random_uuid()) $s$, 'validation');
-select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'replace', '0007', 0, gen_random_uuid()) $s$, 'validation');
+select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'replace', '0007', -1, gen_random_uuid()) $s$, 'validation');
+-- Version zero means no code is assigned; replacing that state is stale rather than malformed.
+select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'replace', '0007', 0, gen_random_uuid()) $s$, 'stale_code');
 select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'generate', '0007', 0, gen_random_uuid()) $s$, 'validation');
 
 -- A manual code must match the level's format.
@@ -230,7 +232,7 @@ select pg_temp.expect_error($s$ select public.list_retired_student_codes('aaaaaa
 set local request.jwt.claim.sub = 'a2222222-2222-4222-8222-222222222222';
 select pg_temp.expect_error($s$ select public.unretire_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.retired0007')::uuid) $s$, 'code_release_removed');
 set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
-select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9b')::uuid, 'replace', '0007', 3, gen_random_uuid()) $s$, 'code_taken');
+select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9b')::uuid, 'replace', '0007', 1, gen_random_uuid()) $s$, 'code_taken');
 reset role;
 -- Even a privileged direct update cannot release a retired row or reuse its string.
 select pg_temp.expect_error($s$ update public.student_code_assignments set retirement_reason = 'released' where id = current_setting('test.retired0007')::uuid $s$, 'code_history');

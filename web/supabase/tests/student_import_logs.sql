@@ -56,7 +56,8 @@ insert into public.academy_levels (academy_id, level_id, sort_order) values
 insert into public.academy_tracks (id, academy_id, level_id, name, sort_order) values
   ('7a111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', 'grade-11', 'Science', 1),
   ('7a222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', 'grade-11', 'Dup', 2),
-  ('7a333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', 'grade-11', 'dup', 3);
+  -- Distinct under the name index, but identical after the importer's NFKC normalization.
+  ('7a333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', 'grade-11', 'ｄｕｐ', 3);
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name) values
   ('7b111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-9', null, 'Nine A'),
   ('7b222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-9', null, 'Nine B'),

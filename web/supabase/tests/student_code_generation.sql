@@ -144,11 +144,18 @@ do $$ declare p jsonb; begin
     or (p -> 'patterns' -> 0 ->> 'available')::int <> 9998 then
     raise exception 'Unexpected examples or capacity %', p -> 'patterns' -> 0;
   end if;
+end $$;
+
+-- Counters are internal: verify their state as the fixture owner, not the application role.
+select pg_temp.expect_error($s$ select * from public.student_code_counters $s$, 'permission denied%');
+reset role;
+do $$ begin
   -- Preview reserves nothing.
   if exists (select 1 from public.student_code_counters c where c.academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and c.last_value > 0) then
     raise exception 'Preview must not move counters';
   end if;
 end $$;
+set local role authenticated;
 
 -- Duplicated ids collapse; a group run touches only that group, with each student's level format,
 -- in name order (amy before Zed).
@@ -244,15 +251,20 @@ do $$ declare p jsonb; r jsonb; begin
   if pg_temp.code_of(current_setting('test.cat')) <> 'ST2001' or pg_temp.code_of(current_setting('test.dan')) <> 'ST2002' then
     raise exception 'Unexpected grade-10 codes';
   end if;
-  if (select last_value from public.student_code_counters where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and prefix = 'ST2') <> 2 then
-    raise exception 'The counter must follow the run';
-  end if;
   if (select count(*) from public.student_code_assignments a join public.annual_student_records r on r.id = a.annual_student_record_id
       where a.academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and a.retired_at is null and r.archived_at is null) <> 5
     or pg_temp.code_of(current_setting('test.eve')) is not null then
     raise exception 'Only the five students reached by a run hold codes';
   end if;
 end $$;
+
+reset role;
+do $$ begin
+  if (select last_value from public.student_code_counters where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and prefix = 'ST2') <> 2 then
+    raise exception 'The counter must follow the run';
+  end if;
+end $$;
+set local role authenticated;
 
 -- Disabling denies a direct run.
 select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2, false, null, '[{"levelId":"grade-10","pattern":"ST2###"}]');

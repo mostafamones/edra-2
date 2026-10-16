@@ -219,11 +219,11 @@ declare changed uuid[];
 begin
   select array_agg(id) into changed from public.set_student_records_archived('dddddddd-dddd-4ddd-8ddd-dddddddddddd',
     'dddddddd-1111-4111-8111-dddddddddddd',
-    jsonb_build_array(jsonb_build_object('id', current_setting('test.r1'), 'version', 2), jsonb_build_object('id', current_setting('test.r2'), 'version', 1)), true);
+    jsonb_build_array(jsonb_build_object('id', current_setting('test.r1'), 'version', 2), jsonb_build_object('id', current_setting('test.r2'), 'version', 1)), true) as archived(id);
   if cardinality(changed) <> 2 then raise exception 'Batch archive did not archive both records'; end if;
   -- Re-archiving an archived record is a harmless no-op.
   select array_agg(id) into changed from public.set_student_records_archived('dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-    'dddddddd-1111-4111-8111-dddddddddddd', jsonb_build_array(jsonb_build_object('id', current_setting('test.r2'), 'version', 2)), true);
+    'dddddddd-1111-4111-8111-dddddddddddd', jsonb_build_array(jsonb_build_object('id', current_setting('test.r2'), 'version', 2)), true) as archived(id);
   if changed is not null then raise exception 'Archiving an archived record changed it'; end if;
 end $$;
 
@@ -242,7 +242,7 @@ do $$
 declare changed uuid[];
 begin
   select array_agg(id) into changed from public.set_student_records_archived('dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-    'dddddddd-1111-4111-8111-dddddddddddd', jsonb_build_array(jsonb_build_object('id', current_setting('test.r1'), 'version', 3)), false);
+    'dddddddd-1111-4111-8111-dddddddddddd', jsonb_build_array(jsonb_build_object('id', current_setting('test.r1'), 'version', 3)), false) as restored(id);
   if cardinality(changed) <> 1 or exists (select 1 from public.annual_student_records where id = current_setting('test.r1')::uuid and archived_at is not null) then
     raise exception 'Restore failed';
   end if;

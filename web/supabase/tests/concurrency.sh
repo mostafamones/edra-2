@@ -414,7 +414,7 @@ psqlx -tA -c "select count(*) from public.attendance_records where session_id = 
 
 # 15. A non-level edit holds the record lock; the scan waits and then succeeds (only a real level
 #     change retires a code; that path is covered in student_code_checkin.sql).
-hold 15a 15b "update public.annual_student_records set level_id = 'grade-10', student_phone = '01055559999' where id = '$R15';"
+hold 15a 15b "update public.annual_student_records set level_id = 'grade-10', student_phone = '+201055559999' where id = '$R15';"
 start 15b "$(scan 0150)"
 wait
 expect_ok 15a "the contact edit holding the record lock failed"

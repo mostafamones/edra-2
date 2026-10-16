@@ -84,7 +84,8 @@ insert into public.academy_levels (academy_id, level_id, sort_order) values
 insert into public.academy_tracks (id, academy_id, level_id, name, sort_order) values
   ('7a111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', 'grade-11', 'Science', 1),
   ('7a222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', 'grade-11', 'Dup', 2),
-  ('7a333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', 'grade-11', 'dup', 3);
+  -- Distinct under the name index, but identical after the importer's NFKC normalization.
+  ('7a333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', 'grade-11', 'ｄｕｐ', 3);
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name) values
   ('7b111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-9', null, 'Nine A'),
   ('7b222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-9', null, 'Nine B'),
@@ -317,7 +318,7 @@ select public.create_student_record('77777777-7777-4777-8777-777777777777', '777
   'Taken meanwhile', '01100000002', '01200000000', 'grade-9', null, null, 'in_person');
 
 set local request.jwt.claim.sub = '73333333-3333-4333-8333-333333333333';
-select pg_temp.expect_error(format($s$ select public.process_student_import_batch(%L, 0) $s$, current_setting('test.s1')), 'forbidden');
+select pg_temp.expect_error(format($s$ select public.process_student_import_batch(%L, 0) $s$, current_setting('test.s1')), 'not_found');
 set local request.jwt.claim.sub = '72222222-2222-4222-8222-222222222222';
 select pg_temp.expect_error(format($s$ select public.process_student_import_batch(%L, 1) $s$, current_setting('test.s1')), 'validation');
 do $$
@@ -431,7 +432,7 @@ set local request.jwt.claim.sub = '72222222-2222-4222-8222-222222222222';
 select set_config('test.s2', public.start_student_import('77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777',
   'late.json', 'json', null, 1, '{"level_id": "grade-9", "participation_type": "online_only"}', null)::text, true);
 select public.stage_student_import_rows(current_setting('test.s2')::uuid,
-  '[{"ordinal": 1, "source_row": 1, "values": {"full_name": "Late", "student_phone": "01600000001", "parent_phone": "01200000000"}}]');
+  '[{"ordinal": 1, "source_row": 1, "values": {"full_name": "Late", "student_phone": "01599999999", "parent_phone": "01200000000"}}]');
 select public.confirm_student_import(current_setting('test.s2')::uuid, public.finalize_student_import(current_setting('test.s2')::uuid));
 reset role;
 update public.academic_years set closed_at = now() where id = '77777777-1111-4111-8111-777777777777';
@@ -444,7 +445,7 @@ begin
   if result ->> 'state' <> 'blocked' or (result ->> 'pending')::int <> 1 or (result ->> 'created')::int <> 0 then
     raise exception 'A closed year did not block the import: %', result;
   end if;
-  if exists (select 1 from public.annual_student_records where student_phone = '+201600000001') then
+  if exists (select 1 from public.annual_student_records where student_phone = '+201599999999') then
     raise exception 'A blocked import created a record';
   end if;
   if (select state from public.student_import_sessions where id = current_setting('test.s1')::uuid) <> 'completed' then
