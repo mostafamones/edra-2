@@ -63,29 +63,29 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('a5555555-5555-4555-8555-555555555555', 'a3333333-3333-4333-8333-333333333333', 'instructor', 'a1111111-1111-4111-8111-111111111111'),
   ('b6666666-6666-4666-8666-666666666666', 'b1111111-1111-4111-8111-111111111111', 'owner', 'b1111111-1111-4111-8111-111111111111');
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('a5555555-5555-4555-8555-555555555555', 'grade-9', 9),
-  ('a5555555-5555-4555-8555-555555555555', 'grade-10', 10),
-  ('b6666666-6666-4666-8666-666666666666', 'grade-9', 9);
+  ('a5555555-5555-4555-8555-555555555555', 'preparatory-3', 9),
+  ('a5555555-5555-4555-8555-555555555555', 'secondary-1', 10),
+  ('b6666666-6666-4666-8666-666666666666', 'preparatory-3', 9);
 insert into public.academy_tracks (id, academy_id, level_id, name) values
-  ('a7777777-7777-4777-8777-777777777777', 'a5555555-5555-4555-8555-555555555555', 'grade-10', 'Science');
+  ('a7777777-7777-4777-8777-777777777777', 'a5555555-5555-4555-8555-555555555555', 'secondary-1', 'Science');
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name) values
-  ('a8888888-0000-4000-8000-000000000001', 'a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', 'grade-9', null, 'Nine A'),
-  ('a8888888-0000-4000-8000-000000000002', 'a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', 'grade-9', null, 'Nine B'),
-  ('a8888888-0000-4000-8000-000000000003', 'a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', 'grade-9', null, 'Nine Empty'),
-  ('b8888888-0000-4000-8000-000000000001', 'b6666666-6666-4666-8666-666666666666', 'b6666666-1111-4111-8111-666666666666', 'grade-9', null, 'T Nine');
+  ('a8888888-0000-4000-8000-000000000001', 'a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', 'preparatory-3', null, 'Nine A'),
+  ('a8888888-0000-4000-8000-000000000002', 'a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', 'preparatory-3', null, 'Nine B'),
+  ('a8888888-0000-4000-8000-000000000003', 'a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', 'preparatory-3', null, 'Nine Empty'),
+  ('b8888888-0000-4000-8000-000000000001', 'b6666666-6666-4666-8666-666666666666', 'b6666666-1111-4111-8111-666666666666', 'preparatory-3', null, 'T Nine');
 grant usage on schema public, auth to authenticated, anon;
 
--- Setup as the owner of S: four grade-9 students (one archived later), one grade-10 Science student.
+-- Setup as the owner of S: four preparatory-3 students (one archived later), one secondary-1 Science student.
 set local role authenticated;
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
 select set_config('test.s' || n, id::text, true) from (
   select n, (public.create_student_record('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', name,
-    '0100000010' || n, '01100000000', 'grade-9', null, grp::uuid, 'in_person')).id
+    '0100000010' || n, '01100000000', 'preparatory-3', null, grp::uuid, 'in_person')).id
   from (values (1, 'Amal', 'a8888888-0000-4000-8000-000000000001'), (2, 'Aya', 'a8888888-0000-4000-8000-000000000001'),
     (3, 'Adam', 'a8888888-0000-4000-8000-000000000002'), (4, 'Alia', 'a8888888-0000-4000-8000-000000000001')) as v (n, name, grp)
 ) made;
 select set_config('test.sci', (public.create_student_record('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555',
-  'Sami', '01000000199', '01100000000', 'grade-10', 'a7777777-7777-4777-8777-777777777777', null, 'online_only')).id::text, true);
+  'Sami', '01000000199', '01100000000', 'secondary-1', 'a7777777-7777-4777-8777-777777777777', null, 'online_only')).id::text, true);
 select public.set_student_records_archived('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555',
   jsonb_build_array(jsonb_build_object('id', current_setting('test.s4'), 'version', 1)), true);
 -- One coded student; the rest have no code and must still be recipients.
@@ -111,11 +111,11 @@ create function pg_temp.mark(n text, marks jsonb, feedback text default null) re
 create function pg_temp.pa(score text) returns jsonb language sql as $$ select jsonb_build_array(jsonb_build_object('part_id', current_setting('test.part_a'), 'score', score)) $$;
 create function pg_temp.pb(score text) returns jsonb language sql as $$ select jsonb_build_array(jsonb_build_object('part_id', current_setting('test.part_b'), 'score', score)) $$;
 
--- The admin creates an active two-part (10 + 15) assignment for grade 9: s1 (coded), s2, s3.
+-- The admin creates an active two-part (10 + 15) assignment for Third Preparatory: s1 (coded), s2, s3.
 set local request.jwt.claim.sub = 'a2222222-2222-4222-8222-222222222222';
 do $$ declare made jsonb; begin
   made := public.create_assignment('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', 'a9999999-0000-4000-8000-000000000001',
-    jsonb_build_object('title', 'Unit 3', 'instructions', '', 'due_at', null, 'audience', 'level', 'level_id', 'grade-9',
+    jsonb_build_object('title', 'Unit 3', 'instructions', '', 'due_at', null, 'audience', 'level', 'level_id', 'preparatory-3',
       'parts', '[{"title":"A","kind":"file_upload","questions":[{"max_score":"10"}]},{"title":"B","kind":"file_upload","questions":[{"max_score":"15"}]}]'::jsonb));
   perform set_config('test.part_a', made->'parts'->0->>'id', true);
   perform set_config('test.part_b', made->'parts'->1->>'id', true);
@@ -230,7 +230,7 @@ select pg_temp.expect_error($s$ select public.resolve_assignment_student('a55555
 select pg_temp.expect_error($s$ select public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', null, '9999', 1, '{"feedback":"x"}', gen_random_uuid()) $s$, 'student_code_not_found');
 select pg_temp.expect_error($s$ select public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', pg_temp.rec('s1'), '0001', 1, '{"feedback":"x"}', gen_random_uuid()) $s$, 'validation');
 select pg_temp.expect_error($s$ select public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', null, null, 1, '{"feedback":"x"}', gen_random_uuid()) $s$, 'validation');
--- A code of a student who is not a recipient (grade 10).
+-- A code of a student who is not a recipient (First Secondary).
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
 select public.change_student_code('a5555555-5555-4555-8555-555555555555', pg_temp.rec('sci'), 'assign', '0002', 0, gen_random_uuid());
 set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';

@@ -90,7 +90,7 @@ export const ISSUE_LABELS: Record<ExamIssue["issue"], string> = {
 
 export type AudienceNames = { levelNames: Record<string, string>; trackNames: Map<string, string>; groupNames: Map<string, string> };
 
-/** "Grade 9 · Science", "Nine A, Nine B", "4 groups", or "No audience yet". */
+/** "Third Preparatory · Science", "Nine A, Nine B", "4 groups", or "No audience yet". */
 export function describeAudience(
   value: { audience: ExamAudience | null; levelId: string | null; trackId: string | null; groupIds: string[] }, names: AudienceNames,
 ): string {

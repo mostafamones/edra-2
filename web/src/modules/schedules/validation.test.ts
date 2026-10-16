@@ -15,7 +15,7 @@ const oneOff = {
   kind: "one_off" as const,
   audience: "level" as const,
   groupId: null,
-  levelId: "grade-10",
+  levelId: "secondary-1",
   trackId: null,
   mandatory: true,
   location: "Room 1",
@@ -114,7 +114,7 @@ describe("schedule input", () => {
 
 describe("schedule form", () => {
   const values = (change: Partial<ScheduleFormValues> = {}): ScheduleFormValues => ({
-    ...scheduleFormDefaults("recurring"), title: "Weekly", levelId: "grade-10", audience: "level", ...change,
+    ...scheduleFormDefaults("recurring"), title: "Weekly", levelId: "secondary-1", audience: "level", ...change,
   });
   const formPaths = (value: ScheduleFormValues) => paths(value, scheduleFormSchema(ACADEMY, YEAR) as never);
 
@@ -127,7 +127,7 @@ describe("schedule form", () => {
 
   it("loads an existing schedule with HH:mm times and Saturday-first slots", () => {
     const defaults = scheduleFormDefaults("recurring", {
-      title: "Weekly", location: null, kind: "recurring", audience: "program", group_id: null, level_id: "grade-10",
+      title: "Weekly", location: null, kind: "recurring", audience: "program", group_id: null, level_id: "secondary-1",
       track_id: TRACK, mandatory: false,
     }, [
       { weekday: 1, starts_at: "09:00:00", ends_at: "10:00:00" },
@@ -142,7 +142,7 @@ describe("schedule form", () => {
 
   it("loads one-off sessions in date order with HH:mm times", () => {
     const defaults = scheduleFormDefaults("one_off", {
-      title: "Revision", location: null, kind: "one_off", audience: "level", group_id: null, level_id: "grade-10",
+      title: "Revision", location: null, kind: "one_off", audience: "level", group_id: null, level_id: "secondary-1",
       track_id: null, mandatory: true,
     }, [], [
       { occurs_on: "2030-10-08", starts_at: "16:00:00", ends_at: "17:00:00" },
@@ -159,7 +159,7 @@ describe("schedule form", () => {
       kind: "one_off", groupId: GROUP, trackId: TRACK, location: "  ",
       sessions: [{ date: "2030-10-01", startsAt: "16:00", endsAt: "17:00" }],
     }), ACADEMY);
-    expect(input).toMatchObject({ groupId: null, levelId: "grade-10", trackId: null, slots: [], location: null });
+    expect(input).toMatchObject({ groupId: null, levelId: "secondary-1", trackId: null, slots: [], location: null });
     expect(input.sessions).toHaveLength(1);
     const weekly = toScheduleInput(values({ sessions: [{ date: "2030-10-01", startsAt: "16:00", endsAt: "17:00" }] }), ACADEMY);
     expect(weekly.sessions).toEqual([]);

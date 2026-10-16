@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { formatScore, sumScores, toHundredths } from "@/lib/score";
-import { EXAM_AUDIENCES, EXAM_PART_KINDS, type Exam, type ExamDraft, type ExamIssue, type ExamPartKind } from "./types";
+import { EXAM_AUDIENCES, EXAM_PART_KINDS, type Exam, type ExamAudience, type ExamDraft, type ExamIssue, type ExamPartKind } from "./types";
 
 /** Authoring limits, enforced identically by parse_exam_draft in the database. */
 export const MAX_PARTS = 20;
@@ -118,7 +118,7 @@ export type ExamFormValues = {
   instructions: string;
   solutionNotes: string;
   /** "" while no audience is chosen. */
-  audience: "" | "groups" | "program";
+  audience: "" | ExamAudience;
   levelId: string;
   trackId: string;
   groupIds: string[];
@@ -145,7 +145,7 @@ export function examToValues(exam: Exam): ExamFormValues {
     title: exam.title,
     instructions: exam.instructions,
     solutionNotes: exam.solutionNotes,
-    audience: exam.audience === null ? "" : exam.audience === "groups" ? "groups" : "program",
+    audience: exam.audience ?? "",
     levelId: exam.levelId ?? "",
     trackId: exam.trackId ?? "",
     groupIds: exam.groupIds,
@@ -194,7 +194,7 @@ export function valuesToDraft(values: ExamFormValues): ExamDraft {
 export function formErrors(values: ExamFormValues): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!values.title.trim()) errors.title = "Enter a title.";
-  if (values.audience === "program" && !values.levelId) errors.levelId = "Choose a level.";
+  if ((values.audience === "level" || values.audience === "program") && !values.levelId) errors.levelId = "Choose a level.";
   if (values.audience === "groups" && values.groupIds.length === 0) errors.groupIds = "Choose at least one group.";
   if (values.timeLimit.trim() !== "") {
     const minutes = Number(values.timeLimit.trim());

@@ -175,7 +175,7 @@ function ScheduleFields({
               <FieldGroup className="grid gap-5 sm:grid-cols-2">
                 <Field data-invalid={Boolean(titleError) || undefined}>
                   <FieldLabel htmlFor="schedule-title">Name</FieldLabel>
-                  <Input id="schedule-title" maxLength={100} placeholder="e.g. Grade 10 weekly class" {...register("title")} {...errorProps(titleError, "schedule-title")} />
+                  <Input id="schedule-title" maxLength={100} placeholder="e.g. Third Secondary weekly class" {...register("title")} {...errorProps(titleError, "schedule-title")} />
                   <FieldError id="schedule-title-error">{titleError}</FieldError>
                 </Field>
                 <Field data-invalid={Boolean(locationError) || undefined}>

@@ -5,25 +5,34 @@ enum APIError: Error, Equatable {
     case forbidden
     case network
     case server(String)
+    /// The calling task was cancelled. Not a failure to report: the work's owner has gone away.
+    case cancelled
 }
 
 /// Bearer-only HTTP adapter for the Edra API. No cookies, current token per request,
-/// one forced refresh + retry on 401.
+/// one forced refresh + retry on 401. Cancellation surfaces as `.cancelled`, never as `.network`.
 struct APIClient: Sendable {
     typealias TokenProvider = @Sendable (_ forceRefresh: Bool) async throws -> String
+    /// Sends one request. Tests substitute a transport that completes requests in a chosen order.
+    typealias Transport = @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
     let origin: URL
     let token: TokenProvider
-    private let session: URLSession
+    private let transport: Transport
 
-    init(origin: URL, token: @escaping TokenProvider) {
+    init(origin: URL, token: @escaping TokenProvider, transport: Transport? = nil) {
         self.origin = origin
         self.token = token
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.httpCookieStorage = nil
-        configuration.httpShouldSetCookies = false
-        configuration.timeoutIntervalForRequest = 20
-        session = URLSession(configuration: configuration)
+        if let transport {
+            self.transport = transport
+        } else {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.httpCookieStorage = nil
+            configuration.httpShouldSetCookies = false
+            configuration.timeoutIntervalForRequest = 20
+            let session = URLSession(configuration: configuration)
+            self.transport = { try await session.data(for: $0) }
+        }
     }
 
     func get<T: Decodable & Sendable>(_ path: String, as type: T.Type = T.self) async throws(APIError) -> T {
@@ -57,8 +66,10 @@ struct APIClient: Sendable {
             }
         } catch let error as APIError {
             throw error
+        } catch is CancellationError {
+            throw .cancelled
         } catch {
-            throw .network
+            throw Task.isCancelled ? .cancelled : .network
         }
     }
 
@@ -66,7 +77,11 @@ struct APIClient: Sendable {
         _ path: String, method: String, body: Data?, headers: [String: String], forceRefresh: Bool
     ) async throws -> T {
         let bearer: String
-        do { bearer = try await token(forceRefresh) } catch { throw APIError.unauthenticated }
+        do { bearer = try await token(forceRefresh) } catch {
+            // A cancelled token refresh is not evidence that the account is signed out.
+            if error is CancellationError || Task.isCancelled { throw CancellationError() }
+            throw APIError.unauthenticated
+        }
 
         guard let url = URL(string: path, relativeTo: origin.appending(path: "/")) else { throw APIError.network }
         var request = URLRequest(url: url)
@@ -80,7 +95,7 @@ struct APIClient: Sendable {
 
         let data: Data
         let response: URLResponse
-        do { (data, response) = try await session.data(for: request) }
+        do { (data, response) = try await transport(request) }
         catch is CancellationError { throw CancellationError() }
         catch let error as URLError where error.code == .cancelled { throw CancellationError() }
         catch { throw APIError.network }

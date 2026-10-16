@@ -18,7 +18,7 @@ describe("list parameters", () => {
 
   it("round-trips every parameter through the URL", () => {
     const params = {
-      search: "0101 234", status: "all" as const, levelId: "grade-11", track: TRACK, group: GROUP,
+      search: "0101 234", status: "all" as const, levelId: "secondary-2", track: TRACK, group: GROUP,
       participationType: "online_only" as const, sorts: [{ id: "level" as const, desc: true }, { id: "group" as const, desc: false }],
       pageIndex: 3, pageSize: 50 as const,
     };
@@ -47,7 +47,7 @@ describe("list parameters", () => {
   });
 
   it("accepts the special no-track and unassigned filters", () => {
-    expect(read("level=grade-11&track=none&group=none").params).toMatchObject({ track: "none", group: "none" });
+    expect(read("level=secondary-2&track=none&group=none").params).toMatchObject({ track: "none", group: "none" });
   });
 
   it("allows up to three distinct sort fields", () => {

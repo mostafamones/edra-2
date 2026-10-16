@@ -37,7 +37,7 @@ const archiveState = (archivedAt: string | null, version = 3) => ({
 const detail = (session: Record<string, unknown>) => ({
   session: {
     id: SESSION, academy_id: ACADEMY, academic_year_id: "y", schedule_id: SCHEDULE, schedule_title: "Nine A", schedule_kind: "recurring",
-    audience: "group", group_id: "g", group_name: "Nine A", level_id: "grade-9", level_name: "Grade 9", track_id: null, track_name: null,
+    audience: "group", group_id: "g", group_name: "Nine A", level_id: "preparatory-3", level_name: "Third Preparatory", track_id: null, track_name: null,
     mandatory: true, location: null, state: "ended", started_at: "2030-01-01T10:00:00Z", started_by: "u", started_by_name: "U",
     auto_end_at: "2030-01-01T12:00:00Z", metadata_version: 3, ended_at: "2030-01-01T11:00:00Z", ended_by: "u", ended_by_name: "U",
     end_reason: "manual", archived_at: null, archived_by_name: null, archive_note: null, year_open: true, can_manage_archive: true,

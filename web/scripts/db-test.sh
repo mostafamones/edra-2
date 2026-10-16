@@ -15,7 +15,7 @@ cd "$(dirname "$0")/.."
 TESTS=supabase/tests
 SQL_SUITES=(groups_schedules student_records student_imports student_import_logs staff_invitations sessions
   attendance session_authority student_codes student_code_changes student_code_generation student_code_checkin
-  assignments assignment_marks session_archival staff_access quizzes exams level_wide_groups)
+  assignments assignment_marks session_archival staff_access quizzes exams level_wide_groups level_catalog)
 
 reject() { echo "db-test: $*" >&2; exit 2; }
 

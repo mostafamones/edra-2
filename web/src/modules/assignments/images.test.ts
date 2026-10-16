@@ -30,7 +30,7 @@ describe("question image tokens", () => {
       choices: [{ label: imageToken(B), isCorrect: true }, { label: "b", isCorrect: false }],
     });
     const draft = (count: number) => ({
-      title: "Unit", instructions: "", audience: "level" as const, levelId: "grade-10", trackId: null, groupIds: [], dueAt: null,
+      title: "Unit", instructions: "", audience: "level" as const, levelId: "secondary-1", trackId: null, groupIds: [], dueAt: null,
       parts: [{ title: "P", instructions: "", kind: "online_questions", maxScore: "0", questions: [question(count)] }] as DraftPart[],
     });
     expect(assignmentDraftSchema.safeParse(draft(10)).success).toBe(true);

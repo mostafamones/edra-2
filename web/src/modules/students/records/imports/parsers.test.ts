@@ -90,7 +90,7 @@ describe("JSON parsing", () => {
   });
 
   it("marks nested values as problems", () => {
-    const source = ok(parseJson(utf8(JSON.stringify([{ full_name: { first: "Ali" }, level: ["grade-9"] }]))));
+    const source = ok(parseJson(utf8(JSON.stringify([{ full_name: { first: "Ali" }, level: ["preparatory-3"] }]))));
     expect(source.records[0].cells).toEqual([{ problem: "nested" }, { problem: "nested" }]);
   });
 

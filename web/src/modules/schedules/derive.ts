@@ -50,7 +50,7 @@ export function audienceDetails(schedule: Schedule, lookup: AudienceLookup) {
   return { level: parts.level, group: parts.group, track: parts.track };
 }
 
-/** "Sunday A · Grade 10 · Science", "Grade 10 · Whole level", or "Grade 10 · Science". */
+/** "Sunday A · First Secondary · Science", "First Secondary · Whole level", or "First Secondary · Science". */
 export function audienceLabel(schedule: Schedule, lookup: AudienceLookup) {
   const parts = audienceParts(schedule, lookup);
   return [parts.group, parts.level, parts.wholeLevel ? "Whole level" : parts.track].filter(Boolean).join(" · ");

@@ -23,7 +23,7 @@ const NO_DEFAULTS = { levelId: "", trackId: "", primaryGroupId: "", participatio
 
 describe("column mapping", () => {
   it("finds headers after a title and reports each unused source column", () => {
-    const source = parsed("Student export\nfull_name,student_phone,parent_phone,grade,type,Notes\nExample,01XXXXXXXXX,01XXXXXXXXX,Grade 11,in_person,Keep\n");
+    const source = parsed("Student export\nfull_name,student_phone,parent_phone,grade,type,Notes\nExample,01XXXXXXXXX,01XXXXXXXXX,Second Secondary,in_person,Keep\n");
     expect(suggestHeaderIndex(source)).toBe(1);
     const columns = columnsFromHeader(source, 1);
     expect(unmappedColumns(columns, suggestMapping(columns))).toEqual([{ id: "c5", label: "Notes" }]);
@@ -55,7 +55,7 @@ describe("column mapping", () => {
     expect(mappingProblems(emptyMapping(), NO_DEFAULTS).map((problem) => problem.field))
       .toEqual(["full_name", "student_phone", "parent_phone", "level", "student_type"]);
     const mapped = { ...emptyMapping(), full_name: "c0", student_phone: "c1", parent_phone: "c2" };
-    expect(mappingProblems(mapped, { ...NO_DEFAULTS, levelId: "grade-9", participationType: "in_person" })).toEqual([]);
+    expect(mappingProblems(mapped, { ...NO_DEFAULTS, levelId: "preparatory-3", participationType: "in_person" })).toEqual([]);
     expect(mappingProblems({ ...mapped, level: "c1" }, { ...NO_DEFAULTS, participationType: "in_person" }))
       .toEqual([{ field: null, message: "Each column can fill only one field." }]);
   });
@@ -98,15 +98,15 @@ describe("column mapping", () => {
 
 describe("templates", () => {
   const reference = {
-    levels: [{ id: "grade-11", name: "Grade 11" }],
-    tracks: [{ id: "science", levelId: "grade-11", levelName: "Grade 11", name: "Science" }],
-    groups: [{ name: "Science A", levelId: "grade-11", trackId: "science", levelName: "Grade 11", trackName: "Science" }],
+    levels: [{ id: "secondary-2", name: "Second Secondary" }],
+    tracks: [{ id: "science", levelId: "secondary-2", levelName: "Second Secondary", name: "Science" }],
+    groups: [{ name: "Science A", levelId: "secondary-2", trackId: "science", levelName: "Second Secondary", trackName: "Science" }],
   };
 
   it("parses academy examples consistently in CSV, JSON, and Excel", async () => {
     const expected = [
-      { full_name: "Example student 1", student_phone: "01XXXXXXXXX", parent_phone: "01XXXXXXXXX", level: "Grade 11", track: "Science", group: "Science A", student_type: "in_person" },
-      { full_name: "Example student 2", student_phone: "01XXXXXXXXX", parent_phone: "01XXXXXXXXX", level: "Grade 11", track: "Science", group: "Unassigned", student_type: "online_only" },
+      { full_name: "Example student 1", student_phone: "01XXXXXXXXX", parent_phone: "01XXXXXXXXX", level: "Second Secondary", track: "Science", group: "Science A", student_type: "in_person" },
+      { full_name: "Example student 2", student_phone: "01XXXXXXXXX", parent_phone: "01XXXXXXXXX", level: "Second Secondary", track: "Science", group: "Unassigned", student_type: "online_only" },
     ];
     const csv = parseCsv(utf8(csvTemplate(reference)));
     if (!csv.ok) throw new Error(csv.error.message);
@@ -143,9 +143,9 @@ describe("templates", () => {
     expect(book.getWorksheet("Students")?.getColumn(3).numFmt).toBe("@");
     expect(book.getWorksheet("Students")?.getCell("B2").value).toBe("01XXXXXXXXX");
     const text = instructionLines(reference).flat().join("\n");
-    expect(text).toContain("grade-11 — Grade 11");
-    expect(text).toContain("Grade 11 — Science");
-    expect(text).toContain("Science A — Grade 11 · Science");
+    expect(text).toContain("secondary-2 — Second Secondary");
+    expect(text).toContain("Second Secondary — Science");
+    expect(text).toContain("Science A — Second Secondary · Science");
     expect(text).toContain("online_only (Online only)");
     expect(text).toContain("Replace the example names and masked phone numbers");
     for (const example of templateExamples(reference)) {
@@ -157,24 +157,24 @@ describe("templates", () => {
 
   it("covers every level/track and matches groups by IDs even when track names repeat", () => {
     const examples = templateExamples({
-      levels: [...reference.levels, { id: "grade-12", name: "Grade 12" }, { id: "grade-10", name: "Grade 10" }],
+      levels: [...reference.levels, { id: "secondary-3", name: "Third Secondary" }, { id: "secondary-1", name: "First Secondary" }],
       tracks: [
         ...reference.tracks,
-        { id: "arts", levelId: "grade-11", levelName: "Grade 11", name: "Arts" },
-        { id: "science-12", levelId: "grade-12", levelName: "Grade 12", name: "Science" },
+        { id: "arts", levelId: "secondary-2", levelName: "Second Secondary", name: "Arts" },
+        { id: "science-12", levelId: "secondary-3", levelName: "Third Secondary", name: "Science" },
       ],
       groups: [
-        { name: "Science B", levelId: "grade-12", trackId: "science-12", levelName: "Grade 12", trackName: "Science" },
+        { name: "Science B", levelId: "secondary-3", trackId: "science-12", levelName: "Third Secondary", trackName: "Science" },
         ...reference.groups,
-        { name: "Class 10", levelId: "grade-10", trackId: null, levelName: "Grade 10", trackName: null },
+        { name: "Class 10", levelId: "secondary-1", trackId: null, levelName: "First Secondary", trackName: null },
       ],
     });
     expect(examples.map(({ level, track, group, student_type }) => [level, track, group, student_type])).toEqual([
-      ["Grade 11", "Science", "Science A", "in_person"],
-      ["Grade 11", "Arts", "Unassigned", "in_person"],
-      ["Grade 12", "Science", "Science B", "in_person"],
-      ["Grade 10", "", "Class 10", "in_person"],
-      ["Grade 11", "Science", "Unassigned", "online_only"],
+      ["Second Secondary", "Science", "Science A", "in_person"],
+      ["Second Secondary", "Arts", "Unassigned", "in_person"],
+      ["Third Secondary", "Science", "Science B", "in_person"],
+      ["First Secondary", "", "Class 10", "in_person"],
+      ["Second Secondary", "Science", "Unassigned", "online_only"],
     ]);
   });
 
@@ -189,7 +189,7 @@ describe("templates", () => {
   it("preserves Arabic, commas, and quotes in CSV and neutralizes spreadsheet formulas", () => {
     const csv = csvTemplate({
       ...reference,
-      levels: [{ id: "grade-11", name: 'الصف، "الثاني", تجريبي' }],
+      levels: [{ id: "secondary-2", name: 'الصف، "الثاني", تجريبي' }],
       groups: [{ ...reference.groups[0], name: '=HYPERLINK("https://example.com")' }],
     });
     expect(csv.startsWith("\uFEFF")).toBe(true);

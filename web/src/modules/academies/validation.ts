@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { globalLevelIdSchema } from "./levels";
+import { GLOBAL_LEVEL_IDS, globalLevelIdSchema } from "./levels";
 import { academySlugSchema } from "./slug";
 
 export const createAcademySchema = z.object({
@@ -32,7 +32,7 @@ export const createAcademySetupSchema = z.object({
   slug: academySlugSchema,
   icon: z.enum(ACADEMY_ICON_IDS),
   subject: z.string().trim().min(1).max(60),
-  levelIds: z.array(globalLevelIdSchema).min(1).max(4),
+  levelIds: z.array(globalLevelIdSchema).min(1).max(GLOBAL_LEVEL_IDS.length),
   tracks: z.array(academyTrackSchema).max(100),
 }).superRefine((setup, context) => {
   const selectedLevels = new Set(setup.levelIds);

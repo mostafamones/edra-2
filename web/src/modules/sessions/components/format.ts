@@ -31,7 +31,7 @@ export function formatClock(iso: string) {
   return timeFormat.format(new Date(iso));
 }
 
-/** "Sunday A · Grade 10 · Science", "Grade 10 · Whole level", or "Grade 10 · Science". */
+/** "Sunday A · First Secondary · Science", "First Secondary · Whole level", or "First Secondary · Science". */
 export function sessionAudience(session: {
   audience: "group" | "level" | "program"; groupName: string | null; levelName: string | null; levelId: string; trackName: string | null;
 }) {

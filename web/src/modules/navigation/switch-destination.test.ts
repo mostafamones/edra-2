@@ -17,7 +17,7 @@ describe("canonical navigation", () => {
     expect(academySwitchHref("/science/schedules/private-id/edit?group=source", "science", { slug: "math", role: "admin" })).toBe("http://app.lvh.me:3000/math/schedules");
     expect(academySwitchHref("/science/students/import?session=source", "science", { slug: "math", role: "admin" })).toBe("http://app.lvh.me:3000/math/students");
   });
-  it("falls back to overview for unavailable and unauthorized sections", () => {
+  it("falls back to home for unavailable and unauthorized sections", () => {
     expect(academySwitchHref("/science/manage/access", "science", { slug: "math", role: "instructor" })).toBe("http://app.lvh.me:3000/math");
     expect(academySwitchHref("/science/unknown/record", "science", { slug: "math", role: "owner" })).toBe("http://app.lvh.me:3000/math");
   });

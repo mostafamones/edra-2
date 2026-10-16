@@ -13,12 +13,12 @@ const GRADE_9_GROUP = "88888888-8888-4888-8888-888888888888";
 
 const context = {
   tracks: [
-    { id: SCIENCE, level_id: "grade-11" },
-    { id: ARTS, level_id: "grade-11" },
+    { id: SCIENCE, level_id: "secondary-2" },
+    { id: ARTS, level_id: "secondary-2" },
   ],
   groups: [
-    { id: SCIENCE_GROUP, level_id: "grade-11", track_id: SCIENCE },
-    { id: GRADE_9_GROUP, level_id: "grade-9", track_id: null },
+    { id: SCIENCE_GROUP, level_id: "secondary-2", track_id: SCIENCE },
+    { id: GRADE_9_GROUP, level_id: "preparatory-3", track_id: null },
   ],
 };
 
@@ -27,7 +27,7 @@ const valid = {
   fullName: "  Mariam Hassan ",
   studentPhone: "010 1234 5678",
   parentPhone: "+20 111 222 3333",
-  levelId: "grade-9",
+  levelId: "preparatory-3",
   trackId: "",
   primaryGroupId: "",
   participationType: "in_person" as const,
@@ -47,7 +47,7 @@ describe("student form schema", () => {
       fullName: "Mariam Hassan",
       studentPhone: "+201012345678",
       parentPhone: "+201112223333",
-      levelId: "grade-9",
+      levelId: "preparatory-3",
       trackId: null,
       primaryGroupId: null,
       participationType: "in_person",
@@ -70,16 +70,16 @@ describe("student form schema", () => {
   });
 
   it("requires a track only for levels that have tracks", () => {
-    expect(issuePaths({ ...valid, levelId: "grade-11" })).toEqual(["trackId"]);
-    expect(schema.safeParse({ ...valid, levelId: "grade-11", trackId: SCIENCE }).success).toBe(true);
+    expect(issuePaths({ ...valid, levelId: "secondary-2" })).toEqual(["trackId"]);
+    expect(schema.safeParse({ ...valid, levelId: "secondary-2", trackId: SCIENCE }).success).toBe(true);
     expect(issuePaths({ ...valid, trackId: SCIENCE })).toEqual(["trackId"]);
   });
 
   it("keeps the group optional and rejects incompatible groups", () => {
     expect(schema.parse({ ...valid, primaryGroupId: GRADE_9_GROUP }).primaryGroupId).toBe(GRADE_9_GROUP);
     expect(issuePaths({ ...valid, primaryGroupId: SCIENCE_GROUP })).toEqual(["primaryGroupId"]);
-    expect(issuePaths({ ...valid, levelId: "grade-11", trackId: ARTS, primaryGroupId: SCIENCE_GROUP })).toEqual(["primaryGroupId"]);
-    expect(schema.safeParse({ ...valid, levelId: "grade-11", trackId: SCIENCE, primaryGroupId: SCIENCE_GROUP }).success).toBe(true);
+    expect(issuePaths({ ...valid, levelId: "secondary-2", trackId: ARTS, primaryGroupId: SCIENCE_GROUP })).toEqual(["primaryGroupId"]);
+    expect(schema.safeParse({ ...valid, levelId: "secondary-2", trackId: SCIENCE, primaryGroupId: SCIENCE_GROUP }).success).toBe(true);
   });
 
   it("reports no placement issues before a level is chosen", () => {
@@ -107,7 +107,7 @@ describe("phone display", () => {
   it("prefills the edit form with national phones and empty selects", () => {
     expect(studentFormDefaults({
       fullName: "Omar", studentPhone: "+201012345678", parentPhone: "+201112223333",
-      levelId: "grade-9", trackId: null, primaryGroupId: null, participationType: "online_only",
+      levelId: "preparatory-3", trackId: null, primaryGroupId: null, participationType: "online_only",
     })).toMatchObject({ studentPhone: "1012345678", trackId: "", primaryGroupId: "", participationType: "online_only" });
     expect(studentFormDefaults().participationType).toBe("");
   });

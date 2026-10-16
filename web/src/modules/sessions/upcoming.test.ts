@@ -5,7 +5,7 @@ import { upcomingToday } from "./upcoming";
 
 const schedule = (id: string, overrides: Partial<Schedule> = {}): Schedule => ({
   id, academy_id: "a", academic_year_id: "y", title: id, kind: "recurring", audience: "level",
-  group_id: null, level_id: "grade-9", track_id: null, mandatory: true, location: null, archived_at: null,
+  group_id: null, level_id: "preparatory-3", track_id: null, mandatory: true, location: null, archived_at: null,
   created_by: "u", ...overrides,
 });
 const slot = (scheduleId: string, weekday: number, startsAt: string, endsAt: string): ScheduleSlot => ({

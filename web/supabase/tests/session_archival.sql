@@ -100,9 +100,9 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('f9666666-6666-4666-8666-666666666666', 'f9111111-1111-4111-8111-111111111111', 'owner', 'f9111111-1111-4111-8111-111111111111');
 
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('e9555555-5555-4555-8555-555555555555', 'grade-9', 9);
+  ('e9555555-5555-4555-8555-555555555555', 'preparatory-3', 9);
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name) values
-  ('e95c5555-5555-4555-8555-555555555555', 'e9555555-5555-4555-8555-555555555555', 'e9555555-1111-4111-8111-555555555555', 'grade-9', null, 'Nine E');
+  ('e95c5555-5555-4555-8555-555555555555', 'e9555555-5555-4555-8555-555555555555', 'e9555555-1111-4111-8111-555555555555', 'preparatory-3', null, 'Nine E');
 
 grant usage on schema public, auth to authenticated, anon;
 
@@ -111,13 +111,13 @@ grant usage on schema public, auth to authenticated, anon;
 set local role authenticated;
 set local request.jwt.claim.sub = 'e9111111-1111-4111-8111-111111111111';
 select set_config('test.a1', id::text, true) from public.create_student_record('e9555555-5555-4555-8555-555555555555',
-  'e9555555-1111-4111-8111-555555555555', 'Eman', '01009000001', '01109000000', 'grade-9', null, 'e95c5555-5555-4555-8555-555555555555', 'in_person');
+  'e9555555-1111-4111-8111-555555555555', 'Eman', '01009000001', '01109000000', 'preparatory-3', null, 'e95c5555-5555-4555-8555-555555555555', 'in_person');
 select set_config('test.a2', id::text, true) from public.create_student_record('e9555555-5555-4555-8555-555555555555',
-  'e9555555-1111-4111-8111-555555555555', 'Ezz', '01009000002', '01109000000', 'grade-9', null, 'e95c5555-5555-4555-8555-555555555555', 'in_person');
+  'e9555555-1111-4111-8111-555555555555', 'Ezz', '01009000002', '01109000000', 'preparatory-3', null, 'e95c5555-5555-4555-8555-555555555555', 'in_person');
 select set_config('test.a3', id::text, true) from public.create_student_record('e9555555-5555-4555-8555-555555555555',
-  'e9555555-1111-4111-8111-555555555555', 'Esraa', '01009000003', '01109000000', 'grade-9', null, 'e95c5555-5555-4555-8555-555555555555', 'in_person');
+  'e9555555-1111-4111-8111-555555555555', 'Esraa', '01009000003', '01109000000', 'preparatory-3', null, 'e95c5555-5555-4555-8555-555555555555', 'in_person');
 select set_config('test.a4', id::text, true) from public.create_student_record('e9555555-5555-4555-8555-555555555555',
-  'e9555555-1111-4111-8111-555555555555', 'Elham', '01009000004', '01109000000', 'grade-9', null, 'e95c5555-5555-4555-8555-555555555555', 'in_person');
+  'e9555555-1111-4111-8111-555555555555', 'Elham', '01009000004', '01109000000', 'preparatory-3', null, 'e95c5555-5555-4555-8555-555555555555', 'in_person');
 select set_config('test.weekly', public.create_schedule('e9555555-5555-4555-8555-555555555555', 'e9555555-1111-4111-8111-555555555555',
   'Nine E weekly', 'recurring', 'group', 'e95c5555-5555-4555-8555-555555555555', null, null, true, 'Room 1',
   '[{"weekday":1,"startsAt":"17:00","endsAt":"18:30"}]', '[]')::text, true);

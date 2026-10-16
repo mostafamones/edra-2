@@ -12,48 +12,60 @@ final class SessionsModel {
 
     private(set) var state: State = .idle
     private(set) var sessions: [LiveSession] = []
-    /// The academy the current `sessions` belong to; late responses for another academy are dropped.
-    private(set) var academyID: String?
+    /// The academy context the current `sessions` belong to; responses for any other are dropped.
+    private(set) var context: AcademyContext?
+    /// Only the newest load may commit, including overlapping loads for the same academy.
+    private var generation = 0
 
     private let api: APIClient
+    private let isCurrent: @MainActor (AcademyContext) -> Bool
     private let onUnauthenticated: @MainActor () async -> Void
     private let onForbidden: @MainActor () async -> Void
 
     init(
         api: APIClient,
+        isCurrent: @escaping @MainActor (AcademyContext) -> Bool,
         onUnauthenticated: @escaping @MainActor () async -> Void,
         onForbidden: @escaping @MainActor () async -> Void
     ) {
         self.api = api
+        self.isCurrent = isCurrent
         self.onUnauthenticated = onUnauthenticated
         self.onForbidden = onForbidden
     }
 
-    func load(academyID id: String?) async {
-        if id != academyID { sessions = [] }
-        academyID = id
-        guard let id else { state = .idle; return }
+    func load(context new: AcademyContext?) async {
+        if new != context { sessions = [] }
+        context = new
+        generation += 1
+        let owner = generation
+        guard let new else { state = .idle; return }
         state = .loading
+        let result: Result<LiveSessionsResponse, APIError>
         do {
-            let response: LiveSessionsResponse = try await api.get("api/v1/academies/\(id)/sessions?state=live")
-            guard academyID == id else { return }
+            result = .success(try await api.get("api/v1/academies/\(new.academyID)/sessions?state=live"))
+        } catch {
+            result = .failure(error)
+        }
+        guard owner == generation, context == new, isCurrent(new) else { return }
+
+        switch result {
+        case .success(let response):
             sessions = response.sessions
             state = .loaded
-        } catch APIError.unauthenticated {
+        case .failure(.unauthenticated):
             await onUnauthenticated()
-        } catch APIError.forbidden {
-            guard academyID == id else { return }
+        case .failure(.forbidden):
             sessions = []
             state = .idle
             await onForbidden()
-        } catch APIError.network {
-            guard academyID == id else { return }
+        case .failure(.network):
             state = .failed("Can't reach the server. Check your connection and try again.")
-        } catch APIError.server(let message) {
-            guard academyID == id else { return }
+        case .failure(.server(let message)):
             state = .failed(message)
-        } catch {
-            // Cancelled by a newer load.
+        case .failure(.cancelled):
+            // The screen went away mid-load; no error to report.
+            state = sessions.isEmpty ? .idle : .loaded
         }
     }
 }

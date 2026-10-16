@@ -28,6 +28,16 @@ info:
     committed mutation (600 check-ins, 240 attendance changes, 60 publications per 60 seconds).
     `429 THROTTLED` includes `Retry-After` in seconds; retry with the same `Idempotency-Key`.
 
+    **Starting sessions.** Owners, Head Admins, Admins and Instructors can start a session from any
+    active schedule (recurring or one-off) of the open academic year at any time; planned days and
+    times never restrict starting. `GET /api/v1/academies/{academyId}/schedules` lists what can be
+    started; `POST /api/v1/academies/{academyId}/sessions` starts it. A schedule has at most one live
+    session: starting it again (here or on the web) opens that session (`existing`). The
+    `Idempotency-Key` is the start key: a retry returns the original session (`replayed`), even if
+    it has since ended or been archived, and never starts another one. Starting captures the roster
+    atomically and does not finalize attendance. Ending, archiving and restoring sessions remain web
+    actions.
+
     **Archived sessions.** Owners, Head Admins and Admins can archive a session on the web (archive
     management is not part of this API). An archived session is always ended, keeps its roster and
     attendance, and is excluded from counted attendance. Its attendance is read-only: every write
@@ -114,6 +124,92 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/LiveSession" }
                   next_cursor: { type: [string, "null"] }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+    post:
+      tags: [Sessions]
+      summary: Start a schedule's session, or open its live one
+      description: |
+        Authority, schedule, academic year and idempotency are checked by the server at this moment,
+        regardless of what the schedule list reported. The schedule must belong to this academy
+        (another academy's schedule is `404`), be active (`409 SCHEDULE_UNAVAILABLE`) and be in the
+        open academic year (`409 YEAR_CLOSED`). Reusing a key for a different schedule is
+        `409 IDEMPOTENCY_CONFLICT`. An answer that never arrived can be retried with the same key.
+        Open the returned `session.id` (`GET /api/v1/sessions/{sessionId}` and its attendance) for
+        its current lifecycle: a replayed session may be ended or archived.
+      operationId: startSession
+      parameters:
+        - { name: academyId, in: path, required: true, schema: { type: string, format: uuid } }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [schedule_id]
+              properties:
+                schedule_id: { type: string, format: uuid }
+      responses:
+        "201":
+          description: A new live session started (`outcome` is `started`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StartSessionResult" }
+        "200":
+          description: The schedule's live session was opened (`existing`), or this key's original session was returned (`replayed`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StartSessionResult" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/academies/{academyId}/schedules:
+    get:
+      tags: [Sessions]
+      summary: Schedules a session can be started from
+      description: |
+        Active schedules of the academy's open academic year, ordered by title then id. Off-day and
+        future-dated schedules are included: `meets_today` is a grouping hint, never an eligibility
+        filter. Archived schedules are excluded. With no open academic year, `academic_year` is null
+        and `schedules` is empty. Pages are complete: follow `next_offset` until it is null.
+      operationId: listStartableSchedules
+      parameters:
+        - { name: academyId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: q, in: query, required: false, description: Case-insensitive literal match within the title., schema: { type: string, maxLength: 100 } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: One page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [time_zone, today, academic_year, schedules, next_offset]
+                properties:
+                  time_zone: { type: string, description: Academy time zone (IANA). Planned dates and times are wall-clock values in it. }
+                  today: { type: string, format: date, description: The academy's current day. }
+                  academic_year:
+                    oneOf:
+                      - type: object
+                        required: [id, start_year]
+                        properties:
+                          id: { type: string, format: uuid }
+                          start_year: { type: integer }
+                      - type: "null"
+                  schedules:
+                    type: array
+                    items: { $ref: "#/components/schemas/StartableSchedule" }
+                  next_offset: { type: [integer, "null"], description: Pass as `offset` for the next page; null on the last page. }
         "400": { $ref: "#/components/responses/Error" }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
@@ -463,7 +559,7 @@ components:
                 - AMBIGUOUS_AUTHENTICATION   # 400 bearer token and auth cookie together
                 - UNAUTHENTICATED            # 401 missing, invalid, or expired token
                 - FORBIDDEN                  # 403 not (or no longer) a staff member of this academy
-                - NOT_FOUND                  # 404 unknown session, or one in another academy
+                - NOT_FOUND                  # 404 unknown session or schedule, or one in another academy
                 - STUDENT_NOT_FOUND          # 404 no such student in this session's academy and year
                 - STUDENT_CODE_NOT_FOUND     # 404 the code was never issued in this academy
                 - ATTENDANCE_CONFLICT        # 409 stale expected_version
@@ -472,6 +568,7 @@ components:
                 - SESSION_ENDED              # 409 check-in after the session ended
                 - SESSION_ARCHIVED           # 409 the session is archived (attendance read-only)
                 - YEAR_CLOSED                # 409 the academic year is closed (read-only)
+                - SCHEDULE_UNAVAILABLE       # 409 the schedule is archived or unavailable and cannot start sessions
                 - IDEMPOTENCY_CONFLICT       # 409 key reused for a different request
                 - STUDENT_CODES_DISABLED     # 409 the academy has student codes turned off
                 - STUDENT_CODE_RETIRED       # 409 issued but no longer active (retired, replaced, stale)
@@ -541,6 +638,55 @@ components:
             session_archived_by_name: { type: [string, "null"] }
             archive_note: { type: [string, "null"], description: Optional note recorded when it was archived. }
             roster_count: { type: integer }
+    StartSessionResult:
+      type: object
+      required: [outcome, replayed, session]
+      properties:
+        outcome:
+          type: string
+          enum: [started, existing, replayed]
+          description: started — a new live session; existing — the schedule was already live (started by anyone); replayed — a retry of this key, returning its original session.
+        replayed: { type: boolean }
+        session: { $ref: "#/components/schemas/Session" }
+    StartableSchedule:
+      type: object
+      required: [id, title, kind, audience, mandatory, location, group_id, group_name, level_id, level_name, track_id, track_name, slots, meetings, meets_today, live_session_id, can_start]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        kind: { type: string, enum: [recurring, one_off] }
+        audience: { type: string, enum: [group, level, program] }
+        mandatory: { type: boolean }
+        location: { type: [string, "null"] }
+        group_id: { type: [string, "null"], format: uuid }
+        group_name: { type: [string, "null"] }
+        level_id: { type: [string, "null"], description: A group schedule's level is its group's. }
+        level_name: { type: [string, "null"] }
+        track_id: { type: [string, "null"], format: uuid }
+        track_name: { type: [string, "null"] }
+        slots:
+          type: array
+          description: Weekly slots of a recurring schedule (empty for one-offs).
+          items:
+            type: object
+            required: [weekday, starts_at, ends_at]
+            properties:
+              weekday: { type: integer, minimum: 1, maximum: 7, description: ISO weekday, 1 = Monday. }
+              starts_at: { type: string, description: Academy-local time, HH:mm:ss. }
+              ends_at: { type: string }
+        meetings:
+          type: array
+          description: Dated meetings of a one-off schedule (empty for recurring ones).
+          items:
+            type: object
+            required: [occurs_on, starts_at, ends_at]
+            properties:
+              occurs_on: { type: string, format: date }
+              starts_at: { type: string }
+              ends_at: { type: string }
+        meets_today: { type: boolean, description: Planned for `today`. Grouping only. }
+        live_session_id: { type: [string, "null"], format: uuid, description: The schedule's live session when listed; starting opens it. }
+        can_start: { type: boolean, description: UI hint. The start command re-checks authority. }
     PermittedActions:
       type: object
       required: [check_in, edit, publish]

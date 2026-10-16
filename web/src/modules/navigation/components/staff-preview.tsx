@@ -20,7 +20,7 @@ export function StaffPreview({ item, preview }: { item: NavItem; preview: PagePr
         <p className="mt-4 text-sm leading-6 text-muted-foreground">
           This section is not available to your role in {activeAcademy.name}.
         </p>
-        <Link href={href("/app")} className="mt-6 text-sm font-medium text-primary underline-offset-4 hover:underline">Back to Overview</Link>
+        <Link href={href("/app")} className="mt-6 text-sm font-medium text-primary underline-offset-4 hover:underline">Back to Home</Link>
       </section>
     );
   }

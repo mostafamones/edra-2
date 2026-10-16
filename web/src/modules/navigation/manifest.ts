@@ -85,11 +85,11 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
     label: "Workspace",
     items: [
       {
-        label: "Overview",
+        label: "Home",
         href: "/app",
         icon: "overview",
         preview: {
-          title: "Overview",
+          title: "Home",
           purpose: "The daily starting point for everyone running the academy.",
           sections: [
             "Today's sessions and the next events on the academy schedule.",

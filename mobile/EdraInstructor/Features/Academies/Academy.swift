@@ -26,3 +26,10 @@ struct Academy: Decodable, Identifiable, Equatable, Sendable {
 struct AcademiesResponse: Decodable, Sendable {
     let academies: [Academy]
 }
+
+/// The selected academy at one point in time. Leaving and returning to the same academy
+/// (A → B → A) creates a new context, so work from the earlier visit is stale.
+struct AcademyContext: Hashable, Sendable {
+    let academyID: String
+    let epoch: Int
+}

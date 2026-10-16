@@ -6,7 +6,7 @@ import { assignmentDraftSchema, assignmentFormDefaults, assignmentFormSchema, fo
 const GROUP = "11111111-1111-4111-8111-111111111111";
 const TRACK = "22222222-2222-4222-8222-222222222222";
 const base = {
-  title: "Unit 3", instructions: "", audience: "level" as const, levelId: "grade-10", trackId: null,
+  title: "Unit 3", instructions: "", audience: "level" as const, levelId: "secondary-1", trackId: null,
   groupIds: [] as string[], dueAt: null,
   parts: [
     { title: "A", instructions: "", kind: null, maxScore: "10", questions: [] },
@@ -81,14 +81,14 @@ describe("assignment draft validation", () => {
   });
 
   it("turns form values into a draft with the due date in Cairo time", () => {
-    const values = { ...assignmentFormDefaults(), title: " Unit 3 ", levelId: "grade-10", dueDate: "2027-01-15", dueTime: "23:59",
+    const values = { ...assignmentFormDefaults(), title: " Unit 3 ", levelId: "secondary-1", dueDate: "2027-01-15", dueTime: "23:59",
       parts: [
         { title: "A", instructions: "", kind: "file_upload" as const, maxScore: "", questions: [{ prompt: "", maxScore: "10", choices: [] }] },
         { title: "B", instructions: "", kind: "legacy" as const, maxScore: "15", questions: [] },
       ] };
     const parsed = assignmentFormSchema.safeParse(values);
     expect(parsed.success).toBe(true);
-    expect(parsed.data).toMatchObject({ title: "Unit 3", audience: "level", levelId: "grade-10", trackId: null, groupIds: [], dueAt: "2027-01-15T21:59:00.000Z" });
+    expect(parsed.data).toMatchObject({ title: "Unit 3", audience: "level", levelId: "secondary-1", trackId: null, groupIds: [], dueAt: "2027-01-15T21:59:00.000Z" });
     expect(parsed.data?.parts.map((part) => [part.kind, part.maxScore, part.questions.length])).toEqual([["file_upload", "0", 1], [null, "15", 0]]);
     expect(assignmentDraftSchema.safeParse(parsed.data).success).toBe(true);
   });

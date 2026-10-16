@@ -54,7 +54,7 @@ export type AudienceNames = {
   groupNames: Map<string, string>;
 };
 
-/** "Grade 10", "Grade 10 · Science", or "Group A, Group B" (unknown ids fall back to a count). */
+/** "Second Secondary", "First Secondary · Science", or "Group A, Group B" (unknown ids fall back to a count). */
 export function describeAudience(
   value: { audience: AssignmentAudience; levelId: string | null; trackId: string | null; groupIds: readonly string[] },
   names: AudienceNames,

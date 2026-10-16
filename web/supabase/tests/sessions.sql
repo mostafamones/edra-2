@@ -88,15 +88,15 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('66666666-6666-4666-8666-666666666666', '61111111-1111-4111-8111-111111111111', 'owner', '61111111-1111-4111-8111-111111111111');
 
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('55555555-5555-4555-8555-555555555555', 'grade-9', 9),
-  ('55555555-5555-4555-8555-555555555555', 'grade-11', 11),
-  ('66666666-6666-4666-8666-666666666666', 'grade-9', 9);
+  ('55555555-5555-4555-8555-555555555555', 'preparatory-3', 9),
+  ('55555555-5555-4555-8555-555555555555', 'secondary-2', 11),
+  ('66666666-6666-4666-8666-666666666666', 'preparatory-3', 9);
 insert into public.academy_tracks (id, academy_id, level_id, name, sort_order) values
-  ('5a555555-5555-4555-8555-555555555555', '55555555-5555-4555-8555-555555555555', 'grade-11', 'Science', 1),
-  ('5b555555-5555-4555-8555-555555555555', '55555555-5555-4555-8555-555555555555', 'grade-11', 'Arts', 2);
+  ('5a555555-5555-4555-8555-555555555555', '55555555-5555-4555-8555-555555555555', 'secondary-2', 'Science', 1),
+  ('5b555555-5555-4555-8555-555555555555', '55555555-5555-4555-8555-555555555555', 'secondary-2', 'Arts', 2);
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name) values
-  ('5c555555-5555-4555-8555-555555555555', '55555555-5555-4555-8555-555555555555', '55555555-1111-4111-8111-555555555555', 'grade-9', null, 'Nine A'),
-  ('5d555555-5555-4555-8555-555555555555', '55555555-5555-4555-8555-555555555555', '55555555-1111-4111-8111-555555555555', 'grade-9', null, 'Nine B');
+  ('5c555555-5555-4555-8555-555555555555', '55555555-5555-4555-8555-555555555555', '55555555-1111-4111-8111-555555555555', 'preparatory-3', null, 'Nine A'),
+  ('5d555555-5555-4555-8555-555555555555', '55555555-5555-4555-8555-555555555555', '55555555-1111-4111-8111-555555555555', 'preparatory-3', null, 'Nine B');
 
 grant usage on schema public, auth to authenticated, anon;
 
@@ -106,17 +106,17 @@ set local role authenticated;
 set local request.jwt.claim.sub = '51111111-1111-4111-8111-111111111111';
 
 select set_config('test.a1', id::text, true) from public.create_student_record('55555555-5555-4555-8555-555555555555',
-  '55555555-1111-4111-8111-555555555555', 'Amal', '01000000001', '01100000000', 'grade-9', null, '5c555555-5555-4555-8555-555555555555', 'in_person');
+  '55555555-1111-4111-8111-555555555555', 'Amal', '01000000001', '01100000000', 'preparatory-3', null, '5c555555-5555-4555-8555-555555555555', 'in_person');
 select set_config('test.a2', id::text, true) from public.create_student_record('55555555-5555-4555-8555-555555555555',
-  '55555555-1111-4111-8111-555555555555', 'Basma', '01000000002', '01100000000', 'grade-9', null, '5c555555-5555-4555-8555-555555555555', 'online_only');
+  '55555555-1111-4111-8111-555555555555', 'Basma', '01000000002', '01100000000', 'preparatory-3', null, '5c555555-5555-4555-8555-555555555555', 'online_only');
 select set_config('test.b1', id::text, true) from public.create_student_record('55555555-5555-4555-8555-555555555555',
-  '55555555-1111-4111-8111-555555555555', 'Bahaa', '01000000003', '01100000000', 'grade-9', null, '5d555555-5555-4555-8555-555555555555', 'in_person');
+  '55555555-1111-4111-8111-555555555555', 'Bahaa', '01000000003', '01100000000', 'preparatory-3', null, '5d555555-5555-4555-8555-555555555555', 'in_person');
 select set_config('test.gone', id::text, true) from public.create_student_record('55555555-5555-4555-8555-555555555555',
-  '55555555-1111-4111-8111-555555555555', 'Archived', '01000000004', '01100000000', 'grade-9', null, '5c555555-5555-4555-8555-555555555555', 'in_person');
+  '55555555-1111-4111-8111-555555555555', 'Archived', '01000000004', '01100000000', 'preparatory-3', null, '5c555555-5555-4555-8555-555555555555', 'in_person');
 select set_config('test.sci', id::text, true) from public.create_student_record('55555555-5555-4555-8555-555555555555',
-  '55555555-1111-4111-8111-555555555555', 'Sara', '01000000005', '01100000000', 'grade-11', '5a555555-5555-4555-8555-555555555555', null, 'in_person');
+  '55555555-1111-4111-8111-555555555555', 'Sara', '01000000005', '01100000000', 'secondary-2', '5a555555-5555-4555-8555-555555555555', null, 'in_person');
 select set_config('test.arts', id::text, true) from public.create_student_record('55555555-5555-4555-8555-555555555555',
-  '55555555-1111-4111-8111-555555555555', 'Adel', '01000000006', '01100000000', 'grade-11', '5b555555-5555-4555-8555-555555555555', null, 'in_person');
+  '55555555-1111-4111-8111-555555555555', 'Adel', '01000000006', '01100000000', 'secondary-2', '5b555555-5555-4555-8555-555555555555', null, 'in_person');
 select public.set_student_records_archived('55555555-5555-4555-8555-555555555555', '55555555-1111-4111-8111-555555555555',
   jsonb_build_array(jsonb_build_object('id', current_setting('test.gone'), 'version', 1)), true);
 
@@ -125,10 +125,10 @@ select set_config('test.weekly', public.create_schedule('55555555-5555-4555-8555
   'Nine A weekly', 'recurring', 'group', '5c555555-5555-4555-8555-555555555555', null, null, true, 'Room 1',
   '[{"weekday":1,"startsAt":"17:00","endsAt":"18:30"}]', '[]')::text, true);
 select set_config('test.optional', public.create_schedule('55555555-5555-4555-8555-555555555555', '55555555-1111-4111-8111-555555555555',
-  'Grade 9 revision', 'recurring', 'level', null, 'grade-9', null, false, null,
+  'Third Preparatory revision', 'recurring', 'level', null, 'preparatory-3', null, false, null,
   '[{"weekday":3,"startsAt":"19:00","endsAt":"20:00"}]', '[]')::text, true);
 select set_config('test.program', public.create_schedule('55555555-5555-4555-8555-555555555555', '55555555-1111-4111-8111-555555555555',
-  'Science one-off', 'one_off', 'program', null, 'grade-11', '5a555555-5555-4555-8555-555555555555', true, 'Lab',
+  'Science one-off', 'one_off', 'program', null, 'secondary-2', '5a555555-5555-4555-8555-555555555555', true, 'Lab',
   '[]', '[{"date":"2030-10-01","startsAt":"10:00","endsAt":"11:00"}]')::text, true);
 select set_config('test.archived', public.create_schedule('55555555-5555-4555-8555-555555555555', '55555555-1111-4111-8111-555555555555',
   'Old class', 'recurring', 'group', '5c555555-5555-4555-8555-555555555555', null, null, true, null,
@@ -171,7 +171,7 @@ do $$ begin
     select 1 from public.sessions where id = current_setting('test.s1')::uuid and state = 'live'
       and started_by = '53333333-3333-4333-8333-333333333333' and started_by_name = 'Instructor One'
       and schedule_title = 'Nine A weekly' and audience = 'group' and group_name = 'Nine A'
-      and level_id = 'grade-9' and mandatory and location = 'Room 1' and metadata_version = 1
+      and level_id = 'preparatory-3' and mandatory and location = 'Room 1' and metadata_version = 1
   ) then raise exception 'Session snapshot is wrong'; end if;
   -- Group roster: active in-person Nine A students only (online-only Basma is excluded), expected because the schedule is mandatory.
   if (select array_agg(annual_student_record_id order by annual_student_record_id) from public.session_roster_entries
@@ -199,7 +199,7 @@ select pg_temp.expect_error($s$ select public.start_session('55555555-5555-4555-
 select pg_temp.expect_error($s$ select public.start_session('55555555-5555-4555-8555-555555555555',
   current_setting('test.archived')::uuid, 'aaaaaaaa-0000-4000-8000-000000000002') $s$, 'schedule_unavailable');
 
--- The optional whole-level schedule captures every active grade-9 student as eligible.
+-- The optional whole-level schedule captures every active preparatory-3 student as eligible.
 select set_config('test.s2', session_id::text, true) from public.start_session(
   '55555555-5555-4555-8555-555555555555', current_setting('test.optional')::uuid, 'aaaaaaaa-0000-4000-8000-000000000003');
 -- The program one-off starts on a different day than planned and captures only the Science track.

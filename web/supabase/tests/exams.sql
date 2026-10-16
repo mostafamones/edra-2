@@ -84,12 +84,12 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
 update public.academy_memberships set suspended_at = now(), suspended_by = 'fa111111-1111-4111-8111-111111111111'
 where academy_id = 'fb555555-5555-4555-8555-555555555555' and user_id = 'fa444444-4444-4444-8444-444444444444';
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('fb555555-5555-4555-8555-555555555555', 'grade-9', 9),
-  ('fb555555-5555-4555-8555-555555555555', 'grade-10', 10),
-  ('fb666666-6666-4666-8666-666666666666', 'grade-9', 9);
+  ('fb555555-5555-4555-8555-555555555555', 'preparatory-3', 9),
+  ('fb555555-5555-4555-8555-555555555555', 'secondary-1', 10),
+  ('fb666666-6666-4666-8666-666666666666', 'preparatory-3', 9);
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name) values
-  ('fc888888-0000-4000-8000-000000000001', 'fb555555-5555-4555-8555-555555555555', 'fb555555-1111-4111-8111-555555555555', 'grade-9', null, 'Nine A'),
-  ('fc888888-0000-4000-8000-000000000002', 'fb555555-5555-4555-8555-555555555555', 'fb555555-1111-4111-8111-555555555555', 'grade-9', null, 'Nine B');
+  ('fc888888-0000-4000-8000-000000000001', 'fb555555-5555-4555-8555-555555555555', 'fb555555-1111-4111-8111-555555555555', 'preparatory-3', null, 'Nine A'),
+  ('fc888888-0000-4000-8000-000000000002', 'fb555555-5555-4555-8555-555555555555', 'fb555555-1111-4111-8111-555555555555', 'preparatory-3', null, 'Nine B');
 -- Helpers, created by the table owner so the read helpers (security definer) see every row whatever
 -- the acting user. rec(n) is the record id of student n.
 create function pg_temp.rec(n text) returns uuid language sql as $$ select current_setting('test.' || n)::uuid $$;
@@ -116,7 +116,7 @@ create function pg_temp.marks_on(question uuid) returns integer language sql sec
 -- Mixed document: Q1, Q2 Question Sheet (2 marks each), Q3 Written Work (6 marks).
 create function pg_temp.mixed(title text, timer integer) returns jsonb language sql as $$
   select jsonb_build_object(
-    'title', title, 'instructions', 'Answer all', 'solution_notes', 'Worked solutions', 'audience', 'level', 'level_id', 'grade-9',
+    'title', title, 'instructions', 'Answer all', 'solution_notes', 'Worked solutions', 'audience', 'level', 'level_id', 'preparatory-3',
     'time_limit_minutes', timer,
     'parts', jsonb_build_array(
       jsonb_build_object('title', 'Choices', 'kind', 'question_sheet', 'questions', jsonb_build_array(
@@ -139,12 +139,12 @@ grant usage on schema public, auth to authenticated, anon;
 
 set local role authenticated;
 set local request.jwt.claim.sub = 'fa111111-1111-4111-8111-111111111111';
--- Six grade-9 students (s1..s6) and one grade-10 student (ten).
+-- Six preparatory-3 students (s1..s6) and one secondary-1 student (ten).
 select set_config('test.s' || n, (public.create_student_record('fb555555-5555-4555-8555-555555555555', 'fb555555-1111-4111-8111-555555555555',
-  'Student ' || n, '0100000050' || n, '01100000000', 'grade-9', null, 'fc888888-0000-4000-8000-000000000001', 'in_person')).id::text, true)
+  'Student ' || n, '0100000050' || n, '01100000000', 'preparatory-3', null, 'fc888888-0000-4000-8000-000000000001', 'in_person')).id::text, true)
 from generate_series(1, 6) n;
 select set_config('test.ten', (public.create_student_record('fb555555-5555-4555-8555-555555555555', 'fb555555-1111-4111-8111-555555555555',
-  'Tenth', '01000000599', '01100000000', 'grade-10', null, null, 'online_only')).id::text, true);
+  'Tenth', '01000000599', '01100000000', 'secondary-1', null, null, 'online_only')).id::text, true);
 
 -- Ids used below.
 --   exam A (fd000000-…01): mixed Question Sheet (Q1, Q2) + Written Work (Q3), 60-minute timer.
@@ -212,7 +212,7 @@ do $$ declare page jsonb; begin
   perform public.list_exam_students(pg_temp.academy(), pg_temp.xa());
   perform public.get_exam(pg_temp.academy(), pg_temp.xa());
   perform pg_temp.check(pg_temp.exam(pg_temp.xa())->>'structure_locked_at' is null and pg_temp.exam(pg_temp.xa())->>'work_started_at' is null, 'reads lock nothing');
-  perform pg_temp.check((pg_temp.exam(pg_temp.xa())->'counts'->>'eligible')::integer = 6, 'six eligible grade-9 students');
+  perform pg_temp.check((pg_temp.exam(pg_temp.xa())->'counts'->>'eligible')::integer = 6, 'six eligible preparatory-3 students');
 end $$;
 
 -- Other academies read nothing; direct table access is denied.
@@ -363,7 +363,7 @@ do $$ declare q jsonb := pg_temp.exam(pg_temp.xa()); body jsonb := pg_temp.docum
   perform pg_temp.expect_error(format($f$ select public.update_exam(%L, %L, %s, %L) $f$, pg_temp.academy(), pg_temp.xa(), q->>'version',
     jsonb_set(body, '{parts,0,questions,0,choices,0,label}', '"Changed"')), 'structure_locked');
   perform pg_temp.expect_error(format($f$ select public.update_exam(%L, %L, %s, %L) $f$, pg_temp.academy(), pg_temp.xa(), q->>'version',
-    body || '{"level_id":"grade-10"}'), 'target_locked');
+    body || '{"level_id":"secondary-1"}'), 'target_locked');
   perform pg_temp.expect_error(format($f$ select public.update_exam(%L, %L, %s, %L) $f$, pg_temp.academy(), pg_temp.xa(), q->>'version',
     body || '{"time_limit_minutes":90}'), 'target_locked');
 end $$;
@@ -696,7 +696,7 @@ do $$ declare out jsonb; begin
   perform pg_temp.check(out->>'outcome' = 'saved', 'draft saved while eligible');
 end $$;
 reset role;
-update public.annual_student_records set level_id = 'grade-10', primary_group_id = null where id = pg_temp.rec('s6');
+update public.annual_student_records set level_id = 'secondary-1', primary_group_id = null where id = pg_temp.rec('s6');
 set local role authenticated;
 select pg_temp.as_user('fa333333-3333-4333-8333-333333333333');
 select pg_temp.expect_error(format($f$ select public.save_exam_physical_draft(%L, 'fd000000-0000-4000-8000-000000000004', %L, 1, '[]', gen_random_uuid()) $f$,
@@ -710,7 +710,7 @@ select pg_temp.check((select count(*) from public.exam_submissions where exam_id
 select pg_temp.check(exists (select 1 from jsonb_array_elements(public.list_exam_students(pg_temp.academy(), 'fd000000-0000-4000-8000-000000000004')->'items') i
   where (i->>'annual_student_record_id')::uuid = pg_temp.rec('s6')), 'historical participant listed');
 reset role;
-update public.annual_student_records set level_id = 'grade-9', primary_group_id = 'fc888888-0000-4000-8000-000000000001' where id = pg_temp.rec('s6');
+update public.annual_student_records set level_id = 'preparatory-3', primary_group_id = 'fc888888-0000-4000-8000-000000000001' where id = pg_temp.rec('s6');
 set local role authenticated;
 select pg_temp.as_user('fa333333-3333-4333-8333-333333333333');
 do $$ declare out jsonb; q jsonb; begin
@@ -729,7 +729,7 @@ end $$;
 select pg_temp.as_user('fa222222-2222-4222-8222-222222222222');
 do $$ begin
   perform public.create_exam(pg_temp.academy(), pg_temp.year(), 'fd000000-0000-4000-8000-000000000006', jsonb_build_object(
-    'title', 'Running', 'audience', 'level', 'level_id', 'grade-9', 'time_limit_minutes', 120,
+    'title', 'Running', 'audience', 'level', 'level_id', 'preparatory-3', 'time_limit_minutes', 120,
     'parts', jsonb_build_array(jsonb_build_object('title', 'W', 'kind', 'written_work', 'questions', jsonb_build_array(jsonb_build_object('max_score', '1'))))));
   perform public.configure_exam_availability(pg_temp.academy(), 'fd000000-0000-4000-8000-000000000006', 1, now() - interval '1 minute', now() + interval '1 hour');
 end $$;

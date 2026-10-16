@@ -17,6 +17,7 @@ export type ApiErrorCode =
   | "SESSION_ENDED"
   | "SESSION_ARCHIVED"
   | "YEAR_CLOSED"
+  | "SCHEDULE_UNAVAILABLE"
   | "IDEMPOTENCY_CONFLICT"
   | "NOT_ON_ROSTER"
   | "STUDENT_CODES_DISABLED"
@@ -48,6 +49,7 @@ const STATUS: Record<ApiErrorCode, number> = {
   SESSION_ENDED: 409,
   SESSION_ARCHIVED: 409,
   YEAR_CLOSED: 409,
+  SCHEDULE_UNAVAILABLE: 409,
   IDEMPOTENCY_CONFLICT: 409,
   NOT_ON_ROSTER: 422,
   STUDENT_CODES_DISABLED: 409,
@@ -80,6 +82,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   SESSION_ENDED: "This session has ended. Check-ins are only accepted while it is live.",
   SESSION_ARCHIVED: "This session is archived. Its attendance is read-only and does not count.",
   YEAR_CLOSED: "This academic year is closed. Attendance is read-only.",
+  SCHEDULE_UNAVAILABLE: "This schedule is archived or unavailable and can no longer start sessions.",
   IDEMPOTENCY_CONFLICT: "This Idempotency-Key was already used for a different request.",
   NOT_ON_ROSTER: "This student is not on the session's roster. A staff member must review it.",
   STUDENT_CODES_DISABLED: "Student codes are turned off for this academy. Check the student in with annual_student_record_id.",

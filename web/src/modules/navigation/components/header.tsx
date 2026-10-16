@@ -22,7 +22,7 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
   const pathname = usePortalPath(portal);
   const override = useBreadcrumbOverride();
   const homeHref = portal === "staff" ? "/app" : "/learn";
-  const homeLabel = portal === "staff" ? "Overview" : "Home";
+  const homeLabel = "Home";
   const item = portal === "staff" ? findStaffItem(pathname) : findStudentItem(pathname);
   const parent = portal === "staff" ? parentHref(pathname) : undefined;
   const parentItem = parent && parent !== homeHref ? findStaffItem(parent) : undefined;

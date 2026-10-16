@@ -7,7 +7,7 @@ const base = {
   expectedVersion: 0,
   enabled: true,
   defaultPattern: "####",
-  levels: [{ levelId: "grade-10", pattern: "ST2###" }],
+  levels: [{ levelId: "secondary-1", pattern: "ST2###" }],
 };
 
 function errors(value: unknown) {
@@ -28,9 +28,9 @@ describe("studentCodeSettingsInputSchema", () => {
 
   it("points at the failing field", () => {
     expect(errors({ ...base, defaultPattern: "#ST#" })).toEqual({ defaultPattern: expect.stringContaining("together at the end") });
-    expect(errors({ ...base, levels: [{ levelId: "grade-10", pattern: "ST 2##" }] })).toHaveProperty(["level:grade-10"]);
-    expect(errors({ ...base, levels: [{ levelId: "grade-10", pattern: "A#" }, { levelId: "grade-10", pattern: "B#" }] }))
-      .toHaveProperty(["level:grade-10"]);
+    expect(errors({ ...base, levels: [{ levelId: "secondary-1", pattern: "ST 2##" }] })).toHaveProperty(["level:secondary-1"]);
+    expect(errors({ ...base, levels: [{ levelId: "secondary-1", pattern: "A#" }, { levelId: "secondary-1", pattern: "B#" }] }))
+      .toHaveProperty(["level:secondary-1"]);
   });
 
   it("rejects a negative expected version and a foreign academy id shape", () => {

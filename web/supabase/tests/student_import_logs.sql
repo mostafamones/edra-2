@@ -50,20 +50,20 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('78888888-8888-4888-8888-888888888888', '74444444-4444-4444-8444-444444444444', 'owner', '74444444-4444-4444-8444-444444444444');
 
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('77777777-7777-4777-8777-777777777777', 'grade-9', 9),
-  ('77777777-7777-4777-8777-777777777777', 'grade-11', 11),
-  ('78888888-8888-4888-8888-888888888888', 'grade-9', 9);
+  ('77777777-7777-4777-8777-777777777777', 'preparatory-3', 9),
+  ('77777777-7777-4777-8777-777777777777', 'secondary-2', 11),
+  ('78888888-8888-4888-8888-888888888888', 'preparatory-3', 9);
 insert into public.academy_tracks (id, academy_id, level_id, name, sort_order) values
-  ('7a111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', 'grade-11', 'Science', 1),
-  ('7a222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', 'grade-11', 'Dup', 2),
+  ('7a111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', 'secondary-2', 'Science', 1),
+  ('7a222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', 'secondary-2', 'Dup', 2),
   -- Distinct under the name index, but identical after the importer's NFKC normalization.
-  ('7a333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', 'grade-11', 'ｄｕｐ', 3);
+  ('7a333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', 'secondary-2', 'ｄｕｐ', 3);
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name) values
-  ('7b111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-9', null, 'Nine A'),
-  ('7b222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-9', null, 'Nine B'),
-  ('7b333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-11', '7a111111-1111-4111-8111-111111111111', 'Science A'),
-  ('7b444444-4444-4444-8444-444444444444', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-9', null, 'Nine archived'),
-  ('7b555555-5555-4555-8555-555555555555', '78888888-8888-4888-8888-888888888888', '78888888-1111-4111-8111-888888888888', 'grade-9', null, 'H group');
+  ('7b111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'preparatory-3', null, 'Nine A'),
+  ('7b222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'preparatory-3', null, 'Nine B'),
+  ('7b333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'secondary-2', '7a111111-1111-4111-8111-111111111111', 'Science A'),
+  ('7b444444-4444-4444-8444-444444444444', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'preparatory-3', null, 'Nine archived'),
+  ('7b555555-5555-4555-8555-555555555555', '78888888-8888-4888-8888-888888888888', '78888888-1111-4111-8111-888888888888', 'preparatory-3', null, 'H group');
 update public.groups set archived_at = now() where id = '7b444444-4444-4444-8444-444444444444';
 
 grant usage on schema public, auth to authenticated, anon;
@@ -90,9 +90,9 @@ do $$ begin
   end if;
 end $$;
 select public.stage_student_import_rows(current_setting('test.log')::uuid, '[
-  {"ordinal":1,"source_row":2,"values":{"full_name":"Example","student_phone":"01000000601","parent_phone":"01200000600","level":"grade-9","student_type":"in_person"}},
-  {"ordinal":2,"source_row":3,"values":{"full_name":"Example duplicate","student_phone":"01000000601","parent_phone":"01200000600","level":"grade-9","student_type":"in_person"}},
-  {"ordinal":3,"source_row":4,"values":{"full_name":"Example third","student_phone":"01000000603","parent_phone":"01200000600","level":"grade-9","student_type":"in_person"}}
+  {"ordinal":1,"source_row":2,"values":{"full_name":"Example","student_phone":"01000000601","parent_phone":"01200000600","level":"preparatory-3","student_type":"in_person"}},
+  {"ordinal":2,"source_row":3,"values":{"full_name":"Example duplicate","student_phone":"01000000601","parent_phone":"01200000600","level":"preparatory-3","student_type":"in_person"}},
+  {"ordinal":3,"source_row":4,"values":{"full_name":"Example third","student_phone":"01000000603","parent_phone":"01200000600","level":"preparatory-3","student_type":"in_person"}}
 ]');
 select set_config('test.revision', public.finalize_student_import(current_setting('test.log')::uuid)::text, true);
 select pg_temp.expect_error(format('select public.remove_student_import_entries(%L, 999, array[2])',current_setting('test.log')), 'stale_revision');
