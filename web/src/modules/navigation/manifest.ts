@@ -247,13 +247,13 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         icon: "exams",
         preview: {
           title: "Exams",
-          purpose: "Organize larger assessments and their answer materials.",
+          purpose: "Prepare timed exams, record physical work, mark and announce results.",
           sections: [
-            "Exam audience, mode, parts, questions, and answer keys.",
-            "In-person and online submission rules, including bubble-sheet materials.",
-            "Draft, published, closed, and archived assessment states.",
+            "Exam audience, parts, questions and key, the required timer, and the opening and closing window.",
+            "One attempt per student with a departure log, accepted online or physical work, private marks and announced results.",
+            "Key corrections and exclusions, with earlier announced results kept as history.",
           ],
-          actions: ["Prepare exam drafts and inspect submissions; publication follows role permissions."],
+          actions: ["All staff prepare, enter, mark and announce; Owners, Head Admins and Admins set windows, archive and correct keys."],
         },
       },
       {

@@ -1,0 +1,74 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { IconAlertCircle } from "@tabler/icons-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { AcademyEntry } from "@/modules/academies";
+import type { ExamPermissions } from "../../permissions";
+import { loadExamStudent, examStudentQueryKey } from "../../queries";
+import type { Exam } from "../../types";
+import { WorkHistory } from "./history";
+import { PhysicalEntry } from "./physical";
+import { WorkReview } from "./review";
+import { WorkTimeline } from "./timeline";
+
+type Props = {
+  academy: AcademyEntry;
+  exam: Exam;
+  permissions: ExamPermissions;
+  recordId: string | null;
+  name: string;
+  onClose: () => void;
+};
+
+/**
+ * One student's exam work. Before a source is accepted: physical entry and confirmation. Afterwards:
+ * the accepted answers, private marks, announcement and official history. Sections keep unsaved input across
+ * background refreshes and show a choice when newer saved data arrives.
+ */
+export function StudentSheet({ academy, exam, permissions, recordId, name, onClose }: Props) {
+  const query = useQuery({
+    queryKey: examStudentQueryKey(academy.id, exam.id, recordId ?? ""),
+    queryFn: () => loadExamStudent(academy.id, exam.id, recordId as string),
+    enabled: recordId !== null,
+  });
+  const data = query.data;
+  return (
+    <Sheet open={recordId !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle className="text-lg font-semibold" style={{ fontFamily: "inherit" }}>{data?.student.fullName ?? name}</SheetTitle>
+          <SheetDescription>{data ? [data.student.studentCode, data.student.groupName].filter(Boolean).join(" · ") || "No code or group" : "Loading…"}</SheetDescription>
+        </SheetHeader>
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-6">
+          {query.isPending && recordId && <div role="status" aria-label="Loading student work" className="flex flex-col gap-3"><Skeleton className="h-20" /><Skeleton className="h-64" /></div>}
+          {query.isError && (
+            <Alert variant="destructive">
+              <IconAlertCircle />
+              <AlertTitle>Couldn’t load this student’s work</AlertTitle>
+              <AlertDescription className="flex flex-wrap items-center gap-3">
+                Check your connection and try again.<Button size="sm" variant="outline" onClick={() => void query.refetch()}>Retry</Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          {data === null && <p className="text-sm text-muted-foreground">This student isn’t part of this exam.</p>}
+          {data && (
+            <>
+              <WorkTimeline exam={exam} student={data.student} />
+              {data.student.submission ? (
+                <WorkReview key={data.student.recordId} exam={exam} student={data.student} detail={data.detail} permissions={permissions} />
+              ) : (
+                <PhysicalEntry key={data.student.recordId} exam={exam} student={data.student} detail={data.detail} permissions={permissions} />
+              )}
+              <WorkHistory exam={exam} detail={data.detail} />
+            </>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
