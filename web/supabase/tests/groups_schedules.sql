@@ -69,7 +69,7 @@ insert into public.academy_tracks (id, academy_id, level_id, name) values
   ('77777777-7777-4777-8777-777777777777', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'grade-10', 'Science');
 
 do $$
-declare a_year uuid;
+declare a_year uuid; level_wide_group uuid;
 begin
   select id into a_year from public.academic_years where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   if a_year is null then raise exception 'New academy year missing'; end if;
@@ -91,13 +91,15 @@ begin
       values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'grade-10', '77777777-7777-4777-8777-777777777777', 'Cross academy');
     raise exception 'cross-academy track constraint failed';
   exception when foreign_key_violation then null; end;
-  begin
-    insert into public.groups (academy_id, academic_year_id, level_id, name)
-      values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'grade-10', 'Missing track');
-    raise exception 'track requirement failed';
-  exception when raise_exception then
-    if sqlerrm = 'track requirement failed' then raise; end if;
-  end;
+  -- Levels that offer tracks may also have a level-wide group with no track.
+  insert into public.groups (academy_id, academic_year_id, level_id, name)
+    values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'grade-10', 'Level-wide group')
+    returning id into level_wide_group;
+  if not exists (select 1 from public.groups where id = level_wide_group
+    and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and academic_year_id = a_year
+    and level_id = 'grade-10' and track_id is null) then
+    raise exception 'level-wide group was not saved correctly';
+  end if;
 end;
 $$;
 

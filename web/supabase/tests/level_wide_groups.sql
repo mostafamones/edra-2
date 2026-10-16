@@ -67,17 +67,17 @@ set local role authenticated;
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-a11111111111';
 
 select set_config('test.sci', id::text, true) from public.create_student_record(
-  'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'Scientific One', '01600000001', '01200000000',
+  'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'Scientific One', '01500000001', '01200000000',
   'grade-11', 'a5555555-5555-4555-8555-a55555555555', 'a7000000-0000-4000-8000-a70000000001', 'in_person');
 select set_config('test.lit', id::text, true) from public.create_student_record(
-  'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'Literature One', '01600000002', '01200000000',
+  'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'Literature One', '01500000002', '01200000000',
   'grade-11', 'a6666666-6666-4666-8666-a66666666666', 'a7000000-0000-4000-8000-a70000000001', 'in_person');
 select set_config('test.sci2', id::text, true) from public.create_student_record(
-  'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'Scientific Two', '01600000003', '01200000000',
+  'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'Scientific Two', '01500000003', '01200000000',
   'grade-11', 'a5555555-5555-4555-8555-a55555555555', 'a7000000-0000-4000-8000-a70000000002', 'in_person');
 -- A trackless student at a level without tracks joins that level's level-wide group.
 select set_config('test.nine', id::text, true) from public.create_student_record(
-  'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'Nine One', '01600000004', '01200000000',
+  'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'Nine One', '01500000004', '01200000000',
   'grade-9', null, 'a7000000-0000-4000-8000-a70000000004', 'in_person');
 -- Tracks stay on the students.
 do $$ begin
@@ -90,26 +90,26 @@ do $$ begin
 end $$;
 
 select pg_temp.expect_error($s$ select public.create_student_record('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0',
-  'Sci in Lit', '01600000010', '01200000000', 'grade-11', 'a5555555-5555-4555-8555-a55555555555', 'a7000000-0000-4000-8000-a70000000003', 'in_person') $s$, 'invalid_placement');
+  'Sci in Lit', '01500000010', '01200000000', 'grade-11', 'a5555555-5555-4555-8555-a55555555555', 'a7000000-0000-4000-8000-a70000000003', 'in_person') $s$, 'invalid_placement');
 select pg_temp.expect_error($s$ select public.create_student_record('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0',
-  'Other level', '01600000011', '01200000000', 'grade-9', null, 'a7000000-0000-4000-8000-a70000000001', 'in_person') $s$, 'invalid_placement');
+  'Other level', '01500000011', '01200000000', 'grade-9', null, 'a7000000-0000-4000-8000-a70000000001', 'in_person') $s$, 'invalid_placement');
 select pg_temp.expect_error($s$ select public.create_student_record('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0',
-  'Archived all', '01600000012', '01200000000', 'grade-11', 'a5555555-5555-4555-8555-a55555555555', 'a7000000-0000-4000-8000-a70000000005', 'in_person') $s$, 'invalid_placement');
+  'Archived all', '01500000012', '01200000000', 'grade-11', 'a5555555-5555-4555-8555-a55555555555', 'a7000000-0000-4000-8000-a70000000005', 'in_person') $s$, 'invalid_placement');
 select pg_temp.expect_error($s$ select public.create_student_record('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0',
-  'Other academy', '01600000013', '01200000000', 'grade-11', 'a5555555-5555-4555-8555-a55555555555', 'b7000000-0000-4000-8000-b70000000001', 'in_person') $s$, 'invalid_placement');
+  'Other academy', '01500000013', '01200000000', 'grade-11', 'a5555555-5555-4555-8555-a55555555555', 'b7000000-0000-4000-8000-b70000000001', 'in_person') $s$, 'invalid_placement');
 -- A level that offers tracks still requires the student's own track.
 select pg_temp.expect_error($s$ select public.create_student_record('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0',
-  'No track', '01600000014', '01200000000', 'grade-11', null, 'a7000000-0000-4000-8000-a70000000001', 'in_person') $s$, 'invalid_placement');
+  'No track', '01500000014', '01200000000', 'grade-11', null, 'a7000000-0000-4000-8000-a70000000001', 'in_person') $s$, 'invalid_placement');
 
 -- Switching track keeps a level-wide group but rejects a track-specific group of the old track.
 select public.update_student_record(current_setting('test.sci')::uuid, 1, 'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0',
-  'Scientific One', '01600000001', '01200000000', 'grade-11', 'a6666666-6666-4666-8666-a66666666666',
+  'Scientific One', '01500000001', '01200000000', 'grade-11', 'a6666666-6666-4666-8666-a66666666666',
   'a7000000-0000-4000-8000-a70000000001', 'in_person');
 select pg_temp.expect_error(format($s$ select public.update_student_record(%L, 2, 'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0',
-  'Scientific One', '01600000001', '01200000000', 'grade-11', 'a6666666-6666-4666-8666-a66666666666',
+  'Scientific One', '01500000001', '01200000000', 'grade-11', 'a6666666-6666-4666-8666-a66666666666',
   'a7000000-0000-4000-8000-a70000000002', 'in_person') $s$, current_setting('test.sci')), 'invalid_placement');
 select pg_temp.expect_error(format($s$ select public.update_student_record(%L, 1, 'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0',
-  'Stale', '01600000001', '01200000000', 'grade-11', 'a6666666-6666-4666-8666-a66666666666',
+  'Stale', '01500000001', '01200000000', 'grade-11', 'a6666666-6666-4666-8666-a66666666666',
   'a7000000-0000-4000-8000-a70000000001', 'in_person') $s$, current_setting('test.sci')), 'stale_record');
 
 -- ---------------------------------------------------------------------------------------------
@@ -121,13 +121,15 @@ select public.set_student_records_group('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 
 do $$ begin
   if (select count(*) from public.annual_student_records
       where id in (current_setting('test.sci2')::uuid, current_setting('test.lit')::uuid)
-        and primary_group_id = 'a7000000-0000-4000-8000-a70000000001') <> 2 then
+        and primary_group_id = 'a7000000-0000-4000-8000-a70000000001') <> 2
+    or (select version from public.annual_student_records where id = current_setting('test.sci2')::uuid) <> 2
+    or (select version from public.annual_student_records where id = current_setting('test.lit')::uuid) <> 1 then
     raise exception 'Mixed-track bulk move into the level-wide group failed';
   end if;
 end $$;
 -- Mixed tracks cannot enter a track-specific group; mixed levels cannot share any destination.
 select pg_temp.expect_error(format($s$ select public.set_student_records_group('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0',
-  jsonb_build_array(jsonb_build_object('id', %L, 'version', 2), jsonb_build_object('id', %L, 'version', 2)), 'a7000000-0000-4000-8000-a70000000002') $s$,
+  jsonb_build_array(jsonb_build_object('id', %L, 'version', 2), jsonb_build_object('id', %L, 'version', 1)), 'a7000000-0000-4000-8000-a70000000002') $s$,
   current_setting('test.sci2'), current_setting('test.lit')), 'incompatible_selection');
 select pg_temp.expect_error(format($s$ select public.set_student_records_group('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0',
   jsonb_build_array(jsonb_build_object('id', %L, 'version', 2), jsonb_build_object('id', %L, 'version', 1)), 'a7000000-0000-4000-8000-a70000000001') $s$,
@@ -150,7 +152,7 @@ declare r record;
 begin
   -- A level-wide group chosen by id fits a student of any track at the level.
   select * into r from public.resolve_student_import_row('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', '{}'::jsonb, null,
-    jsonb_build_object('full_name', 'Import Lit', 'student_phone', '01600000020', 'parent_phone', '01200000000', 'level_id', 'grade-11',
+    jsonb_build_object('full_name', 'Import Lit', 'student_phone', '01500000020', 'parent_phone', '01200000000', 'level_id', 'grade-11',
       'track_id', 'a6666666-6666-4666-8666-a66666666666', 'primary_group_id', 'a7000000-0000-4000-8000-a70000000001', 'participation_type', 'in_person'));
   if r.issues <> '[]'::jsonb or r.input ->> 'primary_group_id' <> 'a7000000-0000-4000-8000-a70000000001'
     or r.input ->> 'track_id' <> 'a6666666-6666-4666-8666-a66666666666' then
@@ -158,7 +160,7 @@ begin
   end if;
   -- A track-specific group of another track is incompatible.
   select * into r from public.resolve_student_import_row('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', '{}'::jsonb, null,
-    jsonb_build_object('full_name', 'Import Lit', 'student_phone', '01600000020', 'parent_phone', '01200000000', 'level_id', 'grade-11',
+    jsonb_build_object('full_name', 'Import Lit', 'student_phone', '01500000020', 'parent_phone', '01200000000', 'level_id', 'grade-11',
       'track_id', 'a6666666-6666-4666-8666-a66666666666', 'primary_group_id', 'a7000000-0000-4000-8000-a70000000002', 'participation_type', 'in_person'));
   if r.issues <> '[{"field": "group", "code": "incompatible"}]'::jsonb then
     raise exception 'Wrong-track group was not flagged incompatible: %', r.issues;
@@ -166,7 +168,7 @@ begin
   -- The default group fills a blank only when compatible; it does not set the student's track.
   select * into r from public.resolve_student_import_row('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0',
     jsonb_build_object('primary_group_id', 'a7000000-0000-4000-8000-a70000000001'),
-    jsonb_build_object('full_name', 'Default group', 'student_phone', '01600000021', 'parent_phone', '01200000000', 'level', 'grade-11',
+    jsonb_build_object('full_name', 'Default group', 'student_phone', '01500000021', 'parent_phone', '01200000000', 'level', 'grade-11',
       'track', 'a5555555-5555-4555-8555-a55555555555', 'student_type', 'in_person'), null);
   if r.input ->> 'primary_group_id' is distinct from 'a7000000-0000-4000-8000-a70000000001'
     or r.input ->> 'track_id' is distinct from 'a5555555-5555-4555-8555-a55555555555' then
@@ -177,7 +179,7 @@ begin
     ('a7000000-0000-4000-8000-a70000000006', 'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'grade-11', null, 'Twin'),
     ('a7000000-0000-4000-8000-a70000000007', 'a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'grade-11', 'a5555555-5555-4555-8555-a55555555555', 'Twin');
   select * into r from public.resolve_student_import_row('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', '{}'::jsonb,
-    jsonb_build_object('full_name', 'Twin', 'student_phone', '01600000022', 'parent_phone', '01200000000', 'level', 'grade-11',
+    jsonb_build_object('full_name', 'Twin', 'student_phone', '01500000022', 'parent_phone', '01200000000', 'level', 'grade-11',
       'track', 'a5555555-5555-4555-8555-a55555555555', 'group', 'Twin', 'student_type', 'in_person'), null);
   if r.issues <> '[{"field": "group", "code": "ambiguous"}]'::jsonb then
     raise exception 'Same-name groups were not ambiguous: %', r.issues;
