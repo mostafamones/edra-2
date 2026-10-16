@@ -20,7 +20,7 @@ Current implementation reference; intended rules are in [teaching and attendance
 
 Client-safe (`index.ts`): `startSession`, `endSession`, `archiveSession`, `restoreSession` server actions; `fetchLiveSessions`, `fetchSession` and query keys; `LiveSession`, `SessionDetail`, `RosterEntry` types.
 
-Server (`server.ts`): `listLiveSessions({ academyId?, cursor?, limit? })` (omit `academyId` to list every academy the caller belongs to; newest first; keyset cursor; limit 1–100, default 50), `getSession(academyId, sessionId)`, `readLiveSessionQuery(searchParams)`.
+Server (`server.ts`): `runStartSession({ academyId, scheduleId, startKey }, authority?)` is the start service shared by the `startSession` cookie action and the bearer API (validation, membership, `start_session`, result mapping); `listLiveSessions({ academyId?, cursor?, limit? })` (omit `academyId` to list every academy the caller belongs to; newest first; keyset cursor; limit 1–100, default 50), `getSession(academyId, sessionId)`, `readLiveSessionQuery(searchParams)`.
 
 Server reads accept an optional `Authority` (from `@/lib/supabase/authority`) so the bearer-token API runs them as the token's user; `sessionAcademy(sessionId)` resolves a visible session's academy. `v1.ts` builds the `/api/v1` session responses (see [sessions/attendance OpenAPI](../../../docs/api/sessions-attendance.openapi.yaml)).
 
@@ -34,4 +34,4 @@ HTTP (cookie session):
 
 Web paths: /<academySlug>/attendance, /new and /<id> on the staff host; internal routes are under /app/[academySlug]/attendance.
 
-Starting, ending, archiving and restoring sessions are web-only server actions; the `/api/v1` token API does not expose them. Its session detail adds `session_archived_at`, `session_archived_by_name` and `archive_note`.
+HTTP (`/api/v1`, bearer): `POST /api/v1/academies/{academyId}/sessions` with `{ "schedule_id" }` and the `Idempotency-Key` as `startKey` → `{ outcome, replayed, session }` (201 when started, 200 for `existing`/`replayed`; the session is read after the start, so a replayed original reports its current ended/archived state). `GET /api/v1/academies/{academyId}/schedules` (schedules module, `listStartableSchedules`) lists what can be started. Ending, archiving and restoring sessions remain web-only server actions. The v1 session detail adds `session_archived_at`, `session_archived_by_name` and `archive_note`.

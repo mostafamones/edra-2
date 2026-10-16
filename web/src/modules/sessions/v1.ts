@@ -3,10 +3,11 @@ import "server-only";
 import { z } from "zod";
 
 import type { StaffApiContext } from "@/lib/api/handler";
-import { apiError, apiJson, snakeKeys } from "@/lib/api/http";
+import { apiError, apiJson, readJson, snakeKeys, type ApiErrorCode } from "@/lib/api/http";
 import { decodeCursor, MAX_PAGE_SIZE } from "./cursor";
-import { listLiveSessions, sessionAcademy } from "./data";
-import type { SessionDetail } from "./types";
+import { getSession, listLiveSessions, sessionAcademy } from "./data";
+import { runStartSession } from "./start";
+import type { SessionDetail, SessionErrorCode } from "./types";
 
 /** The sessions part of the external `/api/v1` contract (snake_case JSON). */
 
@@ -49,4 +50,43 @@ export function sessionV1(detail: SessionDetail) {
 export async function withSessionAcademy(context: StaffApiContext, sessionId: string, handler: (academyId: string) => Promise<Response>) {
   const academyId = await sessionAcademy(sessionId, context.authority);
   return academyId ? handler(academyId) : apiError(context, "NOT_FOUND");
+}
+
+const START_CODES: Record<SessionErrorCode, ApiErrorCode> = {
+  validation: "INVALID_REQUEST",
+  forbidden: "FORBIDDEN",
+  not_found: "NOT_FOUND",
+  schedule_unavailable: "SCHEDULE_UNAVAILABLE",
+  year_unavailable: "YEAR_CLOSED",
+  idempotency_conflict: "IDEMPOTENCY_CONFLICT",
+  session_ended: "SESSION_ENDED",
+  unavailable: "INTERNAL",
+};
+
+const startBody = z.object({ schedule_id: z.uuid() }).strict();
+
+/**
+ * POST /api/v1/academies/{academyId}/sessions — starts the schedule's session, or opens its live
+ * one. The `Idempotency-Key` is the start key: a retry returns the original session (`replayed`),
+ * even if it has since ended or been archived. 201 for a new session, 200 otherwise.
+ */
+export async function startSessionResponse(context: StaffApiContext, request: Request, academyId: string) {
+  const key = request.headers.get("idempotency-key")?.trim() ?? "";
+  if (!z.uuid().safeParse(key).success) {
+    return apiError(context, "INVALID_REQUEST", { message: "Send an Idempotency-Key header containing a UUID; reuse it when retrying." });
+  }
+  const body = startBody.safeParse(await readJson(request));
+  if (!body.success || !z.uuid().safeParse(academyId).success) {
+    return apiError(context, "INVALID_REQUEST", { message: "Send { \"schedule_id\": \"<uuid>\" }." });
+  }
+  const result = await runStartSession({ academyId, scheduleId: body.data.schedule_id, startKey: key }, context.authority);
+  if (!result.ok) return apiError(context, START_CODES[result.code]);
+  // Lifecycle is read after the start, so an auto-closed or archived original reports its current state.
+  const detail = await getSession(academyId, result.sessionId, context.authority);
+  if (!detail.ok) return readStatusError(context, detail.status);
+  return apiJson(
+    context,
+    { outcome: result.outcome, replayed: result.outcome === "replayed", session: sessionV1(detail.data) },
+    result.outcome === "started" ? 201 : 200,
+  );
 }
