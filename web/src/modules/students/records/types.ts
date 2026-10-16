@@ -101,6 +101,9 @@ export type GroupChangePreview = {
   changed: number;
   unchanged: number;
   problems: Record<GroupChangeProblem, number>;
-  /** The selection's single level and track, or null when it spans several programs. */
+  /**
+   * The selection's single level, or null when it spans several levels. `trackId` is the shared
+   * track, or null when the students have different tracks (or none): only level-wide groups fit.
+   */
   program: { levelId: string; trackId: string | null } | null;
 };

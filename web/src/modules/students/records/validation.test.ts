@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  formatPhone, placementIssues, studentFormDefaults, studentFormSchema, studentRecordInputSchema, toDomesticPhone,
+  formatPhone, isCompatibleGroup, placementIssues, studentFormDefaults, studentFormSchema, studentRecordInputSchema, toDomesticPhone,
 } from "./validation";
 
 const ACADEMY = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -110,5 +110,34 @@ describe("phone display", () => {
       levelId: "grade-9", trackId: null, primaryGroupId: null, participationType: "online_only",
     })).toMatchObject({ studentPhone: "1012345678", trackId: "", primaryGroupId: "", participationType: "online_only" });
     expect(studentFormDefaults().participationType).toBe("");
+  });
+});
+
+describe("group compatibility", () => {
+  const context = {
+    tracks: [{ id: "sci", level_id: "g11" }, { id: "lit", level_id: "g11" }],
+    groups: [
+      { id: "all", level_id: "g11", track_id: null },
+      { id: "sci-a", level_id: "g11", track_id: "sci" },
+      { id: "nine", level_id: "g9", track_id: null },
+    ],
+  };
+  const placement = (levelId: string, trackId: string, primaryGroupId: string) => ({ levelId, trackId, primaryGroupId });
+
+  it("accepts a level-wide group for every track of its level", () => {
+    expect(isCompatibleGroup(placement("g11", "sci", "all"), context)).toBe(true);
+    expect(isCompatibleGroup(placement("g11", "lit", "all"), context)).toBe(true);
+  });
+
+  it("requires the same track for a track-specific group", () => {
+    expect(isCompatibleGroup(placement("g11", "sci", "sci-a"), context)).toBe(true);
+    expect(isCompatibleGroup(placement("g11", "lit", "sci-a"), context)).toBe(false);
+  });
+
+  it("rejects another level and unknown groups", () => {
+    expect(isCompatibleGroup(placement("g11", "sci", "nine"), context)).toBe(false);
+    expect(isCompatibleGroup(placement("g9", "", "all"), context)).toBe(false);
+    expect(isCompatibleGroup(placement("g9", "", "nine"), context)).toBe(true);
+    expect(isCompatibleGroup(placement("g11", "sci", "missing"), context)).toBe(false);
   });
 });

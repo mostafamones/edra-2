@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import type { Group, Level, Track } from "@/modules/groups";
 import type { StudentRecordField } from "../types";
 import {
-  isCompatibleGroup, PARTICIPATION_LABELS, PARTICIPATION_TYPES, type StudentFormValues, type StudentRecordInput,
+  isCompatibleGroup, isGroupCompatible, PARTICIPATION_LABELS, PARTICIPATION_TYPES, type StudentFormValues, type StudentRecordInput,
 } from "../validation";
 
 type Props = {
@@ -53,7 +53,7 @@ export function StudentFormFields({ form, levels, tracks, levelNames, groups, pl
   const levelTracks = tracks.filter((track) => track.level_id === levelId);
   const needsTrack = levelTracks.length > 0;
   const groupOptions = levelId && (!needsTrack || trackId)
-    ? groups.filter((group) => group.level_id === levelId && (group.track_id ?? "") === trackId)
+    ? groups.filter((group) => isGroupCompatible(group, levelId, trackId))
     : [];
   const quiet = { shouldDirty: true, shouldValidate: false } as const;
 

@@ -33,6 +33,9 @@ type Props = {
   onCancel: () => void;
 };
 
+/** Select value standing for a null track; a level-wide group accepts every track of its level. */
+const LEVEL_WIDE = "__level_wide__";
+
 export function GroupForm({ academy, group, levels, tracks, levelNames, programLock, sheetLayout = false, onSaved, onCancel }: Props) {
   const isCurrentAcademy = useAcademyScope();
   const queryClient = useQueryClient();
@@ -63,10 +66,6 @@ export function GroupForm({ academy, group, levels, tracks, levelNames, programL
     });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Check the form fields.");
-      return;
-    }
-    if (availableTracks.length && !parsed.data.trackId) {
-      setError("Choose a track for this level.");
       return;
     }
     if (group) {
@@ -111,9 +110,12 @@ export function GroupForm({ academy, group, levels, tracks, levelNames, programL
           </Field>
           {levelId && hasTracks && <Field>
             <FieldLabel>Track</FieldLabel>
-            <Select value={trackId} onValueChange={setTrackId} disabled={Boolean(programLock) || availableTracks.length === 0}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={availableTracks.length ? "Choose a track" : "No track required"} /></SelectTrigger>
-              <SelectContent>{availableTracks.map((track) => <SelectItem key={track.id} value={track.id}>{track.name}</SelectItem>)}</SelectContent>
+            <Select value={trackId || LEVEL_WIDE} onValueChange={(value) => setTrackId(value === LEVEL_WIDE ? "" : value)} disabled={Boolean(programLock) || availableTracks.length === 0}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={LEVEL_WIDE}>Level-wide (all tracks)</SelectItem>
+                {availableTracks.map((track) => <SelectItem key={track.id} value={track.id}>{track.name}</SelectItem>)}
+              </SelectContent>
             </Select>
           </Field>}
         </div>

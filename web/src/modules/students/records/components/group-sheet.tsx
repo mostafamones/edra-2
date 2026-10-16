@@ -114,7 +114,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
   const data: GroupChangePreview | undefined = preview.data;
   const blocked = data ? Object.values(data.problems).some((count) => count > 0) : true;
   const options = data?.program
-    ? groups.filter((group) => group.level_id === data.program?.levelId && group.track_id === data.program?.trackId)
+    ? groups.filter((group) => group.level_id === data.program?.levelId && (group.track_id === null || group.track_id === data.program?.trackId))
     : [];
   const destinationName = destination === null ? "Unassigned" : data?.destination?.name ?? "";
   const pageRows = data?.rows.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize) ?? [];
@@ -198,8 +198,8 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
               </Select>
               <FieldDescription>
                 {data && !data.program
-                  ? "The selected students are in different levels or tracks, so they can only be removed from their groups. Select students from one level and track to move them into a group."
-                  : "Groups in the selected students’ level and track. Group capacity isn’t checked here."}
+                  ? "The selected students are in different levels, so they can only be removed from their groups. Select students from one level to move them into a group."
+                  : "Level-wide groups, and groups for the selected students’ track, in their level. Group capacity isn’t checked here."}
               </FieldDescription>
             </Field>
 
@@ -223,7 +223,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
                     {data.problems.stale > 0 && <li>{students(data.problems.stale)} changed since you selected them.</li>}
                     {data.problems.missing > 0 && <li>{students(data.problems.missing)} no longer exist.</li>}
                     {data.problems.archived > 0 && <li>{students(data.problems.archived)} are archived. Clear them from the selection.</li>}
-                    {data.problems.incompatible > 0 && <li>{students(data.problems.incompatible)} aren’t in this group’s level and track.</li>}
+                    {data.problems.incompatible > 0 && <li>{students(data.problems.incompatible)} aren’t in this group’s level or track.</li>}
                   </ul>
                   {reloadable && (
                     <Button variant="outline" size="sm" onClick={() => onReloadSelection(data.rows)} disabled={saving}>

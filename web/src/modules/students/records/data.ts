@@ -156,7 +156,7 @@ const SELECTION_CHUNK = 100;
 /**
  * Fresh details for a bulk group change: every selected record's current placement and group, the
  * proposed destination, and anything that blocks the change (missing, changed since selection,
- * archived, or not in the destination's level and track). `destination` is a group id, null for
+ * archived, or not in the destination's level, or its track when the destination is track-specific). `destination` is a group id, null for
  * Unassigned, or undefined while none is chosen.
  */
 export async function loadGroupChangePreview(
@@ -184,7 +184,8 @@ export async function loadGroupChangePreview(
   const target = destination ? groupById.get(destination) : undefined;
   if (destination && (!target || target.archived_at)) return null;
 
-  const programs = new Set<string>();
+  const levelIds = new Set<string>();
+  const trackIds = new Set<string>();
   const problems = { missing: 0, stale: 0, archived: 0, incompatible: 0 };
   let changed = 0;
   let unchanged = 0;
@@ -197,10 +198,11 @@ export async function loadGroupChangePreview(
         currentGroupId: null, currentGroupName: null, version: null, archived: false, problem: "missing", changes: false,
       };
     }
-    programs.add(`${record.level_id}:${record.track_id ?? ""}`);
+    levelIds.add(record.level_id);
+    trackIds.add(record.track_id ?? "");
     const problem = record.version !== version ? "stale"
       : record.archived_at ? "archived"
-        : target && (target.level_id !== record.level_id || target.track_id !== record.track_id) ? "incompatible"
+        : target && (target.level_id !== record.level_id || (target.track_id !== null && target.track_id !== record.track_id)) ? "incompatible"
           : null;
     if (problem) problems[problem]++;
     const changes = destination !== undefined && (destination ?? null) !== record.primary_group_id;
@@ -223,7 +225,8 @@ export async function loadGroupChangePreview(
       changes,
     };
   });
-  const [only] = programs;
+  const [onlyLevel] = levelIds;
+  const [onlyTrack] = trackIds;
   return {
     destination: destination === undefined ? undefined : target ? {
       id: target.id,
@@ -235,6 +238,6 @@ export async function loadGroupChangePreview(
     changed,
     unchanged,
     problems,
-    program: programs.size === 1 ? { levelId: only.split(":")[0], trackId: only.split(":")[1] || null } : null,
+    program: levelIds.size === 1 ? { levelId: onlyLevel, trackId: trackIds.size === 1 && onlyTrack ? onlyTrack : null } : null,
   };
 }

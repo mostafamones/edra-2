@@ -12,7 +12,7 @@ Current staff-record implementation at /<academySlug>/students on the staff host
 
 These describe source behavior. The product reference owns intended changes. Head Admins have the Owner/Admin permissions below; a suspended member has none in that academy.
 
-- **Groups are optional.** A record may be unassigned (`primary_group_id` is null). A placed group must be active, in the same academy and year, and match the record's level and track.
+- **Groups are optional.** A record may be unassigned (`primary_group_id` is null). A placed group must be active, in the same academy and year, and be in the record's level; it is either level-wide (`track_id` null, any track or none) or has the record's track.
 - **Both phones are required and must be valid Egyptian mobiles** for every staff role. There is no empty-phone or validation-bypass path. Phones are stored as canonical `+201XXXXXXXXX`; neither requires OTP verification here.
 - The student phone is unique per academy and year, **including archived records**. Duplicate names and shared parent phones are allowed.
 - A track is required only when the chosen level has tracks. No synthetic "General" track exists.
@@ -42,7 +42,7 @@ Authenticated users can only `select` the tables (through RLS). Every write goes
 
 ## Bulk group changes
 
-`Change group` in the selection bar opens a sheet that reads the selected records fresh (`previewStudentGroupChange`); the selection itself only holds versions. `set_student_records_group` takes up to 500 records with their versions and either one destination group or `null` (Unassigned). It locks the records in id order and the destination group, and rejects the whole selection if any record is missing, stale, archived, or (for a group) outside the group's level and track. Only `primary_group_id` changes; records already in the target are reported as unchanged. Removing a group may span programs. Capacity is not checked.
+`Change group` in the selection bar opens a sheet that reads the selected records fresh (`previewStudentGroupChange`); the selection itself only holds versions. `set_student_records_group` takes up to 500 records with their versions and either one destination group or `null` (Unassigned). It locks the records in id order and the destination group, and rejects the whole selection if any record is missing, stale, archived, or (for a group) outside the group's level, or outside its track when the group is track-specific. Only `primary_group_id` changes; records already in the target are reported as unchanged. Removing a group may span programs. Capacity is not checked.
 
 ## Importing
 

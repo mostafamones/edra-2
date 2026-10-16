@@ -147,7 +147,7 @@ export async function previewStudentGroupChange(
 
 /**
  * Assigns the selected active records to one group, or removes their group when `primaryGroupId`
- * is null. All-or-nothing: every record must be current and, for a group, in its level and track.
+ * is null. All-or-nothing: every record must be current and, for a group, in its level (and track, for a track-specific group).
  */
 export async function setStudentRecordsGroup(
   scope: { academyId: string; academicYearId: string }, records: RecordVersion[], primaryGroupId: string | null,

@@ -31,10 +31,10 @@ export function issueMessage(issue: ImportIssue): string {
     case "required": return `${label} is required.`;
     case "invalid_phone": return `${label} isn’t a valid Egyptian mobile number.`;
     case "too_long": return `${label} is longer than 200 characters.`;
-    case "unknown": return `${label} doesn’t match any ${label.toLowerCase()} in this academy${issue.field === "group" ? " for this level and track" : ""}.`;
+    case "unknown": return `${label} doesn’t match any ${label.toLowerCase()} in this academy${issue.field === "group" ? " for this level" : ""}.`;
     case "ambiguous": return `${label} matches more than one ${label.toLowerCase()}. Choose one.`;
     case "not_offered": return "This level has no tracks; leave the track empty.";
-    case "incompatible": return "This group belongs to a different level or track.";
+    case "incompatible": return "This group belongs to a different level, or to a different track than this student’s.";
     case "unsupported": return `${label} ${PROBLEMS[issue.detail ?? "unsupported"] ?? PROBLEMS.unsupported}`;
     default: return `${label} needs correction.`;
   }

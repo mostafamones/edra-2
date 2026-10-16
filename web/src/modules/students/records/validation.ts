@@ -60,13 +60,18 @@ export function placementIssues(value: Placement, context: PlacementContext): Is
   if (value.trackId && !levelTracks.some((track) => track.id === value.trackId))
     issues.push({ path: "trackId", message: "Choose a track offered for this level." });
   if (value.primaryGroupId && !isCompatibleGroup(value, context))
-    issues.push({ path: "primaryGroupId", message: "Choose an active group in this level and track." });
+    issues.push({ path: "primaryGroupId", message: "Choose an active level-wide group or a group for this track." });
   return issues;
 }
 
 export function isCompatibleGroup(value: Placement, context: PlacementContext) {
   const group = context.groups.find((candidate) => candidate.id === value.primaryGroupId);
-  return Boolean(group && group.level_id === value.levelId && (group.track_id ?? "") === value.trackId);
+  return Boolean(group && isGroupCompatible(group, value.levelId, value.trackId));
+}
+
+/** A level-wide group (null track) fits any student of its level; a track group needs the same track. */
+export function isGroupCompatible(group: { level_id: string; track_id: string | null }, levelId: string, trackId: string) {
+  return group.level_id === levelId && (group.track_id === null || group.track_id === trackId);
 }
 
 /** Form schema that validates raw values and produces the action input for one academy and year. */

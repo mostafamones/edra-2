@@ -25,7 +25,7 @@ const FIELD_NOTES: Record<(typeof IMPORT_FIELDS)[number], string> = {
   parent_phone: "Required. An Egyptian mobile number; students may share one.",
   level: "Required unless you choose a default level. The level code or its name.",
   track: "Required when the level has tracks. The track name.",
-  group: "Optional. The group name in the student’s level and track, or “Unassigned”.",
+  group: "Optional. The group name: a level-wide group in the student’s level, or a group for their track; or “Unassigned”.",
   student_type: `Required unless you choose a default type. ${PARTICIPATION_TYPES.map((type) => `“${PARTICIPATION_LABELS[type]}” (${type})`).join(" or ")}.`,
 };
 
@@ -39,10 +39,10 @@ export function instructionLines(reference: ImportReference): string[][] {
   lines.push([], ["Tracks", "Level — Track"]);
   if (reference.tracks.length === 0) lines.push(["", "No level has tracks."]);
   for (const track of reference.tracks) lines.push(["", `${track.levelName} — ${track.name}`]);
-  lines.push([], ["Groups", "Group — Level · Track"]);
+  lines.push([], ["Groups", "Group — Level · Track (no track: level-wide, accepts every track)"]);
   if (reference.groups.length === 0) lines.push(["", "No active groups this year. Leave the group column empty."]);
   for (const group of reference.groups) {
-    lines.push(["", `${group.name} — ${group.levelName}${group.trackName ? ` · ${group.trackName}` : ""}`]);
+    lines.push(["", `${group.name} — ${group.levelName}${group.trackName ? ` · ${group.trackName}` : " · Level-wide"}`]);
   }
   lines.push([], ["Student types", PARTICIPATION_TYPES.map((type) => `${type} (${PARTICIPATION_LABELS[type]})`).join(", ")]);
   return lines;
@@ -54,7 +54,8 @@ export function templateExamples(reference: ImportReference): Record<ImportField
   for (const level of reference.levels) {
     const tracks = reference.tracks.filter((track) => track.levelId === level.id);
     for (const track of tracks.length ? tracks : [null]) {
-      const group = reference.groups.find((group) => group.levelId === level.id && group.trackId === (track?.id ?? null));
+      const levelGroups = reference.groups.filter((group) => group.levelId === level.id);
+      const group = levelGroups.find((group) => group.trackId === (track?.id ?? null)) ?? levelGroups.find((group) => group.trackId === null);
       rows.push({
         full_name: `Example student ${rows.length + 1}`,
         student_phone: "01XXXXXXXXX",
