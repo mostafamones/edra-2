@@ -1,0 +1,413 @@
+openapi: 3.1.0
+info:
+  title: Edra exams API (staff)
+  version: "1.0.0"
+  description: |
+    Bearer-token reads for signed-in Edra staff (owner, head_admin, admin, instructor): list exams,
+    read one exam (including its key), and read its students' work and result state. It shares
+    authentication, response, throttling and CORS conventions with `sessions-attendance.openapi.yaml`;
+    only what differs is stated here.
+
+    **Operational now (source-checked 2026-10-14).** The three `GET` paths below. Staff commands
+    (preparation, window, archive, physical entry and confirmation, private marks, announcement, key
+    corrections and exclusions) are cookie web actions over the same database operations; they are not
+    part of this HTTP contract.
+
+    **Not operational: the student contract (EDRA-83 handoff).** The trusted student operations exist
+    in the database (`edra_private.start_exam_attempt_for`, `save_exam_answers_for`,
+    `record_exam_departure_for`, `submit_exam_attempt_for`, `exam_student_state`) and their public
+    wrappers (`get_my_exam`, `start_exam_attempt`, `save_exam_answers`, `record_exam_departure`,
+    `submit_exam_attempt`) are deployed, but every wrapper is denied with `student_link_unavailable`
+    because there is no authoritative student-account-to-annual-record link. Exams have no content
+    attachment yet, so they are standalone and need no released content once identity resolves; an
+    attached exam (future) must pass authoritative release authorization (`content_unavailable`). No
+    HTTP route exposes these operations. They are documented under `components.schemas.StudentExamState`
+    and `x-edra-student-operations`; an annual record id or phone number supplied by a student is never
+    ownership.
+
+    **Rules.** An exam has ordered Question Sheet (choices, one correct, scored automatically) and
+    Written Work (staff-marked) parts; Answer Sheet parts do not exist. Every exam needs an individual
+    timer (`time_limit_minutes`) before it is ready: an incomplete draft may omit it, but scheduling,
+    physical work and online starts require it. Scores are decimal **strings** with at most two
+    fractional digits; unsupported precision is rejected, never rounded. A blank manual mark is
+    unmarked; `"0"` is a mark. Eligibility is live: the students currently matching the target, plus
+    every historical participant in the student list.
+
+    **Timing.** `opens_at <= server_now < closes_at` allows a new online attempt. `actual_closes_at` is
+    always `closes_at + 2 minutes`. A started attempt continues until the earlier of its original
+    `deadline_at` (`started_at + time_limit_minutes`, never reset or extended) and `actual_closes_at`;
+    at that cutoff its saved answers are submitted (`timer` when the deadline is at or before actual
+    closure, a tie included, otherwise `window_closed`). `submitted_at` is the effective time;
+    `processed_at` when the database settled it. A database worker settles deadlines every 30 seconds
+    and every detail read and command settles due work first. Physical drafts and confirmation work
+    once the exam is ready (also before opening or without a window) and stop at actual closure.
+    Nothing reopens after actual closure.
+
+    **Departures.** Each logical departure (stable event uuid per attempt, with the question the
+    student was on) is stored once. The first two warn and return the next non-excluded question
+    (none after the last); the third submits the saved answers with reason `kicked`, an explanatory
+    flag graded normally, never a zero. A due timer or closure is settled first and wins.
+
+    **Acceptance.** Online and physical drafts may coexist; the first online final submission or
+    physical confirmation is the single accepted submission (`submission.source`). The other draft is
+    kept as history and never merged.
+
+    **Results.** `result` is the private current result (staff only). `publication` is the latest
+    official revision; `publication_state` is `pending_correction` when the private result differs
+    from it (for example after a key correction or exclusion). Fully automatic online work (including
+    `timer`, `kicked` and `window_closed`) is announced in its acceptance transaction; everything else
+    is announced by staff.
+
+    **Not in this delivery.** Document/photo evidence, answer-document assets, file storage and
+    solution videos are deferred: written answers are text and physical written work is marked by
+    hand. Solution release covers the key, model answers and solution notes. Recording a
+    `solutions_qualified` effect is not video access or parent delivery.
+servers:
+  - url: http://app.lvh.me:3000
+    description: Local development (the staff origin; requires the lvh.me host, not localhost)
+  - url: "{staffOrigin}"
+    description: Deployed staff origin (the value of EDRA_APP_ORIGIN)
+    variables:
+      staffOrigin:
+        default: https://app.example.invalid
+security:
+  - staffToken: []
+tags:
+  - name: Exams
+paths:
+  /api/v1/academies/{academyId}/exams:
+    get:
+      tags: [Exams]
+      summary: The academy's exams, newest first, with derived phase
+      operationId: listExams
+      parameters:
+        - name: academyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: academic_year_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: phase
+          in: query
+          description: One derived phase. Archived exams are omitted unless `phase=archived`.
+          schema: { $ref: "#/components/schemas/Phase" }
+        - name: audience
+          in: query
+          schema: { type: string, enum: [level, program, groups] }
+        - name: search
+          in: query
+          description: Case-insensitive title substring (at most 200 characters).
+          schema: { type: string, maxLength: 200 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 100000, default: 0 }
+      responses:
+        "200":
+          description: One page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total, exams, server_now]
+                properties:
+                  total: { type: integer }
+                  server_now: { type: string, format: date-time }
+                  exams:
+                    type: array
+                    items: { $ref: "#/components/schemas/ExamSummary" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/exams/{examId}:
+    get:
+      tags: [Exams]
+      summary: One exam with its parts, questions, key, timer, window, counts and corrections (staff)
+      operationId: getExam
+      parameters:
+        - { $ref: "#/components/parameters/ExamId" }
+      responses:
+        "200":
+          description: The exam.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Exam" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/exams/{examId}/students:
+    get:
+      tags: [Exams]
+      summary: Eligible and historical students with attempts, accepted work and result state
+      operationId: listExamStudents
+      parameters:
+        - { $ref: "#/components/parameters/ExamId" }
+      responses:
+        "200":
+          description: Every student, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total, students]
+                properties:
+                  total: { type: integer }
+                  students:
+                    type: array
+                    items: { $ref: "#/components/schemas/Student" }
+              examples:
+                kicked:
+                  summary: Third departure submitted the saved answers; written question still unmarked
+                  value:
+                    total: 1
+                    students:
+                      - annual_student_record_id: 3d1e5a4c-0000-4000-8000-000000000001
+                        full_name: Amal Hassan
+                        archived: false
+                        group_name: Nine A
+                        student_code: "0042"
+                        eligible: true
+                        version: 2
+                        attempt: { started_at: "2026-10-14T16:05:00Z", deadline_at: "2026-10-14T17:05:00Z", departure_count: 3, answers_version: 7, last_saved_at: "2026-10-14T16:40:10Z", finalized_at: "2026-10-14T16:41:00Z", finalization_reason: kicked, superseded: false }
+                        physical_draft: null
+                        submission: { id: 7b0e0000-0000-4000-8000-000000000001, source: online, reason: kicked, submitted_at: "2026-10-14T16:41:00Z", processed_at: "2026-10-14T16:41:00Z", original_deadline_at: "2026-10-14T17:05:00Z", scoring_revision: 1 }
+                        result: { complete: false, total: "4.00", max_score: "10.00", marked: 0, required: 1 }
+                        feedback: ""
+                        publication: null
+                        publication_state: unpublished
+                        solutions_qualified: false
+                        updated_at: "2026-10-14T16:41:00Z"
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+x-edra-student-operations:
+  status: not-operational
+  reason: No authoritative student-account link (student_link_unavailable). Exams are standalone (no content attachment exists), so no release is required once identity resolves.
+  operations:
+    - name: get_my_exam(exam_id)
+      returns: StudentExamState
+      notes: Settles due work first.
+    - name: start_exam_attempt(exam_id)
+      returns: StudentExamState
+      notes: Creates the single attempt (deadline_at = started_at + time limit) or resumes it with the same started_at, deadline_at, answers and departure_count; never a retake. Errors not_open (outside opens_at..closes_at, not ready or archived), not_eligible.
+    - name: save_exam_answers(exam_id, expected_version, answers[{question_id, choice_id?|text_answer?}], key)
+      returns: "{outcome: saved | conflict | finalized, state: StudentExamState, replayed}"
+      notes: Stale expected_version writes nothing (conflict). Past the cutoff the attempt is settled and reported (finalized); late answers are never saved. Changed answers to excluded questions are rejected (question_excluded). A key reused for different input fails with idempotency_conflict.
+    - name: record_exam_departure(exam_id, event_id, question_id)
+      returns: "{outcome: warned | kicked | duplicate | finalized, departure: Departure | null, state: StudentExamState}"
+      notes: question_id is the question the student was on (unknown_question for another exam's question). warned returns departure.next_question_id, the next non-excluded question (null after the last). The third distinct event is kicked. A repeated event_id returns duplicate with its original departure; reusing it for another question fails with idempotency_conflict. A due timer or closure is settled first (finalized). Detecting departures, deduplicating overlapping browser signals and fullscreen handling belong to EDRA-83; signals are client evidence, not proof of proctoring.
+    - name: submit_exam_attempt(exam_id, key)
+      returns: "{outcome: submitted | finalized | source_conflict, state: StudentExamState, replayed}"
+      notes: A retry with the same key replays. source_conflict when physical work was confirmed first.
+components:
+  securitySchemes:
+    staffToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: The Supabase Auth access token of a signed-in staff member.
+  parameters:
+    ExamId:
+      name: examId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Error:
+      description: Error with a stable code (see sessions-attendance.openapi.yaml for the shape).
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: object
+                required: [code, message, request_id]
+                properties:
+                  code: { type: string, enum: [INVALID_REQUEST, AMBIGUOUS_AUTHENTICATION, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, THROTTLED, INTERNAL] }
+                  message: { type: string }
+                  request_id: { type: string }
+  schemas:
+    Phase:
+      type: string
+      description: Derived from readiness (including the timer), window and archive. headroom is between the scheduled close and actual closure.
+      enum: [preparing, ready, scheduled, open, headroom, closed, archived]
+    Reason:
+      type: string
+      description: kicked is the third departure; it is an explanatory flag on ordinary accepted work.
+      enum: [submitted, timer, kicked, window_closed, physical]
+    Decimal:
+      type: string
+      pattern: "^\\d{1,5}(\\.\\d{1,2})?$"
+    Departure:
+      type: object
+      properties:
+        event_id: { type: string, format: uuid }
+        ordinal: { type: integer, minimum: 1, maximum: 3 }
+        question_id: { type: string, format: uuid }
+        question_number: { type: integer, description: Original exam-wide number of the question the student left. }
+        outcome: { type: string, enum: [warned, kicked] }
+        next_question_id: { type: [string, "null"], format: uuid, description: Where a warned student continues; null after the last non-excluded question and when kicked. }
+        recorded_at: { type: string, format: date-time }
+    ExamSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        academic_year_id: { type: string, format: uuid }
+        title: { type: string }
+        audience: { type: [string, "null"], enum: [level, program, groups, null] }
+        level_id: { type: [string, "null"] }
+        track_id: { type: [string, "null"], format: uuid }
+        group_ids: { type: array, items: { type: string, format: uuid } }
+        time_limit_minutes: { type: [integer, "null"], description: Null only while preparation is incomplete. }
+        opens_at: { type: [string, "null"], format: date-time }
+        closes_at: { type: [string, "null"], format: date-time }
+        actual_closes_at: { type: [string, "null"], format: date-time }
+        max_score: { $ref: "#/components/schemas/Decimal" }
+        effective_max_score: { $ref: "#/components/schemas/Decimal" }
+        question_count: { type: integer }
+        phase: { $ref: "#/components/schemas/Phase" }
+        updated_at: { type: string, format: date-time }
+        submitted: { type: integer }
+        in_progress: { type: integer }
+        announced: { type: integer }
+        processing_pending:
+          type: boolean
+          description: >-
+            Due work (an attempt past its cutoff, or actual closure not yet settled) has not been processed.
+            The list is a read-only snapshot and never settles; `GET /exams/{examId}` and staff commands
+            settle it, and the deadline worker does so within about a minute. `phase` is derived from time
+            and stays `closed` regardless; this flag is the separate processing fact.
+        closure_settled_at: { type: [string, "null"], format: date-time }
+    Exam:
+      type: object
+      description: Staff document. Includes the key (`is_correct`), model answers and solution notes.
+      properties:
+        id: { type: string, format: uuid }
+        academy_id: { type: string, format: uuid }
+        academic_year_id: { type: string, format: uuid }
+        title: { type: string }
+        instructions: { type: string }
+        solution_notes: { type: string }
+        audience: { type: [string, "null"], enum: [level, program, groups, null] }
+        level_id: { type: [string, "null"] }
+        track_id: { type: [string, "null"] }
+        group_ids: { type: array, items: { type: string } }
+        time_limit_minutes: { type: [integer, "null"], minimum: 1, maximum: 600, description: Required for readiness. }
+        opens_at: { type: [string, "null"], format: date-time }
+        closes_at: { type: [string, "null"], format: date-time }
+        actual_closes_at: { type: [string, "null"], format: date-time }
+        max_score: { $ref: "#/components/schemas/Decimal" }
+        effective_max_score: { $ref: "#/components/schemas/Decimal" }
+        question_count: { type: integer }
+        version: { type: integer }
+        scoring_revision: { type: integer, description: Incremented by each key correction or exclusion. }
+        work_started_at: { type: [string, "null"], description: Audience and timer are locked from here. }
+        structure_locked_at: { type: [string, "null"], description: Parts, questions, choices, maxima and key are locked from here. }
+        closure_settled_at: { type: [string, "null"] }
+        processing_pending: { type: boolean, description: Always false after this read, which settles due work first. }
+        year_open: { type: boolean }
+        ready: { type: boolean }
+        issues:
+          type: array
+          items:
+            type: object
+            properties:
+              scope: { type: string, enum: [exam, part, question] }
+              id: { type: string, format: uuid }
+              issue: { type: string, enum: [target, timer, parts, questions, choices, correct_choice, choice_text] }
+        phase: { $ref: "#/components/schemas/Phase" }
+        server_now: { type: string, format: date-time }
+        fully_automatic: { type: boolean }
+        counts: { type: object }
+        corrections: { type: array, items: { type: object } }
+        parts: { type: array, items: { type: object }, description: Questions carry `number`, their original exam-wide number, kept after exclusion. }
+    Student:
+      type: object
+      properties:
+        annual_student_record_id: { type: string, format: uuid }
+        full_name: { type: string }
+        eligible: { type: boolean, description: Currently matches the target. Historical participants may not. }
+        version: { type: integer }
+        attempt:
+          type: [object, "null"]
+          properties:
+            deadline_at: { type: string, format: date-time, description: Original individual deadline. }
+            departure_count: { type: integer, minimum: 0, maximum: 3 }
+        physical_draft: { type: [object, "null"] }
+        submission:
+          type: [object, "null"]
+          properties:
+            source: { type: string, enum: [online, physical] }
+            reason: { $ref: "#/components/schemas/Reason" }
+            submitted_at: { type: string, format: date-time }
+            processed_at: { type: string, format: date-time }
+        result:
+          type: [object, "null"]
+          description: Private current result. complete is false while a non-excluded Written Work question is unmarked.
+        publication: { type: [object, "null"], description: Latest official revision. }
+        publication_state: { type: string, enum: [unpublished, published, pending_correction] }
+        solutions_qualified: { type: boolean }
+    StudentExamState:
+      type: object
+      description: |
+        Student-safe projection (EDRA-83 handoff; not exposed over HTTP yet), built field by field.
+        Never contains the key, model answers, solution notes or private marks before `solutions` is
+        present, and no score before `result` (an announced revision) exists.
+      properties:
+        exam_id: { type: string, format: uuid }
+        server_now: { type: string, format: date-time }
+        opens_at: { type: [string, "null"] }
+        closes_at: { type: [string, "null"] }
+        actual_closes_at: { type: [string, "null"] }
+        time_limit_minutes: { type: integer }
+        phase: { $ref: "#/components/schemas/Phase" }
+        eligible: { type: boolean }
+        excluded_question_ids: { type: array, items: { type: string }, description: Skip these when navigating; they cannot be answered. }
+        parts: { type: array, items: { type: object }, description: Stable order; questions carry their original `number`; choices without correctness. }
+        attempt:
+          type: [object, "null"]
+          properties:
+            started_at: { type: string }
+            deadline_at: { type: string, description: Original timer deadline; never changes. }
+            cutoff_at: { type: string, description: Earlier of deadline_at and actual_closes_at. }
+            answers_version: { type: integer }
+            departure_count: { type: integer }
+            departures: { type: array, items: { $ref: "#/components/schemas/Departure" } }
+            finalized_at: { type: [string, "null"] }
+            finalization_reason: { oneOf: [{ $ref: "#/components/schemas/Reason" }, { type: "null" }] }
+            superseded: { type: boolean, description: Physical work was accepted first. }
+            answers: { type: array, items: { type: object } }
+        submission:
+          type: [object, "null"]
+          description: Finalization acknowledgment.
+          properties:
+            source: { type: string, enum: [online, physical] }
+            reason: { $ref: "#/components/schemas/Reason" }
+            submitted_at: { type: string, description: Effective submission time (the cutoff for deadline submissions). }
+            processed_at: { type: string, description: When the database settled it; may be later than submitted_at. }
+            original_deadline_at: { type: [string, "null"] }
+        result: { type: [object, "null"], description: Latest announced revision only. }
+        solutions: { type: [object, "null"], description: Present once qualified (online at actual closure, including timer/kicked/window_closed; physical at closure plus announcement). Key, model answers and notes only; no video access. }
+      examples:
+        - summary: Second departure on the last question (warned, no later question)
+          phase: open
+          time_limit_minutes: 60
+          attempt: { started_at: "2026-10-14T16:00:00Z", deadline_at: "2026-10-14T17:00:00Z", cutoff_at: "2026-10-14T17:00:00Z", departure_count: 2, finalized_at: null, finalization_reason: null, superseded: false }
+          submission: null
+          result: null
+          solutions: null
+        - summary: Timer tie at actual closure (deadline equals actual closure, so reason timer)
+          phase: closed
+          attempt: { started_at: "2026-10-14T16:02:00Z", deadline_at: "2026-10-14T17:02:00Z", cutoff_at: "2026-10-14T17:02:00Z", finalized_at: "2026-10-14T17:02:00Z", finalization_reason: timer, superseded: false }
+          submission: { source: online, reason: timer, submitted_at: "2026-10-14T17:02:00Z", processed_at: "2026-10-14T17:02:20Z" }
