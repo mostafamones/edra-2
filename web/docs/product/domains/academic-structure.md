@@ -17,7 +17,7 @@ The release catalog follows the Egyptian school system:
 - Preparatory stage: first, second and third preparatory.
 - Secondary stage: first, second and third secondary.
 
-The current Grade 9–12 catalog is a development placeholder and will be replaced before the MVP is ready for release. Level names should be consistent across applications.
+The former Grade 9–12 development catalog has been replaced by the catalog above; its rows remain only as non-selectable history. Level names should be consistent across applications.
 
 For the replacement, existing Grade 9 references map to Third Preparatory, Grade 10 to First Secondary, Grade 11 to Second Secondary, and Grade 12 to Third Secondary (owner-approved 2026-10-16). This corrects the catalog; it does not advance students, enroll them in another year, or change their tracks or groups. Preserve all records, issued student codes, recorded work and official history. Existing stored historical labels and snapshots remain as recorded; current catalog labels use the replacement names.
 

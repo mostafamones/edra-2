@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { GLOBAL_LEVELS, globalLevelIdSchema } from "@/modules/academies/levels";
+import { GLOBAL_LEVELS, convertLegacyLevelId, globalLevelIdSchema } from "@/modules/academies/levels";
 import { academySlugSchema } from "@/modules/academies/slug";
 
 import { academyCreationCopy } from "./copy/academy-creation";
@@ -46,10 +46,27 @@ export const EMPTY_ACADEMY_DRAFT: AcademyDraft = {
   tracks: [],
 };
 
+/** Applies the approved legacy level conversion to the level ids of a stored draft. */
+function convertDraftLevels(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null) return raw;
+  const draft: Record<string, unknown> = { ...raw };
+  if (Array.isArray(draft.levelIds)) draft.levelIds = [...new Set(draft.levelIds.map(convertLegacyLevelId))];
+  for (const key of ["tracks", "programs"]) {
+    const items = draft[key];
+    if (!Array.isArray(items)) continue;
+    draft[key] = items.map((item: unknown) =>
+      typeof item === "object" && item !== null && "levelId" in item
+        ? { ...item, levelId: convertLegacyLevelId(item.levelId) }
+        : item,
+    );
+  }
+  return draft;
+}
+
 export function readAcademyDraft(value: string | null): AcademyDraft {
   if (!value) return EMPTY_ACADEMY_DRAFT;
   try {
-    const raw: unknown = JSON.parse(value);
+    const raw = convertDraftLevels(JSON.parse(value));
     const parsed = academyDraftSchema.safeParse(raw);
     if (parsed.success) return parsed.data;
 

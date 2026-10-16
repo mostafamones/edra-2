@@ -1,3 +1,4 @@
+import { legacyLevelAlias } from "@/modules/academies/levels";
 import { IMPORT_LIMITS } from "./limits";
 import {
   IMPORT_FIELDS, type CellValue, type ColumnMapping, type ImportDefaults, type ImportField, type ParsedSource,
@@ -153,7 +154,7 @@ export function buildStagedRows(source: ParsedSource, headerIndex: number, mappi
         if (text.length > IMPORT_LIMITS.cellLength) {
           return { ok: false, message: `${rowLabel(source, record.sourceRow)} has a ${FIELD_LABELS[field].toLowerCase()} longer than ${IMPORT_LIMITS.cellLength.toLocaleString("en")} characters.` };
         }
-        values[field] = text;
+        values[field] = field === "level" ? legacyLevelAlias(text) ?? text : text;
       } else {
         values[field] = cell;
       }

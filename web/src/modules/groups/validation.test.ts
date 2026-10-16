@@ -5,7 +5,7 @@ import { groupInputSchema } from "./validation";
 const valid = {
   academyId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   name: "Sunday A",
-  levelId: "grade-10",
+  levelId: "secondary-1",
   trackId: null,
   capacity: null,
   notes: null,

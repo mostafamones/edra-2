@@ -6,8 +6,8 @@ describe("failureFromDatabase", () => {
   it("maps stable codes and field hints", () => {
     expect(failureFromDatabase({ code: "P0001", message: "stale_settings" })).toMatchObject({ code: "stale_settings" });
     expect(failureFromDatabase({ code: "P0001", message: "forbidden" })).toMatchObject({ code: "forbidden" });
-    expect(failureFromDatabase({ code: "P0001", message: "validation", hint: "level:grade-10" }))
-      .toMatchObject({ code: "validation", fieldErrors: { "level:grade-10": expect.any(String) } });
+    expect(failureFromDatabase({ code: "P0001", message: "validation", hint: "level:secondary-1" }))
+      .toMatchObject({ code: "validation", fieldErrors: { "level:secondary-1": expect.any(String) } });
     expect(failureFromDatabase({ code: "P0001", message: "validation", hint: "default_pattern" }))
       .toMatchObject({ fieldErrors: { defaultPattern: expect.any(String) } });
   });

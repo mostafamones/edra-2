@@ -4,7 +4,7 @@ import { draftIssues, emptyQuizValues, formErrors, isValidQuestionMax, quizDraft
 import type { Quiz, QuizDraft } from "./types";
 
 const draft = (change: Partial<QuizDraft> = {}): QuizDraft => ({
-  title: "Weekly quiz", instructions: "", solutionNotes: "", audience: "level", levelId: "grade-9", trackId: null, groupIds: [], timeLimitMinutes: null,
+  title: "Weekly quiz", instructions: "", solutionNotes: "", audience: "level", levelId: "preparatory-3", trackId: null, groupIds: [], timeLimitMinutes: null,
   parts: [{ title: "P", instructions: "", kind: "question_sheet", questions: [{ prompt: "", modelAnswer: "", maxScore: "2", choices: [{ label: "A", isCorrect: true }, { label: "B", isCorrect: false }] }] }],
   ...change,
 });
@@ -48,7 +48,7 @@ describe("draftIssues", () => {
 describe("form conversion", () => {
   it("round-trips a quiz, keeping ids and the key", () => {
     const quiz = {
-      title: "Q", instructions: "", solutionNotes: "", audience: "program", levelId: "grade-10", trackId: "7a0b6f2a-3f3b-4c9d-8e2a-111111111111", groupIds: [],
+      title: "Q", instructions: "", solutionNotes: "", audience: "program", levelId: "secondary-1", trackId: "7a0b6f2a-3f3b-4c9d-8e2a-111111111111", groupIds: [],
       timeLimitMinutes: 15,
       parts: [{ id: "p1", position: 1, title: "P", instructions: "", kind: "question_sheet", questions: [{
         id: "q1", position: 1, number: 1, prompt: "x", modelAnswer: "", maxScore: "2.50", excluded: false, excludedAt: null,
