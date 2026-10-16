@@ -101,10 +101,10 @@ insert into public.academies (id, name, slug, icon, subject, created_by)
 update public.academic_years set id = '$YEAR', start_year = 2030 where academy_id = '$ACADEMY';
 insert into public.academy_memberships (academy_id, user_id, role, created_by)
   values ('$ACADEMY', '$ADMIN', 'owner', '$ADMIN');
-insert into public.academy_levels (academy_id, level_id, sort_order) values ('$ACADEMY', 'grade-10', 10);
+insert into public.academy_levels (academy_id, level_id, sort_order) values ('$ACADEMY', 'secondary-1', 10);
 insert into public.groups (id, academy_id, academic_year_id, level_id, name) values
-  ('$GROUP_ARCH', '$ACADEMY', '$YEAR', 'grade-10', 'Race A'),
-  ('$GROUP_SCHED', '$ACADEMY', '$YEAR', 'grade-10', 'Race B');
+  ('$GROUP_ARCH', '$ACADEMY', '$YEAR', 'secondary-1', 'Race A'),
+  ('$GROUP_SCHED', '$ACADEMY', '$YEAR', 'secondary-1', 'Race B');
 SQL
 
 as_admin="set local role authenticated; set local request.jwt.claim.sub = '$ADMIN';"
@@ -200,7 +200,7 @@ grep -q suspended "$OUT/s4b" || fail "the demoted member was not suspended: $(ou
 # 3. Two sessions each delete a different slot of a two-slot schedule; one must be rejected.
 psqlx >/dev/null <<SQL
 begin; $as_admin
-select public.create_schedule('$ACADEMY','$YEAR','Race slots','recurring','level',null,'grade-10',null,true,null,
+select public.create_schedule('$ACADEMY','$YEAR','Race slots','recurring','level',null,'secondary-1',null,true,null,
   '[{"weekday":1,"startsAt":"09:00","endsAt":"10:00"},{"weekday":2,"startsAt":"09:00","endsAt":"10:00"}]'::jsonb, '[]'::jsonb);
 commit;
 SQL
@@ -219,12 +219,12 @@ GROUP_STUDENT_ARCH="$(uuid)"  # archive wins first
 GROUP_STUDENT_PLACE="$(uuid)" # placement wins first
 psqlx <<SQL
 insert into public.groups (id, academy_id, academic_year_id, level_id, name) values
-  ('$GROUP_STUDENT_ARCH', '$ACADEMY', '$YEAR', 'grade-10', 'Race students A'),
-  ('$GROUP_STUDENT_PLACE', '$ACADEMY', '$YEAR', 'grade-10', 'Race students B');
+  ('$GROUP_STUDENT_ARCH', '$ACADEMY', '$YEAR', 'secondary-1', 'Race students A'),
+  ('$GROUP_STUDENT_PLACE', '$ACADEMY', '$YEAR', 'secondary-1', 'Race students B');
 SQL
 create_student() { # $1 name, $2 student phone, $3 group id or null
   local group="null"; [ "$3" != null ] && group="'$3'"
-  echo "select public.create_student_record('$ACADEMY','$YEAR','$1','$2','01112223333','grade-10',null,$group,'in_person');"
+  echo "select public.create_student_record('$ACADEMY','$YEAR','$1','$2','01112223333','secondary-1',null,$group,'in_person');"
 }
 hold 4a 4b "$as_admin $(create_student 'Race dup 1' '01055556666' null)"
 start 4b "$as_admin $(create_student 'Race dup 2' '+20 10 5555 6666' null)"
@@ -257,9 +257,9 @@ GROUP_BULK_MOVE="$(uuid)"   # group change wins first
 GROUP_IMPORT="$(uuid)"      # archived while an import batch waits
 psqlx <<SQL
 insert into public.groups (id, academy_id, academic_year_id, level_id, name) values
-  ('$GROUP_BULK_ARCH', '$ACADEMY', '$YEAR', 'grade-10', 'Race bulk A'),
-  ('$GROUP_BULK_MOVE', '$ACADEMY', '$YEAR', 'grade-10', 'Race bulk B'),
-  ('$GROUP_IMPORT', '$ACADEMY', '$YEAR', 'grade-10', 'Race import');
+  ('$GROUP_BULK_ARCH', '$ACADEMY', '$YEAR', 'secondary-1', 'Race bulk A'),
+  ('$GROUP_BULK_MOVE', '$ACADEMY', '$YEAR', 'secondary-1', 'Race bulk B'),
+  ('$GROUP_IMPORT', '$ACADEMY', '$YEAR', 'secondary-1', 'Race import');
 SQL
 student_row() { # $1 ordinal, $2 name, $3 phone, $4 optional group name
   local group=""; [ -n "${4:-}" ] && group=",\"group\":\"$4\""
@@ -269,7 +269,7 @@ make_import() { # $1 file name, $2 JSON rows; prints the confirmed session id
   psqlx -tA <<SQL | grep -E '^[0-9a-f-]{36}$' | tail -1
 begin; $as_admin
 select set_config('race.s', public.start_student_import('$ACADEMY', '$YEAR', '$1', 'json', null, jsonb_array_length('$2'::jsonb),
-  '{"level_id": "grade-10", "participation_type": "in_person"}', null)::text, true);
+  '{"level_id": "secondary-1", "participation_type": "in_person"}', null)::text, true);
 select public.stage_student_import_rows(current_setting('race.s')::uuid, '$2'::jsonb);
 select public.confirm_student_import(current_setting('race.s')::uuid, public.finalize_student_import(current_setting('race.s')::uuid));
 select current_setting('race.s');
@@ -380,7 +380,7 @@ expect_rejected 13b "concurrent issuers of one code did not produce exactly one 
 # 14-16. Code check-in races. A live session with coded students; each case holds a conflicting
 #     change open while a scan arrives, then the scan must observe the committed result.
 GROUP_SCAN="$(uuid)"
-psqlx -c "insert into public.groups (id, academy_id, academic_year_id, level_id, name) values ('$GROUP_SCAN', '$ACADEMY', '$YEAR', 'grade-10', 'Scan race');"
+psqlx -c "insert into public.groups (id, academy_id, academic_year_id, level_id, name) values ('$GROUP_SCAN', '$ACADEMY', '$YEAR', 'secondary-1', 'Scan race');"
 R14="$(new_student 'Scan race one' 01055550021 "$GROUP_SCAN")"
 R15="$(new_student 'Scan race two' 01055550022 "$GROUP_SCAN")"
 R16="$(new_student 'Scan race three' 01055550023 "$GROUP_SCAN")"
@@ -414,7 +414,7 @@ psqlx -tA -c "select count(*) from public.attendance_records where session_id = 
 
 # 15. A non-level edit holds the record lock; the scan waits and then succeeds (only a real level
 #     change retires a code; that path is covered in student_code_checkin.sql).
-hold 15a 15b "update public.annual_student_records set level_id = 'grade-10', student_phone = '+201055559999' where id = '$R15';"
+hold 15a 15b "update public.annual_student_records set level_id = 'secondary-1', student_phone = '+201055559999' where id = '$R15';"
 start 15b "$(scan 0150)"
 wait
 expect_ok 15a "the contact edit holding the record lock failed"
@@ -527,7 +527,7 @@ QR2="$(new_student 'Quiz race 2' 01088880002 null)"
 [ -n "$QR1" ] && [ -n "$QR2" ] || fail "could not create quiz race students"
 psqlx >/dev/null <<SQL
 begin; $as_admin
-select public.create_quiz('$ACADEMY','$YEAR','$QUIZ','{"title":"Race quiz","audience":"level","level_id":"grade-10","parts":[{"title":"P","kind":"question_sheet","questions":[{"max_score":"1","choices":[{"label":"A","is_correct":true},{"label":"B"}]}]}]}');
+select public.create_quiz('$ACADEMY','$YEAR','$QUIZ','{"title":"Race quiz","audience":"level","level_id":"secondary-1","parts":[{"title":"P","kind":"question_sheet","questions":[{"max_score":"1","choices":[{"label":"A","is_correct":true},{"label":"B"}]}]}]}');
 select public.configure_quiz_availability('$ACADEMY','$QUIZ',1,now() - interval '1 minute',now() + interval '1 hour');
 commit;
 SQL
@@ -592,7 +592,7 @@ ER4="$(new_student 'Exam race 4' 01088880014 null)"
 [ -n "$ER1" ] && [ -n "$ER2" ] && [ -n "$ER3" ] && [ -n "$ER4" ] || fail "could not create exam race students"
 psqlx >/dev/null <<SQL
 begin; $as_admin
-select public.create_exam('$ACADEMY','$YEAR','$EXAM','{"title":"Race exam","audience":"level","level_id":"grade-10","time_limit_minutes":60,"parts":[{"title":"P","kind":"question_sheet","questions":[{"max_score":"1","choices":[{"label":"A","is_correct":true},{"label":"B"}]}]}]}');
+select public.create_exam('$ACADEMY','$YEAR','$EXAM','{"title":"Race exam","audience":"level","level_id":"secondary-1","time_limit_minutes":60,"parts":[{"title":"P","kind":"question_sheet","questions":[{"max_score":"1","choices":[{"label":"A","is_correct":true},{"label":"B"}]}]}]}');
 select public.configure_exam_availability('$ACADEMY','$EXAM',1,now() - interval '1 minute',now() + interval '1 hour');
 commit;
 SQL
@@ -643,8 +643,8 @@ psqlx -tA -c "select count(*) from public.exam_result_publications where exam_id
 
 # 31. A placement move holds the student's record; a concurrent physical confirmation waits, then
 #     finds the student outside the audience and accepts nothing.
-psqlx >/dev/null -c "insert into public.academy_levels (academy_id, level_id, sort_order) values ('$ACADEMY', 'grade-11', 11) on conflict do nothing;"
-hold 31a 31b "update public.annual_student_records set level_id = 'grade-11' where id = '$ER3';"
+psqlx >/dev/null -c "insert into public.academy_levels (academy_id, level_id, sort_order) values ('$ACADEMY', 'secondary-2', 11) on conflict do nothing;"
+hold 31a 31b "update public.annual_student_records set level_id = 'secondary-2' where id = '$ER3';"
 start 31b "$as_admin select public.confirm_exam_physical('$ACADEMY','$EXAM','$ER3',0,gen_random_uuid());"
 wait
 expect_ok 31a "the placement move holding the record failed"
@@ -670,8 +670,8 @@ psqlx -tA -c "select s.reason = 'window_closed' and s.submitted_at = z.actual_cl
 # 33. Preparation holds a fresh exam exclusively; a concurrent first physical confirmation waits, then
 #     confirms against the saved structure and locks it. Neither deadlocks.
 EXAM2="$(uuid)"
-psqlx >/dev/null -c "begin; $as_admin select public.create_exam('$ACADEMY','$YEAR','$EXAM2','{\"title\":\"Race exam 2\",\"audience\":\"level\",\"level_id\":\"grade-10\",\"time_limit_minutes\":30,\"parts\":[{\"title\":\"P\",\"kind\":\"written_work\",\"questions\":[{\"max_score\":\"2\"}]}]}'); commit;"
-hold 33a 33b "$as_admin select public.update_exam('$ACADEMY','$EXAM2',1,'{\"title\":\"Race exam 2 (edited)\",\"audience\":\"level\",\"level_id\":\"grade-10\",\"time_limit_minutes\":30,\"parts\":[{\"title\":\"P\",\"kind\":\"written_work\",\"questions\":[{\"max_score\":\"3\"}]}]}');"
+psqlx >/dev/null -c "begin; $as_admin select public.create_exam('$ACADEMY','$YEAR','$EXAM2','{\"title\":\"Race exam 2\",\"audience\":\"level\",\"level_id\":\"secondary-1\",\"time_limit_minutes\":30,\"parts\":[{\"title\":\"P\",\"kind\":\"written_work\",\"questions\":[{\"max_score\":\"2\"}]}]}'); commit;"
+hold 33a 33b "$as_admin select public.update_exam('$ACADEMY','$EXAM2',1,'{\"title\":\"Race exam 2 (edited)\",\"audience\":\"level\",\"level_id\":\"secondary-1\",\"time_limit_minutes\":30,\"parts\":[{\"title\":\"P\",\"kind\":\"written_work\",\"questions\":[{\"max_score\":\"3\"}]}]}');"
 start 33b "$as_admin select public.confirm_exam_physical('$ACADEMY','$EXAM2','$ER2',0,gen_random_uuid());"
 wait
 expect_ok 33a "the preparation holding the exam failed"

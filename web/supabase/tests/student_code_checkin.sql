@@ -54,12 +54,12 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('d5555555-5555-4555-8555-555555555555', 'd4444444-4444-4444-8444-444444444444', 'instructor', 'd1111111-1111-4111-8111-111111111111'),
   ('e6666666-6666-4666-8666-666666666666', 'e1111111-1111-4111-8111-111111111111', 'owner', 'e1111111-1111-4111-8111-111111111111');
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('d5555555-5555-4555-8555-555555555555', 'grade-9', 9),
-  ('d5555555-5555-4555-8555-555555555555', 'grade-10', 10),
-  ('e6666666-6666-4666-8666-666666666666', 'grade-9', 9);
+  ('d5555555-5555-4555-8555-555555555555', 'preparatory-3', 9),
+  ('d5555555-5555-4555-8555-555555555555', 'secondary-1', 10),
+  ('e6666666-6666-4666-8666-666666666666', 'preparatory-3', 9);
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name) values
-  ('d5c55555-5555-4555-8555-555555555555', 'd5555555-5555-4555-8555-555555555555', 'd5555555-1111-4111-8111-555555555555', 'grade-9', null, 'Nine A'),
-  ('e6c66666-6666-4666-8666-666666666666', 'e6666666-6666-4666-8666-666666666666', 'e6666666-1111-4111-8111-666666666666', 'grade-9', null, 'T Nine');
+  ('d5c55555-5555-4555-8555-555555555555', 'd5555555-5555-4555-8555-555555555555', 'd5555555-1111-4111-8111-555555555555', 'preparatory-3', null, 'Nine A'),
+  ('e6c66666-6666-4666-8666-666666666666', 'e6666666-6666-4666-8666-666666666666', 'e6666666-1111-4111-8111-666666666666', 'preparatory-3', null, 'T Nine');
 grant usage on schema public, auth to authenticated, anon;
 
 -- Setup as the owner: five Nine A students and a live session; one student in academy T.
@@ -67,7 +67,7 @@ set local role authenticated;
 set local request.jwt.claim.sub = 'd1111111-1111-4111-8111-111111111111';
 select set_config('test.a' || n, id::text, true) from (
   select n, (public.create_student_record('d5555555-5555-4555-8555-555555555555', 'd5555555-1111-4111-8111-555555555555', name,
-    '0100000000' || n, '01100000000', 'grade-9', null, 'd5c55555-5555-4555-8555-555555555555', 'in_person')).id
+    '0100000000' || n, '01100000000', 'preparatory-3', null, 'd5c55555-5555-4555-8555-555555555555', 'in_person')).id
   from (values (1, 'Amal'), (2, 'Aya'), (3, 'Adam'), (4, 'Alia'), (5, 'Ali')) as v (n, name)
 ) made;
 select set_config('test.weekly', public.create_schedule('d5555555-5555-4555-8555-555555555555', 'd5555555-1111-4111-8111-555555555555',
@@ -77,7 +77,7 @@ select set_config('test.s1', session_id::text, true) from public.start_session(
   'd5555555-5555-4555-8555-555555555555', current_setting('test.weekly')::uuid, 'dddddddd-0000-4000-8000-000000000001');
 set local request.jwt.claim.sub = 'e1111111-1111-4111-8111-111111111111';
 select set_config('test.t1', id::text, true) from public.create_student_record('e6666666-6666-4666-8666-666666666666',
-  'e6666666-1111-4111-8111-666666666666', 'Tarek', '01000000099', '01100000000', 'grade-9', null, 'e6c66666-6666-4666-8666-666666666666', 'in_person');
+  'e6666666-1111-4111-8111-666666666666', 'Tarek', '01000000099', '01100000000', 'preparatory-3', null, 'e6c66666-6666-4666-8666-666666666666', 'in_person');
 
 -- Codes are off until enabled; a missing settings row means disabled. No formula edit is needed to scan.
 set local request.jwt.claim.sub = 'd3333333-3333-4333-8333-333333333333';
@@ -212,7 +212,7 @@ select pg_temp.expect_error($s$ select pg_temp.assign('test.a3', 'assign', '0013
 select pg_temp.assign('test.a3', 'assign', '0030', 0);
 reset role;
 alter table public.annual_student_records disable trigger annual_student_records_retire_code;
-update public.annual_student_records set level_id = 'grade-10', primary_group_id = null where id = current_setting('test.a3')::uuid;
+update public.annual_student_records set level_id = 'secondary-1', primary_group_id = null where id = current_setting('test.a3')::uuid;
 alter table public.annual_student_records enable trigger annual_student_records_retire_code;
 set local role authenticated;
 set local request.jwt.claim.sub = 'd3333333-3333-4333-8333-333333333333';
@@ -227,7 +227,7 @@ do $$ declare version_before integer; begin
     raise exception 'A contact edit must not retire a code';
   end if;
   select version into version_before from public.student_code_states where annual_student_record_id = current_setting('test.a1')::uuid;
-  update public.annual_student_records set level_id = 'grade-10', primary_group_id = null where id = current_setting('test.a1')::uuid;
+  update public.annual_student_records set level_id = 'secondary-1', primary_group_id = null where id = current_setting('test.a1')::uuid;
   if exists (select 1 from public.student_code_assignments where annual_student_record_id = current_setting('test.a1')::uuid and retired_at is null)
     or not exists (select 1 from public.student_code_assignments where annual_student_record_id = current_setting('test.a1')::uuid
       and code = '0007' and retirement_reason = 'level_changed' and retired_by is null)

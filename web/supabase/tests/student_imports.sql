@@ -78,20 +78,20 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('78888888-8888-4888-8888-888888888888', '74444444-4444-4444-8444-444444444444', 'owner', '74444444-4444-4444-8444-444444444444');
 
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('77777777-7777-4777-8777-777777777777', 'grade-9', 9),
-  ('77777777-7777-4777-8777-777777777777', 'grade-11', 11),
-  ('78888888-8888-4888-8888-888888888888', 'grade-9', 9);
+  ('77777777-7777-4777-8777-777777777777', 'preparatory-3', 9),
+  ('77777777-7777-4777-8777-777777777777', 'secondary-2', 11),
+  ('78888888-8888-4888-8888-888888888888', 'preparatory-3', 9);
 insert into public.academy_tracks (id, academy_id, level_id, name, sort_order) values
-  ('7a111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', 'grade-11', 'Science', 1),
-  ('7a222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', 'grade-11', 'Dup', 2),
+  ('7a111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', 'secondary-2', 'Science', 1),
+  ('7a222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', 'secondary-2', 'Dup', 2),
   -- Distinct under the name index, but identical after the importer's NFKC normalization.
-  ('7a333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', 'grade-11', 'ｄｕｐ', 3);
+  ('7a333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', 'secondary-2', 'ｄｕｐ', 3);
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name) values
-  ('7b111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-9', null, 'Nine A'),
-  ('7b222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-9', null, 'Nine B'),
-  ('7b333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-11', '7a111111-1111-4111-8111-111111111111', 'Science A'),
-  ('7b444444-4444-4444-8444-444444444444', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'grade-9', null, 'Nine archived'),
-  ('7b555555-5555-4555-8555-555555555555', '78888888-8888-4888-8888-888888888888', '78888888-1111-4111-8111-888888888888', 'grade-9', null, 'H group');
+  ('7b111111-1111-4111-8111-111111111111', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'preparatory-3', null, 'Nine A'),
+  ('7b222222-2222-4222-8222-222222222222', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'preparatory-3', null, 'Nine B'),
+  ('7b333333-3333-4333-8333-333333333333', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'secondary-2', '7a111111-1111-4111-8111-111111111111', 'Science A'),
+  ('7b444444-4444-4444-8444-444444444444', '77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777', 'preparatory-3', null, 'Nine archived'),
+  ('7b555555-5555-4555-8555-555555555555', '78888888-8888-4888-8888-888888888888', '78888888-1111-4111-8111-888888888888', 'preparatory-3', null, 'H group');
 update public.groups set archived_at = now() where id = '7b444444-4444-4444-8444-444444444444';
 
 grant usage on schema public, auth to authenticated, anon;
@@ -101,9 +101,9 @@ grant usage on schema public, auth to authenticated, anon;
 set local role authenticated;
 set local request.jwt.claim.sub = '71111111-1111-4111-8111-111111111111';
 select public.create_student_record('77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777',
-  'Existing Active', '01000000001', '01200000000', 'grade-9', null, null, 'in_person');
+  'Existing Active', '01000000001', '01200000000', 'preparatory-3', null, null, 'in_person');
 select set_config('test.archived', id::text, true) from public.create_student_record('77777777-7777-4777-8777-777777777777',
-  '77777777-1111-4111-8111-777777777777', 'Existing Archived', '01000000002', '01200000000', 'grade-9', null, null, 'in_person');
+  '77777777-1111-4111-8111-777777777777', 'Existing Archived', '01000000002', '01200000000', 'preparatory-3', null, null, 'in_person');
 select public.set_student_records_archived('77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777',
   jsonb_build_array(jsonb_build_object('id', current_setting('test.archived'), 'version', 1)), true);
 
@@ -127,7 +127,7 @@ select set_config('test.s0', public.start_student_import('77777777-7777-4777-877
 -- A replacement draft cancels the session it replaces.
 select set_config('test.s1', public.start_student_import('77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777',
   'students.csv', 'csv', null, 15,
-  '{"level_id": "grade-9", "participation_type": "in_person", "primary_group_id": "7b111111-1111-4111-8111-111111111111"}',
+  '{"level_id": "preparatory-3", "participation_type": "in_person", "primary_group_id": "7b111111-1111-4111-8111-111111111111"}',
   current_setting('test.s0')::uuid)::text, true);
 do $$ begin
   if (select state from public.student_import_sessions where id = current_setting('test.s0')::uuid) <> 'cancelled' then
@@ -138,18 +138,18 @@ end $$;
 -- ---------------------------------------------------------------------------------------------
 -- Staging: idempotent retries, conflicts, shape checks, and completeness.
 select public.stage_student_import_rows(current_setting('test.s1')::uuid, $j$[
-  {"ordinal": 1, "source_row": 2, "values": {"full_name": "Row One", "student_phone": "01100000001", "parent_phone": "01200000000", "level": "Grade 9", "group": "nine b", "student_type": "In person"}},
-  {"ordinal": 2, "source_row": 3, "values": {"full_name": "Row Two", "student_phone": "1100000002", "parent_phone": "01200000000", "level": "grade-11", "track": "science"}},
+  {"ordinal": 1, "source_row": 2, "values": {"full_name": "Row One", "student_phone": "01100000001", "parent_phone": "01200000000", "level": "Third Preparatory", "group": "nine b", "student_type": "In person"}},
+  {"ordinal": 2, "source_row": 3, "values": {"full_name": "Row Two", "student_phone": "1100000002", "parent_phone": "01200000000", "level": "secondary-2", "track": "science"}},
   {"ordinal": 3, "source_row": 4, "values": {"full_name": "Dup Active", "student_phone": "+20 10 0000 0001", "parent_phone": "01200000000"}},
   {"ordinal": 4, "source_row": 5, "values": {"full_name": "Dup Archived", "student_phone": "01000000002", "parent_phone": "01200000000"}},
   {"ordinal": 5, "source_row": 6, "values": {"full_name": "File Dup A", "student_phone": "01100000005", "parent_phone": "01200000000"}},
   {"ordinal": 6, "source_row": 7, "values": {"full_name": "File Dup B", "student_phone": "00201100000005", "parent_phone": "01200000000"}},
-  {"ordinal": 7, "source_row": 8, "values": {"full_name": "Bad", "student_phone": "01100000007", "parent_phone": "12345", "level": "Grade 11"}},
+  {"ordinal": 7, "source_row": 8, "values": {"full_name": "Bad", "student_phone": "01100000007", "parent_phone": "12345", "level": "Second Secondary"}},
   {"ordinal": 8, "source_row": 9, "values": {"full_name": "Explicit none", "student_phone": "01100000008", "parent_phone": "01200000000", "group": "Unassigned"}}
 ]$j$::jsonb);
 -- The same chunk again (a lost response) is accepted.
 select public.stage_student_import_rows(current_setting('test.s1')::uuid, $j$[
-  {"ordinal": 1, "source_row": 2, "values": {"full_name": "Row One", "student_phone": "01100000001", "parent_phone": "01200000000", "level": "Grade 9", "group": "nine b", "student_type": "In person"}}
+  {"ordinal": 1, "source_row": 2, "values": {"full_name": "Row One", "student_phone": "01100000001", "parent_phone": "01200000000", "level": "Third Preparatory", "group": "nine b", "student_type": "In person"}}
 ]$j$::jsonb);
 select pg_temp.expect_error(format($s$ select public.stage_student_import_rows(%L, '[{"ordinal": 1, "source_row": 2, "values": {"full_name": "Changed"}}]') $s$,
   current_setting('test.s1')), 'stage_conflict');
@@ -185,7 +185,7 @@ set local request.jwt.claim.sub = '72222222-2222-4222-8222-222222222222';
 select public.stage_student_import_rows(current_setting('test.s1')::uuid, $j$[
   {"ordinal": 9, "source_row": 10, "values": {"full_name": "Json null", "student_phone": "01100000009", "parent_phone": "01200000000", "group": null}},
   {"ordinal": 10, "source_row": 11, "values": {"full_name": "Default group", "student_phone": "01100000010", "parent_phone": "01200000000"}},
-  {"ordinal": 11, "source_row": 12, "values": {"full_name": {"problem": "formula"}, "student_phone": "01100000011", "parent_phone": "01200000000", "level": "grade-11", "track": "DUP"}},
+  {"ordinal": 11, "source_row": 12, "values": {"full_name": {"problem": "formula"}, "student_phone": "01100000011", "parent_phone": "01200000000", "level": "secondary-2", "track": "DUP"}},
   {"ordinal": 12, "source_row": 13, "values": {"full_name": "Unknowns", "student_phone": "01100000012", "parent_phone": "01200000000", "level": "Grade 99", "student_type": "hybrid"}},
   {"ordinal": 13, "source_row": 14, "values": {"full_name": "Wrong program", "student_phone": "01100000013", "parent_phone": "01200000000", "group": "Science A"}},
   {"ordinal": 14, "source_row": 15, "values": {"student_phone": "01100000014", "parent_phone": "01200000000"}},
@@ -218,7 +218,7 @@ begin
     or (select input ->> 'participation_type' from public.student_import_rows where session_id = s and ordinal = 1) <> 'in_person' then
     raise exception 'Explicit group by name (case-insensitive) or type label did not resolve';
   end if;
-  -- The grade-9 default group does not apply to a grade-11 row.
+  -- The preparatory-3 default group does not apply to a secondary-2 row.
   if (select input ->> 'primary_group_id' from public.student_import_rows where session_id = s and ordinal = 2) is not null
     or (select input ->> 'track_id' from public.student_import_rows where session_id = s and ordinal = 2) <> '7a111111-1111-4111-8111-111111111111' then
     raise exception 'Track by name or incompatible default group handled wrongly';
@@ -256,12 +256,12 @@ select pg_temp.expect_row(15, 'excluded');
 select pg_temp.expect_row(14, 'invalid', '{full_name:required}');
 
 select set_config('test.rev', public.correct_student_import_row(current_setting('test.s1')::uuid, current_setting('test.rev')::int, 6,
-  '{"full_name": "File Dup B", "student_phone": "+201100000006", "parent_phone": "+201200000000", "level_id": "grade-9",
+  '{"full_name": "File Dup B", "student_phone": "+201100000006", "parent_phone": "+201200000000", "level_id": "preparatory-3",
     "track_id": null, "primary_group_id": null, "participation_type": "online_only"}')::text, true);
 select pg_temp.expect_row(5, 'ready', '{}');
 select pg_temp.expect_row(6, 'ready', '{}');
 select set_config('test.rev', public.correct_student_import_row(current_setting('test.s1')::uuid, current_setting('test.rev')::int, 7,
-  '{"full_name": "Bad fixed", "student_phone": "+201100000007", "parent_phone": "+201200000000", "level_id": "grade-11",
+  '{"full_name": "Bad fixed", "student_phone": "+201100000007", "parent_phone": "+201200000000", "level_id": "secondary-2",
     "track_id": "7a111111-1111-4111-8111-111111111111", "primary_group_id": "7b333333-3333-4333-8333-333333333333", "participation_type": "in_person"}')::text, true);
 select pg_temp.expect_row(7, 'ready', '{}');
 -- A correction is validated like a record: a group outside the chosen track is an issue, not a write.
@@ -280,7 +280,7 @@ end $$;
 select pg_temp.expect_error(format($s$ select public.confirm_student_import(%L, 1) $s$, current_setting('test.s1')), 'stale_revision');
 set local request.jwt.claim.sub = '71111111-1111-4111-8111-111111111111';
 select public.create_student_record('77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777',
-  'Added meanwhile', '01100000010', '01200000000', 'grade-9', null, null, 'in_person');
+  'Added meanwhile', '01100000010', '01200000000', 'preparatory-3', null, null, 'in_person');
 set local request.jwt.claim.sub = '72222222-2222-4222-8222-222222222222';
 do $$
 declare result jsonb;
@@ -315,7 +315,7 @@ update public.groups set archived_at = now() where id = '7b222222-2222-4222-8222
 set local role authenticated;
 set local request.jwt.claim.sub = '71111111-1111-4111-8111-111111111111';
 select public.create_student_record('77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777',
-  'Taken meanwhile', '01100000002', '01200000000', 'grade-9', null, null, 'in_person');
+  'Taken meanwhile', '01100000002', '01200000000', 'preparatory-3', null, null, 'in_person');
 
 set local request.jwt.claim.sub = '73333333-3333-4333-8333-333333333333';
 select pg_temp.expect_error(format($s$ select public.process_student_import_batch(%L, 0) $s$, current_setting('test.s1')), 'not_found');
@@ -362,11 +362,11 @@ end $$;
 -- ---------------------------------------------------------------------------------------------
 -- Bulk group changes.
 select set_config('test.a', id::text, true) from public.create_student_record('77777777-7777-4777-8777-777777777777',
-  '77777777-1111-4111-8111-777777777777', 'Group A', '01500000001', '01200000000', 'grade-9', null, null, 'in_person');
+  '77777777-1111-4111-8111-777777777777', 'Group A', '01500000001', '01200000000', 'preparatory-3', null, null, 'in_person');
 select set_config('test.b', id::text, true) from public.create_student_record('77777777-7777-4777-8777-777777777777',
-  '77777777-1111-4111-8111-777777777777', 'Group B', '01500000002', '01200000000', 'grade-9', null, '7b111111-1111-4111-8111-111111111111', 'in_person');
+  '77777777-1111-4111-8111-777777777777', 'Group B', '01500000002', '01200000000', 'preparatory-3', null, '7b111111-1111-4111-8111-111111111111', 'in_person');
 select set_config('test.c', id::text, true) from public.create_student_record('77777777-7777-4777-8777-777777777777',
-  '77777777-1111-4111-8111-777777777777', 'Group C', '01500000003', '01200000000', 'grade-11', '7a111111-1111-4111-8111-111111111111', null, 'online_only');
+  '77777777-1111-4111-8111-777777777777', 'Group C', '01500000003', '01200000000', 'secondary-2', '7a111111-1111-4111-8111-111111111111', null, 'online_only');
 
 -- Mixed programs cannot move into one group; nothing changes.
 select pg_temp.expect_error(format($s$ select public.set_student_records_group('77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777',
@@ -405,7 +405,7 @@ begin
     raise exception 'Group removal result wrong: %', result;
   end if;
   if exists (select 1 from public.annual_student_records where id = current_setting('test.a')::uuid
-    and (primary_group_id is not null or level_id <> 'grade-9' or participation_type <> 'in_person' or full_name <> 'Group A')) then
+    and (primary_group_id is not null or level_id <> 'preparatory-3' or participation_type <> 'in_person' or full_name <> 'Group A')) then
     raise exception 'Group removal changed more than the group';
   end if;
 end $$;
@@ -430,7 +430,7 @@ select pg_temp.expect_error($s$ select count(*) from public.student_import_sessi
 set local role authenticated;
 set local request.jwt.claim.sub = '72222222-2222-4222-8222-222222222222';
 select set_config('test.s2', public.start_student_import('77777777-7777-4777-8777-777777777777', '77777777-1111-4111-8111-777777777777',
-  'late.json', 'json', null, 1, '{"level_id": "grade-9", "participation_type": "online_only"}', null)::text, true);
+  'late.json', 'json', null, 1, '{"level_id": "preparatory-3", "participation_type": "online_only"}', null)::text, true);
 select public.stage_student_import_rows(current_setting('test.s2')::uuid,
   '[{"ordinal": 1, "source_row": 1, "values": {"full_name": "Late", "student_phone": "01599999999", "parent_phone": "01200000000"}}]');
 select public.confirm_student_import(current_setting('test.s2')::uuid, public.finalize_student_import(current_setting('test.s2')::uuid));

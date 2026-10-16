@@ -60,13 +60,13 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '44444444-4444-4444-8444-444444444444', 'owner', '44444444-4444-4444-8444-444444444444');
 
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-10', 10),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-11', 11),
-  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'grade-10', 10);
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-1', 10),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-2', 11),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'secondary-1', 10);
 
 insert into public.academy_tracks (id, academy_id, level_id, name) values
-  ('55555555-5555-4555-8555-555555555555', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-10', 'Science'),
-  ('77777777-7777-4777-8777-777777777777', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'grade-10', 'Science');
+  ('55555555-5555-4555-8555-555555555555', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-1', 'Science'),
+  ('77777777-7777-4777-8777-777777777777', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'secondary-1', 'Science');
 
 do $$
 declare a_year uuid; level_wide_group uuid;
@@ -83,21 +83,21 @@ begin
   exception when unique_violation then null; end;
   begin
     insert into public.groups (academy_id, academic_year_id, level_id, track_id, name, capacity)
-      values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'grade-10', '55555555-5555-4555-8555-555555555555', 'Bad capacity', 0);
+      values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'secondary-1', '55555555-5555-4555-8555-555555555555', 'Bad capacity', 0);
     raise exception 'capacity constraint failed';
   exception when check_violation then null; end;
   begin
     insert into public.groups (academy_id, academic_year_id, level_id, track_id, name)
-      values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'grade-10', '77777777-7777-4777-8777-777777777777', 'Cross academy');
+      values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'secondary-1', '77777777-7777-4777-8777-777777777777', 'Cross academy');
     raise exception 'cross-academy track constraint failed';
   exception when foreign_key_violation then null; end;
   -- Levels that offer tracks may also have a level-wide group with no track.
   insert into public.groups (academy_id, academic_year_id, level_id, name)
-    values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'grade-10', 'Level-wide group')
+    values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'secondary-1', 'Level-wide group')
     returning id into level_wide_group;
   if not exists (select 1 from public.groups where id = level_wide_group
     and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and academic_year_id = a_year
-    and level_id = 'grade-10' and track_id is null) then
+    and level_id = 'secondary-1' and track_id is null) then
     raise exception 'level-wide group was not saved correctly';
   end if;
 end;
@@ -108,7 +108,7 @@ set local role authenticated;
 set local request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
 
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name)
-select '66666666-6666-4666-8666-666666666666', academy_id, id, 'grade-10',
+select '66666666-6666-4666-8666-666666666666', academy_id, id, 'secondary-1',
   '55555555-5555-4555-8555-555555555555', 'Group A'
 from public.academic_years where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
@@ -134,12 +134,12 @@ select public.create_schedule(
 
 select public.create_schedule(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', id, 'Level one-off', 'one_off', 'level',
-  null, 'grade-11', null, false, 'Hall', '[]'::jsonb, '[{"date":"2030-10-01","startsAt":"10:00","endsAt":"11:00"}]'::jsonb
+  null, 'secondary-2', null, false, 'Hall', '[]'::jsonb, '[{"date":"2030-10-01","startsAt":"10:00","endsAt":"11:00"}]'::jsonb
 ) from public.academic_years where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 select public.create_schedule(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', id, 'Program one-off', 'one_off', 'program',
-  null, 'grade-10', '55555555-5555-4555-8555-555555555555', true, 'Hall',
+  null, 'secondary-1', '55555555-5555-4555-8555-555555555555', true, 'Hall',
   '[]'::jsonb, '[{"date":"2030-10-02","startsAt":"10:00","endsAt":"11:00"}]'::jsonb
 ) from public.academic_years where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
@@ -171,7 +171,7 @@ end $$;
 set local request.jwt.claim.sub = '22222222-2222-4222-8222-222222222222';
 update public.groups set name = 'Group A updated' where id = '66666666-6666-4666-8666-666666666666';
 insert into public.groups (id, academy_id, academic_year_id, level_id, name)
-select '88888888-8888-4888-8888-888888888888', academy_id, id, 'grade-11', 'Unused group'
+select '88888888-8888-4888-8888-888888888888', academy_id, id, 'secondary-2', 'Unused group'
 from public.academic_years where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 update public.groups set archived_at = now() where id = '88888888-8888-4888-8888-888888888888';
 do $$ begin
@@ -189,7 +189,7 @@ do $$ begin
   end;
   -- A restore that would duplicate an active group's name is rejected by the active-name index.
   insert into public.groups (academy_id, academic_year_id, level_id, name)
-  select academy_id, id, 'grade-11', 'Unused group'
+  select academy_id, id, 'secondary-2', 'Unused group'
   from public.academic_years where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   begin
     update public.groups set archived_at = null where id = '88888888-8888-4888-8888-888888888888';
@@ -211,7 +211,7 @@ begin
   select id into a_year from public.academic_years where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   begin
     insert into public.groups (academy_id, academic_year_id, level_id, name)
-      values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'grade-11', 'Instructor group');
+      values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'secondary-2', 'Instructor group');
     raise exception 'instructor created group';
   exception when insufficient_privilege then null; end;
   if not exists (select 1 from public.groups where id = '66666666-6666-4666-8666-666666666666') then
@@ -227,12 +227,12 @@ begin
   end if;
   begin
     perform public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year,
-      'Instructor recurring', 'recurring', 'level', null, 'grade-11', null, true,
+      'Instructor recurring', 'recurring', 'level', null, 'secondary-2', null, true,
       'Room', '[{"weekday":1,"startsAt":"16:00","endsAt":"17:00"}]'::jsonb, '[]'::jsonb);
     raise exception 'instructor created recurring schedule';
   exception when insufficient_privilege then null; end;
   perform public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year,
-    'Instructor one-off', 'one_off', 'level', null, 'grade-11', null, false,
+    'Instructor one-off', 'one_off', 'level', null, 'secondary-2', null, false,
     'Room', '[]'::jsonb, '[{"date":"2030-10-03","startsAt":"16:00","endsAt":"17:00"}]'::jsonb);
 end $$;
 
@@ -245,7 +245,7 @@ begin
   select id into other_id from public.schedules where title = 'Level one-off';
   select id into own_id from public.schedules where title = 'Instructor one-off';
   if not public.update_schedule(other_id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Level one-off revised',
-    'program', null, 'grade-10', '55555555-5555-4555-8555-555555555555', true, 'Lab',
+    'program', null, 'secondary-1', '55555555-5555-4555-8555-555555555555', true, 'Lab',
     '[]'::jsonb, '[{"date":"2030-10-05","startsAt":"12:00","endsAt":"13:00"}]'::jsonb) then
     raise exception 'instructor could not edit another creator''s one-off';
   end if;
@@ -277,7 +277,7 @@ begin
     if sqlerrm = 'instructor changed schedule type' then raise; end if;
   end;
   begin
-    perform public.update_schedule(other_id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Out of year', 'level', null, 'grade-11', null,
+    perform public.update_schedule(other_id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Out of year', 'level', null, 'secondary-2', null,
       true, null, '[]'::jsonb, '[{"date":"2032-01-01","startsAt":"12:00","endsAt":"13:00"}]'::jsonb);
     raise exception 'out-of-year one-off accepted';
   exception when raise_exception then
@@ -291,7 +291,7 @@ begin
     raise exception 'instructor could not archive own one-off';
   end if;
   update public.schedules set title = 'Edited while archived' where id = own_id;
-  if public.update_schedule(own_id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Edited while archived', 'level', null, 'grade-11', null,
+  if public.update_schedule(own_id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Edited while archived', 'level', null, 'secondary-2', null,
     true, null, '[]'::jsonb, '[{"date":"2030-10-03","startsAt":"16:00","endsAt":"17:00"}]'::jsonb) then
     raise exception 'archived one-off edited through RPC';
   end if;
@@ -307,7 +307,7 @@ begin
   if exists (select 1 from public.schedules where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') then raise exception 'cross-academy schedule visible'; end if;
   begin
     insert into public.groups (academy_id, academic_year_id, level_id, name)
-      values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'grade-11', 'Cross academy group');
+      values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'secondary-2', 'Cross academy group');
     raise exception 'cross-academy write succeeded';
   exception when raise_exception then
     if sqlerrm = 'cross-academy write succeeded' then raise; end if;
@@ -328,7 +328,7 @@ begin
   -- Empty recurring schedule is rejected at the verification point.
   begin
     insert into public.schedules (academy_id, academic_year_id, title, kind, audience, level_id)
-      values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Empty recurring', 'recurring', 'level', 'grade-11');
+      values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Empty recurring', 'recurring', 'level', 'secondary-2');
     set constraints all immediate;
     raise exception 'empty recurring schedule accepted';
   exception when raise_exception then
@@ -336,9 +336,9 @@ begin
   end;
 
   sched := public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'One slot', 'recurring', 'level',
-    null, 'grade-11', null, true, null, '[{"weekday":2,"startsAt":"09:00","endsAt":"10:00"}]'::jsonb, '[]'::jsonb);
+    null, 'secondary-2', null, true, null, '[{"weekday":2,"startsAt":"09:00","endsAt":"10:00"}]'::jsonb, '[]'::jsonb);
   other := public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Other slot', 'recurring', 'level',
-    null, 'grade-11', null, true, null, '[{"weekday":4,"startsAt":"09:00","endsAt":"10:00"}]'::jsonb, '[]'::jsonb);
+    null, 'secondary-2', null, true, null, '[{"weekday":4,"startsAt":"09:00","endsAt":"10:00"}]'::jsonb, '[]'::jsonb);
   set constraints all immediate;
   set constraints all deferred;
   select id into slot_id from public.schedule_slots where schedule_id = sched;
@@ -363,7 +363,7 @@ begin
 
   -- Atomic replacement keeps the schedule nonempty and passes the verification point.
   if not public.update_schedule(sched, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'One slot', 'level',
-    null, 'grade-11', null, true, null, '[{"weekday":6,"startsAt":"09:00","endsAt":"10:00"}]'::jsonb, '[]'::jsonb) then raise exception 'atomic replacement failed'; end if;
+    null, 'secondary-2', null, true, null, '[{"weekday":6,"startsAt":"09:00","endsAt":"10:00"}]'::jsonb, '[]'::jsonb) then raise exception 'atomic replacement failed'; end if;
   set constraints all immediate;
   set constraints all deferred;
 
@@ -401,12 +401,12 @@ declare a_year constant uuid := 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
 begin
   begin
     perform public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Duplicate slot', 'recurring', 'level',
-      null, 'grade-11', null, true, null, '[{"weekday":1,"startsAt":"09:00","endsAt":"10:00"},{"weekday":1,"startsAt":"09:00","endsAt":"11:00"}]'::jsonb, '[]'::jsonb);
+      null, 'secondary-2', null, true, null, '[{"weekday":1,"startsAt":"09:00","endsAt":"10:00"},{"weekday":1,"startsAt":"09:00","endsAt":"11:00"}]'::jsonb, '[]'::jsonb);
     raise exception 'duplicate weekday/start accepted';
   exception when unique_violation then null; end;
   begin
     perform public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Too many slots', 'recurring', 'level',
-      null, 'grade-11', null, true, null,
+      null, 'secondary-2', null, true, null,
       (select jsonb_agg(jsonb_build_object('weekday', 1, 'startsAt', make_time(8, i, 0)::text,
         'endsAt', make_time(9, i, 0)::text)) from generate_series(1, 21) i), '[]'::jsonb);
     raise exception '21 slots accepted';
@@ -415,7 +415,7 @@ begin
   end;
   begin
     perform public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Dated recurring', 'recurring', 'level',
-      null, 'grade-11', null, true, null,
+      null, 'secondary-2', null, true, null,
       '[{"weekday":1,"startsAt":"09:00","endsAt":"10:00"}]'::jsonb,
       '[{"date":"2030-10-01","startsAt":"10:00","endsAt":"11:00"}]'::jsonb);
     raise exception 'recurring schedule with dated sessions accepted';
@@ -424,14 +424,14 @@ begin
   end;
   begin
     perform public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Undated one-off', 'one_off', 'level',
-      null, 'grade-11', null, true, null, '[]'::jsonb, '[]'::jsonb);
+      null, 'secondary-2', null, true, null, '[]'::jsonb, '[]'::jsonb);
     raise exception 'one-off without sessions accepted';
   exception when raise_exception then
     if sqlerrm = 'one-off without sessions accepted' then raise; end if;
   end;
   begin
     perform public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Slotted one-off', 'one_off', 'level',
-      null, 'grade-11', null, true, null,
+      null, 'secondary-2', null, true, null,
       '[{"weekday":1,"startsAt":"09:00","endsAt":"10:00"}]'::jsonb,
       '[{"date":"2030-10-01","startsAt":"10:00","endsAt":"11:00"}]'::jsonb);
     raise exception 'one-off with weekly slots accepted';
@@ -440,13 +440,13 @@ begin
   end;
   begin
     perform public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Duplicate session', 'one_off', 'level',
-      null, 'grade-11', null, true, null, '[]'::jsonb,
+      null, 'secondary-2', null, true, null, '[]'::jsonb,
       '[{"date":"2030-10-01","startsAt":"10:00","endsAt":"11:00"},{"date":"2030-10-01","startsAt":"10:00","endsAt":"12:00"}]'::jsonb);
     raise exception 'duplicate session accepted';
   exception when unique_violation then null; end;
   begin
     perform public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Too many sessions', 'one_off', 'level',
-      null, 'grade-11', null, true, null, '[]'::jsonb,
+      null, 'secondary-2', null, true, null, '[]'::jsonb,
       (select jsonb_agg(jsonb_build_object('date', '2030-10-01', 'startsAt', make_time(8, i, 0)::text,
         'endsAt', make_time(9, i, 0)::text)) from generate_series(1, 51) i));
     raise exception '51 sessions accepted';
@@ -457,13 +457,13 @@ begin
   declare multi uuid;
   begin
     multi := public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Multi-date one-off', 'one_off', 'level',
-      null, 'grade-11', null, true, null, '[]'::jsonb,
+      null, 'secondary-2', null, true, null, '[]'::jsonb,
       '[{"date":"2030-10-01","startsAt":"10:00","endsAt":"11:00"},{"date":"2030-10-08","startsAt":"10:00","endsAt":"11:00"}]'::jsonb);
     if (select count(*) from public.schedule_sessions where schedule_id = multi) <> 2 then
       raise exception 'multi-date one-off sessions missing';
     end if;
     if not public.update_schedule(multi, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Multi-date one-off', 'level',
-      null, 'grade-11', null, true, null, '[]'::jsonb,
+      null, 'secondary-2', null, true, null, '[]'::jsonb,
       '[{"date":"2030-10-15","startsAt":"09:00","endsAt":"10:00"}]'::jsonb) then
       raise exception 'multi-date one-off update failed';
     end if;
@@ -481,19 +481,19 @@ begin
   end;
   begin
     perform public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Backwards one-off', 'one_off', 'level',
-      null, 'grade-11', null, true, null, '[]'::jsonb, '[{"date":"2030-10-01","startsAt":"11:00","endsAt":"10:00"}]'::jsonb);
+      null, 'secondary-2', null, true, null, '[]'::jsonb, '[{"date":"2030-10-01","startsAt":"11:00","endsAt":"10:00"}]'::jsonb);
     raise exception 'backwards one-off accepted';
   exception when check_violation then null; end;
   begin
     perform public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Before year', 'one_off', 'level',
-      null, 'grade-11', null, true, null, '[]'::jsonb, '[{"date":"2030-08-15","startsAt":"10:00","endsAt":"11:00"}]'::jsonb);
+      null, 'secondary-2', null, true, null, '[]'::jsonb, '[{"date":"2030-08-15","startsAt":"10:00","endsAt":"11:00"}]'::jsonb);
     raise exception 'one-off before the academic year accepted';
   exception when raise_exception then
     if sqlerrm = 'one-off before the academic year accepted' then raise; end if;
   end;
   -- Blank locations are stored as null.
   if (select location from public.schedules where id = public.create_schedule('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Blank location',
-    'one_off', 'level', null, 'grade-11', null, false, '  ', '[]'::jsonb, '[{"date":"2031-08-15","startsAt":"10:00","endsAt":"11:00"}]'::jsonb)) is not null then
+    'one_off', 'level', null, 'secondary-2', null, false, '  ', '[]'::jsonb, '[{"date":"2031-08-15","startsAt":"10:00","endsAt":"11:00"}]'::jsonb)) is not null then
     raise exception 'blank location was not stored as null';
   end if;
 end $$;
@@ -553,7 +553,7 @@ begin
   end;
   begin
     perform public.update_schedule((select id from public.schedules where title = 'Program one-off'),
-      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Closed year edit', 'level', null, 'grade-11', null, true, null,
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Closed year edit', 'level', null, 'secondary-2', null, true, null,
       '[]'::jsonb, '[{"date":"2030-10-02","startsAt":"10:00","endsAt":"11:00"}]'::jsonb);
     raise exception 'closed-year schedule edit accepted';
   exception when raise_exception then

@@ -37,9 +37,9 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'a3333333-3333-4333-8333-333333333333', 'instructor', 'a1111111-1111-4111-8111-111111111111'),
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'b1111111-1111-4111-8111-111111111111', 'owner', 'b1111111-1111-4111-8111-111111111111');
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-9', 9),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-10', 10),
-  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'grade-12', 12);
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'preparatory-3', 9),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-1', 10),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'secondary-3', 12);
 
 grant usage on schema public, auth to authenticated, anon;
 
@@ -48,17 +48,17 @@ set local role authenticated;
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
 select set_config('test.r9', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Nine One',
-  '01000000001', '01100000001', 'grade-9', null, null, 'in_person');
+  '01000000001', '01100000001', 'preparatory-3', null, null, 'in_person');
 select set_config('test.r9b', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Nine Two',
-  '01000000002', '01100000001', 'grade-9', null, null, 'in_person');
+  '01000000002', '01100000001', 'preparatory-3', null, null, 'in_person');
 select set_config('test.r10', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Ten One',
-  '01000000004', '01100000001', 'grade-10', null, null, 'in_person');
+  '01000000004', '01100000001', 'secondary-1', null, null, 'in_person');
 set local request.jwt.claim.sub = 'b1111111-1111-4111-8111-111111111111';
 select set_config('test.rb', id::text, true) from public.create_student_record(
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb', 'Other Academy',
-  '01000000009', '01100000001', 'grade-12', null, null, 'in_person');
+  '01000000009', '01100000001', 'secondary-3', null, null, 'in_person');
 
 set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
 -- Codes are off by default.
@@ -66,7 +66,7 @@ select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa
 select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid, 'generate', null, 0, gen_random_uuid()) $s$, 'codes_disabled');
 
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
-select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, '####', '[{"levelId":"grade-10","pattern":"ST2###"}]');
+select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, '####', '[{"levelId":"secondary-1","pattern":"ST2###"}]');
 
 -- Outsiders, other academies, and unknown records.
 set local request.jwt.claim.sub = 'c9999999-9999-4999-8999-999999999999';
@@ -248,7 +248,7 @@ end $$;
 -- Retirement keeps working while codes are off; assignment does not.
 set local role authenticated;
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
-select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 1, false, '####', '[{"levelId":"grade-10","pattern":"ST2###"}]');
+select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 1, false, '####', '[{"levelId":"secondary-1","pattern":"ST2###"}]');
 select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r10')::uuid, 'retire', null, 1, gen_random_uuid());
 select pg_temp.expect_error($s$ select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r10')::uuid, 'assign', '0042', 2, gen_random_uuid()) $s$, 'codes_disabled');
 

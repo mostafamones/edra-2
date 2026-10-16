@@ -77,12 +77,12 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
 update public.academy_memberships set suspended_at = now(), suspended_by = 'e1111111-1111-4111-8111-111111111111'
 where academy_id = 'ea555555-5555-4555-8555-555555555555' and user_id = 'e4444444-4444-4444-8444-444444444444';
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('ea555555-5555-4555-8555-555555555555', 'grade-9', 9),
-  ('ea555555-5555-4555-8555-555555555555', 'grade-10', 10),
-  ('eb666666-6666-4666-8666-666666666666', 'grade-9', 9);
+  ('ea555555-5555-4555-8555-555555555555', 'preparatory-3', 9),
+  ('ea555555-5555-4555-8555-555555555555', 'secondary-1', 10),
+  ('eb666666-6666-4666-8666-666666666666', 'preparatory-3', 9);
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name) values
-  ('ea888888-0000-4000-8000-000000000001', 'ea555555-5555-4555-8555-555555555555', 'ea555555-1111-4111-8111-555555555555', 'grade-9', null, 'Nine A'),
-  ('ea888888-0000-4000-8000-000000000002', 'ea555555-5555-4555-8555-555555555555', 'ea555555-1111-4111-8111-555555555555', 'grade-9', null, 'Nine B');
+  ('ea888888-0000-4000-8000-000000000001', 'ea555555-5555-4555-8555-555555555555', 'ea555555-1111-4111-8111-555555555555', 'preparatory-3', null, 'Nine A'),
+  ('ea888888-0000-4000-8000-000000000002', 'ea555555-5555-4555-8555-555555555555', 'ea555555-1111-4111-8111-555555555555', 'preparatory-3', null, 'Nine B');
 -- Helpers, created by the table owner so the read helpers (security definer) see every row whatever
 -- the acting user. rec(n) is the record id of student n.
 create function pg_temp.rec(n text) returns uuid language sql as $$ select current_setting('test.' || n)::uuid $$;
@@ -106,12 +106,12 @@ grant usage on schema public, auth to authenticated, anon;
 
 set local role authenticated;
 set local request.jwt.claim.sub = 'e1111111-1111-4111-8111-111111111111';
--- Six grade-9 students (s1..s6) and one grade-10 student (ten).
+-- Six preparatory-3 students (s1..s6) and one secondary-1 student (ten).
 select set_config('test.s' || n, (public.create_student_record('ea555555-5555-4555-8555-555555555555', 'ea555555-1111-4111-8111-555555555555',
-  'Student ' || n, '0100000030' || n, '01100000000', 'grade-9', null, 'ea888888-0000-4000-8000-000000000001', 'in_person')).id::text, true)
+  'Student ' || n, '0100000030' || n, '01100000000', 'preparatory-3', null, 'ea888888-0000-4000-8000-000000000001', 'in_person')).id::text, true)
 from generate_series(1, 6) n;
 select set_config('test.ten', (public.create_student_record('ea555555-5555-4555-8555-555555555555', 'ea555555-1111-4111-8111-555555555555',
-  'Tenth', '01000000399', '01100000000', 'grade-10', null, null, 'online_only')).id::text, true);
+  'Tenth', '01000000399', '01100000000', 'secondary-1', null, null, 'online_only')).id::text, true);
 
 
 -- Ids used below.
@@ -150,10 +150,10 @@ do $$ declare made jsonb; begin
   perform pg_temp.check((public.create_quiz(pg_temp.academy(), pg_temp.year(), pg_temp.qa(), '{"title":"Weekly quiz","parts":[]}')->>'version')::integer = 1, 'create retry');
 end $$;
 
--- Complete it: grade 9, Q1/Q2 Question Sheet (2 marks), Q3 Written Work (6 marks).
+-- Complete it: Third Preparatory, Q1/Q2 Question Sheet (2 marks), Q3 Written Work (6 marks).
 do $$ declare saved jsonb; again jsonb; begin
   saved := public.update_quiz(pg_temp.academy(), pg_temp.qa(), 1, jsonb_build_object(
-    'title', 'Weekly quiz', 'instructions', 'Answer all', 'solution_notes', 'Worked solutions', 'audience', 'level', 'level_id', 'grade-9',
+    'title', 'Weekly quiz', 'instructions', 'Answer all', 'solution_notes', 'Worked solutions', 'audience', 'level', 'level_id', 'preparatory-3',
     'parts', jsonb_build_array(
       jsonb_build_object('title', 'Choices', 'kind', 'question_sheet', 'questions', jsonb_build_array(
         jsonb_build_object('prompt', 'One?', 'max_score', '2', 'choices', '[{"label":"A","is_correct":true},{"label":"B"}]'::jsonb),
@@ -163,7 +163,7 @@ do $$ declare saved jsonb; again jsonb; begin
   perform pg_temp.check((saved->>'ready')::boolean and saved->>'max_score' = '10.00' and (saved->>'question_count')::integer = 3, 'complete quiz ready, max 10');
   -- Saving the same document with its ids keeps every id.
   again := public.update_quiz(pg_temp.academy(), pg_temp.qa(), 2, jsonb_build_object(
-    'title', 'Weekly quiz', 'instructions', 'Answer all', 'solution_notes', 'Worked solutions', 'audience', 'level', 'level_id', 'grade-9',
+    'title', 'Weekly quiz', 'instructions', 'Answer all', 'solution_notes', 'Worked solutions', 'audience', 'level', 'level_id', 'preparatory-3',
     'parts', (select jsonb_agg(jsonb_build_object('id', p->'id', 'title', p->'title', 'kind', p->'kind',
       'questions', (select jsonb_agg(jsonb_build_object('id', q->'id', 'prompt', q->'prompt', 'model_answer', q->'model_answer', 'max_score', q->'max_score',
         'choices', (select coalesce(jsonb_agg(jsonb_build_object('id', c->'id', 'label', c->'label', 'is_correct', c->'is_correct') order by (c->>'position')::integer), '[]'::jsonb)
@@ -186,7 +186,7 @@ end $$;
 do $$ begin
   perform public.list_quiz_students(pg_temp.academy(), pg_temp.qa());
   perform pg_temp.check(pg_temp.quiz(pg_temp.qa())->>'structure_locked_at' is null and pg_temp.quiz(pg_temp.qa())->>'work_started_at' is null, 'reads lock nothing');
-  perform pg_temp.check((pg_temp.quiz(pg_temp.qa())->'counts'->>'eligible')::integer = 6, 'six eligible grade-9 students');
+  perform pg_temp.check((pg_temp.quiz(pg_temp.qa())->'counts'->>'eligible')::integer = 6, 'six eligible preparatory-3 students');
 end $$;
 
 -- Other academies read nothing; direct table writes are denied.
@@ -281,7 +281,7 @@ select pg_temp.check(public.save_quiz_physical_draft(pg_temp.academy(), pg_temp.
 
 -- Structure and target are locked now; model answers and wording outside the structure remain editable.
 do $$ declare q jsonb := pg_temp.quiz(pg_temp.qa()); body jsonb; begin
-  body := jsonb_build_object('title', 'Weekly quiz (edited)', 'instructions', 'Answer all', 'solution_notes', 'Notes v2', 'audience', 'level', 'level_id', 'grade-9',
+  body := jsonb_build_object('title', 'Weekly quiz (edited)', 'instructions', 'Answer all', 'solution_notes', 'Notes v2', 'audience', 'level', 'level_id', 'preparatory-3',
     'parts', (select jsonb_agg(jsonb_build_object('id', p->'id', 'title', p->'title', 'kind', p->'kind',
       'questions', (select jsonb_agg(jsonb_build_object('id', x->'id', 'prompt', x->'prompt', 'model_answer', 'Updated', 'max_score', x->'max_score',
         'choices', (select coalesce(jsonb_agg(jsonb_build_object('id', c->'id', 'label', c->'label', 'is_correct', c->'is_correct') order by (c->>'position')::integer), '[]'::jsonb)
@@ -292,7 +292,7 @@ do $$ declare q jsonb := pg_temp.quiz(pg_temp.qa()); body jsonb; begin
   perform pg_temp.expect_error(format($f$ select public.update_quiz(%L, %L, %s, %L) $f$, pg_temp.academy(), pg_temp.qa(), q->>'version',
     jsonb_set(body, '{parts,0,questions,0,max_score}', '"3"')), 'structure_locked');
   perform pg_temp.expect_error(format($f$ select public.update_quiz(%L, %L, %s, %L) $f$, pg_temp.academy(), pg_temp.qa(), q->>'version',
-    body || '{"level_id":"grade-10"}'), 'target_locked');
+    body || '{"level_id":"secondary-1"}'), 'target_locked');
 end $$;
 
 -- ---------------------------------------------------------------------------------------------
@@ -548,7 +548,7 @@ end $$;
 set local role authenticated;
 select pg_temp.as_user('e3333333-3333-4333-8333-333333333333');
 do $$ declare paper jsonb := jsonb_build_object(
-  'title', 'Paper quiz', 'audience', 'level', 'level_id', 'grade-9',
+  'title', 'Paper quiz', 'audience', 'level', 'level_id', 'preparatory-3',
   'parts', jsonb_build_array(jsonb_build_object('title', 'Choices', 'kind', 'question_sheet', 'questions', jsonb_build_array(
     jsonb_build_object('prompt', 'One?', 'max_score', '2', 'choices', '[{"label":"A","is_correct":true},{"label":"B"}]'::jsonb),
     jsonb_build_object('prompt', 'Two?', 'max_score', '2', 'choices', '[{"label":"A"},{"label":"B","is_correct":true}]'::jsonb)))));
@@ -566,7 +566,7 @@ do $$ declare out jsonb; begin
   perform pg_temp.check(out->>'outcome' = 'saved', 'draft saved while eligible');
 end $$;
 reset role;
-update public.annual_student_records set level_id = 'grade-10', primary_group_id = null where id = pg_temp.rec('s6');
+update public.annual_student_records set level_id = 'secondary-1', primary_group_id = null where id = pg_temp.rec('s6');
 set local role authenticated;
 select pg_temp.as_user('e3333333-3333-4333-8333-333333333333');
 select pg_temp.expect_error(format($f$ select public.save_quiz_physical_draft(%L, 'ec000000-0000-4000-8000-000000000004', %L, 1, '[]', gen_random_uuid()) $f$,
@@ -578,7 +578,7 @@ select pg_temp.check((pg_temp.student('ec000000-0000-4000-8000-000000000004', 's
 select pg_temp.check((select count(*) from public.quiz_submissions where quiz_id = 'ec000000-0000-4000-8000-000000000004') = 0, 'nothing was accepted');
 -- Back in the audience: confirmation works; moving out afterwards keeps the accepted work announceable.
 reset role;
-update public.annual_student_records set level_id = 'grade-9', primary_group_id = 'ea888888-0000-4000-8000-000000000001' where id = pg_temp.rec('s6');
+update public.annual_student_records set level_id = 'preparatory-3', primary_group_id = 'ea888888-0000-4000-8000-000000000001' where id = pg_temp.rec('s6');
 set local role authenticated;
 select pg_temp.as_user('e3333333-3333-4333-8333-333333333333');
 do $$ declare out jsonb; begin
@@ -586,7 +586,7 @@ do $$ declare out jsonb; begin
   perform pg_temp.check(out->>'outcome' = 'confirmed', 'confirmed once eligible again');
 end $$;
 reset role;
-update public.annual_student_records set level_id = 'grade-10', primary_group_id = null where id = pg_temp.rec('s6');
+update public.annual_student_records set level_id = 'secondary-1', primary_group_id = null where id = pg_temp.rec('s6');
 set local role authenticated;
 select pg_temp.as_user('e3333333-3333-4333-8333-333333333333');
 do $$ declare out jsonb; begin
@@ -600,7 +600,7 @@ do $$ declare out jsonb; begin
   perform pg_temp.check(out->>'outcome' = 'published', 'accepted work of a moved-out student is still announceable');
 end $$;
 reset role;
-update public.annual_student_records set level_id = 'grade-9', primary_group_id = 'ea888888-0000-4000-8000-000000000001' where id = pg_temp.rec('s6');
+update public.annual_student_records set level_id = 'preparatory-3', primary_group_id = 'ea888888-0000-4000-8000-000000000001' where id = pg_temp.rec('s6');
 
 -- A blank confirmation locks the scoring structure before any result exists.
 set local role authenticated;
@@ -612,7 +612,7 @@ do $$ declare out jsonb; q jsonb; begin
   q := pg_temp.quiz('ec000000-0000-4000-8000-000000000005');
   perform pg_temp.check(q->>'structure_locked_at' is not null, 'acceptance locked the structure');
   perform pg_temp.expect_error(format($f$ select public.update_quiz(%L, %L, %s, %L) $f$, pg_temp.academy(), 'ec000000-0000-4000-8000-000000000005', q->>'version',
-    jsonb_set(jsonb_build_object('title', 'Paper quiz', 'audience', 'level', 'level_id', 'grade-9',
+    jsonb_set(jsonb_build_object('title', 'Paper quiz', 'audience', 'level', 'level_id', 'preparatory-3',
       'parts', jsonb_build_array(jsonb_build_object('id', q->'parts'->0->'id', 'title', 'Choices', 'kind', 'question_sheet', 'questions', jsonb_build_array(
         jsonb_build_object('id', q->'parts'->0->'questions'->0->'id', 'prompt', 'One?', 'max_score', '5',
           'choices', '[{"label":"A","is_correct":true},{"label":"B"}]'::jsonb),
@@ -652,7 +652,7 @@ set local role authenticated;
 select pg_temp.as_user('e2222222-2222-4222-8222-222222222222');
 do $$ begin
   perform public.create_quiz(pg_temp.academy(), pg_temp.year(), 'ec000000-0000-4000-8000-000000000003', jsonb_build_object(
-    'title', 'Running', 'audience', 'level', 'level_id', 'grade-9',
+    'title', 'Running', 'audience', 'level', 'level_id', 'preparatory-3',
     'parts', jsonb_build_array(jsonb_build_object('title', 'W', 'kind', 'written_work', 'questions', jsonb_build_array(jsonb_build_object('max_score', '1'))))));
   perform public.configure_quiz_availability(pg_temp.academy(), 'ec000000-0000-4000-8000-000000000003', 1, now() - interval '1 minute', now() + interval '1 hour');
 end $$;

@@ -71,17 +71,17 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'e1111111-1111-4111-8111-111111111111', 'owner', 'e1111111-1111-4111-8111-111111111111');
 
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'grade-9', 9),
-  ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'grade-11', 11),
-  ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'grade-9', 9);
+  ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'preparatory-3', 9),
+  ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'secondary-2', 11),
+  ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'preparatory-3', 9);
 insert into public.academy_tracks (id, academy_id, level_id, name, sort_order) values
-  ('d5555555-5555-4555-8555-555555555555', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'grade-11', 'Science', 1),
-  ('d6666666-6666-4666-8666-666666666666', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'grade-11', 'Arts', 2);
+  ('d5555555-5555-4555-8555-555555555555', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'secondary-2', 'Science', 1),
+  ('d6666666-6666-4666-8666-666666666666', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'secondary-2', 'Arts', 2);
 insert into public.groups (id, academy_id, academic_year_id, level_id, track_id, name) values
-  ('d7777777-7777-4777-8777-777777777777', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', 'grade-9', null, 'Nine A'),
-  ('d8888888-8888-4888-8888-888888888888', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', 'grade-11', 'd5555555-5555-4555-8555-555555555555', 'Science A'),
-  ('d9999999-9999-4999-8999-999999999999', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', 'grade-9', null, 'Nine archived'),
-  ('e7777777-7777-4777-8777-777777777777', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'eeeeeeee-1111-4111-8111-eeeeeeeeeeee', 'grade-9', null, 'E group');
+  ('d7777777-7777-4777-8777-777777777777', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', 'preparatory-3', null, 'Nine A'),
+  ('d8888888-8888-4888-8888-888888888888', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', 'secondary-2', 'd5555555-5555-4555-8555-555555555555', 'Science A'),
+  ('d9999999-9999-4999-8999-999999999999', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', 'preparatory-3', null, 'Nine archived'),
+  ('e7777777-7777-4777-8777-777777777777', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'eeeeeeee-1111-4111-8111-eeeeeeeeeeee', 'preparatory-3', null, 'E group');
 update public.groups set archived_at = now() where id = 'd9999999-9999-4999-8999-999999999999';
 
 grant usage on schema public, auth to authenticated, anon;
@@ -93,14 +93,14 @@ set local request.jwt.claim.sub = 'd1111111-1111-4111-8111-111111111111';
 
 select set_config('test.r1', id::text, true) from public.create_student_record(
   'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', '  Mariam Hassan  ',
-  '010 1234 5678', '0111 222 3333', 'grade-9', null, null, 'in_person');
+  '010 1234 5678', '0111 222 3333', 'preparatory-3', null, null, 'in_person');
 -- Duplicate names and a shared parent phone are allowed.
 select set_config('test.r2', id::text, true) from public.create_student_record(
   'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', 'Mariam Hassan',
-  '01012345679', '01112223333', 'grade-9', null, 'd7777777-7777-4777-8777-777777777777', 'online_only');
+  '01012345679', '01112223333', 'preparatory-3', null, 'd7777777-7777-4777-8777-777777777777', 'online_only');
 select set_config('test.r3', id::text, true) from public.create_student_record(
   'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', 'مريم حسن 100% _test_',
-  '01512345678', '01112223333', 'grade-11', 'd5555555-5555-4555-8555-555555555555', 'd8888888-8888-4888-8888-888888888888', 'in_person');
+  '01512345678', '01112223333', 'secondary-2', 'd5555555-5555-4555-8555-555555555555', 'd8888888-8888-4888-8888-888888888888', 'in_person');
 
 do $$ begin
   if not exists (
@@ -117,38 +117,38 @@ end $$;
 
 -- Equivalent phone formats collide on the normalized student phone.
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Another', '+20 10 1234 5678', '01112223333', 'grade-9', null, null, 'in_person') $s$, 'duplicate_student_phone');
+  'Another', '+20 10 1234 5678', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, 'duplicate_student_phone');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Another', '00201012345678', '01112223333', 'grade-9', null, null, 'in_person') $s$, 'duplicate_student_phone');
+  'Another', '00201012345678', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, 'duplicate_student_phone');
 -- Required values and phone format.
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  '   ', '01000000001', '01112223333', 'grade-9', null, null, 'in_person') $s$, 'validation');
+  '   ', '01000000001', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, 'validation');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'No phone', '', '01112223333', 'grade-9', null, null, 'in_person') $s$, 'validation');
+  'No phone', '', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, 'validation');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'No parent', '01000000002', null, 'grade-9', null, null, 'in_person') $s$, 'validation');
+  'No parent', '01000000002', null, 'preparatory-3', null, null, 'in_person') $s$, 'validation');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Bad phone', '0131234567', '01112223333', 'grade-9', null, null, 'in_person') $s$, 'validation');
+  'Bad phone', '0131234567', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, 'validation');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'No type', '01000000003', '01112223333', 'grade-9', null, null, null) $s$, 'validation');
+  'No type', '01000000003', '01112223333', 'preparatory-3', null, null, null) $s$, 'validation');
 -- Track required only where the level has tracks; groups must match year, level, and track.
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'No track', '01000000004', '01112223333', 'grade-11', null, null, 'in_person') $s$, 'invalid_placement');
+  'No track', '01000000004', '01112223333', 'secondary-2', null, null, 'in_person') $s$, 'invalid_placement');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Wrong track', '01000000005', '01112223333', 'grade-9', 'd5555555-5555-4555-8555-555555555555', null, 'in_person') $s$, 'invalid_placement');
+  'Wrong track', '01000000005', '01112223333', 'preparatory-3', 'd5555555-5555-4555-8555-555555555555', null, 'in_person') $s$, 'invalid_placement');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Wrong group', '01000000006', '01112223333', 'grade-9', null, 'd8888888-8888-4888-8888-888888888888', 'in_person') $s$, 'invalid_placement');
+  'Wrong group', '01000000006', '01112223333', 'preparatory-3', null, 'd8888888-8888-4888-8888-888888888888', 'in_person') $s$, 'invalid_placement');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Arts in Science', '01000000007', '01112223333', 'grade-11', 'd6666666-6666-4666-8666-666666666666', 'd8888888-8888-4888-8888-888888888888', 'in_person') $s$, 'invalid_placement');
+  'Arts in Science', '01000000007', '01112223333', 'secondary-2', 'd6666666-6666-4666-8666-666666666666', 'd8888888-8888-4888-8888-888888888888', 'in_person') $s$, 'invalid_placement');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Archived group', '01000000008', '01112223333', 'grade-9', null, 'd9999999-9999-4999-8999-999999999999', 'in_person') $s$, 'invalid_placement');
+  'Archived group', '01000000008', '01112223333', 'preparatory-3', null, 'd9999999-9999-4999-8999-999999999999', 'in_person') $s$, 'invalid_placement');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Cross-academy group', '01000000009', '01112223333', 'grade-9', null, 'e7777777-7777-4777-8777-777777777777', 'in_person') $s$, 'invalid_placement');
+  'Cross-academy group', '01000000009', '01112223333', 'preparatory-3', null, 'e7777777-7777-4777-8777-777777777777', 'in_person') $s$, 'invalid_placement');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Unknown level', '01000000010', '01112223333', 'grade-12', null, null, 'in_person') $s$, 'invalid_placement');
+  'Unknown level', '01000000010', '01112223333', 'secondary-3', null, null, 'in_person') $s$, 'invalid_placement');
 -- A form loaded for another academy's year cannot write into it.
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'eeeeeeee-1111-4111-8111-eeeeeeeeeeee',
-  'Wrong year', '01000000011', '01112223333', 'grade-9', null, null, 'in_person') $s$, 'year_unavailable');
+  'Wrong year', '01000000011', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, 'year_unavailable');
 
 do $$ begin
   -- Failed creations leave no orphan identities.
@@ -169,15 +169,15 @@ do $$
 declare result record;
 begin
   select * into result from public.update_student_record(current_setting('test.r1')::uuid, 1, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-    'Mariam H.', '01012345678', '01112223333', 'grade-9', null, 'd7777777-7777-4777-8777-777777777777', 'in_person');
+    'Mariam H.', '01012345678', '01112223333', 'preparatory-3', null, 'd7777777-7777-4777-8777-777777777777', 'in_person');
   if result.version <> 2 then raise exception 'Update did not bump the version'; end if;
 end $$;
 select pg_temp.expect_error(format($s$ select public.update_student_record(%L, 1, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-  'Stale', '01012345678', '01112223333', 'grade-9', null, null, 'in_person') $s$, current_setting('test.r1')), 'stale_record');
+  'Stale', '01012345678', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, current_setting('test.r1')), 'stale_record');
 select pg_temp.expect_error(format($s$ select public.update_student_record(%L, 1, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-  'Taken phone', '01012345678', '01112223333', 'grade-9', null, 'd7777777-7777-4777-8777-777777777777', 'online_only') $s$, current_setting('test.r2')), 'duplicate_student_phone');
+  'Taken phone', '01012345678', '01112223333', 'preparatory-3', null, 'd7777777-7777-4777-8777-777777777777', 'online_only') $s$, current_setting('test.r2')), 'duplicate_student_phone');
 select pg_temp.expect_error(format($s$ select public.update_student_record(%L, 1, 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-  'Other academy', '01012345679', '01112223333', 'grade-9', null, null, 'in_person') $s$, current_setting('test.r2')), 'forbidden');
+  'Other academy', '01012345679', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, current_setting('test.r2')), 'forbidden');
 do $$ begin
   if (select full_name from public.annual_student_records where id = current_setting('test.r1')::uuid) <> 'Mariam H.' then
     raise exception 'A rejected update changed the record';
@@ -229,9 +229,9 @@ end $$;
 
 -- Archived records cannot be edited and keep their phone reserved.
 select pg_temp.expect_error(format($s$ select public.update_student_record(%L, 3, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-  'Archived edit', '01012345678', '01112223333', 'grade-9', null, 'd7777777-7777-4777-8777-777777777777', 'in_person') $s$, current_setting('test.r1')), 'archived_record');
+  'Archived edit', '01012345678', '01112223333', 'preparatory-3', null, 'd7777777-7777-4777-8777-777777777777', 'in_person') $s$, current_setting('test.r1')), 'archived_record');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Reuse archived phone', '01012345678', '01112223333', 'grade-9', null, null, 'in_person') $s$, 'duplicate_student_phone');
+  'Reuse archived phone', '01012345678', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, 'duplicate_student_phone');
 reset role;
 -- The group still referenced by an archived record stays protected.
 select pg_temp.expect_error($s$ update public.groups set archived_at = now() where id = 'd7777777-7777-4777-8777-777777777777' $s$, '%student records%');
@@ -253,13 +253,13 @@ end $$;
 set local request.jwt.claim.sub = 'd3333333-3333-4333-8333-333333333333';
 select set_config('test.r4', id::text, true) from public.create_student_record(
   'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', 'Instructor Created',
-  '01022223333', '01033334444', 'grade-11', 'd5555555-5555-4555-8555-555555555555', 'd8888888-8888-4888-8888-888888888888', 'in_person');
+  '01022223333', '01033334444', 'secondary-2', 'd5555555-5555-4555-8555-555555555555', 'd8888888-8888-4888-8888-888888888888', 'in_person');
 select public.update_student_record(current_setting('test.r4')::uuid, 1, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-  'Instructor Renamed', '01022223334', '01033334445', 'grade-11', 'd5555555-5555-4555-8555-555555555555', 'd8888888-8888-4888-8888-888888888888', 'in_person');
+  'Instructor Renamed', '01022223334', '01033334445', 'secondary-2', 'd5555555-5555-4555-8555-555555555555', 'd8888888-8888-4888-8888-888888888888', 'in_person');
 select pg_temp.expect_error(format($s$ select public.update_student_record(%L, 2, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-  'Instructor Renamed', '01022223334', '01033334445', 'grade-11', 'd5555555-5555-4555-8555-555555555555', null, 'in_person') $s$, current_setting('test.r4')), 'forbidden');
+  'Instructor Renamed', '01022223334', '01033334445', 'secondary-2', 'd5555555-5555-4555-8555-555555555555', null, 'in_person') $s$, current_setting('test.r4')), 'forbidden');
 select pg_temp.expect_error(format($s$ select public.update_student_record(%L, 2, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-  'Instructor Renamed', '01022223334', '01033334445', 'grade-11', 'd5555555-5555-4555-8555-555555555555', 'd8888888-8888-4888-8888-888888888888', 'online_only') $s$, current_setting('test.r4')), 'forbidden');
+  'Instructor Renamed', '01022223334', '01033334445', 'secondary-2', 'd5555555-5555-4555-8555-555555555555', 'd8888888-8888-4888-8888-888888888888', 'online_only') $s$, current_setting('test.r4')), 'forbidden');
 select pg_temp.expect_error(format($s$ select public.set_student_records_archived('dddddddd-dddd-4ddd-8ddd-dddddddddddd',
   'dddddddd-1111-4111-8111-dddddddddddd', jsonb_build_array(jsonb_build_object('id', %L, 'version', 2)), true) $s$, current_setting('test.r4')), 'forbidden');
 do $$ begin
@@ -302,7 +302,7 @@ begin
   if (page ->> 'total')::int <> 1 then raise exception 'Arabic search failed'; end if;
 
   -- Filters, including no-track and unassigned.
-  page := public.list_student_records('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', null, 'all', 'grade-11', 'd5555555-5555-4555-8555-555555555555', null, null, null, 0, 20);
+  page := public.list_student_records('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', null, 'all', 'secondary-2', 'd5555555-5555-4555-8555-555555555555', null, null, null, 0, 20);
   if (page ->> 'total')::int <> 2 then raise exception 'Track filter failed'; end if;
   page := public.list_student_records('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', null, 'all', null, 'none', null, null, null, 0, 20);
   if (page ->> 'total')::int <> 2 then raise exception 'No-track filter failed'; end if;
@@ -314,7 +314,7 @@ begin
   -- Multi-column sort with a stable tie-break, and paging past the end keeps the total.
   page := public.list_student_records('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', null, 'all', null, null, null, null,
     '[{"id":"level","desc":true},{"id":"name","desc":false}]'::jsonb, 0, 10);
-  if page -> 'rows' -> 0 ->> 'level_id' <> 'grade-11' then raise exception 'Level sort failed'; end if;
+  if page -> 'rows' -> 0 ->> 'level_id' <> 'secondary-2' then raise exception 'Level sort failed'; end if;
   page := public.list_student_records('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd', null, 'all', null, null, null, null,
     '[{"id":"track","desc":false}]'::jsonb, 0, 10);
   if page -> 'rows' -> 3 ->> 'track_name' is not null then raise exception 'Absent tracks did not sort last'; end if;
@@ -338,9 +338,9 @@ end $$;
 select pg_temp.expect_error($s$ select public.list_student_records('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
   null, 'active', null, null, null, null, null, 0, 20) $s$, 'forbidden');
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Intruder', '01200000001', '01112223333', 'grade-9', null, null, 'in_person') $s$, 'forbidden');
+  'Intruder', '01200000001', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, 'forbidden');
 select pg_temp.expect_error(format($s$ select public.update_student_record(%L, 2, 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-  'Hijack', '01022223334', '01033334445', 'grade-9', null, null, 'in_person') $s$, current_setting('test.r4')), 'not_found');
+  'Hijack', '01022223334', '01033334445', 'preparatory-3', null, null, 'in_person') $s$, current_setting('test.r4')), 'not_found');
 select pg_temp.expect_error(format($s$ select public.set_student_records_archived('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
   'eeeeeeee-1111-4111-8111-eeeeeeeeeeee', jsonb_build_array(jsonb_build_object('id', %L, 'version', 2)), true) $s$, current_setting('test.r4')), 'not_found');
 
@@ -349,11 +349,11 @@ do $$ begin
   if exists (select 1 from public.annual_student_records) then raise exception 'A non-member can read student records'; end if;
 end $$;
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Outsider', '01200000002', '01112223333', 'grade-9', null, null, 'in_person') $s$, 'forbidden');
+  'Outsider', '01200000002', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, 'forbidden');
 
 set local role anon;
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Anonymous', '01200000003', '01112223333', 'grade-9', null, null, 'in_person') $s$, 'permission denied%');
+  'Anonymous', '01200000003', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, 'permission denied%');
 select pg_temp.expect_error($s$ select count(*) from public.annual_student_records $s$, 'permission denied%');
 
 -- ---------------------------------------------------------------------------------------------
@@ -363,9 +363,9 @@ update public.academic_years set closed_at = now() where id = 'dddddddd-1111-411
 set local role authenticated;
 set local request.jwt.claim.sub = 'd1111111-1111-4111-8111-111111111111';
 select pg_temp.expect_error($s$ select public.create_student_record('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'dddddddd-1111-4111-8111-dddddddddddd',
-  'Closed year', '01200000004', '01112223333', 'grade-9', null, null, 'in_person') $s$, 'year_unavailable');
+  'Closed year', '01200000004', '01112223333', 'preparatory-3', null, null, 'in_person') $s$, 'year_unavailable');
 select pg_temp.expect_error(format($s$ select public.update_student_record(%L, 2, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-  'Closed edit', '01022223334', '01033334445', 'grade-11', 'd5555555-5555-4555-8555-555555555555', 'd8888888-8888-4888-8888-888888888888', 'in_person') $s$, current_setting('test.r4')), 'year_unavailable');
+  'Closed edit', '01022223334', '01033334445', 'secondary-2', 'd5555555-5555-4555-8555-555555555555', 'd8888888-8888-4888-8888-888888888888', 'in_person') $s$, current_setting('test.r4')), 'year_unavailable');
 select pg_temp.expect_error(format($s$ select public.set_student_records_archived('dddddddd-dddd-4ddd-8ddd-dddddddddddd',
   'dddddddd-1111-4111-8111-dddddddddddd', jsonb_build_array(jsonb_build_object('id', %L, 'version', 2)), true) $s$, current_setting('test.r4')), 'year_unavailable');
 

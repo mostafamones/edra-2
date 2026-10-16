@@ -60,7 +60,7 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('9a9a9a9a-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '9b666666-6666-4666-8666-666666666666', 'instructor', '9c111111-1111-4111-8111-111111111111');
 
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('9a9a9a9a-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-10', 10);
+  ('9a9a9a9a-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-1', 10);
 
 -- Schema invariants: the Owner cannot be suspended, and attribution needs a suspension.
 do $$ begin
@@ -102,17 +102,17 @@ begin
   perform pg_temp.check((select name from public.academies where id = x) = 'Access Academy X+', 'head admin edits academy settings');
   select id into year_id from public.academic_years where academy_id = x and closed_at is null;
   insert into public.groups (academy_id, academic_year_id, level_id, name)
-    values (x, year_id, 'grade-10', 'Head admin group');
+    values (x, year_id, 'secondary-1', 'Head admin group');
   perform pg_temp.check(exists (select 1 from public.groups where academy_id = x and name = 'Head admin group'), 'head admin creates groups');
   insert into public.schedules (academy_id, academic_year_id, title, kind, audience, level_id, created_by)
-    values (x, year_id, 'Head admin recurring', 'recurring', 'level', 'grade-10', '9b222222-2222-4222-8222-222222222222');
+    values (x, year_id, 'Head admin recurring', 'recurring', 'level', 'secondary-1', '9b222222-2222-4222-8222-222222222222');
   perform pg_temp.check(exists (select 1 from public.schedules where academy_id = x and title = 'Head admin recurring'), 'head admin creates recurring schedules');
 
   perform pg_temp.act('9b666666-6666-4666-8666-666666666666');
   perform pg_temp.check(public.academy_role_for(x) = 'instructor' and not public.is_academy_manager(x), 'instructor is not a manager');
   begin
     insert into public.schedules (academy_id, academic_year_id, title, kind, audience, level_id, created_by)
-      values (x, year_id, 'Instructor recurring', 'recurring', 'level', 'grade-10', '9b666666-6666-4666-8666-666666666666');
+      values (x, year_id, 'Instructor recurring', 'recurring', 'level', 'secondary-1', '9b666666-6666-4666-8666-666666666666');
     raise exception 'FAILED: instructor created a recurring schedule';
   exception when insufficient_privilege then null;
   end;

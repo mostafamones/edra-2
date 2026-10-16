@@ -2608,19 +2608,33 @@ export type Database = {
         Row: {
           id: string
           name: string
+          replaced_by: string | null
+          selectable: boolean
           sort_order: number
         }
         Insert: {
           id: string
           name: string
+          replaced_by?: string | null
+          selectable?: boolean
           sort_order: number
         }
         Update: {
           id?: string
           name?: string
+          replaced_by?: string | null
+          selectable?: boolean
           sort_order?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "global_levels_replaced_by_fkey"
+            columns: ["replaced_by"]
+            isOneToOne: false
+            referencedRelation: "global_levels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       groups: {
         Row: {

@@ -110,9 +110,9 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'a3333333-3333-4333-8333-333333333333', 'instructor', 'a1111111-1111-4111-8111-111111111111'),
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'b1111111-1111-4111-8111-111111111111', 'owner', 'b1111111-1111-4111-8111-111111111111');
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-9', 9),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-10', 10),
-  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'grade-12', 12);
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'preparatory-3', 9),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-1', 10),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'secondary-3', 12);
 
 grant usage on schema public, auth to authenticated, anon;
 
@@ -128,16 +128,16 @@ do $$ begin
 end $$;
 select set_config('test.r9', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Nine One',
-  '01000000001', '01100000001', 'grade-9', null, null, 'in_person');
+  '01000000001', '01100000001', 'preparatory-3', null, null, 'in_person');
 select set_config('test.r9b', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Nine Two',
-  '01000000002', '01100000001', 'grade-9', null, null, 'in_person');
+  '01000000002', '01100000001', 'preparatory-3', null, null, 'in_person');
 select set_config('test.r9c', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Nine Three',
-  '01000000003', '01100000001', 'grade-9', null, null, 'in_person');
+  '01000000003', '01100000001', 'preparatory-3', null, null, 'in_person');
 select set_config('test.r10', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Ten One',
-  '01000000004', '01100000001', 'grade-10', null, null, 'in_person');
+  '01000000004', '01100000001', 'secondary-1', null, null, 'in_person');
 
 set local request.jwt.claim.sub = 'c9999999-9999-4999-8999-999999999999';
 select pg_temp.expect_error($s$ select public.get_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') $s$, 'forbidden');
@@ -152,19 +152,19 @@ set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
 select pg_temp.expect_error($s$ select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, '####', '[]') $s$, 'forbidden');
 select pg_temp.expect_error($s$ insert into public.student_code_settings (academy_id, enabled, default_pattern, updated_by)
   values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true, '####', 'a3333333-3333-4333-8333-333333333333') $s$, 'permission denied%');
-select pg_temp.expect_error($s$ select public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-9') $s$, 'permission denied%');
+select pg_temp.expect_error($s$ select public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'preparatory-3') $s$, 'permission denied%');
 
 -- ---------------------------------------------------------------------------------------------
 -- Owner configures: validation, foreign levels, versions.
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
 select pg_temp.expect_error($s$ select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, 'ST#A#', '[]') $s$, 'validation');
 select pg_temp.expect_error($s$ select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, '####',
-  '[{"levelId":"grade-10","pattern":"ST 2###"}]') $s$, 'validation');
+  '[{"levelId":"secondary-1","pattern":"ST 2###"}]') $s$, 'validation');
 select pg_temp.expect_error($s$ select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, '####',
-  '[{"levelId":"grade-10","pattern":"A#"},{"levelId":"grade-10","pattern":"B#"}]') $s$, 'validation');
--- grade-12 exists globally and in academy B, but not in academy A.
+  '[{"levelId":"secondary-1","pattern":"A#"},{"levelId":"secondary-1","pattern":"B#"}]') $s$, 'validation');
+-- secondary-3 exists globally and in academy B, but not in academy A.
 select pg_temp.expect_error($s$ select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, '####',
-  '[{"levelId":"grade-12","pattern":"ST2###"}]') $s$, 'invalid_level');
+  '[{"levelId":"secondary-3","pattern":"ST2###"}]') $s$, 'invalid_level');
 select pg_temp.expect_error($s$ select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, '####',
   '[{"levelId":"nope","pattern":"ST2###"}]') $s$, 'invalid_level');
 -- Disabled with an empty draft is allowed and creates no code.
@@ -172,11 +172,11 @@ select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
 select pg_temp.expect_error($s$ select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, '####', '[]') $s$, 'stale_settings');
 do $$ begin
   if (public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 1, true, ' #### ',
-      '[{"levelId":"grade-10","pattern":"st2###"}]') ->> 'version')::int <> 2 then
+      '[{"levelId":"secondary-1","pattern":"st2###"}]') ->> 'version')::int <> 2 then
     raise exception 'Saving must advance the version';
   end if;
   if public.get_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
-    <> '{"enabled": true, "defaultPattern": "####", "version": 2, "levels": [{"levelId": "grade-10", "pattern": "ST2###"}]}'::jsonb then
+    <> '{"enabled": true, "defaultPattern": "####", "version": 2, "levels": [{"levelId": "secondary-1", "pattern": "ST2###"}]}'::jsonb then
     raise exception 'Saved settings were not normalized: %', public.get_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
   end if;
   if exists (select 1 from public.student_code_assignments) or exists (select 1 from public.student_code_states) then
@@ -190,8 +190,8 @@ select pg_temp.expect_error($s$ select public.save_student_code_settings('aaaaaa
 set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
 do $$ begin
   if (public.get_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') ->> 'version')::int <> 2
-    or public.student_code_effective_pattern('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-10') <> 'ST2###'
-    or public.student_code_effective_pattern('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-9') <> '####' then
+    or public.student_code_effective_pattern('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-1') <> 'ST2###'
+    or public.student_code_effective_pattern('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'preparatory-3') <> '####' then
     raise exception 'Instructor cannot read effective settings';
   end if;
   if (public.get_student_code_state('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.r9')::uuid))
@@ -210,7 +210,7 @@ set local request.jwt.claim.sub = 'b1111111-1111-4111-8111-111111111111';
 select public.save_student_code_settings('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 0, true, '####', '[]');
 select set_config('test.rb', id::text, true) from public.create_student_record(
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb', 'B One',
-  '01000000001', '01100000001', 'grade-12', null, null, 'in_person');
+  '01000000001', '01100000001', 'secondary-3', null, null, 'in_person');
 do $$ begin
   if exists (select 1 from public.student_code_settings where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
     or exists (select 1 from public.student_code_level_patterns where academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') then
@@ -231,8 +231,8 @@ create function pg_temp.issue(record_id text, code text, code_version integer) r
 $$;
 
 do $$ begin
-  if public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-9') <> '0001'
-    or public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-10') <> 'ST2001' then
+  if public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'preparatory-3') <> '0001'
+    or public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-1') <> 'ST2001' then
     raise exception 'Allocation must start at 1 with padding';
   end if;
 end $$;
@@ -241,7 +241,7 @@ select pg_temp.issue(current_setting('test.r10'), 'ST2001', 1);
 -- Manual code taking the formula's next value; allocation skips it.
 select pg_temp.issue(current_setting('test.r9b'), '0002', 1);
 do $$ begin
-  if public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-9') <> '0003' then
+  if public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'preparatory-3') <> '0003' then
     raise exception 'Allocation must skip issued codes';
   end if;
   if (select current_assignment_id from public.student_code_states where annual_student_record_id = current_setting('test.r9')::uuid)
@@ -259,7 +259,7 @@ select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r9c')
 select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r9c'), 'ABC', 2) $s$, 'stale_code');
 select pg_temp.expect_error($s$ insert into public.student_code_assignments (academy_id, academic_year_id, academy_student_profile_id,
   annual_student_record_id, level_id, code, code_version, issued_by)
-  select r.academy_id, r.academic_year_id, r.academy_student_profile_id, r.id, 'grade-10', 'ABC', 1, 'a1111111-1111-4111-8111-111111111111'
+  select r.academy_id, r.academic_year_id, r.academy_student_profile_id, r.id, 'secondary-1', 'ABC', 1, 'a1111111-1111-4111-8111-111111111111'
   from public.annual_student_records r where r.id = current_setting('test.r9c')::uuid $s$, 'level_mismatch');
 -- Foreign academy/record combination is rejected by the composite key.
 select pg_temp.expect_error($s$ insert into public.student_code_assignments (academy_id, academic_year_id, academy_student_profile_id,
@@ -324,7 +324,7 @@ select pg_temp.expect_error($s$ select public.get_student_code_state('aaaaaaaa-a
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
 select set_config('test.search', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Search Student',
-  '01000000005', '01100000001', 'grade-9', null, null, 'in_person');
+  '01000000005', '01100000001', 'preparatory-3', null, null, 'in_person');
 reset role;
 select pg_temp.issue(current_setting('test.search'), 'LOOKUP10', 1);
 set local role authenticated;
@@ -345,7 +345,7 @@ do $$ declare page jsonb; actor text; term text; begin
     end loop;
   end loop;
   page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
-    'ST2', 'active', 'grade-9', null, null, null, null, 0, 10);
+    'ST2', 'active', 'preparatory-3', null, null, null, null, 0, 10);
   if (page ->> 'total')::int <> 0 then raise exception 'Code search bypassed the level filter'; end if;
   page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
     'ST2', 'archived', null, null, null, null, null, 0, 10);
@@ -372,7 +372,7 @@ select pg_temp.expect_error($s$ select public.list_student_records('aaaaaaaa-aaa
   'ST2', 'all', null, null, null, null, null, 0, 10) $s$, 'forbidden');
 
 set local request.jwt.claim.sub = 'a2222222-2222-4222-8222-222222222222';
-select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2, false, '####', '[{"levelId":"grade-10","pattern":"ST2###"}]');
+select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2, false, '####', '[{"levelId":"secondary-1","pattern":"ST2###"}]');
 do $$ declare page jsonb; term text; begin
   foreach term in array array['ST2', 'LOOKUP10'] loop
     page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
@@ -395,7 +395,7 @@ do $$ begin
     raise exception 'Disabling must preserve assignments, counters, and formulas';
   end if;
 end $$;
-select pg_temp.expect_error($s$ select public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-9') $s$, 'codes_disabled');
+select pg_temp.expect_error($s$ select public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'preparatory-3') $s$, 'codes_disabled');
 select pg_temp.expect_error($s$ select pg_temp.issue(current_setting('test.r10'), 'NEW1', 1) $s$, 'codes_disabled');
 -- Lifecycle retirement still works while disabled.
 update public.student_code_assignments set retired_at = now(), retirement_reason = 'level_changed'
@@ -403,7 +403,7 @@ where code = 'ST2001' and academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 set local role authenticated;
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
-select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 3, true, '####', '[{"levelId":"grade-10","pattern":"ST2###"}]');
+select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 3, true, '####', '[{"levelId":"secondary-1","pattern":"ST2###"}]');
 do $$ declare page jsonb; begin
   page := public.list_student_records('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
     'LOOKUP10', 'active', null, null, null, null, null, 0, 10);
@@ -416,8 +416,8 @@ do $$ declare page jsonb; begin
 end $$;
 reset role;
 do $$ begin
-  if public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-9') <> '0004'
-    or public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-10') <> 'ST2002' then
+  if public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'preparatory-3') <> '0004'
+    or public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-1') <> 'ST2002' then
     raise exception 'Re-enabling must resume the cursors';
   end if;
 end $$;
@@ -437,11 +437,11 @@ insert into public.student_code_counters (academy_id, prefix, width, last_value)
 values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'X', 1, 8)
 on conflict (academy_id, prefix, width) do update set last_value = 8;
 do $$ begin
-  if public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-10') <> 'X9' then
+  if public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-1') <> 'X9' then
     raise exception 'Last value of a width must be usable';
   end if;
 end $$;
-select pg_temp.expect_error($s$ select public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-10') $s$, 'code_exhausted');
+select pg_temp.expect_error($s$ select public.allocate_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-1') $s$, 'code_exhausted');
 
 -- Closed years receive no code; year-close retirement still works.
 update public.academic_years set closed_at = now() where id = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';

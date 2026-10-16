@@ -40,42 +40,42 @@ insert into public.academy_memberships (academy_id, user_id, role, created_by) v
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'a3333333-3333-4333-8333-333333333333', 'instructor', 'a1111111-1111-4111-8111-111111111111'),
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'b1111111-1111-4111-8111-111111111111', 'owner', 'b1111111-1111-4111-8111-111111111111');
 insert into public.academy_levels (academy_id, level_id, sort_order) values
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-9', 9),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'grade-10', 10),
-  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'grade-12', 12);
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'preparatory-3', 9),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'secondary-1', 10),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'secondary-3', 12);
 insert into public.groups (id, academy_id, academic_year_id, level_id, name) values
-  ('99999999-0001-4000-8000-000000000001', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'grade-9', 'Nine A'),
-  ('99999999-0002-4000-8000-000000000002', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'grade-10', 'Ten A'),
-  ('99999999-0003-4000-8000-000000000003', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb', 'grade-12', 'Other');
+  ('99999999-0001-4000-8000-000000000001', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'preparatory-3', 'Nine A'),
+  ('99999999-0002-4000-8000-000000000002', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'secondary-1', 'Ten A'),
+  ('99999999-0003-4000-8000-000000000003', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb', 'secondary-3', 'Other');
 
 grant usage on schema public, auth to authenticated, anon;
 
 set local role authenticated;
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
--- Group Nine A: Zed and amy (name order: amy, Zed). Grade 9 without a group: Bob. Grade 10 in Ten A:
--- Cat. Grade 10 without a group: Dan. Archived grade 9: Old.
+-- Group Nine A: Zed and amy (name order: amy, Zed). Third Preparatory without a group: Bob. First Secondary in Ten A:
+-- Cat. First Secondary without a group: Dan. Archived grade 9: Old.
 select set_config('test.zed', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Zed',
-  '01000000001', '01100000001', 'grade-9', null, '99999999-0001-4000-8000-000000000001', 'in_person');
+  '01000000001', '01100000001', 'preparatory-3', null, '99999999-0001-4000-8000-000000000001', 'in_person');
 select set_config('test.amy', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'amy',
-  '01000000002', '01100000001', 'grade-9', null, '99999999-0001-4000-8000-000000000001', 'in_person');
+  '01000000002', '01100000001', 'preparatory-3', null, '99999999-0001-4000-8000-000000000001', 'in_person');
 select set_config('test.bob', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Bob',
-  '01000000003', '01100000001', 'grade-9', null, null, 'in_person');
+  '01000000003', '01100000001', 'preparatory-3', null, null, 'in_person');
 select set_config('test.cat', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Cat',
-  '01000000004', '01100000001', 'grade-10', null, '99999999-0002-4000-8000-000000000002', 'in_person');
+  '01000000004', '01100000001', 'secondary-1', null, '99999999-0002-4000-8000-000000000002', 'in_person');
 select set_config('test.dan', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Dan',
-  '01000000005', '01100000001', 'grade-10', null, null, 'in_person');
+  '01000000005', '01100000001', 'secondary-1', null, null, 'in_person');
 select set_config('test.old', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Old',
-  '01000000006', '01100000001', 'grade-9', null, '99999999-0001-4000-8000-000000000001', 'in_person');
+  '01000000006', '01100000001', 'preparatory-3', null, '99999999-0001-4000-8000-000000000001', 'in_person');
 set local request.jwt.claim.sub = 'b1111111-1111-4111-8111-111111111111';
 select set_config('test.other', id::text, true) from public.create_student_record(
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb', 'Other',
-  '01000000009', '01100000001', 'grade-12', null, null, 'in_person');
+  '01000000009', '01100000001', 'secondary-3', null, null, 'in_person');
 select public.save_student_code_settings('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 0, true, '####', '[]');
 
 reset role;
@@ -87,9 +87,9 @@ set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
 select pg_temp.expect_error($s$ select public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'all', '{}') $s$, 'codes_disabled');
 select pg_temp.expect_error($s$ select public.generate_student_codes('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'all', '{}', 1, md5('x'), gen_random_uuid()) $s$, 'codes_disabled');
 
--- Default ####, grade 10 ST2###. Bob already holds the manual code 0002.
+-- Default ####, First Secondary ST2###. Bob already holds the manual code 0002.
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
-select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, '####', '[{"levelId":"grade-10","pattern":"ST2###"}]');
+select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 0, true, '####', '[{"levelId":"secondary-1","pattern":"ST2###"}]');
 select public.change_student_code('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', current_setting('test.bob')::uuid, 'assign', '0002', 0, gen_random_uuid());
 
 -- Outsiders and other academies.
@@ -101,10 +101,10 @@ select pg_temp.expect_error($s$ select public.preview_student_code_generation('a
 
 -- Scope validation: foreign or unknown levels and groups, ids with "all", empty selections.
 set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
-select pg_temp.expect_error($s$ select public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'levels', '{grade-12}') $s$, 'invalid_target');
+select pg_temp.expect_error($s$ select public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'levels', '{secondary-3}') $s$, 'invalid_target');
 select pg_temp.expect_error($s$ select public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'groups', '{99999999-0003-4000-8000-000000000003}') $s$, 'invalid_target');
 select pg_temp.expect_error($s$ select public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'groups', '{not-a-uuid}') $s$, 'invalid_target');
-select pg_temp.expect_error($s$ select public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'all', '{grade-9}') $s$, 'validation');
+select pg_temp.expect_error($s$ select public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'all', '{preparatory-3}') $s$, 'validation');
 select pg_temp.expect_error($s$ select public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'levels', '{}') $s$, 'validation');
 select pg_temp.expect_error($s$ select public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'everyone', '{}') $s$, 'validation');
 
@@ -200,7 +200,7 @@ end $$;
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
 select set_config('test.eve', id::text, true) from public.create_student_record(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'Eve',
-  '01000000007', '01100000001', 'grade-9', null, '99999999-0001-4000-8000-000000000001', 'in_person');
+  '01000000007', '01100000001', 'preparatory-3', null, '99999999-0001-4000-8000-000000000001', 'in_person');
 do $$ begin
   if pg_temp.code_of(current_setting('test.eve')) is not null then raise exception 'New students start uncoded'; end if;
 end $$;
@@ -234,10 +234,10 @@ set local role authenticated;
 
 -- A level without a format blocks the run.
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
-select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 1, true, null, '[{"levelId":"grade-10","pattern":"ST2###"}]');
+select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 1, true, null, '[{"levelId":"secondary-1","pattern":"ST2###"}]');
 do $$ declare p jsonb; begin
   p := public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'all', '{}');
-  if p -> 'missingFormat' <> '[{"levelId": "grade-9", "missing": 1}]'::jsonb then raise exception 'Expected grade-9 without format %', p; end if;
+  if p -> 'missingFormat' <> '[{"levelId": "preparatory-3", "missing": 1}]'::jsonb then raise exception 'Expected preparatory-3 without format %', p; end if;
   perform pg_temp.expect_error(format(
     'select public.generate_student_codes(%L, %L, %L, 2, %L, gen_random_uuid())',
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'all', '{}', p ->> 'token'), 'pattern_missing');
@@ -245,11 +245,11 @@ end $$;
 
 -- A level run with a new format; afterwards the counts match the ledger.
 do $$ declare p jsonb; r jsonb; begin
-  p := public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'levels', '{grade-10}');
-  r := public.generate_student_codes('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'levels', '{grade-10}', 2, p ->> 'token', gen_random_uuid());
+  p := public.preview_student_code_generation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'levels', '{secondary-1}');
+  r := public.generate_student_codes('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'levels', '{secondary-1}', 2, p ->> 'token', gen_random_uuid());
   if (r ->> 'assigned')::int <> 2 then raise exception 'Unexpected level run %', r; end if;
   if pg_temp.code_of(current_setting('test.cat')) <> 'ST2001' or pg_temp.code_of(current_setting('test.dan')) <> 'ST2002' then
-    raise exception 'Unexpected grade-10 codes';
+    raise exception 'Unexpected secondary-1 codes';
   end if;
   if (select count(*) from public.student_code_assignments a join public.annual_student_records r on r.id = a.annual_student_record_id
       where a.academy_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and a.retired_at is null and r.archived_at is null) <> 5
@@ -267,7 +267,7 @@ end $$;
 set local role authenticated;
 
 -- Disabling denies a direct run.
-select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2, false, null, '[{"levelId":"grade-10","pattern":"ST2###"}]');
+select public.save_student_code_settings('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2, false, null, '[{"levelId":"secondary-1","pattern":"ST2###"}]');
 select pg_temp.expect_error($s$ select public.generate_student_codes('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'all', '{}', 3, md5('x'), gen_random_uuid()) $s$, 'codes_disabled');
 
 -- Helpers are internal.
