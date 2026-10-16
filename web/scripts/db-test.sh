@@ -15,7 +15,7 @@ cd "$(dirname "$0")/.."
 TESTS=supabase/tests
 SQL_SUITES=(groups_schedules student_records student_imports student_import_logs staff_invitations sessions
   attendance session_authority student_codes student_code_changes student_code_generation student_code_checkin
-  assignments assignment_marks session_archival staff_access quizzes)
+  assignments assignment_marks session_archival staff_access quizzes exams level_wide_groups)
 
 reject() { echo "db-test: $*" >&2; exit 2; }
 
@@ -121,7 +121,7 @@ value() { sed -n "s/^$1=//p" "$preflight_out" | tail -1; }
 marker="$(value marker)"
 [ -n "$marker" ] || reject "target has no edra_db_test.target marker; it is not a prepared isolated test target"
 [ "$marker" = "$EDRA_DB_TEST_TARGET" ] || reject "target marker is '$marker', expected '$EDRA_DB_TEST_TARGET'"
-[ "$(value read_only)" = f ] || reject "target is a read-only replica"
+[ "$(value read_only)" = false ] || reject "target is a read-only replica"
 missing="$(value missing_migrations)"
 [ -z "$missing" ] || reject "target schema is behind the repository (missing: $missing). Apply migrations with the
   normal migration workflow first; test:db never applies or replays them"

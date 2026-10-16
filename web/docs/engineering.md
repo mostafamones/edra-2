@@ -24,6 +24,8 @@ Application source uses Tabler icons only; `lucide-react` and `react-icons` are 
 
 Use the applicable web scripts: npm run lint, npm run typecheck, npm run test, npm run build and npm run test:edge. Run required checks appropriate to the changed behavior; do not mistake script presence for a pass.
 
+`npm run typecheck` generates Next.js route types before running TypeScript, so a clean CI checkout can resolve `PageProps` and `LayoutProps`. `npm run test:edge` checks each Edge Function with its own `deno.json` dependency map and frozen `deno.lock`; it does not rely on the web application's installed npm dependencies. When changing a function's dependencies, update its lockfile with Deno before running the frozen check.
+
 Verify affected database behavior against an authorized cloud development/isolated test target, including permissions, tenant isolation and relevant concurrency/retry rules. The full assertion suite runs only on an isolated test target, as described below.
 
 Report source, test, cloud and deployed-flow evidence separately. Documentation edits do not establish runtime readiness.
@@ -34,6 +36,8 @@ Report source, test, cloud and deployed-flow evidence separately. Documentation 
 
 - `EDRA_DB_TEST_URL`: a `postgres://` URL for a privileged role (Supabase `postgres`) on the isolated target. Use the direct connection or the session pooler (port 5432); the transaction pooler (port 6543) is rejected because races need stable sessions. The runner moves the password into the environment, never passes it as an argument, and masks the host, user and password in any reported error.
 - `EDRA_DB_TEST_TARGET`: the expected name of the target. A target is isolated only when its `edra_db_test.target` table holds exactly that name.
+
+GitHub Actions uses the dedicated Free-plan `edra-ci` project (`msnjxvnblgkdeigctbhk`), separate from the application's `edra-1` project. The connection is stored in the repository secret `EDRA_DB_TEST_URL`, and the repository variable `EDRA_DB_TEST_TARGET` is `edra-ci`. The database job installs `psql`, checks the target, then runs the suites. Its concurrency group serializes CI runs against this target; coordinate manual runs with CI as well. Apply new repository migrations to this test project before the corresponding CI run. Credentials belong in secrets or the local environment, never in source files.
 
 Run `npm run test:db -- --check` for the read-only preflight alone, or name suites to run a subset, e.g. `npm run test:db -- attendance concurrency`. Exit status 2 means the configuration, target or prerequisites were rejected before any write; 1 means a suite failed.
 

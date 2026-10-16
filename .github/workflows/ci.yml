@@ -30,13 +30,24 @@ jobs:
 
   database:
     runs-on: ubuntu-latest
+    # The marked cloud test project has fixed SQL fixture IDs and must have one runner at a time.
+    concurrency:
+      group: edra-cloud-database-tests
+      cancel-in-progress: false
+    env:
+      EDRA_DB_TEST_URL: ${{ secrets.EDRA_DB_TEST_URL }}
+      EDRA_DB_TEST_TARGET: ${{ vars.EDRA_DB_TEST_TARGET }}
+      NEXT_PUBLIC_SUPABASE_URL: https://fgbcjlibwgxylfwmocgx.supabase.co
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      - uses: actions/setup-node@v4
         with:
-          version: latest
-      # scripts/db-test.sh replays all migrations on a clean local database, then runs the SQL
-      # assertions (psql ON_ERROR_STOP) and the concurrent-session harness. Failures exit non-zero.
+          node-version: 22
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      # The isolated cloud project must already have the repository migrations applied.
+      # The runner validates its marker and migration history; it never resets or migrates it.
+      - run: npm run test:db -- --check
       - run: npm run test:db
 
   edge:
@@ -46,4 +57,4 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno check supabase/functions/*/index.ts
+      - run: bash scripts/edge-check.sh

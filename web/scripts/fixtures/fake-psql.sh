@@ -19,7 +19,7 @@ if [ -n "${FAKE_FAIL_MATCH:-}" ] && [[ "$text" =~ $FAKE_FAIL_MATCH ]]; then
 fi
 case "$text" in
   *"collisions="*)
-    echo "marker=${FAKE_MARKER-}"; echo "read_only=f"; echo "missing_migrations=${FAKE_MISSING:-}"
+    echo "marker=${FAKE_MARKER-}"; echo "read_only=${FAKE_READ_ONLY:-false}"; echo "missing_migrations=${FAKE_MISSING:-}"
     echo "privileges="; echo "collisions=" ;;
   *"from edra_db_test.target"*) echo "${FAKE_MARKER-}" ;;
   *pg_stat_activity*) [ "${FAKE_READY:-1}" = 0 ] || echo 1 ;;

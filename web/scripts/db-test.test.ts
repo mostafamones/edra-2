@@ -83,6 +83,7 @@ describe("db-test runner", () => {
   it.each([
     ["an unmarked target", { FAKE_MARKER: "" }, "no edra_db_test.target marker"],
     ["a different target", { FAKE_MARKER: "shared-dev" }, "expected 'edra-ci'"],
+    ["a read-only replica", { FAKE_READ_ONLY: "true" }, "target is a read-only replica"],
     ["missing migrations", { FAKE_MISSING: "20261009100000" }, "missing: 20261009100000"],
   ])("rejects %s after only the read-only preflight", (_, env, message) => {
     const { status, output, calls } = run(runner, [], env);
