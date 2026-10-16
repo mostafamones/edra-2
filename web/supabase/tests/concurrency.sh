@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Separate-session race tests for staff access, schedule/group/slot, student-record, import,
-# student-code, check-in and quiz locking. Run only through `npm run test:db`, which validates the isolated target and
+# student-code, check-in, quiz and exam locking. Run only through `npm run test:db`, which validates the isolated target and
 # exports its connection. Races need real concurrent transactions, so fixtures are committed under a
 # run-specific academy, admin and ids. They are retained: preserved history (sessions, attendance,
 # code ledger) cannot be removed through normal flows. Fresh identities keep reruns collision-free.
@@ -581,5 +581,122 @@ psqlx -tA -c "select s.reason = 'window_closed' and s.submitted_at = z.actual_cl
   join public.quiz_submission_answers a on a.submission_id = s.id
   where s.quiz_id = '$QUIZ' and s.annual_student_record_id = '$QR2'" | grep -qx t \
   || fail "the late save crossed the cutoff or the effective time is wrong"
+
+# 27-33. Exam races. Same lock order as quizzes: year (share), exam row (key share for per-student
+#     commands, for update for exam-wide ones), the student's record (share), the work row, the attempt.
+EXAM="$(uuid)"
+ER1="$(new_student 'Exam race 1' 01088880011 null)"
+ER2="$(new_student 'Exam race 2' 01088880012 null)"
+ER3="$(new_student 'Exam race 3' 01088880013 null)"
+ER4="$(new_student 'Exam race 4' 01088880014 null)"
+[ -n "$ER1" ] && [ -n "$ER2" ] && [ -n "$ER3" ] && [ -n "$ER4" ] || fail "could not create exam race students"
+psqlx >/dev/null <<SQL
+begin; $as_admin
+select public.create_exam('$ACADEMY','$YEAR','$EXAM','{"title":"Race exam","audience":"level","level_id":"grade-10","time_limit_minutes":60,"parts":[{"title":"P","kind":"question_sheet","questions":[{"max_score":"1","choices":[{"label":"A","is_correct":true},{"label":"B"}]}]}]}');
+select public.configure_exam_availability('$ACADEMY','$EXAM',1,now() - interval '1 minute',now() + interval '1 hour');
+commit;
+SQL
+EQ="$(psqlx -tA -c "select id from public.exam_questions where exam_id = '$EXAM'")"
+ECA="$(psqlx -tA -c "select id from public.exam_choices where question_id = '$EQ' and position = 1")"
+ECB="$(psqlx -tA -c "select id from public.exam_choices where question_id = '$EQ' and position = 2")"
+[ -n "$EQ" ] && [ -n "$ECA" ] && [ -n "$ECB" ] || fail "could not create the race exam"
+
+# 27. Two students start at once: both record work-start on the exam row without deadlocking.
+hold 27a 27b "select edra_private.start_exam_attempt_for('$EXAM','$ER1');"
+start 27b "select edra_private.start_exam_attempt_for('$EXAM','$ER2');"
+wait
+expect_ok 27a "the first concurrent exam start failed"
+expect_ok 27b "the second concurrent exam start failed"
+psqlx -tA -c "select count(*) from public.exam_attempts where exam_id = '$EXAM'" | grep -qx 2 || fail "concurrent exam starts did not create one attempt each"
+
+# 28. Physical confirmation holds the work row; the concurrent online submission reports source_conflict.
+hold 28a 28b "$as_admin select public.confirm_exam_physical('$ACADEMY','$EXAM','$ER1',0,gen_random_uuid());"
+start 28b "select edra_private.submit_exam_attempt_for('$EXAM','$ER1',gen_random_uuid());"
+wait
+expect_ok 28a "the exam physical confirmation holding the work row failed"
+expect_ok 28b "the concurrent exam online submission failed"
+grep -q source_conflict "$OUT/28b" || fail "the losing exam online submission did not report source_conflict: $(out 28b)"
+psqlx -tA -c "select string_agg(source::text, ',') from public.exam_submissions where exam_id = '$EXAM' and annual_student_record_id = '$ER1'" \
+  | grep -qx physical || fail "the exam student does not have exactly one physical submission"
+
+# 29. The other order: the online submission holds the work row; a concurrent physical confirmation
+#     reports source_conflict and the saved online answer is the accepted work.
+psqlx >/dev/null -c "select edra_private.save_exam_answers_for('$EXAM','$ER2',0,'[{\"question_id\":\"$EQ\",\"choice_id\":\"$ECA\"}]',gen_random_uuid());"
+hold 29a 29b "select edra_private.submit_exam_attempt_for('$EXAM','$ER2',gen_random_uuid());"
+start 29b "$as_admin select public.confirm_exam_physical('$ACADEMY','$EXAM','$ER2',0,gen_random_uuid());"
+wait
+expect_ok 29a "the exam online submission holding the work row failed"
+expect_ok 29b "the concurrent exam physical confirmation failed"
+grep -q source_conflict "$OUT/29b" || fail "the losing physical confirmation did not report source_conflict: $(out 29b)"
+psqlx -tA -c "select string_agg(source::text || ':' || reason::text, ',') from public.exam_submissions where exam_id = '$EXAM' and annual_student_record_id = '$ER2'" \
+  | grep -qx online:submitted || fail "the exam student does not have exactly one online submission"
+
+# 30. A key correction holds the exam; an announcement prepared at the old scoring revision waits and is rejected.
+V30="$(psqlx -tA -c "select version from public.exam_work where exam_id = '$EXAM' and annual_student_record_id = '$ER1'")"
+hold 30a 30b "$as_admin select public.correct_exam_key('$ACADEMY','$EXAM','$EQ','$ECB',1,gen_random_uuid());"
+start 30b "$as_admin select public.announce_exam_results('$ACADEMY','$EXAM',1,'[{\"annual_student_record_id\":\"$ER1\",\"expected_version\":$V30}]',gen_random_uuid());"
+wait
+expect_ok 30a "the exam correction holding the exam failed"
+expect_rejected 30b "an exam announcement on a stale scoring basis was accepted" stale_basis
+psqlx -tA -c "select count(*) from public.exam_result_publications where exam_id = '$EXAM' and annual_student_record_id = '$ER1'" | grep -qx 0 \
+  || fail "an exam result was published on a stale scoring basis"
+
+# 31. A placement move holds the student's record; a concurrent physical confirmation waits, then
+#     finds the student outside the audience and accepts nothing.
+psqlx >/dev/null -c "insert into public.academy_levels (academy_id, level_id, sort_order) values ('$ACADEMY', 'grade-11', 11) on conflict do nothing;"
+hold 31a 31b "update public.annual_student_records set level_id = 'grade-11' where id = '$ER3';"
+start 31b "$as_admin select public.confirm_exam_physical('$ACADEMY','$EXAM','$ER3',0,gen_random_uuid());"
+wait
+expect_ok 31a "the placement move holding the record failed"
+expect_rejected 31b "a physical confirmation was accepted for a student moved out concurrently" not_eligible
+psqlx -tA -c "select count(*) from public.exam_submissions where exam_id = '$EXAM' and annual_student_record_id = '$ER3'" | grep -qx 0 \
+  || fail "work was accepted for a student who left the audience"
+
+# 32. The worker settles actual closure while holding the exam; a late departure waits, then reports
+#     finalized: the deadline wins, the departure count is unchanged and the reason is window_closed.
+psqlx >/dev/null -c "select edra_private.start_exam_attempt_for('$EXAM','$ER4');"
+psqlx >/dev/null -c "update public.exams set opens_at = now() - interval '2 hours', closes_at = now() - interval '3 minutes', actual_closes_at = now() - interval '1 minute' where id = '$EXAM';"
+hold 32a 32b "select edra_private.settle_exam_closure('$EXAM');"
+start 32b "select edra_private.record_exam_departure_for('$EXAM','$ER4',gen_random_uuid(),'$EQ');"
+wait
+expect_ok 32a "the exam closure settlement holding the exam failed"
+expect_ok 32b "the late departure failed"
+grep -q finalized "$OUT/32b" || fail "the late departure did not report finalized: $(out 32b)"
+psqlx -tA -c "select s.reason = 'window_closed' and s.submitted_at = z.actual_closes_at and a.departure_count = 0
+  from public.exam_submissions s join public.exams z on z.id = s.exam_id join public.exam_attempts a on a.id = s.attempt_id
+  where s.exam_id = '$EXAM' and s.annual_student_record_id = '$ER4'" | grep -qx t \
+  || fail "the late departure reclassified the closure submission"
+
+# 33. Preparation holds a fresh exam exclusively; a concurrent first physical confirmation waits, then
+#     confirms against the saved structure and locks it. Neither deadlocks.
+EXAM2="$(uuid)"
+psqlx >/dev/null -c "begin; $as_admin select public.create_exam('$ACADEMY','$YEAR','$EXAM2','{\"title\":\"Race exam 2\",\"audience\":\"level\",\"level_id\":\"grade-10\",\"time_limit_minutes\":30,\"parts\":[{\"title\":\"P\",\"kind\":\"written_work\",\"questions\":[{\"max_score\":\"2\"}]}]}'); commit;"
+hold 33a 33b "$as_admin select public.update_exam('$ACADEMY','$EXAM2',1,'{\"title\":\"Race exam 2 (edited)\",\"audience\":\"level\",\"level_id\":\"grade-10\",\"time_limit_minutes\":30,\"parts\":[{\"title\":\"P\",\"kind\":\"written_work\",\"questions\":[{\"max_score\":\"3\"}]}]}');"
+start 33b "$as_admin select public.confirm_exam_physical('$ACADEMY','$EXAM2','$ER2',0,gen_random_uuid());"
+wait
+expect_ok 33a "the preparation holding the exam failed"
+expect_ok 33b "the first physical confirmation waiting on preparation failed"
+grep -qi deadlock "$OUT/33a" "$OUT/33b" && fail "preparation and the first physical confirmation deadlocked"
+psqlx -tA -c "select structure_locked_at is not null and max_score = 3 from public.exams where id = '$EXAM2'" | grep -qx t \
+  || fail "the confirmation did not lock the saved structure"
+
+# 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
+#     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
+#     neither deadlocks. After the commit the worker finds a closed year and the command is refused.
+#     Runs last: it closes the race year.
+psqlx >/dev/null -c "update public.quizzes set opens_at = now() - interval '2 hours', closes_at = now() - interval '3 minutes', actual_closes_at = now() - interval '1 minute' where id = '$QUIZ';"
+hold 26a 26b "update public.academic_years set closed_at = now() where id = '$YEAR';"
+start 26b "select edra_private.settle_quiz_closure('$QUIZ');"
+start 26c "$as_admin select public.save_quiz_marks('$ACADEMY','$QUIZ','$QR1',1,'{\"feedback\":\"late\"}',gen_random_uuid());"
+start 26d "select edra_private.settle_exam_closure('$EXAM');"
+start 26e "$as_admin select public.save_exam_marks('$ACADEMY','$EXAM','$ER1',1,'{\"feedback\":\"late\"}',gen_random_uuid());"
+wait
+expect_ok 26a "the year closure holding the year and quiz rows failed"
+expect_ok 26b "the worker settlement queued behind the year closure failed"
+expect_rejected 26c "a staff command wrote into a year closed concurrently" year_unavailable
+expect_ok 26d "the exam worker settlement queued behind the year closure failed"
+expect_rejected 26e "an exam staff command wrote into a year closed concurrently" year_unavailable
+psqlx -tA -c "select closed_at is not null from public.academic_years where id = '$YEAR'" | grep -qx t || fail "the year did not close"
+grep -qi deadlock "$OUT/26a" "$OUT/26b" "$OUT/26c" "$OUT/26d" "$OUT/26e" && fail "the year closure deadlocked with quiz or exam work"
 
 echo "concurrency checks passed"
