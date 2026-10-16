@@ -25,6 +25,7 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 
 ## Commit runs
 
+- Never mark plan files with Git's intent-to-add flag (`git add -N` or `git add --intent-to-add`). Keep plans unstaged unless the owner explicitly asks to commit them; creating, updating, or exporting a plan does not authorize staging it.
 - When the owner requests a "commit run", review the current changes, run the relevant verification checks, and create Git commits for the requested scope.
 - Group related changes into focused, coherent commits. Stage each group separately, using partial staging when a file contains changes belonging to different groups. Create as many commits as needed to represent the work clearly.
 - Give each commit a clear subject and a detailed message explaining what changed and why. Include relevant verification results and material limitations.
