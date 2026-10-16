@@ -272,7 +272,9 @@ do $$ begin
   perform pg_temp.check(exists (select 1 from public.academy_memberships where academy_id = '9a9a9a9a-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
     and user_id = '9b555555-5555-4555-8555-555555555555' and role = 'admin' and suspended_at is not null
     and suspended_by = '9b222222-2222-4222-8222-222222222222'), 'suspension keeps membership and role');
-  perform pg_temp.check((select count(*) from edra_private.staff_access_events where action in ('suspended', 'restored')) = 5, 'suspensions and restorations audited once each');
+  perform pg_temp.check((select count(*) from edra_private.staff_access_events
+    where academy_id = '9a9a9a9a-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and action in ('suspended', 'restored')) = 5, 'suspensions and restorations audited once each');
 end $$;
 set local role authenticated;
 
