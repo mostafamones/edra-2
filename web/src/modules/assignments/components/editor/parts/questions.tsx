@@ -20,7 +20,7 @@ import { MAX_CHOICES, MAX_QUESTIONS, type AssignmentFormValues, type FormPart } 
 import { ImageTextField } from "../images/field";
 import { countLabel, PART_KIND_ICONS } from "../../shared/labels";
 import { MarkRanges } from "./ranges";
-import { StepPanel } from "../steps";
+import { StepPanel } from "@/components/shared/assessment/steps";
 
 const letter = (index: number) => String.fromCharCode(65 + index);
 const BULK = [5, 10, 20] as const;
