@@ -23,7 +23,8 @@ import {
 } from "../../queries";
 import { ASSIGNMENT_AUDIENCES, ASSIGNMENT_STATES } from "../../types";
 import { AssignmentCard } from "./card";
-import { AUDIENCE_LABELS, describeAudience, STATE_LABELS } from "../shared/labels";
+import { AUDIENCE_LABELS, STATE_LABELS } from "../shared/labels";
+import { describeAudience } from "@/components/shared/assessment/workspace/names";
 
 /** `/app/assignments`: every assignment in the academy, searchable and filterable. */
 export function AssignmentsPage() {

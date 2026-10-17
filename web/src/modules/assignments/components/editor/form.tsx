@@ -16,7 +16,8 @@ import type { Assignment, AssignmentDraft } from "../../types";
 import { assignmentFormDefaults, assignmentFormSchema } from "../../validation";
 import { AudienceCount } from "./count";
 import { DueFields } from "./due";
-import { ImagesProvider } from "./images/context";
+import { ImagesProvider } from "@/components/shared/assessment/images/context";
+import { newStash } from "@/components/shared/assessment/parts/editor";
 import { PartEditor, type PartStash } from "./parts/editor";
 import { PartsList } from "./parts/list";
 import { ReviewStep } from "./review";
@@ -61,7 +62,7 @@ function AssignmentFields({ academy, assignment, onSaved, onCancel, onStatusChan
   // Marking started: the structure and audience are read-only, and text details are saved explicitly.
   const locked = assignment ? !assignmentPermissions(academy.role, assignment).editStructure : false;
   // What the part editor set aside while the form is open; it survives moving between parts.
-  const [stash] = useState<PartStash>(() => ({ choices: new Map(), removed: new Map() }));
+  const [stash] = useState<PartStash>(newStash);
 
   return (
     <AssessmentFormShell

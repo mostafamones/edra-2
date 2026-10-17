@@ -12,7 +12,7 @@ import { useCanonicalHref } from "@/modules/navigation";
 import { assignmentPermissions } from "../../permissions";
 import { assignmentQueryKey, loadAssignment } from "../../queries";
 import { AssignmentFormPage } from "./page";
-import { NotFound } from "../shared/not-found";
+import { WorkspaceMissing } from "@/components/shared/assessment/workspace/missing";
 
 /** `/app/assignments/<id>/edit`: the whole setup until marking starts, then only text details (Owner/Head Admin/Admin). */
 export function EditAssignmentPage({ id }: { id: string }) {
@@ -24,7 +24,7 @@ function EditContent({ academy, assignmentId }: { academy: AcademyEntry; assignm
   return (
     <AssessmentEditGate
       academy={academy} noun="assignment" queryKey={assignmentQueryKey(academy.id, assignmentId)} load={() => loadAssignment(academy.id, assignmentId)}
-      notFound={<NotFound />}
+      notFound={<WorkspaceMissing noun="assignment" route="assignments" />}
       blocked={(assignment) => assignmentPermissions(academy.role, assignment).edit ? null : (
         <Alert>
           <IconAlertCircle />

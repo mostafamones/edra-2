@@ -9,7 +9,7 @@ import {
   Combobox, ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxContent, ComboboxEmpty, ComboboxItem, ComboboxList,
   ComboboxValue, useComboboxAnchor,
 } from "@/components/ui/combobox";
-import { Field, FieldDescription, FieldError } from "@/components/ui/field";
+import { Field, FieldError } from "@/components/ui/field";
 import type { Group, Level, Track } from "@/modules/groups";
 
 /** The form values every audience picker reads and writes. `""` means no audience chosen yet. */
@@ -29,9 +29,9 @@ type Props = {
   levelNames: Record<string, string>;
   disabled?: boolean;
   /** Offers “Decide later”: the audience may stay empty while the work is being prepared. */
-  optional?: { hint: ReactNode };
+  optional?: boolean;
   /** The advisory count of matching students, shown once the audience is complete. */
-  count: ReactNode;
+  count?: ReactNode;
 };
 
 type Option = { value: string; label: string; hint: string };
@@ -97,7 +97,7 @@ export function AudienceFields({ idPrefix, groups, levels, tracks, levelNames, d
         />
       )}
       <FieldError>{errors.audience?.message}</FieldError>
-      {kind === "none" ? <FieldDescription>{optional?.hint}</FieldDescription> : !disabled && count}
+      {kind !== "none" && !disabled && count}
     </div>
   );
 }

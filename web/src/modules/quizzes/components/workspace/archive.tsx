@@ -10,6 +10,7 @@ import {
   AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAcademyScope } from "@/modules/auth";
 import { archiveExistingQuiz } from "../../actions";
 import { quizzesRootKey } from "../../queries";
@@ -36,7 +37,12 @@ export function ArchiveQuiz({ quiz }: { quiz: Quiz }) {
   }
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild><Button variant="outline" disabled={busy}><IconArchive />Archive</Button></AlertDialogTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <AlertDialogTrigger asChild><Button variant="outline" size="icon" aria-label="Archive" disabled={busy}><IconArchive /></Button></AlertDialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Archive</TooltipContent>
+      </Tooltip>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Archive this quiz?</AlertDialogTitle>

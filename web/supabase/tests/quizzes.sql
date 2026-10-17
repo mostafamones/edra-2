@@ -653,7 +653,7 @@ select pg_temp.as_user('e2222222-2222-4222-8222-222222222222');
 do $$ begin
   perform public.create_quiz(pg_temp.academy(), pg_temp.year(), 'ec000000-0000-4000-8000-000000000003', jsonb_build_object(
     'title', 'Running', 'audience', 'level', 'level_id', 'preparatory-3',
-    'parts', jsonb_build_array(jsonb_build_object('title', 'W', 'kind', 'written_work', 'questions', jsonb_build_array(jsonb_build_object('max_score', '1'))))));
+    'parts', jsonb_build_array(jsonb_build_object('title', 'W', 'kind', 'written_work', 'questions', jsonb_build_array(jsonb_build_object('prompt', 'Q', 'max_score', '1'))))));
   perform public.configure_quiz_availability(pg_temp.academy(), 'ec000000-0000-4000-8000-000000000003', 1, now() - interval '1 minute', now() + interval '1 hour');
 end $$;
 reset role;
