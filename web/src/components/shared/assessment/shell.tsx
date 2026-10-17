@@ -57,6 +57,18 @@ type Props<V extends FieldValues & { parts: unknown[] }, D, E extends { id: stri
 
 type FormError = { title: string; message: string; conflict?: boolean };
 
+/** Writes every stored `id` in `next` that differs from the form's value at the same path. */
+function adoptIds(next: unknown, path: string, set: (path: string, id: unknown) => void, get: (path: string) => unknown) {
+  if (Array.isArray(next)) {
+    next.forEach((item, index) => adoptIds(item, `${path}.${index}`, set, get));
+  } else if (next && typeof next === "object") {
+    for (const [key, value] of Object.entries(next)) {
+      const child = path ? `${path}.${key}` : key;
+      if (key === "id") { if (get(child) !== value) set(child, value); } else adoptIds(value, child, set, get);
+    }
+  }
+}
+
 /**
  * The create/edit form every assessment shares: Basics, Parts and Review steps, one part edited on its
  * own page, automatic saving until work starts, and the pinned step footer. Modules supply the fields,
@@ -82,7 +94,11 @@ export function AssessmentFormShell<V extends FieldValues & { parts: unknown[] }
   const current = useRef<E | undefined>(entity);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
 
-  useEffect(() => { onStatusChange?.({ dirty: isDirty, saving: isSubmitting }); }, [isDirty, isSubmitting, onStatusChange]);
+  // What automatic saving last stored: the form is not dirty while it still matches.
+  const [saved, setSaved] = useState<string | null>(null);
+  const values = useWatch({ control: form.control });
+  const dirty = isDirty && (saved === null || JSON.stringify(values) !== saved);
+  useEffect(() => { onStatusChange?.({ dirty, saving: isSubmitting }); }, [dirty, isSubmitting, onStatusChange]);
 
   function run(draft: D): Promise<SaveResult<E>> {
     const next = queue.current.then(async () => {
@@ -126,9 +142,12 @@ export function AssessmentFormShell<V extends FieldValues & { parts: unknown[] }
         void queryClient.invalidateQueries({ queryKey: rootKey });
         lastSaved = snapshot;
         // Adopt the stored ids when nothing changed meanwhile; otherwise the next pause saves the newer edits.
+        // Only the ids are written, in place: replacing the values would re-create every list item, which
+        // remounts the editors (losing focus) and replays their animations.
         if (JSON.stringify(form.getValues()) === snapshot) {
-          form.reset(toValues(result.entity) as never);
+          adoptIds(toValues(result.entity), "", (path, id) => form.setValue(path as never, id as never, { shouldDirty: false }), (path) => form.getValues(path as never));
           lastSaved = JSON.stringify(form.getValues());
+          setSaved(lastSaved);
         }
         setAutosave("saved");
       } catch {
@@ -201,13 +220,10 @@ export function AssessmentFormShell<V extends FieldValues & { parts: unknown[] }
     <form id={formId} onSubmit={(event) => void form.handleSubmit(save, showInvalid)(event)} noValidate className="flex flex-col gap-6">
       <fieldset disabled={isSubmitting} className="flex min-w-0 flex-col gap-6">
         {props.notice}
+        {/* The tabs stay put; only the content below them animates between steps. */}
+        {editingPart === null && <StepTabs steps={STEPS.map((value) => ({ value, label: LABELS[value] }))} value={step} onChange={(value) => go(value as Step)} />}
         <StepPanel stepKey={editingPart === null ? step : `part-${editingPart}`} direction={direction}>
-          {editingPart === null ? (
-            <div className="flex flex-col gap-6">
-              <StepTabs steps={STEPS.map((value) => ({ value, label: LABELS[value] }))} value={step} onChange={(value) => go(value as Step)} />
-              {panel}
-            </div>
-          ) : props.partEditor({ index: editingPart, select: edit, close: () => go("parts") })}
+          {editingPart === null ? panel : props.partEditor({ index: editingPart, select: edit, close: () => go("parts") })}
         </StepPanel>
         {formError && (
           <Alert variant="destructive">

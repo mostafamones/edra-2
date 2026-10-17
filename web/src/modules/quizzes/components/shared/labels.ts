@@ -85,24 +85,8 @@ export const ISSUE_LABELS: Record<QuizIssue["issue"], string> = {
   choices: "A question needs at least two choices",
   correct_choice: "A question needs its correct answer",
   choice_text: "A choice has no text",
+  prompt: "A question has no text or image",
 };
-
-export type AudienceNames = { levelNames: Record<string, string>; trackNames: Map<string, string>; groupNames: Map<string, string> };
-
-/** "Third Preparatory · Science", "Nine A, Nine B", "4 groups", or "No audience yet". */
-export function describeAudience(
-  value: { audience: QuizAudience | null; levelId: string | null; trackId: string | null; groupIds: string[] }, names: AudienceNames,
-): string {
-  if (value.audience === null) return "No audience yet";
-  if (value.audience === "groups") {
-    const known = value.groupIds.map((id) => names.groupNames.get(id)).filter((name): name is string => Boolean(name));
-    if (known.length === value.groupIds.length && known.length <= 3) return known.join(", ");
-    return `${value.groupIds.length} group${value.groupIds.length === 1 ? "" : "s"}`;
-  }
-  const level = value.levelId ? names.levelNames[value.levelId] ?? value.levelId : "";
-  const track = value.trackId ? names.trackNames.get(value.trackId) : undefined;
-  return track ? `${level} · ${track}` : level;
-}
 
 /** "A", "B", … for choice positions. */
 export const choiceLetter = (position: number) => String.fromCharCode(64 + position);

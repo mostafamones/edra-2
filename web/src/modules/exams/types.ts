@@ -23,7 +23,7 @@ export type StaffRole = AcademyRole;
 export type ExamIssue = {
   scope: "exam" | "part" | "question";
   id: string;
-  issue: "target" | "timer" | "parts" | "questions" | "choices" | "correct_choice" | "choice_text";
+  issue: "target" | "timer" | "parts" | "questions" | "choices" | "correct_choice" | "choice_text" | "prompt";
 };
 
 /** Staff contract: includes the key and model answers. Student projections never carry them before qualification. */

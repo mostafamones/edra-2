@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { useAttemptKey } from "@/lib/attempt-key";
 import { useAcademyScope } from "@/modules/auth";
 import { correctQuizKey, excludeQuizQuestion } from "../../actions";
 import { quizzesRootKey } from "../../queries";
 import type { Quiz, QuizQuestion } from "../../types";
 import { choiceLetter } from "../shared/labels";
-import { useAttemptKey } from "../shared/use-attempt-key";
+
 
 type Props = { quiz: Quiz; question: QuizQuestion | null; mode: "key" | "exclude"; onClose: () => void };
 

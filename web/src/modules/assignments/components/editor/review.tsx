@@ -8,8 +8,9 @@ import type { Group, Track } from "@/modules/groups";
 import { formPartIssues } from "../../readiness";
 import { formatScore } from "../../score";
 import { formMaxScore, type AssignmentFormValues } from "../../validation";
-import { describeAudience, PART_ISSUE_LABELS } from "../shared/labels";
+import { PART_ISSUE_LABELS } from "../shared/labels";
 import { summarizePart } from "./parts/summary";
+import { describeAudience } from "@/components/shared/assessment/workspace/names";
 
 type Props = {
   levelNames: Record<string, string>;

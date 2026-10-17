@@ -5,7 +5,7 @@ import type { Exam, ExamDraft } from "./types";
 
 const draft = (change: Partial<ExamDraft> = {}): ExamDraft => ({
   title: "Term exam", instructions: "", solutionNotes: "", audience: "level", levelId: "preparatory-3", trackId: null, groupIds: [], timeLimitMinutes: 60,
-  parts: [{ title: "P", instructions: "", kind: "question_sheet", questions: [{ prompt: "", modelAnswer: "", maxScore: "2", choices: [{ label: "A", isCorrect: true }, { label: "B", isCorrect: false }] }] }],
+  parts: [{ title: "P", instructions: "", kind: "question_sheet", questions: [{ prompt: "What is 2 + 2?", modelAnswer: "", maxScore: "2", choices: [{ label: "A", isCorrect: true }, { label: "B", isCorrect: false }] }] }],
   ...change,
 });
 
@@ -26,6 +26,18 @@ describe("examDraftSchema", () => {
     const two = draft();
     two.parts[0].questions[0].choices[1].isCorrect = true;
     expect(examDraftSchema.safeParse(two).success).toBe(false);
+  });
+
+  it("allows up to ten images across a question's text and choices", () => {
+    const token = "{{image:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa}}";
+    const withImages = (count: number) => {
+      const value = draft();
+      value.parts[0].questions[0].prompt = token.repeat(count - 1);
+      value.parts[0].questions[0].choices[0].label = token;
+      return value;
+    };
+    expect(examDraftSchema.safeParse(withImages(10)).success).toBe(true);
+    expect(examDraftSchema.safeParse(withImages(11)).success).toBe(false);
   });
 
   it("rejects unsupported precision rather than rounding", () => {
@@ -50,6 +62,9 @@ describe("draftIssues", () => {
     const unkeyed = draft();
     unkeyed.parts[0].questions[0].choices = [{ label: "", isCorrect: false }];
     expect(draftIssues(unkeyed).map((issue) => issue.issue)).toEqual(["choices", "correct_choice", "choice_text"]);
+    const untitled = draft();
+    untitled.parts[0].questions[0].prompt = " ";
+    expect(draftIssues(untitled).map((issue) => issue.issue)).toEqual(["prompt"]);
   });
 });
 
@@ -64,7 +79,7 @@ describe("form conversion", () => {
       }] }],
     } as unknown as Exam;
     const values = examToValues(exam);
-    expect(values.parts[0].questions[0]).toMatchObject({ maxScore: "2.5", correct: 1 });
+    expect(values.parts[0].questions[0]).toMatchObject({ maxScore: "2.5", choices: [{ isCorrect: false }, { isCorrect: true }] });
     const result = valuesToDraft(values);
     expect(result).toMatchObject({ audience: "program", timeLimitMinutes: 15 });
     expect(result.parts[0].questions[0].choices).toEqual([{ id: "c1", label: "A", isCorrect: false }, { id: "c2", label: "B", isCorrect: true }]);

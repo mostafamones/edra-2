@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { MAX_QUESTION_IMAGES, questionImageCount } from "@/components/shared/assessment/images/tokens";
 import { formatScore, sumScores, toHundredths } from "@/lib/score";
 import { EXAM_AUDIENCES, EXAM_PART_KINDS, type Exam, type ExamAudience, type ExamDraft, type ExamIssue, type ExamPartKind } from "./types";
 
@@ -38,6 +39,9 @@ const partSchema = z.object({
   part.questions.forEach((question, index) => {
     if (part.kind === "written_work" && question.choices.length > 0) {
       context.addIssue({ code: "custom", path: ["questions", index, "choices"], message: "Written Work questions have no choices." });
+    }
+    if (questionImageCount(question) > MAX_QUESTION_IMAGES) {
+      context.addIssue({ code: "custom", path: ["questions", index, "prompt"], message: `A question can have at most ${MAX_QUESTION_IMAGES} images.` });
     }
     if (question.choices.filter((choice) => choice.isCorrect).length > 1) {
       context.addIssue({ code: "custom", path: ["questions", index, "choices"], message: "Choose a single correct answer." });
@@ -85,6 +89,9 @@ export function draftIssues(draft: ExamDraft): Omit<ExamIssue, "id">[] {
   if (draft.parts.length === 0) issues.push({ scope: "exam", issue: "parts" });
   for (const part of draft.parts) {
     if (part.questions.length === 0) issues.push({ scope: "part", issue: "questions" });
+    for (const question of part.questions) {
+      if (question.prompt.trim() === "") issues.push({ scope: "question", issue: "prompt" });
+    }
     if (part.kind !== "question_sheet") continue;
     for (const question of part.questions) {
       if (question.choices.length < 2) issues.push({ scope: "question", issue: "choices" });
@@ -108,9 +115,8 @@ export type FormQuestion = {
   prompt: string;
   modelAnswer: string;
   maxScore: string;
-  /** Index of the correct choice, or -1 for none (Question Sheet only). */
-  correct: number;
-  choices: { id?: string; label: string }[];
+  /** Question Sheet only; exactly one choice may be correct. */
+  choices: { id?: string; label: string; isCorrect: boolean }[];
 };
 export type FormPart = { id?: string; title: string; instructions: string; kind: ExamPartKind; questions: FormQuestion[] };
 export type ExamFormValues = {
@@ -127,12 +133,8 @@ export type ExamFormValues = {
   parts: FormPart[];
 };
 
-export const newChoices = (): FormQuestion["choices"] => [{ label: "A" }, { label: "B" }, { label: "C" }, { label: "D" }];
-export const newQuestion = (kind: ExamPartKind): FormQuestion => ({
-  prompt: "", modelAnswer: "", maxScore: "1", correct: -1, choices: kind === "question_sheet" ? newChoices() : [],
-});
 export const newPart = (kind: ExamPartKind, position: number): FormPart => ({
-  title: kind === "question_sheet" ? `Part ${position} · Questions` : `Part ${position} · Written work`, instructions: "", kind, questions: [newQuestion(kind)],
+  title: `Part ${position}`, instructions: "", kind, questions: [],
 });
 
 export const emptyExamValues = (): ExamFormValues => ({
@@ -154,8 +156,7 @@ export function examToValues(exam: Exam): ExamFormValues {
       id: part.id, title: part.title, instructions: part.instructions, kind: part.kind,
       questions: part.questions.map((question) => ({
         id: question.id, prompt: question.prompt, modelAnswer: question.modelAnswer, maxScore: formatScore(question.maxScore),
-        correct: question.choices.findIndex((choice) => choice.isCorrect),
-        choices: question.choices.map((choice) => ({ id: choice.id, label: choice.label })),
+        choices: question.choices.map((choice) => ({ id: choice.id, label: choice.label, isCorrect: choice.isCorrect })),
       })),
     })),
   };
@@ -183,7 +184,7 @@ export function valuesToDraft(values: ExamFormValues): ExamDraft {
         modelAnswer: question.modelAnswer,
         maxScore: question.maxScore.trim(),
         choices: part.kind === "question_sheet"
-          ? question.choices.map((choice, index) => ({ ...(choice.id ? { id: choice.id } : {}), label: choice.label, isCorrect: index === question.correct }))
+          ? question.choices.map((choice) => ({ ...(choice.id ? { id: choice.id } : {}), label: choice.label, isCorrect: choice.isCorrect }))
           : [],
       })),
     })),

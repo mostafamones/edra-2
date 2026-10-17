@@ -7,8 +7,8 @@ import { sheetPartIssues, sheetTotal, summarizeSheetPart } from "@/components/sh
 import { formatScore } from "@/lib/score";
 import type { Group, Track } from "@/modules/groups";
 import { draftIssues, valuesToDraft, type QuizFormValues } from "../../validation";
-import { describeAudience, ISSUE_LABELS } from "../shared/labels";
-import { SHEET } from "./sheet";
+import { ISSUE_LABELS, KIND_LABELS } from "../shared/labels";
+import { describeAudience } from "@/components/shared/assessment/workspace/names";
 
 type Props = {
   levelNames: Record<string, string>;
@@ -23,7 +23,7 @@ export function ReviewStep({ levelNames, tracks, groups, onEditDetails, onEditPa
   const { control } = useFormContext<QuizFormValues>();
   const values = useWatch({ control }) as QuizFormValues;
   const parts = values.parts ?? [];
-  const summaries = parts.map((part, index) => summarizeSheetPart(part, index, SHEET));
+  const summaries = parts.map((part, index) => summarizeSheetPart(part, index, KIND_LABELS));
   const total = sheetTotal(parts);
   const questions = parts.reduce((sum, part) => sum + part.questions.length, 0);
   const draft = valuesToDraft({ ...values, parts, groupIds: values.groupIds ?? [] });
