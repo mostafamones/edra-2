@@ -415,12 +415,101 @@ end $$;
 reset role;
 
 -- ---------------------------------------------------------------------------------------------
+-- Start receipts: opening a live session binds the key too, so a retry returns that same session
+-- after it ends or is archived, even with a newer live session; keys never cross schedules.
+set local role authenticated;
+set local request.jwt.claim.sub = '54444444-4444-4444-8444-444444444444';
+select set_config('test.w', id::text, true) from public.sessions
+where schedule_id = current_setting('test.weekly')::uuid and state = 'live';
+do $$ begin
+  if (select row(session_id, outcome)::text from public.start_session('55555555-5555-4555-8555-555555555555',
+      current_setting('test.weekly')::uuid, 'f1f1f1f1-0000-4000-8000-000000000001'))
+    <> row(current_setting('test.w')::uuid, 'existing')::text then
+    raise exception 'Opening the live session did not report existing';
+  end if;
+end $$;
+reset role;
+
+set local role authenticated;
+set local request.jwt.claim.sub = '51111111-1111-4111-8111-111111111111';
+select public.end_session('55555555-5555-4555-8555-555555555555', current_setting('test.w')::uuid);
+select set_config('test.y', session_id::text, true) from public.start_session(
+  '55555555-5555-4555-8555-555555555555', current_setting('test.weekly')::uuid, 'f1f1f1f1-0000-4000-8000-000000000002');
+reset role;
+
+set local role authenticated;
+set local request.jwt.claim.sub = '54444444-4444-4444-8444-444444444444';
+do $$ declare before_count bigint := (select count(*) from public.sessions); begin
+  if current_setting('test.y') = current_setting('test.w')
+    or (select row(session_id, outcome)::text from public.start_session('55555555-5555-4555-8555-555555555555',
+        current_setting('test.weekly')::uuid, 'f1f1f1f1-0000-4000-8000-000000000001'))
+      <> row(current_setting('test.w')::uuid, 'replayed')::text
+    or (select count(*) from public.sessions) <> before_count then
+    raise exception 'Retry of an opened-then-ended session did not return the original';
+  end if;
+end $$;
+-- The same key for another schedule is a conflict and starts nothing.
+select pg_temp.expect_error($s$ select public.start_session('55555555-5555-4555-8555-555555555555',
+  current_setting('test.optional')::uuid, 'f1f1f1f1-0000-4000-8000-000000000001') $s$, 'idempotency_conflict');
+reset role;
+
+-- Another actor may use the same key independently.
+set local role authenticated;
+set local request.jwt.claim.sub = '53333333-3333-4333-8333-333333333333';
+do $$ begin
+  if (select row(session_id, outcome)::text from public.start_session('55555555-5555-4555-8555-555555555555',
+      current_setting('test.weekly')::uuid, 'f1f1f1f1-0000-4000-8000-000000000001'))
+    <> row(current_setting('test.y')::uuid, 'existing')::text then
+    raise exception 'Another actor could not reuse the key independently';
+  end if;
+end $$;
+reset role;
+
+-- After the original session is archived the retry still returns it.
+set local role authenticated;
+set local request.jwt.claim.sub = '51111111-1111-4111-8111-111111111111';
+select public.archive_session('55555555-5555-4555-8555-555555555555', current_setting('test.w')::uuid,
+  (select metadata_version from public.sessions where id = current_setting('test.w')::uuid),
+  'f1f1f1f1-0000-4000-8000-000000000003');
+reset role;
+set local role authenticated;
+set local request.jwt.claim.sub = '54444444-4444-4444-8444-444444444444';
+do $$ begin
+  if (select row(session_id, outcome)::text from public.start_session('55555555-5555-4555-8555-555555555555',
+      current_setting('test.weekly')::uuid, 'f1f1f1f1-0000-4000-8000-000000000001'))
+    <> row(current_setting('test.w')::uuid, 'replayed')::text then
+    raise exception 'Retry after archive did not return the original session';
+  end if;
+end $$;
+reset role;
+
+-- Receipts are server-only and permanent.
+do $$ begin
+  if has_table_privilege('authenticated', 'public.session_start_requests', 'select')
+    or has_table_privilege('anon', 'public.session_start_requests', 'select')
+    or not (select relrowsecurity from pg_class where oid = 'public.session_start_requests'::regclass)
+    or exists (select 1 from public.sessions s where not exists (
+      select 1 from public.session_start_requests r where r.actor_id = s.started_by and r.start_key = s.start_key)) then
+    raise exception 'Start receipts are exposed or missing for an original start';
+  end if;
+end $$;
+select pg_temp.expect_error($s$ delete from public.session_start_requests $s$, 'validation');
+
+-- ---------------------------------------------------------------------------------------------
 -- Closed years cannot start sessions; ending an existing live session still works.
 update public.academic_years set closed_at = now() where id = '55555555-1111-4111-8111-555555555555';
 set local role authenticated;
 set local request.jwt.claim.sub = '53333333-3333-4333-8333-333333333333';
 select pg_temp.expect_error($s$ select public.start_session('55555555-5555-4555-8555-555555555555',
   current_setting('test.program')::uuid, 'aaaaaaaa-0000-4000-8000-000000000009') $s$, 'year_unavailable');
+-- A bound key still replays in a closed year.
+do $$ begin
+  if (select row(session_id, outcome)::text from public.start_session('55555555-5555-4555-8555-555555555555',
+      current_setting('test.weekly')::uuid, 'aaaaaaaa-0000-4000-8000-000000000001'))
+    <> row(current_setting('test.s1')::uuid, 'replayed')::text then
+    raise exception 'Replay failed in a closed year';
+  end if;
+end $$;
 do $$ begin
   if public.end_session('55555555-5555-4555-8555-555555555555', current_setting('test.s3')::uuid) <> 'ended' then
     raise exception 'A live session in a closed year could not end';

@@ -18,7 +18,7 @@ Configure Supabase Phone confirmation and its Send SMS Hook URL/secret. Source r
 
 ## Development versus production
 
-WHATSAPP_DEVELOPMENT_MODE=true redirects to WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE and logs EDRA_DEV_AUTH_CODE. It uses jaspers_market_order_confirmation_v1, not the production verify template. Missing/invalid test recipient fails closed. This is fake-number/test delivery only.
+WHATSAPP_DEVELOPMENT_MODE=true redirects to WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE and logs EDRA_DEV_AUTH_CODE (last four phone digits and the code only). It uses jaspers_market_order_confirmation_v1, not the production verify template. Missing/invalid test recipient fails closed. This is fake-number/test delivery only.
 
 When development routing is off, EDRA_AUTH_DEV_LOG_PHONE plus a short EDRA_AUTH_DEV_LOG_UNTIL can enable a one-number log-only path. Remove those overrides and disable development mode for real users. Never log production OTPs or expose hook/provider secrets to clients.
 

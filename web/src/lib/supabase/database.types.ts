@@ -4142,6 +4142,42 @@ export type Database = {
           },
         ]
       }
+      session_start_requests: {
+        Row: {
+          actor_id: string
+          created_at: string
+          session_id: string
+          start_key: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          session_id: string
+          start_key: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          session_id?: string
+          start_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_start_requests_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_start_requests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           academic_year_id: string

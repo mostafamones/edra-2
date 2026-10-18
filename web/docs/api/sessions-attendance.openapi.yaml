@@ -15,7 +15,8 @@ info:
     suspended academy is omitted from `/api/v1/academies` until access is restored.
 
     **Writes** require an `Idempotency-Key` header: a UUID created once per user action and reused
-    on every retry of that action. A retry returns the stored result with `"replayed": true`. Reusing
+    on every retry of that action. A retry returns the stored result with `"replayed": true`
+    (session starts retain the original session identity and read its current lifecycle). Reusing
     a key for a different request returns `409 IDEMPOTENCY_CONFLICT`. Keys are scoped to the signed-in
     user and are currently kept indefinitely (at least 24 hours is guaranteed). Conflict and
     `REVIEW_REQUIRED` answers are not stored, so the same key can be retried after review.
@@ -34,7 +35,12 @@ info:
     started; `POST /api/v1/academies/{academyId}/sessions` starts it. A schedule has at most one live
     session: starting it again (here or on the web) opens that session (`existing`). The
     `Idempotency-Key` is the start key: a retry returns the original session (`replayed`), even if
-    it has since ended or been archived, and never starts another one. Starting captures the roster
+    it has since ended or been archived, and never starts another one. Every successful start or
+    open binds the actor/key to one academy, schedule and session indefinitely, across academies;
+    another actor may use the same key independently. Replays retain current authority checks but
+    survive schedule archival and year closure. Restoration never changes the bound identity.
+    Legacy keys used only for existing-session opens before receipts were recorded cannot be recovered.
+    Starting captures the roster
     atomically and does not finalize attendance. Ending, archiving and restoring sessions remain web
     actions.
 
@@ -133,11 +139,14 @@ paths:
       tags: [Sessions]
       summary: Start a schedule's session, or open its live one
       description: |
-        Authority, schedule, academic year and idempotency are checked by the server at this moment,
-        regardless of what the schedule list reported. The schedule must belong to this academy
-        (another academy's schedule is `404`), be active (`409 SCHEDULE_UNAVAILABLE`) and be in the
-        open academic year (`409 YEAR_CLOSED`). Reusing a key for a different schedule is
-        `409 IDEMPOTENCY_CONFLICT`. An answer that never arrived can be retried with the same key.
+        Current authority and target academy scope are checked on every request, regardless of
+        what the schedule list reported. The schedule must belong to this academy (another
+        academy's schedule is `404`). For a fresh action, it must be active
+        (`409 SCHEDULE_UNAVAILABLE`) and in the open academic year (`409 YEAR_CLOSED`).
+        A stored replay is resolved before those fresh-action checks. Reusing this actor's bound
+        key for a different academy or schedule is `409 IDEMPOTENCY_CONFLICT`, after authority and
+        target checks; a conflict does not disclose the original session. An answer that never
+        arrived can be retried with the same key, whether it originally started or opened a session.
         Open the returned `session.id` (`GET /api/v1/sessions/{sessionId}` and its attendance) for
         its current lifecycle: a replayed session may be ended or archived.
       operationId: startSession

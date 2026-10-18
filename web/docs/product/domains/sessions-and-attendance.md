@@ -10,6 +10,12 @@ Owners, Head Admins, Admins and Instructors may start a session from an active r
 
 A schedule has at most one live session. Starting it again opens the existing live session. After that session ends, staff may start another; there is no one-session-per-day limit.
 
+Session-start retry decisions confirmed 2026-10-17: every successful start or open binds the caller's start key to that academy, schedule and session. Keys are scoped to the actor across academies and retained indefinitely; reusing a bound key for another academy or schedule conflicts. Another actor may use the same key independently.
+
+Retrying returns the original session identity with its current lifecycle, including after manual or automatic ending, archival, restoration, schedule archival or academic-year closure. Current authentication, active staff membership and academy scope still apply. A replay never reopens or restores a session, captures another roster, or opens a newer session. Fresh actions use new keys and remain subject to the ordinary active-schedule and open-year requirements.
+
+Existing original-start keys can be preserved. Keys used only to open an existing session before successful opens were recorded cannot be reconstructed; the retry guarantee for those previously unrecorded actions cannot be restored retroactively.
+
 ## Student roster
 
 Starting a session captures the non-archived in-person students who match its group, level or track audience in that academic year. Online-only students do not enter the initial roster automatically.

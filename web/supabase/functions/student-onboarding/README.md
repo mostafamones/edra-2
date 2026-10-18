@@ -12,7 +12,7 @@ Actions are status, request, verify and complete. Parent challenges use six-digi
 
 SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are backend-only. Current source hashes parent challenges using the service-role key directly; it does not read a separate parent-code secret. Rotation affects outstanding challenges. Delivery shares META_WHATSAPP_ACCESS_TOKEN, sender ID, template language/version and development-routing variables with the auth hook.
 
-Development mode logs EDRA_DEV_PARENT_CODE and may send to the configured test recipient. Production requires the actual entered parent number, the approved Authentication template and successful delivery, without code logging. Read index.ts and the shared provider helper for exact payload/errors rather than applying the signed-hook flags to this JWT-authenticated endpoint.
+Development mode logs EDRA_DEV_PARENT_CODE (last four phone digits and the code only) and may send to the configured test recipient. Production requires the actual entered parent number, the approved Authentication template and successful delivery, without code logging. Read index.ts and the shared provider helper for exact payload/errors rather than applying the signed-hook flags to this JWT-authenticated endpoint.
 
 Using the configured project, deploy with JWT verification enabled:
 

@@ -26,6 +26,8 @@ A student phone may appear only once within an academy and academic year, includ
 
 Academy-entered information remains preserved when an online account is connected. Account information does not silently overwrite the academy's values.
 
+The academy record name is the primary student display name throughout that academy. For a genuinely new online student, onboarding initializes it from the optional account display name, falling back to the full account name. Staff may then edit it independently. Account-name changes do not overwrite academy records. See [personal account settings](account-settings.md) for the agreed name precedence and linked/suspended table indicator; student profile pictures do not appear in staff student-record views.
+
 ## Placement
 
 Every annual student record has a level and may have a track. Together these are called the student's program.
