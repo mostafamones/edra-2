@@ -6,3 +6,4 @@ export type { StaffInvitationInput } from "./validation";
 export type { StaffJoinState } from "./types";
 export { isTerminalJoinState } from "./types";
 export { parseStaffInviteLink } from "./link";
+export { copyInvitationLink } from "./clipboard";

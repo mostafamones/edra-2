@@ -1,10 +1,10 @@
 # Staff student records
 
-Current staff-record implementation at /<academySlug>/students on the staff host. Intended rules are in [students](../../../../docs/product/domains/students.md). This module does not create authentication accounts or implement academy joining.
+Current staff-record implementation at /<academySlug>/students on the staff host. Intended rules are in [students](../../../../docs/product/domains/students.md). This module does not create authentication accounts; academy joining and account linking live in [enrollment](../enrollment/README.md).
 
 ## Model
 
-- `academy_student_profiles` is the persistent internal identity of a student inside one academy. Account-link fields and returning-student workflows are deferred.
+- `academy_student_profiles` is the persistent internal identity of a student inside one academy. Its account link (`user_id`) and independent suspension (`access_suspended_at`) are written only by enrollment and staff suspension management, never by record maintenance. The edit sheet shows whether the record's profile has a connected online account and whether its access is suspended.
 - `annual_student_records` holds one record per profile per academic year: name, student phone, parent phone, level, track, optional primary group, participation type (`in_person` or `online_only`), archive state, and a `version` incremented by every write.
 - Creating a record inserts the profile and the annual record in one transaction.
 
@@ -63,8 +63,8 @@ CSV, JSON, and Excel templates include an example for every academy level/track,
 
 ## Deferred
 
-Updating existing records through imports, general exports, bulk changes other than groups, deletion, account linking, returning-student workflows, booking, custom fields, and student academy onboarding.
+Updating existing records through imports, general exports, bulk changes other than groups, deletion, booking and custom fields. Student academy onboarding lives in enrollment.
 
 ## Intended behavior awaiting implementation
 
-Current placement SQL compares group and student tracks exactly; the approved product allows level-wide groups to accept any track at that level. Track-removal broadening, returning enrollment/account links and related access flows require their own implementation. Do not broaden permissions or change historical placement merely to match this reference.
+Current placement SQL compares group and student tracks exactly; the approved product allows level-wide groups to accept any track at that level. Track-removal broadening requires its own implementation. Do not broaden permissions or change historical placement merely to match this reference.

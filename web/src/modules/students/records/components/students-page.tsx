@@ -33,7 +33,7 @@ import { fetchStudentCodes, studentCodeQueryKeys } from "../../codes/queries";
 import { useStudentCodeSettings } from "../../codes/use-settings";
 import { StudentEditSheet } from "./edit-sheet";
 import { GroupChangeSheet } from "./group-sheet";
-import { ImportMenu } from "../imports/components/menu";
+import { AddStudentMenu } from "./add-menu";
 import { BulkBar } from "./table/bulk-bar";
 import { buildColumns } from "./table/columns";
 import { ColumnsPopover } from "./table/columns-popover";
@@ -220,12 +220,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
         tracks={structureQuery.data?.tracks ?? []}
         groups={groupsQuery.data?.groups ?? []}
         actions={
-          <>
-            {canImportStudents(academy.role) && (
-              <ImportMenu academyId={academyId} showLogs />
-            )}
-            <Button asChild><Link href={href("/app/students/new")} ><Plus />Add student</Link></Button>
-          </>
+          <AddStudentMenu academyId={academyId} canImport={canImportStudents(academy.role)} />
         }
       >
         <ColumnsPopover

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/supabase/server";
 import { PUBLIC_PATH_HEADER } from "@/lib/routing";
-import { getStudentProfile } from "@/modules/students/server";
+import { getStudentProfile, listMyStudentAcademies } from "@/modules/students/server";
 import { PortalHeader } from "@/modules/navigation/components/header";
 import { StudentMobileNav } from "@/modules/navigation/components/student-mobile-nav";
 import { StudentSidebar } from "@/modules/navigation/components/student-sidebar";
@@ -24,10 +24,11 @@ export default async function LearnLayout({ children }: LayoutProps<"/learn">) {
   }
 
   const defaultOpen = (await cookies()).get("sidebar_state")?.value !== "false";
+  const academies = await listMyStudentAcademies();
 
   return (
     <SidebarProvider defaultOpen={defaultOpen} className="min-h-svh">
-      <StudentSidebar />
+      <StudentSidebar academies={academies} />
       <SidebarInset className="min-h-svh">
         <PortalHeader portal="student" />
         <div className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</div>

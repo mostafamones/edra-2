@@ -129,9 +129,13 @@ export async function getStudentRecord(academyId: string, recordId: string): Pro
     .eq("academy_id", academyId).eq("id", recordId).maybeSingle();
   if (error) return { ok: false, status: 500 };
   if (!data) return { ok: false, status: 404 };
+  const { data: profile, error: profileError } = await actor.db.from("academy_student_profiles")
+    .select("user_id,access_suspended_at").eq("academy_id", academyId).eq("id", data.academy_student_profile_id).maybeSingle();
+  if (profileError) return { ok: false, status: 500 };
   return {
     ok: true,
     data: {
+      onlineAccount: !profile?.user_id ? "not_connected" : data.archived_at || profile.access_suspended_at ? "suspended" : "connected",
       id: data.id,
       academyId: data.academy_id,
       academicYearId: data.academic_year_id,

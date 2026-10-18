@@ -58,7 +58,7 @@ Archiving removes a student record from ordinary active student lists while reta
 
 An archived record's phone remains reserved within that academy and year. Creating another record with that phone is not a substitute for reviewing or restoring the existing record.
 
-Archival, online-access suspension and account disconnection are distinct actions. Their effects on student-facing access are defined in the enrollment and access rules.
+Archiving annual participation also adds online-access suspension caused by archival. Restoring that participation removes only the archival suspension. An independent staff suspension, whether applied before or during archival, remains until explicitly removed by staff. Neither action disconnects the account or removes academic history.
 
 ## Staff permissions
 
