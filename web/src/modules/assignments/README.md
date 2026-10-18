@@ -16,15 +16,15 @@ Source kinds are online_questions, answer_sheet and file_upload, labeled Questio
 
 Question images use the private assignment-images bucket and stored inline image references. Storage/transaction checks protect academy folders and saved references; student image reads and orphan cleanup are not completed by this module.
 
-Staff may enter per-question answers/manual scores or a fast part total. Answers derive part marks; fast/excused marks replace that part's answer entry. Totals use exact decimal strings and maxima checks. v1 returns part marks, omits per-question answers and accepts part marks/feedback only.
+Staff may enter per-question answers/manual scores or a fast part total. Answers derive part marks; fast/excused marks replace that part's answer entry. Totals use exact decimal strings and maxima checks. v1 returns saved answers with part marks, accepts answers (choice, explicit blank, Written Work score or clear), part marks and feedback, and searches the whole cohort (name fragment or code prefix) before paging.
 
 ## Public services and concurrency
 
-server.ts exports createAssignment, updateAssignment, changeAssignmentState, getAssignment, listAssignments, previewAudience, listMarks, saveMarks, recordWork, publishResults, resolveStudent and assignmentAcademy plus v1 builders. actions.ts exposes web actions; routes remain composition/adapters.
+server.ts exports createAssignment, updateAssignment, changeAssignmentState, getAssignment, listAssignments, previewAudience, listMarks, saveMarks, recordWork, publishResults, resolveStudent, studentCodesEnabled and assignmentAcademy plus v1 builders. actions.ts exposes web actions; routes remain composition/adapters.
 
 Authoring uses expectedVersion and a create identity; marking uses per-student expectedVersion and stable retry keys. Code saves bind the previewed record where supplied. Lifecycle/authoring lock assignment then year; marking/code operations follow the SQL lock graph before recipient writes. Do not reverse lock order or replace existing part IDs during an edit.
 
-Result announcement validates complete work, snapshots official marks and records result_published/result_corrected effects. Changed private marks remain pending corrections until announcement; unchanged announcement creates no duplicate effect. Effects currently have no consumer here: recording one is not parent delivery or solution access.
+Result announcement (web action and `POST .../results/publications`) validates complete work, snapshots official marks and records result_published/result_corrected effects. Changed private marks remain pending corrections until announcement; unchanged announcement creates no duplicate effect. Effects currently have no consumer here: recording one is not parent delivery or solution access.
 
 ## Product work still outstanding
 

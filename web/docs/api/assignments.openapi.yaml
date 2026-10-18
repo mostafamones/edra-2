@@ -1,19 +1,20 @@
 openapi: 3.1.0
 info:
   title: Edra assignments API (staff)
-  version: "1.1.0"
+  version: "1.2.0"
   description: |
-    Bearer-token API for signed-in Edra staff (owner, head_admin, admin, instructor): read assignments, read each
-    student's work and marks, save marks (including by student code), and resolve a student code.
+    Bearer-token API for signed-in Edra staff (owner, head_admin, admin, instructor): read assignments, read and
+    search each student's work, answers and marks, save per-question answers or part marks (including by student
+    code), resolve a student code, and announce selected students' complete results.
     It shares authentication, idempotency, response, throttling, student-code, and CORS conventions
     with `sessions-attendance.openapi.yaml`; only what differs is stated here.
 
     **Not in this contract yet.** Student submissions (online essays), student-facing reads, file
     upload handlers, and private Storage attachments are not implemented: there is no account-to-student
-    link or student suspension state yet. Creating, editing, closing and reopening assignments, recording work
-    status, and publishing individual results are staff web actions for now.
+    link or student suspension state yet. Creating, editing, closing and reopening assignments and recording
+    work status are staff web actions for now.
 
-    **Current source contract.** Source-checked on 2026-10-13; deployment/cloud state is not asserted.
+    **Current source contract.** Source-checked on 2026-10-18; deployment/cloud state is not asserted.
     Active assignments do not require a Publish action. Head Admin has the Owner/Admin assignment
     authority; a suspended staff member has none in that academy. Later product rules for optional late
     eligibility, exclusions and student submissions are not implemented by this contract.
@@ -35,8 +36,16 @@ info:
     student who is not a recipient is `422 NOT_A_RECIPIENT`. The first ordinary mark saved for a student
     whose work is not yet recorded as received records it as received (`work_recorded: true`).
 
-    **Result publication** is not draft state: marks saved here are staff-only drafts. Students see
-    nothing until a staff member publishes the student's result in the web app.
+    **Answers.** `answers` are the per-question entry. Choice parts (`online_questions`, `answer_sheet`) take
+    `{question_id, choice_id}`, where `choice_id: null` is an explicit unanswered entry; Written Work
+    (`file_upload`) takes `{question_id, score}`; `{question_id, clear: true}` returns a question to not entered.
+    The database scores choices from the key and derives the part mark from its answers. A fast or excused
+    part mark (`marks`) and question answers are alternative representations of one part: saving one replaces
+    the other for that part, and one request may not touch the same part both ways.
+
+    **Result announcement** is separate from saving: saved marks are private. `POST .../results/publications`
+    announces the selected students' complete results atomically; a changed result of an announced student
+    becomes a correction, and the previous official result stays official until then.
 servers:
   - url: http://app.lvh.me:3000
     description: Local development (the staff origin; requires the lvh.me host, not localhost)
@@ -117,7 +126,12 @@ paths:
         - { $ref: "#/components/parameters/AssignmentId" }
         - name: filter
           in: query
+          description: "`unpublished` (Unannounced) is complete work without a current official result, including pending corrections."
           schema: { type: string, enum: [all, not_received, needs_marking, marked, unpublished], default: all }
+        - name: search
+          in: query
+          description: A literal, case-insensitive name fragment or a student-code prefix (normalized). Applied across every recipient before paging; `total` counts all matches.
+          schema: { type: string, maxLength: 100 }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 1000, default: 200 }
@@ -133,7 +147,7 @@ paths:
                 type: object
                 required: [total, students]
                 properties:
-                  total: { type: integer, description: Students matching the filter. }
+                  total: { type: integer, description: Students matching the filter and search. }
                   students:
                     type: array
                     items: { $ref: "#/components/schemas/Student" }
@@ -144,7 +158,7 @@ paths:
         "500": { $ref: "#/components/responses/Error" }
     patch:
       tags: [Marks]
-      summary: Save one student's part marks and/or feedback
+      summary: Save one student's answers, part marks and/or feedback
       operationId: saveMarks
       parameters:
         - { $ref: "#/components/parameters/AssignmentId" }
@@ -161,6 +175,14 @@ paths:
                   expected_version: 1
                   marks:
                     - { part_id: 5b1c6f4e-3d0a-4a53-9d63-6a0f2f6b1a11, score: "7.5" }
+              answers:
+                value:
+                  annual_student_record_id: 0c4f1b9e-8a2d-4f5b-9e3a-1d2c3b4a5f60
+                  expected_version: 2
+                  answers:
+                    - { question_id: 7d0e9a1c-2b3f-4c5d-8e6f-9a0b1c2d3e4f, choice_id: 1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d }
+                    - { question_id: 8e1f0b2d-3c4a-4d6e-9f7a-0b1c2d3e4f5a, choice_id: null }
+                    - { question_id: 9f2a1c3e-4d5b-4e7f-8a8b-1c2d3e4f5a6b, score: "2.5" }
               excusedPart:
                 value:
                   annual_student_record_id: 0c4f1b9e-8a2d-4f5b-9e3a-1d2c3b4a5f60
@@ -188,12 +210,12 @@ paths:
           description: >
             `MARKS_CONFLICT` (stale `expected_version`; `error.details.current` is the current student),
             `ASSIGNMENT_NOT_OPEN`, `ASSIGNMENT_CLOSED`, `YEAR_CLOSED`, `IDEMPOTENCY_CONFLICT`,
-            `STUDENT_CODES_DISABLED`, `STUDENT_CODE_RETIRED`, or `STUDENT_CODE_AMBIGUOUS`.
+            `STUDENT_CODES_DISABLED`, `STUDENT_CODE_RETIRED`, `STUDENT_CODE_AMBIGUOUS`, or `STUDENT_CHANGED`.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "422":
-          description: "`INVALID_SCORE`, `UNKNOWN_PART`, or `NOT_A_RECIPIENT`."
+          description: "`INVALID_SCORE`, `UNKNOWN_PART` (also for a question of another assignment), or `NOT_A_RECIPIENT`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -232,6 +254,73 @@ paths:
         "404": { description: "`NOT_FOUND` or `STUDENT_CODE_NOT_FOUND`.", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "409": { description: "`STUDENT_CODES_DISABLED`, `STUDENT_CODE_RETIRED`, or `STUDENT_CODE_AMBIGUOUS`.", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "422": { description: "`NOT_A_RECIPIENT`.", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/assignments/{assignmentId}/results/publications:
+    post:
+      tags: [Marks]
+      summary: Announce selected students' complete results, all or nothing
+      operationId: publishResults
+      description: >
+        Validates every item against its `expected_version`, complete marking and eligibility inside one
+        transaction before anything is announced. Unchanged results create no new revision or effect.
+        Recording an effect is not parent delivery.
+      parameters:
+        - { $ref: "#/components/parameters/AssignmentId" }
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              additionalProperties: false
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  description: Unique students.
+                  items:
+                    type: object
+                    required: [annual_student_record_id, expected_version]
+                    additionalProperties: false
+                    properties:
+                      annual_student_record_id: { type: string, format: uuid }
+                      expected_version: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Every item announced. A retry with the same key returns the stored result with `replayed` true.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [outcome, results, replayed]
+                properties:
+                  outcome: { type: string, enum: [published] }
+                  replayed: { type: boolean }
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [annual_student_record_id, outcome, revision]
+                      properties:
+                        annual_student_record_id: { type: string, format: uuid }
+                        outcome: { type: string, enum: [published, corrected, unchanged] }
+                        revision: { type: integer }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409":
+          description: >
+            `PUBLICATION_REJECTED` (nothing announced; `error.details.failures` lists
+            `{annual_student_record_id, reason}` with reason `stale`, `incomplete` or `not_recipient`),
+            `ASSIGNMENT_NOT_OPEN`, `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
         "429": { $ref: "#/components/responses/Error" }
         "500": { $ref: "#/components/responses/Error" }
 components:
@@ -277,13 +366,14 @@ components:
                 - FORBIDDEN
                 - NOT_FOUND
                 - ASSIGNMENT_CONFLICT
-                - ASSIGNMENT_NOT_OPEN     # marks need a published or closed assignment
+                - ASSIGNMENT_NOT_OPEN     # not ready for marking, or archived
                 - ASSIGNMENT_CLOSED       # a closed assignment accepts no newly received work
                 - MARKS_CONFLICT          # stale expected_version; details.current is the current student
                 - NOT_A_RECIPIENT
                 - INVALID_SCORE
                 - UNKNOWN_PART
                 - HAS_MARKS
+                - PUBLICATION_REJECTED    # details.failures lists each rejected student
                 - YEAR_CLOSED
                 - IDEMPOTENCY_CONFLICT
                 - STUDENT_CODES_DISABLED
@@ -317,8 +407,17 @@ components:
       allOf:
         - $ref: "#/components/schemas/AssignmentSummary"
         - type: object
-          required: [instructions, group_ids, parts, year_open, has_activity, ready]
+          required: [instructions, group_ids, parts, year_open, has_activity, ready, student_codes_enabled, actions]
           properties:
+            student_codes_enabled: { type: boolean, description: The academy issues student codes; code entry and scanning are available. }
+            actions:
+              type: object
+              description: What staff may do now, decided by the server. Clients never derive it; unknown fields grant nothing.
+              required: [mark, record_work, announce]
+              properties:
+                mark: { type: boolean, description: Save answers and marks for received work. }
+                record_work: { type: boolean, description: Record newly received physical work (false once closed). }
+                announce: { type: boolean }
             academy_id: { type: string, format: uuid }
             instructions: { type: string }
             group_ids: { type: array, items: { type: string, format: uuid } }
@@ -398,7 +497,18 @@ components:
               kind: { type: string, enum: [mark, excused] }
               score: { type: string }
               reason: { type: [string, "null"], description: Required for excused adjustments. }
-              from_answers: { type: boolean, description: True when the mark is derived from per-question staff answers; answers themselves are omitted from v1. }
+              from_answers: { type: boolean, description: True when the mark is derived from the part's per-question answers; false for a fast or excused mark. }
+        answers:
+          type: array
+          description: Saved per-question entries. A question without one is not entered; `choice_id` null is an explicit unanswered entry.
+          items:
+            type: object
+            required: [question_id, part_id, choice_id, score]
+            properties:
+              question_id: { type: string, format: uuid }
+              part_id: { type: string, format: uuid }
+              choice_id: { type: [string, "null"], format: uuid }
+              score: { type: string, description: The question's mark (choice parts are scored from the key). }
         marked_parts: { type: integer }
         total: { type: [string, "null"], description: Exact sum of the marked parts, or null while nothing is marked. }
         marking: { type: string, enum: [unmarked, partial, complete] }
@@ -415,7 +525,7 @@ components:
       type: object
       required: [expected_version]
       additionalProperties: false
-      description: Exactly one of `student_id` and `annual_student_record_id`, and at least one of `marks` and `feedback`.
+      description: Exactly one of `student_id` and `annual_student_record_id`, and at least one of `answers`, `marks` and `feedback`.
       properties:
         student_id: { type: string, maxLength: 40, description: The academy-local student code. }
         annual_student_record_id: { type: string, format: uuid }
@@ -437,4 +547,28 @@ components:
                 type: [string, "null"]
                 description: A decimal string from 0 up to the part maximum with at most two decimals; null clears the part.
               excused_reason: { type: string, minLength: 1, maxLength: 500, description: Makes the part an excused adjustment carrying `score`. }
+        answers:
+          type: array
+          maxItems: 1000
+          description: Unique questions; each item has exactly one of `choice_id`, `score` or `clear`.
+          items:
+            oneOf:
+              - type: object
+                required: [question_id, choice_id]
+                additionalProperties: false
+                properties:
+                  question_id: { type: string, format: uuid }
+                  choice_id: { type: [string, "null"], format: uuid, description: null records an explicit unanswered entry. }
+              - type: object
+                required: [question_id, score]
+                additionalProperties: false
+                properties:
+                  question_id: { type: string, format: uuid }
+                  score: { type: string, description: Written Work mark, 0 up to the question maximum, at most two decimals. }
+              - type: object
+                required: [question_id, clear]
+                additionalProperties: false
+                properties:
+                  question_id: { type: string, format: uuid }
+                  clear: { type: boolean, enum: [true] }
         feedback: { type: string, maxLength: 5000 }

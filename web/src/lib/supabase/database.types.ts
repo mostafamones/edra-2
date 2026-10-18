@@ -5710,6 +5710,7 @@ export type Database = {
           p_filter?: string
           p_limit?: number
           p_offset?: number
+          p_search?: string
         }
         Returns: Json
       }
