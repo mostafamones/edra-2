@@ -28,6 +28,8 @@ Use the applicable web scripts: npm run lint, npm run typecheck, npm run test, n
 
 Verify affected database behavior against an authorized cloud development/isolated test target, including permissions, tenant isolation and relevant concurrency/retry rules. The full assertion suite runs only on an isolated test target, as described below.
 
+During implementation, changes affecting database behavior, authorization, tenant isolation or concurrency require relevant cloud database verification; use selected suites where sufficient. Documentation-only and presentation-only changes do not require manual database testing. The full database suite remains an automated CI check on every PR and push to `main`. Do not manually repeat a passing CI run unless subsequent changes or unresolved concerns justify it.
+
 Report source, test, cloud and deployed-flow evidence separately. Documentation edits do not establish runtime readiness.
 
 ### Database assertions

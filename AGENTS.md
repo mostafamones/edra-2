@@ -31,6 +31,12 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 - Give each commit a clear subject and a detailed message explaining what changed and why. Include relevant verification results and material limitations.
 - Do not push commits unless the owner explicitly requests it.
 
+## UI copy and helper text
+
+- Do not add helper text by default anywhere in either application. This includes descriptions under fields, page subtitles, section introductions, card descriptions, and explanatory text beside controls. Add helper text only when the owner explicitly requests it.
+- Use clear, concise labels and self-explanatory controls instead of explaining each field or part of a screen. Do not replace omitted helper text with unsolicited tooltips, info icons, or placeholder instructions.
+- Keep actionable validation errors, required status feedback, and accessible labels available; these are functional UI feedback, not optional helper text.
+
 ## Table empty states
 
 - All tables must have an empty state that replaces the table and does not sit inside it. This applies both to datasets with no records and to filters or searches with no results.

@@ -84,6 +84,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Verification and change safety
 
 - Run `npm run lint`, `npm run build`, and relevant tests for implementation changes. Add an appropriate test setup when the first feature needs one.
+- During implementation, run checks appropriate to the changed behavior. Changes affecting database behavior, authorization, tenant isolation, or concurrency require relevant cloud database verification; use selected suites where sufficient. Documentation-only and presentation-only changes do not require manual database testing. The full database suite remains an automated CI check on every PR and push to `main`. Do not manually repeat a passing CI run unless subsequent changes or unresolved concerns justify it.
 - Test security-sensitive paths from an unauthorized and a cross-academy perspective, not only the happy path.
 - Report what was tested, what could not be tested, and why.
 - Preserve user changes. Do not make unrelated rewrites or edit owner-controlled specifications and design-system files without approval.
