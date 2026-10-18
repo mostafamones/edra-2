@@ -187,11 +187,6 @@ struct ShellView: View {
     private var assessmentsStack: some View {
         NavigationStack(path: $assessmentsPath) {
             page("Assessments", trailing: { _ in EmptyView() }) { AssignmentsView(model: assignments) }
-                .navigationDestination(for: AssignmentSummary.self) { summary in
-                    if let context = model.context {
-                        WorkspaceView(summary: summary, context: context, parent: assignments).id(context)
-                    }
-                }
         }
     }
 

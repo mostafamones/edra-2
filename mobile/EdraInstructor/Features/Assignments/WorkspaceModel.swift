@@ -82,6 +82,8 @@ final class WorkspaceModel {
     private var runPartID: String?
     private var runMode = MarkingModel.Mode.byQuestion
     private var generation = 0
+    /// Loaded chips (without search), so switching back doesn't refetch.
+    private var chips: [Filter: (students: [StudentWork], total: Int)] = [:]
     private var lookupGeneration = 0
 
     static let pageSize = 50
@@ -117,21 +119,39 @@ final class WorkspaceModel {
         }
     }
 
+    /// Each chip is fetched the first time it's chosen, then reused until the data changes.
     func setFilter(_ new: Filter) async {
         guard new != filter else { return }
+        if search.isEmpty, listState == .loaded { chips[filter] = (students, total) }
         filter = new
-        await reloadStudents()
+        if search.isEmpty, let cached = chips[new] {
+            generation += 1 // drops any page still loading for the previous chip
+            selection = []
+            isLoadingMore = false
+            loadMoreError = nil
+            students = cached.students
+            total = cached.total
+            listState = .loaded
+            return
+        }
+        await fetchFirstPage()
     }
 
     func setSearch(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed != search else { return }
         search = trimmed
-        await reloadStudents()
+        await fetchFirstPage()
+    }
+
+    /// Fresh data: forget every cached chip, then load the current one.
+    func reloadStudents() async {
+        chips = [:]
+        await fetchFirstPage()
     }
 
     /// First page for the current filter and search. Selection never survives a different list.
-    func reloadStudents() async {
+    private func fetchFirstPage() async {
         generation += 1
         let owner = generation
         selection = []
@@ -227,6 +247,8 @@ final class WorkspaceModel {
     /// Acknowledged save: update the row. The sheet stays open; closing it ends the student.
     private func saved(_ student: StudentWork) {
         if let index = students.firstIndex(where: { $0.id == student.id }) { students[index] = student }
+        // The save may move the student between chips; other chips reload when next chosen.
+        chips = [:]
     }
 
     /// Typed or scanned code: the server resolves it among this assignment's students. Writes nothing.

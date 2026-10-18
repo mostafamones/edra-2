@@ -4,6 +4,7 @@ import SwiftUI
 struct WorkspaceView: View {
     @State private var model: WorkspaceModel
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dismiss) private var dismiss
     enum Pane: Hashable { case students, scan, search }
 
     @State private var searchText = ""
@@ -16,12 +17,6 @@ struct WorkspaceView: View {
 
     var body: some View {
         content
-            .navigationTitle(model.detail?.title ?? model.summary.title)
-            .navigationBarTitleDisplayMode(.inline)
-            // This screen has its own tab bar (Students, Scan, search) instead of the app's.
-            .toolbar(.hidden, for: .tabBar)
-            .navigationBarBackButtonHidden(model.isSelecting)
-            .toolbar { toolbar }
             // Loaded once; returning from another tab keeps the list, its paging and any selection.
             .task { if model.detail == nil { await model.load() } }
             // Search runs on the server across every student; debounce typing.
@@ -54,11 +49,22 @@ struct WorkspaceView: View {
     @ViewBuilder private var content: some View {
         switch model.state {
         case .loading:
-            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            page(ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity))
         case .failed(let message):
-            UnavailableView(title: "Couldn't load this assignment", message: message, action: "Retry") { await model.load() }
+            page(UnavailableView(title: "Couldn't load this assignment", message: message, action: "Retry") { await model.load() })
         case .loaded:
             tabs
+        }
+    }
+
+    /// One tab's navigation: the assignment title, Back (or Cancel while selecting).
+    /// Each tab owns its stack so the search tab can morph into the native search field.
+    private func page<Content: View>(_ content: Content) -> some View {
+        NavigationStack {
+            content
+                .navigationTitle(model.detail?.title ?? model.summary.title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { toolbar }
         }
     }
 
@@ -70,24 +76,23 @@ struct WorkspaceView: View {
         })
         if #available(iOS 26, *) {
             TabView(selection: selection) {
-                Tab("Students", image: "tabler-users", value: Pane.students) { studentsPage }
+                Tab("Students", image: "tabler-users", value: Pane.students) { page(studentsPage) }
                 if scanAvailable && !model.isSelecting {
-                    Tab("Scan", image: "tabler-scan", value: Pane.scan) { AssignmentScanView(workspace: model, scan: scan) }
+                    Tab("Scan", image: "tabler-scan", value: Pane.scan) { page(AssignmentScanView(workspace: model, scan: scan)) }
                 }
-                Tab(value: Pane.search, role: .search) { studentsPage } label: {
+                Tab(value: Pane.search, role: .search) { page(studentsPage) } label: {
                     if model.isSelecting { Label("Announce selected", image: "tabler-check") } else { Label("Search", image: "tabler-search") }
                 }
-                .badge(model.isSelecting ? model.selection.count : 0)
             }
-            .searchable(text: $searchText, prompt: "Name or code")
+            .searchable(text: $searchText, prompt: "Search students in this assessment...")
         } else {
             TabView(selection: selection) {
-                studentsPage.tabItem { Label("Students", image: "tabler-users") }.tag(Pane.students)
+                page(studentsPage.searchable(text: $searchText, prompt: "Search students in this assessment..."))
+                    .tabItem { Label("Students", image: "tabler-users") }.tag(Pane.students)
                 if scanAvailable && !model.isSelecting {
-                    AssignmentScanView(workspace: model, scan: scan).tabItem { Label("Scan", image: "tabler-scan") }.tag(Pane.scan)
+                    page(AssignmentScanView(workspace: model, scan: scan)).tabItem { Label("Scan", image: "tabler-scan") }.tag(Pane.scan)
                 }
             }
-            .searchable(text: $searchText, prompt: "Name or code")
         }
     }
 
@@ -190,7 +195,7 @@ struct WorkspaceView: View {
                 }
                 Spacer(minLength: 8)
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(Score.display(student.total)) / \(Score.display(model.detail?.maxScore))").font(.subheadline.monospacedDigit())
+                    scoreText(student.total, model.detail?.maxScore).font(.subheadline.monospacedDigit())
                     Text(student.status).font(.footnote).foregroundStyle(statusColor(student))
                 }
             }
@@ -219,15 +224,17 @@ struct WorkspaceView: View {
 
     /// No action bar while selecting; a close button replaces Back so the mode can be left.
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
-        if model.isSelecting {
-            ToolbarItem(placement: .topBarLeading) {
+        ToolbarItem(placement: .topBarLeading) {
+            if model.isSelecting {
                 Button { model.isSelecting = false } label: { Image("tabler-x") }.accessibilityLabel("Cancel selection")
+            } else {
+                Button { dismiss() } label: { Image("tabler-chevron-left") }.accessibilityLabel("Back")
             }
-            // Before iOS 26 there is no search tab to turn into the confirm button.
-            if Self.needsToolbarConfirm {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Announce \(model.selection.count)") { model.reviewSelection() }.disabled(model.selection.isEmpty)
-                }
+        }
+        // Before iOS 26 there is no search tab to turn into the confirm button.
+        if model.isSelecting && Self.needsToolbarConfirm {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Announce \(model.selection.count)") { model.reviewSelection() }.disabled(model.selection.isEmpty)
             }
         }
     }
@@ -260,7 +267,7 @@ struct AnnounceSheet: View {
                                     }
                                 }
                                 Spacer()
-                                Text("\(Score.display(student.total)) / \(Score.display(model.detail?.maxScore))").monospacedDigit()
+                                scoreText(student.total, model.detail?.maxScore).monospacedDigit()
                             }
                         }
                     } header: {
@@ -270,13 +277,14 @@ struct AnnounceSheet: View {
                         Section { Text(status).foregroundStyle(.red) }
                     }
                 }
-                .navigationTitle("Announce results")
+                .navigationTitle("Announce?")
                 .navigationBarTitleDisplayMode(.inline)
                 .interactiveDismissDisabled(announcement.state == .sending)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button(isDone(announcement.state) ? "Close" : "Cancel") { model.announcement = nil }
+                        Button { model.announcement = nil } label: { Image("tabler-x") }
                             .disabled(announcement.state == .sending)
+                            .accessibilityLabel(isDone(announcement.state) ? "Close" : "Cancel")
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         if announcement.state == .sending {
@@ -314,4 +322,9 @@ struct AnnounceSheet: View {
         if case .uncertain = state { return true }
         return false
     }
+}
+
+/// "8.5 / 10": the mark bold, the maximum muted.
+func scoreText(_ total: String?, _ max: String?) -> Text {
+    Text("\(Text(Score.display(total)).bold())\(Text(" / \(Score.display(max))").foregroundStyle(.secondary))")
 }

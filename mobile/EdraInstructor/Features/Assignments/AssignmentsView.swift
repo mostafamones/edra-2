@@ -3,8 +3,19 @@ import SwiftUI
 /// Assessments root: active and closed assignments, including overdue ones.
 struct AssignmentsView: View {
     let model: AssignmentsModel
+    /// The open workspace. It has its own tab bar (Students, Scan, search), so it covers the app's.
+    @State private var open: AssignmentSummary?
 
     var body: some View {
+        content
+            .fullScreenCover(item: $open) { summary in
+                if let context = model.context { WorkspaceView(summary: summary, context: context, parent: model) }
+            }
+            // A different academy (or lost access) closes the workspace and drops its drafts.
+            .onChange(of: model.context) { open = nil }
+    }
+
+    @ViewBuilder private var content: some View {
         switch model.state {
         case .idle, .loading where model.assignments.isEmpty:
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -24,7 +35,8 @@ struct AssignmentsView: View {
     private var list: some View {
         List {
             ForEach(model.assignments) { assignment in
-                NavigationLink(value: assignment) { AssignmentRow(assignment: assignment) }
+                Button { open = assignment } label: { AssignmentRow(assignment: assignment).contentShape(.rect) }
+                    .buttonStyle(.plain)
             }
             if model.hasMore {
                 HStack {
