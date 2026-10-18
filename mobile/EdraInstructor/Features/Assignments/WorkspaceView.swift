@@ -80,11 +80,13 @@ struct WorkspaceView: View {
                 if scanAvailable && !model.isSelecting {
                     Tab("Scan", image: "tabler-scan", value: Pane.scan) { page(AssignmentScanView(workspace: model, scan: scan)) }
                 }
-                Tab(value: Pane.search, role: .search) { page(studentsPage) } label: {
+                // Search belongs to the search tab only, so other tabs get no pinned search bar.
+                Tab(value: Pane.search, role: .search) {
+                    page(studentsPage).searchable(text: $searchText, prompt: "Search students in this assessment...")
+                } label: {
                     if model.isSelecting { Label("Announce selected", image: "tabler-check") } else { Label("Search", image: "tabler-search") }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search students in this assessment...")
         } else {
             TabView(selection: selection) {
                 page(studentsPage.searchable(text: $searchText, prompt: "Search students in this assessment..."))
