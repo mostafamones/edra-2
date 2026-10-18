@@ -111,13 +111,15 @@ struct ShellView: View {
         } label: {
             Image(model.selected?.iconAsset ?? "tabler-building-community")
                 .resizable().scaledToFit().frame(width: 26, height: 26)
-                .frame(width: 62, height: 62)
+                // The glass style adds ~6.5 pt per side: 48 + 13 matches the tab bar's 61 pt circle.
+                .frame(width: 48, height: 48)
         }
         .nativeGlass()
         .accessibilityLabel(model.selected.map { "Switch academy, current: \($0.name)" } ?? "Switch academy")
-        .padding(.trailing, 20)
-        .padding(.bottom, 22)
-        .ignoresSafeArea(.container, edges: .bottom)
+        // Measured on device: the tab circle ends 21 pt from the right edge and 13 pt below the
+        // bottom safe-area line, so the menu must cover it exactly or both circles show.
+        .padding(.trailing, 16)
+        .offset(y: 13)
     }
 
     private var academyLabel: some View {
