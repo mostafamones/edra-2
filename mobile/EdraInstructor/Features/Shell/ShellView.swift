@@ -3,7 +3,7 @@ import SwiftUI
 /// Signed-in shell: one navigation stack per destination under the system tab bar, with an academy
 /// action tab. Academy loading, access states and academy-change resets live here, above both stacks.
 struct ShellView: View {
-    enum Tab: Hashable { case sessions, assessments, academy }
+    enum Destination: Hashable { case sessions, assessments, academy }
 
     let model: AcademiesModel
     let sessions: SessionsModel
@@ -13,7 +13,7 @@ struct ShellView: View {
     let onSignOut: () -> Void
 
     @Environment(\.scenePhase) private var scenePhase
-    @State private var tab = Tab.sessions
+    @State private var tab = Destination.sessions
     @State private var showAcademies = false
     /// Session screens belong to the selected academy; they close when the selection changes.
     @State private var sessionsPath: [LiveSession] = []
@@ -72,15 +72,15 @@ struct ShellView: View {
         let selection = Binding(get: { tab }, set: { if $0 == .academy { showAcademies = true } else { tab = $0 } })
         if #available(iOS 26, *) {
             TabView(selection: selection) {
-                Tab("Sessions", image: "tabler-calendar-clock", value: Tab.sessions) { sessionsStack }
-                Tab("Assessments", image: "tabler-file-pencil", value: Tab.assessments) { assessmentsStack }
-                Tab(value: Tab.academy, role: .search) { Color.clear } label: { academyLabel }
+                Tab("Sessions", image: "tabler-calendar-clock", value: Destination.sessions) { sessionsStack }
+                Tab("Assessments", image: "tabler-file-pencil", value: Destination.assessments) { assessmentsStack }
+                Tab(value: Destination.academy, role: .search) { Color.clear } label: { academyLabel }
             }
         } else {
             TabView(selection: selection) {
-                sessionsStack.tabItem { Label("Sessions", image: "tabler-calendar-clock") }.tag(Tab.sessions)
-                assessmentsStack.tabItem { Label("Assessments", image: "tabler-file-pencil") }.tag(Tab.assessments)
-                Color.clear.tabItem { academyLabel }.tag(Tab.academy)
+                sessionsStack.tabItem { Label("Sessions", image: "tabler-calendar-clock") }.tag(Destination.sessions)
+                assessmentsStack.tabItem { Label("Assessments", image: "tabler-file-pencil") }.tag(Destination.assessments)
+                Color.clear.tabItem { academyLabel }.tag(Destination.academy)
             }
         }
     }
