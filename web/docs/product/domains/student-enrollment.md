@@ -36,6 +36,8 @@ When no existing record matches, the invite flow offers enrollment if the academ
 
 The flow reuses the student’s name and contacts from account setup rather than asking for them again. The student first chooses a program from the academy’s available offerings, then optionally chooses a compatible group on a second screen.
 
+For a genuinely new student, the initial record name uses the optional account display name, falling back to the full account name. The resulting academy record name becomes primary within that academy and remains staff-editable independently of account names. Existing record names are preserved. See [personal account settings](account-settings.md) for verified contact changes and name ownership.
+
 Completing those choices creates their academy profile and annual participation and connects their account within the onboarding flow. There is no separate review screen or routine staff approval step. After successful completion, an animation takes the student into the student portal.
 
 If the academy is not accepting new enrollment, a valid invite may still connect an eligible existing current-year record. Creating annual participation is blocked for both genuinely new students and returning students without a current-year record. The flow explains how to contact staff and does not create a record merely because the student opened an invite.
