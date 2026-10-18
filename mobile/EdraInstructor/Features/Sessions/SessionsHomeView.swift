@@ -2,20 +2,17 @@ import SwiftUI
 
 /// Sessions root: the selected academy's live sessions and the start action.
 struct SessionsHomeView: View {
-    let academy: Academy
     let context: AcademyContext?
     let sessions: SessionsModel
     let start: StartSessionModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            PageHeader(academy: academy, title: "Sessions") {
+        content.toolbar {
+            ToolbarItem(placement: .primaryAction) {
                 Button { start.presentPicker() } label: {
                     Label { Text("Start session") } icon: { Image("tabler-plus") }
                 }
-                .buttonStyle(.bordered)
             }
-            content
         }
     }
 

@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Signed-in shell: one navigation stack per destination, the floating tab pill and the academy
-/// menu. Academy loading, access states and academy-change resets live here, above both stacks.
+/// Signed-in shell: one navigation stack per destination under the system tab bar, with an academy
+/// action tab. Academy loading, access states and academy-change resets live here, above both stacks.
 struct ShellView: View {
-    enum Tab: Hashable { case sessions, assessments }
+    enum Tab: Hashable { case sessions, assessments, academy }
 
     let model: AcademiesModel
     let sessions: SessionsModel
@@ -14,25 +14,14 @@ struct ShellView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var tab = Tab.sessions
+    @State private var showAcademies = false
     /// Session screens belong to the selected academy; they close when the selection changes.
     @State private var sessionsPath: [LiveSession] = []
     /// Assessments content (EDRA-79) pushes onto this stack.
     @State private var assessmentsPath = NavigationPath()
 
     var body: some View {
-        // Both stacks stay alive so switching tabs keeps each one's history and view state.
-        ZStack {
-            NavigationStack(path: $sessionsPath) {
-                page { SessionsHomeView(academy: $0, context: model.context, sessions: sessions, start: start) }
-                    .navigationDestination(for: LiveSession.self) { SessionView(session: $0, makeModel: makeSessionModel) }
-            }
-            .activeTab(tab == .sessions)
-            NavigationStack(path: $assessmentsPath) {
-                page { AssessmentsPlaceholderView(academy: $0) }
-            }
-            .activeTab(tab == .assessments)
-        }
-        .safeAreaInset(edge: .bottom) { ShellDock(tab: $tab, academies: model, onSignOut: onSignOut) }
+        tabs
         .task { await model.load() }
         .task(id: model.context) { await sessions.load(context: model.context) }
         // Switching or losing an academy (suspension, removal) changes the context: leave its
@@ -60,6 +49,12 @@ struct ShellView: View {
                 StartSessionView(academy: academy, context: context, schedules: schedules, start: start)
             }
         }
+        .confirmationDialog("Your academies", isPresented: $showAcademies, titleVisibility: .visible) {
+            ForEach(model.academies) { academy in
+                Button(academy.id == model.selectedID ? "✓ \(academy.name)" : academy.name) { model.select(academy) }
+            }
+            Button("Sign out", role: .destructive, action: onSignOut)
+        }
         // Revalidate access when returning to the app; missed changes surface here or as a 403.
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
@@ -71,8 +66,44 @@ struct ShellView: View {
         }
     }
 
+    /// The system tab bar (floating Liquid Glass on iOS 26). Academy is a trailing action tab, like
+    /// Photos' search: it never stays selected, it opens the academy list.
+    @ViewBuilder private var tabs: some View {
+        let selection = Binding(get: { tab }, set: { if $0 == .academy { showAcademies = true } else { tab = $0 } })
+        if #available(iOS 26, *) {
+            TabView(selection: selection) {
+                Tab("Sessions", image: "tabler-calendar-clock", value: Tab.sessions) { sessionsStack }
+                Tab("Assessments", image: "tabler-file-pencil", value: Tab.assessments) { assessmentsStack }
+                Tab(value: Tab.academy, role: .search) { Color.clear } label: { academyLabel }
+            }
+        } else {
+            TabView(selection: selection) {
+                sessionsStack.tabItem { Label("Sessions", image: "tabler-calendar-clock") }.tag(Tab.sessions)
+                assessmentsStack.tabItem { Label("Assessments", image: "tabler-file-pencil") }.tag(Tab.assessments)
+                Color.clear.tabItem { academyLabel }.tag(Tab.academy)
+            }
+        }
+    }
+
+    private var academyLabel: some View {
+        Label("Academy", image: model.selected?.iconAsset ?? "tabler-building-community")
+            .accessibilityLabel(model.selected.map { "Switch academy, current: \($0.name)" } ?? "Switch academy")
+    }
+
+    private var sessionsStack: some View {
+        NavigationStack(path: $sessionsPath) {
+            page("Sessions") { SessionsHomeView(context: model.context, sessions: sessions, start: start) }
+                .navigationDestination(for: LiveSession.self) { SessionView(session: $0, makeModel: makeSessionModel) }
+        }
+    }
+
+    private var assessmentsStack: some View {
+        NavigationStack(path: $assessmentsPath) { page("Assessments") { AssessmentsPlaceholderView() } }
+    }
+
     /// A destination's root: its content only while an academy is selected, never a stale one.
-    private func page<Content: View>(@ViewBuilder _ content: (Academy) -> Content) -> some View {
+    /// Large system title with the academy name beneath, as Photos does.
+    private func page<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
         Group {
             switch model.state {
             case .loading where model.academies.isEmpty:
@@ -80,41 +111,31 @@ struct ShellView: View {
             case .failed(let message):
                 UnavailableView(title: "Couldn't load academies", message: message, action: "Retry") { await model.load() }
             default:
-                if let academy = model.selected {
-                    content(academy)
+                if model.selected != nil {
+                    content()
                 } else {
                     UnavailableView(title: "No staff access",
                                     message: "Your account doesn't have active staff access to an academy.")
                 }
             }
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(title)
+        .academySubtitle(model.selected?.name)
     }
 }
 
-/// Large page title with the academy name above it, so shared academy icons stay distinguishable.
-struct PageHeader<Trailing: View>: View {
-    let academy: Academy
-    let title: String
-    @ViewBuilder var trailing: Trailing
-
-    var body: some View {
-        HStack(alignment: .lastTextBaseline) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(academy.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Text(title)
-                    .font(.largeTitle.bold())
-                    .accessibilityAddTraits(.isHeader)
+private extension View {
+    @ViewBuilder func academySubtitle(_ name: String?) -> some View {
+        if #available(iOS 26, *) {
+            navigationSubtitle(name ?? "")
+        } else {
+            safeAreaInset(edge: .top, spacing: 0) {
+                if let name {
+                    Text(name).font(.subheadline).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 16)
+                }
             }
-            Spacer()
-            trailing
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 12)
     }
 }
 
@@ -134,19 +155,5 @@ struct UnavailableView: View {
                 Button(action) { Task { await perform() } }.buttonStyle(.borderedProminent)
             }
         }
-    }
-}
-
-extension EnvironmentValues {
-    /// False while the view sits in the hidden tab; screens pause polling there.
-    @Entry var isActiveTab = true
-}
-
-private extension View {
-    func activeTab(_ active: Bool) -> some View {
-        opacity(active ? 1 : 0)
-            .allowsHitTesting(active)
-            .accessibilityHidden(!active)
-            .environment(\.isActiveTab, active)
     }
 }
