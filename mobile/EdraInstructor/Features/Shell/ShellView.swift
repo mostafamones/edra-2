@@ -127,30 +127,31 @@ struct ShellView: View {
 
     private var sessionsStack: some View {
         NavigationStack(path: $sessionsPath) {
-            page("Sessions", trailing: { startButton }) { SessionsHomeView(context: model.context, sessions: sessions) }
+            page("Sessions", trailing: { startButton(diameter: $0) }) { SessionsHomeView(context: model.context, sessions: sessions) }
                 .navigationDestination(for: LiveSession.self) { SessionView(session: $0, makeModel: makeSessionModel) }
         }
     }
 
-    private var startButton: some View {
+    private func startButton(diameter: CGFloat) -> some View {
         Button { start.presentPicker() } label: {
-            Image("tabler-plus").frame(width: 24, height: 24).frame(width: 44, height: 44)
+            Image("tabler-plus").resizable().scaledToFit()
+                .frame(width: diameter * 0.5, height: diameter * 0.5)
+                .frame(width: diameter, height: diameter)
         }
         .nativeGlass()
         .accessibilityLabel("Start session")
     }
 
     private var assessmentsStack: some View {
-        NavigationStack(path: $assessmentsPath) { page("Assessments", trailing: { EmptyView() }) { AssessmentsPlaceholderView() } }
+        NavigationStack(path: $assessmentsPath) { page("Assessments", trailing: { _ in EmptyView() }) { AssessmentsPlaceholderView() } }
     }
 
     /// A destination's root: its content only while an academy is selected, never a stale one.
     /// Large system title with the academy name beneath, as Photos does.
     private func page<Content: View, Trailing: View>(
-        _ title: String, @ViewBuilder trailing: () -> Trailing, @ViewBuilder _ content: () -> Content
+        _ title: String, @ViewBuilder trailing: @escaping (CGFloat) -> Trailing, @ViewBuilder _ content: () -> Content
     ) -> some View {
-        let trailingView = trailing()
-        return Group {
+        Group {
             switch model.state {
             case .loading where model.academies.isEmpty:
                 ProgressView("Loading academies…").frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -167,7 +168,7 @@ struct ShellView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .top, spacing: 0) {
-            if let academy = model.selected { PageHeader(academy: academy, title: title, trailing: trailingView) }
+            if let academy = model.selected { PageHeader(academy: academy, title: title, trailing: trailing) }
         }
     }
 }
@@ -176,21 +177,25 @@ struct ShellView: View {
 private struct PageHeader<Trailing: View>: View {
     let academy: Academy
     let title: String
-    let trailing: Trailing
+    /// Builds the title-row button for a given diameter.
+    let trailing: (CGFloat) -> Trailing
+    @State var width: CGFloat = 393
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             // The button shares the title's row, centered on it; the academy sits beneath.
             HStack {
-                Text(title).font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                Text(title).font(.system(size: width * 108 / 1180, weight: .bold)).accessibilityAddTraits(.isHeader)
                 Spacer()
-                trailing
+                trailing(width * 132 / 1180)
             }
             Text(academy.name).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
         }
         .padding(.horizontal, 20)
         .padding(.top, 32)
         .padding(.bottom, 14)
+        // Owner's Photos-matched ratios at 1180 px wide: title 108 px, button 132 px.
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     }
 }
 
