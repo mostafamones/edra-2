@@ -10,7 +10,7 @@ do $$ begin
     or has_function_privilege('anon', 'public.save_assignment_marks(uuid, uuid, uuid, text, integer, jsonb, uuid, uuid)', 'execute')
     or has_function_privilege('anon', 'public.record_assignment_work(uuid, uuid, uuid, integer, public.assignment_work_status, timestamptz, text)', 'execute')
     or has_function_privilege('anon', 'public.publish_assignment_results(uuid, uuid, jsonb, uuid)', 'execute')
-    or has_function_privilege('anon', 'public.list_assignment_marks(uuid, uuid, text, integer, integer)', 'execute')
+    or has_function_privilege('anon', 'public.list_assignment_marks(uuid, uuid, text, integer, integer, text)', 'execute')
     or has_function_privilege('anon', 'public.resolve_assignment_student(uuid, uuid, text)', 'execute')
     or has_function_privilege('authenticated', 'edra_private.save_assignment_marks(uuid, uuid, uuid, text, integer, jsonb, uuid, uuid)', 'execute')
     or has_function_privilege('authenticated', 'edra_private.publish_assignment_results(uuid, uuid, jsonb, uuid)', 'execute')
@@ -274,6 +274,21 @@ do $$ declare listed jsonb; begin
   if (public.list_assignment_marks('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 'needs_marking')->>'total')::int <> 1 then raise exception 'Needs-marking filter is wrong'; end if;
 end $$;
 select pg_temp.expect_error($s$ select public.list_assignment_marks('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 'nonsense') $s$, 'validation');
+
+-- Search runs over the whole cohort before paging: literal names, normalized code prefixes.
+do $$ declare listed jsonb; begin
+  listed := public.list_assignment_marks('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 'all', 1, 1, ' AM ');
+  if (listed->>'total')::int <> 2 or jsonb_array_length(listed->'items') <> 1 or listed->'items'->0->>'full_name' <> 'Amal' then
+    raise exception 'Name search must count every match and page after filtering: %', listed;
+  end if;
+  listed := public.list_assignment_marks('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 'all', 10, 0, '000');
+  if (listed->>'total')::int <> 1 or listed->'items'->0->>'student_code' <> '0001' then raise exception 'Code search is wrong: %', listed; end if;
+  if (public.list_assignment_marks('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 'all', 10, 0, '%')->>'total')::int <> 0
+    or (public.list_assignment_marks('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 'marked', 10, 0, 'adam')->>'total')::int
+      <> (select count(*) from jsonb_array_elements(public.list_assignment_marks('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 'marked')->'items') i where i->>'full_name' = 'Adam') then
+    raise exception 'Search must be literal and combine with filters';
+  end if;
+end $$;
 
 -- Publication: an incomplete student rejects the whole batch and nothing is written.
 set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';

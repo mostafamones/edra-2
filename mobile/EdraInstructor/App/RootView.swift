@@ -51,6 +51,7 @@ private struct SignedInRoot: View {
     @State private var sessions: SessionsModel
     @State private var schedules: SchedulesModel
     @State private var start: StartSessionModel
+    @State private var assignments: AssignmentsModel
     private let api: APIClient
 
     init(config: AppConfiguration, auth: AuthModel, scope: AccountScope) {
@@ -75,10 +76,13 @@ private struct SignedInRoot: View {
             onStarted: { await sessions.load(context: $0) },
             onUnauthenticated: signOut, onForbidden: revalidate
         ))
+        _assignments = State(initialValue: AssignmentsModel(
+            api: api, isCurrent: isCurrent, onUnauthenticated: signOut, onForbidden: revalidate
+        ))
     }
 
     var body: some View {
-        ShellView(model: academies, sessions: sessions, schedules: schedules, start: start, makeSessionModel: { [academies, scope] session in
+        ShellView(model: academies, sessions: sessions, schedules: schedules, start: start, assignments: assignments, makeSessionModel: { [academies, scope] session in
             SessionDetailModel(
                 session: session,
                 api: api,

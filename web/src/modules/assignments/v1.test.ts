@@ -4,6 +4,8 @@ const ACADEMY = "11111111-1111-4111-8111-111111111111";
 const ASSIGNMENT = "22222222-2222-4222-8222-222222222222";
 const STUDENT = "33333333-3333-4333-8333-333333333333";
 const PART = "55555555-5555-4555-8555-555555555555";
+const QUESTION = "66666666-6666-4666-8666-666666666666";
+const CHOICE = "77777777-7777-4777-8777-777777777777";
 const KEY = "44444444-4444-4444-8444-444444444444";
 
 const state = vi.hoisted(() => ({ result: { data: null as unknown, error: null as unknown }, calls: [] as { name: string; args: unknown }[] }));
@@ -11,7 +13,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({ cookieAuthority: async () => null }));
 
 import type { StaffApiContext } from "@/lib/api/handler";
-import { patchMarksResponse, resolutionResponse } from "./v1";
+import { marksResponse, patchMarksResponse, publicationResponse, resolutionResponse } from "./v1";
 
 const chain = { select: () => chain, eq: () => chain, is: () => chain, maybeSingle: async () => ({ data: { role: "instructor" } }) };
 const context = {
@@ -25,7 +27,8 @@ const context = {
 const recipient = (version: number, score = "7.50") => ({
   annual_student_record_id: STUDENT, full_name: "Amal", archived: false, group_name: "Nine A", student_code: "0001",
   work_status: "submitted", received_at: "2030-01-01T10:00:00Z", work_note: "", feedback: "", version,
-  marks: [{ part_id: PART, kind: "mark", score, reason: null }], marked_parts: 1, total: score, marking: "partial",
+  marks: [{ part_id: PART, kind: "mark", score, reason: null, from_answers: true }], marked_parts: 1, total: score, marking: "partial",
+  answers: [{ question_id: QUESTION, part_id: PART, choice_id: null, score: "0" }],
   publication: null, publication_state: "unpublished",
 });
 
@@ -98,5 +101,63 @@ describe("assignment student resolution", () => {
     state.result = { data: null, error: { code: "P0001", message: "student_code_ambiguous" } };
     expect((await resolutionResponse(context, request({ student_id: "0001" }), ACADEMY, ASSIGNMENT)).status).toBe(409);
     expect((await resolutionResponse(context, request({}), ACADEMY, ASSIGNMENT)).status).toBe(400);
+  });
+});
+
+describe("assignment answers, search and announcement API", () => {
+  it("saves per-question answers without part marks and returns saved answers", async () => {
+    state.result = { data: { outcome: "saved", recipient: recipient(2), work_recorded: true, replayed: false }, error: null };
+    const response = await patchMarksResponse(context, request({
+      annual_student_record_id: STUDENT, expected_version: 1,
+      answers: [{ question_id: QUESTION, choice_id: null }, { question_id: CHOICE, score: "1.5" }, { question_id: PART, clear: true }],
+    }), ACADEMY, ASSIGNMENT);
+    expect(response.status).toBe(200);
+    expect((await response.json()).student.answers).toEqual([{ question_id: QUESTION, part_id: PART, choice_id: null, score: "0" }]);
+    expect(state.calls.at(-1)?.args).toMatchObject({ p_changes: { marks: [], answers: [
+      { question_id: QUESTION, choice_id: null }, { question_id: CHOICE, score: "1.5" }, { question_id: PART, clear: true },
+    ] } });
+  });
+
+  it("refuses mixed or duplicate answer edits before the database", async () => {
+    const bad = [
+      [{ question_id: QUESTION, choice_id: CHOICE, score: "1" }],
+      [{ question_id: QUESTION, clear: false }],
+      [{ question_id: QUESTION, choice_id: CHOICE }, { question_id: QUESTION, clear: true }],
+    ];
+    for (const answers of bad) {
+      expect((await patchMarksResponse(context, request({ annual_student_record_id: STUDENT, expected_version: 1, answers }), ACADEMY, ASSIGNMENT)).status).toBe(400);
+    }
+    expect(state.calls).toHaveLength(0);
+  });
+
+  it("passes the search to the database so totals cover every match", async () => {
+    state.result = { data: { total: 120, items: [recipient(1)] }, error: null };
+    const response = await marksResponse(context, ACADEMY, ASSIGNMENT, new URLSearchParams({ search: "am", limit: "1", offset: "50" }));
+    expect(response.status).toBe(200);
+    expect((await response.json()).total).toBe(120);
+    expect(state.calls.at(-1)?.args).toMatchObject({ p_search: "am", p_limit: 1, p_offset: 50 });
+  });
+
+  it("announces a selection and rejects the whole selection with per-student reasons", async () => {
+    const items = [{ annual_student_record_id: STUDENT, expected_version: 2 }];
+    state.result = { data: { outcome: "published", results: [{ annual_student_record_id: STUDENT, outcome: "corrected", revision: 2 }], replayed: true }, error: null };
+    const published = await publicationResponse(context, request({ items }), ACADEMY, ASSIGNMENT);
+    expect(published.status).toBe(200);
+    expect(await published.json()).toEqual({ outcome: "published", replayed: true, results: [{ annual_student_record_id: STUDENT, outcome: "corrected", revision: 2 }] });
+    expect(state.calls.at(-1)).toMatchObject({ name: "publish_assignment_results", args: { p_key: KEY, p_items: items } });
+
+    state.result = { data: { outcome: "rejected", failures: [{ annual_student_record_id: STUDENT, reason: "stale" }] }, error: null };
+    const rejected = await publicationResponse(context, request({ items }), ACADEMY, ASSIGNMENT);
+    expect(rejected.status).toBe(409);
+    expect((await rejected.json()).error).toMatchObject({ code: "PUBLICATION_REJECTED", details: { failures: [{ annual_student_record_id: STUDENT, reason: "stale" }] } });
+  });
+
+  it("requires a key and unique items to announce", async () => {
+    state.calls = [];
+    const items = [{ annual_student_record_id: STUDENT, expected_version: 2 }];
+    expect((await publicationResponse(context, request({ items }, null), ACADEMY, ASSIGNMENT)).status).toBe(400);
+    expect((await publicationResponse(context, request({ items: [...items, ...items] }), ACADEMY, ASSIGNMENT)).status).toBe(400);
+    expect((await publicationResponse(context, request({ items: [] }), ACADEMY, ASSIGNMENT)).status).toBe(400);
+    expect(state.calls).toHaveLength(0);
   });
 });

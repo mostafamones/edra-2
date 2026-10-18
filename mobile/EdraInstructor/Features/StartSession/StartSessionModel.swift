@@ -143,6 +143,8 @@ final class StartSessionModel {
         case .failure(.server(let message)):
             // The key stays with this schedule, so trying it again cannot start twice.
             phase = .failed(message)
+        case .failure(.rejected(let failure)):
+            phase = .failed(failure.message)
         case .failure(.cancelled):
             phase = .uncertain("The start of “\(current.scheduleTitle)” was interrupted. Retry: it won't start a second session.")
         }

@@ -9,6 +9,7 @@ struct ShellView: View {
     let sessions: SessionsModel
     let schedules: SchedulesModel
     let start: StartSessionModel
+    let assignments: AssignmentsModel
     let makeSessionModel: (LiveSession) -> SessionDetailModel
     let onSignOut: () -> Void
 
@@ -17,8 +18,10 @@ struct ShellView: View {
     @State private var showAcademies = false
     /// Session screens belong to the selected academy; they close when the selection changes.
     @State private var sessionsPath: [LiveSession] = []
-    /// Assessments content (EDRA-79) pushes onto this stack.
+    /// Assignment workspaces push onto this stack.
     @State private var assessmentsPath = NavigationPath()
+    /// A voluntary switch away from an academy with an unsaved marking draft waits for this choice.
+    @State private var pendingAcademy: Academy?
 
     var body: some View {
         tabs
@@ -26,6 +29,7 @@ struct ShellView: View {
         .task(id: model.context) { await sessions.load(context: model.context) }
         // Prefetch the start picker's schedules so it opens already populated.
         .task(id: model.context) { if let context = model.context { await schedules.load(context: context) } }
+        .task(id: model.context) { await assignments.load(context: model.context) }
         // Switching or losing an academy (suspension, removal) changes the context: leave its
         // screens, which cancels their tasks and discards pending edits, scan confirmations and
         // any unacknowledged start. Reselecting the current academy keeps the context.
@@ -59,6 +63,31 @@ struct ShellView: View {
                 await model.load()
                 if model.context == context { await sessions.load(context: context) }
             }
+        }
+        .confirmationDialog("Save marks before switching academy?", isPresented: Binding(
+            get: { pendingAcademy != nil }, set: { if !$0 { pendingAcademy = nil } }
+        ), titleVisibility: .visible) {
+            if let academy = pendingAcademy, let marking = assignments.activeMarking {
+                Button("Save") {
+                    Task { if await marking.save() { model.select(academy) } }
+                }
+                .disabled(!marking.canSave && !marking.isUncertain)
+                Button("Discard", role: .destructive) {
+                    marking.discard()
+                    assignments.activeMarking = nil
+                    model.select(academy)
+                }
+                Button("Keep editing", role: .cancel) {}
+            }
+        }
+    }
+
+    /// Switching away from unsaved marking asks first; reselecting the current academy changes nothing.
+    private func choose(_ academy: Academy) {
+        if academy.id != model.selectedID, assignments.activeMarking?.hasChanges == true {
+            pendingAcademy = academy
+        } else {
+            model.select(academy)
         }
     }
 
@@ -99,7 +128,7 @@ struct ShellView: View {
             ForEach(model.academies) { academy in
                 Button {
                     showAcademies = false
-                    model.select(academy)
+                    choose(academy)
                 } label: {
                     row(academy.name, icon: academy.iconAsset, checked: academy.id == model.selectedID)
                 }
@@ -156,12 +185,9 @@ struct ShellView: View {
     }
 
     private var assessmentsStack: some View {
-        NavigationStack(path: $assessmentsPath) { page("Assessments", trailing: { diameter in
-            // Placeholder: its actions arrive with assessment content.
-            Menu {} label: { headerIcon("tabler-dots", diameter: diameter) }
-                .nativeGlass()
-                .accessibilityLabel("More")
-        }) { AssessmentsPlaceholderView() } }
+        NavigationStack(path: $assessmentsPath) {
+            page("Assessments", trailing: { _ in EmptyView() }) { AssignmentsView(model: assignments) }
+        }
     }
 
     /// A destination's root: its content only while an academy is selected, never a stale one.

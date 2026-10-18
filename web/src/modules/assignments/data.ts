@@ -288,20 +288,25 @@ const listInput = z.object({
   academyId: z.uuid(), assignmentId: z.uuid(),
   filter: z.enum(["all", "not_received", "needs_marking", "marked", "unpublished"]),
   limit: z.number().int().min(1).max(1000), offset: z.number().int().min(0),
+  search: z.string().trim().max(100).nullable(),
 });
 
-/** The assignment's students with work status, marks, totals, and publication state, filtered and paged. */
+/**
+ * The assignment's students with work status, marks, totals, and publication state, filtered and paged.
+ * `search` matches a name (literal, case-insensitive) or a student-code prefix across the whole cohort.
+ */
 export async function listMarks(
-  input: { academyId: string; assignmentId: string; filter?: MarkFilter; limit?: number; offset?: number }, authority?: Authority | null,
+  input: { academyId: string; assignmentId: string; filter?: MarkFilter; limit?: number; offset?: number; search?: string | null }, authority?: Authority | null,
 ): Promise<ReadResult<{ total: number; students: StudentWork[] }>> {
-  const parsed = listInput.safeParse({ filter: "all", limit: 1000, offset: 0, ...input });
+  const parsed = listInput.safeParse({ filter: "all", limit: 1000, offset: 0, search: null, ...input });
   if (!parsed.success) return { ok: false, status: 400 };
-  const { academyId, assignmentId, filter, limit, offset } = parsed.data;
+  const { academyId, assignmentId, filter, limit, offset, search } = parsed.data;
   const caller = await member(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
     const { data, error } = await caller.db.rpc("list_assignment_marks", {
       p_academy_id: academyId, p_assignment_id: assignmentId, p_filter: filter, p_limit: limit, p_offset: offset,
+      ...(search ? { p_search: search } : {}),
     });
     if (error) return { ok: false, status: error.code === "P0001" && error.message === "validation" ? 400 : 500 };
     if (data === null) return { ok: false, status: 404 };
@@ -331,6 +336,14 @@ export async function resolveStudent(input: { academyId: string; assignmentId: s
 
 // ---------------------------------------------------------------------------------------------
 // Reads for the external API.
+
+/** Whether the academy issues student codes (code entry and scanning). False when unknown. */
+export async function studentCodesEnabled(academyId: string, authority?: Authority | null): Promise<boolean> {
+  const caller = await member(academyId, authority);
+  if (!caller) return false;
+  const { data } = await caller.db.from("student_code_settings").select("enabled").eq("academy_id", academyId).maybeSingle();
+  return data?.enabled ?? false;
+}
 
 /** The academy of an assignment the caller can see (RLS), or null for unknown and foreign assignments. */
 export async function assignmentAcademy(assignmentId: string, authority?: Authority | null): Promise<string | null> {

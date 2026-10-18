@@ -113,6 +113,8 @@ final class SchedulesModel {
             show("Can't reach the server. Check your connection and try again.")
         case .server(let message):
             show(message)
+        case .rejected(let failure):
+            show(failure.message)
         case .cancelled:
             // A newer search or the picker closing cancelled this load; nothing to report.
             if state == .loading { state = schedules.isEmpty ? .idle : .loaded }
