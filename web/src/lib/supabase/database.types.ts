@@ -272,6 +272,77 @@ export type Database = {
           },
         ]
       }
+      account_contact_changes: {
+        Row: {
+          attempts: number
+          code_hash: string | null
+          commit_attempts: number
+          expires_at: string | null
+          new_phone: string
+          new_sends: number
+          new_sent_at: string | null
+          new_window_started_at: string | null
+          old_phone: string
+          old_sends: number
+          old_sent_at: string | null
+          old_window_started_at: string | null
+          operation_id: string
+          purpose: string
+          session_id: string
+          stage: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash?: string | null
+          commit_attempts?: number
+          expires_at?: string | null
+          new_phone: string
+          new_sends?: number
+          new_sent_at?: string | null
+          new_window_started_at?: string | null
+          old_phone: string
+          old_sends?: number
+          old_sent_at?: string | null
+          old_window_started_at?: string | null
+          operation_id: string
+          purpose: string
+          session_id: string
+          stage: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string | null
+          commit_attempts?: number
+          expires_at?: string | null
+          new_phone?: string
+          new_sends?: number
+          new_sent_at?: string | null
+          new_window_started_at?: string | null
+          old_phone?: string
+          old_sends?: number
+          old_sent_at?: string | null
+          old_window_started_at?: string | null
+          operation_id?: string
+          purpose?: string
+          session_id?: string
+          stage?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_contact_changes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_password_challenges: {
         Row: {
           attempts: number
@@ -5270,6 +5341,10 @@ export type Database = {
         Args: { p_challenge_id: string; p_user_id: string }
         Returns: undefined
       }
+      cancel_contact_change: {
+        Args: { p_operation_id: string; p_user_id: string }
+        Returns: string
+      }
       cancel_student_import: {
         Args: { p_session_id: string }
         Returns: undefined
@@ -5338,6 +5413,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      claim_login_phone_change: {
+        Args: { p_operation_id: string; p_session_id: string; p_user_id: string }
+        Returns: Json
       }
       complete_student_invite: {
         Args: { p_group_id: string; p_token: string; p_track_id: string }
@@ -5980,6 +6059,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      resend_contact_change_code: {
+        Args: { p_code_hash: string; p_operation_id: string; p_session_id: string; p_stage: string; p_user_id: string }
+        Returns: Json
+      }
       resolve_assignment_student: {
         Args: { p_academy_id: string; p_assignment_id: string; p_code: string }
         Returns: Json
@@ -6140,6 +6223,10 @@ export type Database = {
         }
         Returns: Json
       }
+      settle_login_phone_change: {
+        Args: { p_end: boolean; p_operation_id: string; p_user_id: string }
+        Returns: string
+      }
       shares_academy_with: {
         Args: { target_user_id: string }
         Returns: boolean
@@ -6198,6 +6285,18 @@ export type Database = {
       }
       start_exam_attempt: { Args: { p_exam_id: string }; Returns: Json }
       start_quiz_attempt: { Args: { p_quiz_id: string }; Returns: Json }
+      start_contact_change: {
+        Args: {
+          p_code_hash: string
+          p_expected_old: string
+          p_new_phone: string
+          p_operation_id: string
+          p_purpose: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       start_session: {
         Args: {
           p_academy_id: string
@@ -6423,6 +6522,10 @@ export type Database = {
           p_session_id: string
           p_user_id: string
         }
+        Returns: string
+      }
+      verify_contact_change_code: {
+        Args: { p_code_hash: string; p_operation_id: string; p_session_id: string; p_stage: string; p_user_id: string }
         Returns: string
       }
       verify_student_parent_challenge: {

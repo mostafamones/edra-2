@@ -16,7 +16,7 @@ Deploy application and schema changes compatibly. In particular, the standalone 
 
 ## 3. Configure authentication delivery
 
-Use the source-specific setup for [send-whatsapp-auth](../../supabase/functions/send-whatsapp-auth/README.md), [student-onboarding](../../supabase/functions/student-onboarding/README.md) and [account-password](../../supabase/functions/account-password/README.md). The first authenticates a signed hook; the others authenticate a user JWT. Their JWT deployment flags are not interchangeable.
+Use the source-specific setup for [send-whatsapp-auth](../../supabase/functions/send-whatsapp-auth/README.md), [student-onboarding](../../supabase/functions/student-onboarding/README.md) [account-password](../../supabase/functions/account-password/README.md) and [account-contact](../../supabase/functions/account-contact/README.md). The first authenticates a signed hook; the others authenticate a user JWT. Their JWT deployment flags are not interchangeable.
 
 Enable phone confirmation and configure the Send SMS Hook secret. Supply the approved production Authentication template/language, Meta sender ID/token and applicable provider configuration. Production uses the actual requested phone, not a redirected test recipient.
 

@@ -177,9 +177,12 @@ begin
   perform pg_temp.check(public.verify_account_password_challenge(me, s1, c2, good) = 'verified', 'verify new challenge');
 
   -- A phone change or sign-out of the originating session makes the proof unusable.
-  update auth.users set phone = '201290000009' where id = me;
+  -- Unconfirmed first: the EDRA-127 guard only lets settings replace a confirmed phone.
+  update auth.users set phone_confirmed_at = null where id = me;
+  update auth.users set phone = '201290000009', phone_confirmed_at = now() where id = me;
   perform pg_temp.check(public.claim_account_password_change(me, s1, c2) = 'session_inactive', 'phone changed during verification');
-  update auth.users set phone = '201290000001' where id = me;
+  update auth.users set phone_confirmed_at = null where id = me;
+  update auth.users set phone = '201290000001', phone_confirmed_at = now() where id = me;
   update public.account_password_challenges set grant_expires_at = now() - interval '1 second' where user_id = me;
   perform pg_temp.check(public.claim_account_password_change(me, s1, c2) = 'expired', 'expired grant');
   update public.account_password_challenges set grant_expires_at = now() + interval '5 minutes' where user_id = me;
