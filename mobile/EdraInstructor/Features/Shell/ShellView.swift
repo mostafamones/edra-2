@@ -74,7 +74,8 @@ struct ShellView: View {
         // Before iOS 26 the academy tab opens a dialog; from 26 a Menu overlays its circle instead.
         let selection = Binding(get: { tab }, set: { if $0 == .academy { showAcademies = true } else { tab = $0 } })
         if #available(iOS 26, *) {
-            TabView(selection: $tab) {
+            // Taps that slip past the menu overlay (while it dismisses) must not select the action tab.
+            TabView(selection: Binding(get: { tab }, set: { if $0 != .academy { tab = $0 } })) {
                 Tab("Sessions", image: "tabler-calendar-clock", value: Destination.sessions) { sessionsStack }
                 Tab("Assessments", image: "tabler-file-pencil", value: Destination.assessments) { assessmentsStack }
                 Tab(value: Destination.academy, role: .search) { Color.clear } label: { academyLabel }
@@ -123,19 +124,30 @@ struct ShellView: View {
 
     private var sessionsStack: some View {
         NavigationStack(path: $sessionsPath) {
-            page("Sessions") { SessionsHomeView(context: model.context, sessions: sessions, start: start) }
+            page("Sessions", trailing: { startButton }) { SessionsHomeView(context: model.context, sessions: sessions) }
                 .navigationDestination(for: LiveSession.self) { SessionView(session: $0, makeModel: makeSessionModel) }
         }
     }
 
+    private var startButton: some View {
+        Button { start.presentPicker() } label: {
+            Image("tabler-plus").frame(width: 28, height: 28)
+        }
+        .nativeGlass()
+        .accessibilityLabel("Start session")
+    }
+
     private var assessmentsStack: some View {
-        NavigationStack(path: $assessmentsPath) { page("Assessments") { AssessmentsPlaceholderView() } }
+        NavigationStack(path: $assessmentsPath) { page("Assessments", trailing: { EmptyView() }) { AssessmentsPlaceholderView() } }
     }
 
     /// A destination's root: its content only while an academy is selected, never a stale one.
     /// Large system title with the academy name beneath, as Photos does.
-    private func page<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
-        Group {
+    private func page<Content: View, Trailing: View>(
+        _ title: String, @ViewBuilder trailing: () -> Trailing, @ViewBuilder _ content: () -> Content
+    ) -> some View {
+        let trailingView = trailing()
+        return Group {
             switch model.state {
             case .loading where model.academies.isEmpty:
                 ProgressView("Loading academies…").frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -150,24 +162,31 @@ struct ShellView: View {
                 }
             }
         }
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.inline)
-        .academySubtitle(model.selected?.name)
+        .toolbar(.hidden, for: .navigationBar)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let academy = model.selected { PageHeader(academy: academy, title: title, trailing: trailingView) }
+        }
     }
 }
 
-private extension View {
-    @ViewBuilder func academySubtitle(_ name: String?) -> some View {
-        if #available(iOS 26, *) {
-            navigationSubtitle(name ?? "")
-        } else {
-            safeAreaInset(edge: .top, spacing: 0) {
-                if let name {
-                    Text(name).font(.subheadline).foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 16)
-                }
+/// Large page title with the academy name small beneath it; `trailing` shares the title's row.
+private struct PageHeader<Trailing: View>: View {
+    let academy: Academy
+    let title: String
+    let trailing: Trailing
+
+    var body: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                Text(academy.name).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
             }
+            Spacer()
+            trailing
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
     }
 }
 
@@ -186,6 +205,17 @@ struct UnavailableView: View {
             if let action, let perform {
                 Button(action) { Task { await perform() } }.buttonStyle(.borderedProminent)
             }
+        }
+    }
+}
+
+private extension View {
+    /// System Liquid Glass circle button on iOS 26+, a standard bordered circle before.
+    @ViewBuilder func nativeGlass() -> some View {
+        if #available(iOS 26, *) {
+            buttonStyle(.glass).buttonBorderShape(.circle)
+        } else {
+            buttonStyle(.bordered).buttonBorderShape(.circle)
         }
     }
 }

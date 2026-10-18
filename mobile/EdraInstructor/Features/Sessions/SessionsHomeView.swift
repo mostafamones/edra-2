@@ -4,16 +4,9 @@ import SwiftUI
 struct SessionsHomeView: View {
     let context: AcademyContext?
     let sessions: SessionsModel
-    let start: StartSessionModel
 
     var body: some View {
-        content.toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { start.presentPicker() } label: {
-                    Label { Text("Start session") } icon: { Image("tabler-plus") }
-                }
-            }
-        }
+        content
     }
 
     @ViewBuilder private var content: some View {
