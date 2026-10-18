@@ -24,6 +24,8 @@ struct ShellView: View {
         tabs
         .task { await model.load() }
         .task(id: model.context) { await sessions.load(context: model.context) }
+        // Prefetch the start picker's schedules so it opens already populated.
+        .task(id: model.context) { if let context = model.context { await schedules.load(context: context) } }
         // Switching or losing an academy (suspension, removal) changes the context: leave its
         // screens, which cancels their tasks and discards pending edits, scan confirmations and
         // any unacknowledged start. Reselecting the current academy keeps the context.
@@ -69,13 +71,15 @@ struct ShellView: View {
     /// The system tab bar (floating Liquid Glass on iOS 26). Academy is a trailing action tab, like
     /// Photos' search: it never stays selected, it opens the academy list.
     @ViewBuilder private var tabs: some View {
+        // Before iOS 26 the academy tab opens a dialog; from 26 a Menu overlays its circle instead.
         let selection = Binding(get: { tab }, set: { if $0 == .academy { showAcademies = true } else { tab = $0 } })
         if #available(iOS 26, *) {
-            TabView(selection: selection) {
+            TabView(selection: $tab) {
                 Tab("Sessions", image: "tabler-calendar-clock", value: Destination.sessions) { sessionsStack }
                 Tab("Assessments", image: "tabler-file-pencil", value: Destination.assessments) { assessmentsStack }
                 Tab(value: Destination.academy, role: .search) { Color.clear } label: { academyLabel }
             }
+            .overlay(alignment: .bottomTrailing) { academyMenu }
         } else {
             TabView(selection: selection) {
                 sessionsStack.tabItem { Label("Sessions", image: "tabler-calendar-clock") }.tag(Destination.sessions)
@@ -83,6 +87,33 @@ struct ShellView: View {
                 Color.clear.tabItem { academyLabel }.tag(Destination.academy)
             }
         }
+    }
+
+    /// An invisible Menu over the tab bar's trailing circle: it opens a native menu, and having no
+    /// glass label of its own avoids the square flash while the menu morphs out.
+    private var academyMenu: some View {
+        Menu {
+            Section("Your academies") {
+                ForEach(model.academies) { academy in
+                    Button { model.select(academy) } label: {
+                        Label { Text(academy.name) } icon: {
+                            Image(academy.id == model.selectedID ? "tabler-check" : academy.iconAsset)
+                        }
+                    }
+                }
+            }
+            Section {
+                Button(role: .destructive, action: onSignOut) {
+                    Label { Text("Sign out") } icon: { Image("tabler-logout") }
+                }
+            }
+        } label: {
+            Color.clear.frame(width: 64, height: 64).contentShape(.circle)
+        }
+        .accessibilityLabel(model.selected.map { "Switch academy, current: \($0.name)" } ?? "Switch academy")
+        .padding(.trailing, 20)
+        .padding(.bottom, 22)
+        .ignoresSafeArea(.container, edges: .bottom)
     }
 
     private var academyLabel: some View {
@@ -120,6 +151,7 @@ struct ShellView: View {
             }
         }
         .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
         .academySubtitle(model.selected?.name)
     }
 }
