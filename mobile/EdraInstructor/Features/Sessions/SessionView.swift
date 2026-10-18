@@ -9,6 +9,7 @@ struct SessionView: View {
     @State private var showScanner = false
     @State private var confirmPublish = false
     @State private var confirmMarkAbsent = false
+    @Environment(\.isActiveTab) private var isActiveTab
 
     init(session: LiveSession, makeModel: (LiveSession) -> SessionDetailModel) {
         _model = State(initialValue: makeModel(session))
@@ -44,7 +45,8 @@ struct SessionView: View {
             } message: {
                 Text("Every student without a status will be marked Absent. You can still change them afterwards.")
             }
-            .task { await model.refreshWhileVisible() }
+            // A session kept under the other tab stops polling and reloads when shown again.
+            .task(id: isActiveTab) { if isActiveTab { await model.refreshWhileVisible() } }
             .alert("Couldn't change status", isPresented: Binding(
                 get: { model.statusError != nil }, set: { if !$0 { model.statusError = nil } }
             )) { Button("OK", role: .cancel) {} } message: { Text(model.statusError ?? "") }

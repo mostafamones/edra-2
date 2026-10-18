@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// Academy switcher header, mirroring the web sidebar switcher.
+/// Academy menu circle in the shell dock, mirroring the web sidebar switcher's menu.
 struct AcademySwitcher: View {
     let model: AcademiesModel
     let onSignOut: () -> Void
+
+    @ScaledMetric(relativeTo: .caption) private var diameter = 60.0
 
     var body: some View {
         Menu {
@@ -24,40 +26,16 @@ struct AcademySwitcher: View {
                 }
             }
         } label: {
-            HStack(spacing: 14) {
-                Image(model.selected?.iconAsset ?? "tabler-building-community")
-                    .resizable()
-                    .scaledToFit()
-                    .padding(11)
-                    .frame(width: 52, height: 52)
-                    .foregroundStyle(.white)
-                    .background(Color.accentColor, in: .rect(cornerRadius: 14))
-                Text(title)
-                    .font(.title3.weight(.semibold))
-                    .lineLimit(1)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Image("tabler-selector").foregroundStyle(.white.opacity(0.6))
-            }
-            .padding(12)
-            .glassBackground(cornerRadius: 28)
+            // Same height as the tab pill beside it.
+            Image(model.selected?.iconAsset ?? "tabler-building-community")
+                .resizable()
+                .scaledToFit()
+                .frame(width: diameter * 0.42, height: diameter * 0.42)
+                .frame(width: diameter, height: diameter)
+                .foregroundStyle(.primary)
+                .glassBackground(in: .circle)
+                .contentShape(.circle)
         }
         .accessibilityLabel(model.selected.map { "Switch academy, current: \($0.name)" } ?? "Switch academy")
-    }
-
-    private var title: String {
-        if let selected = model.selected { return selected.name }
-        return model.state == .loading ? "Loading academies" : "No academy"
-    }
-}
-
-private extension View {
-    /// Liquid Glass on iOS 26+, a translucent material before that.
-    @ViewBuilder func glassBackground(cornerRadius: CGFloat) -> some View {
-        if #available(iOS 26, *) {
-            glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
-        } else {
-            background(.ultraThinMaterial, in: .rect(cornerRadius: cornerRadius))
-        }
     }
 }
