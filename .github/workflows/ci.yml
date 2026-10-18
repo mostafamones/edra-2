@@ -30,25 +30,17 @@ jobs:
 
   database:
     runs-on: ubuntu-latest
-    # The marked cloud test project has fixed SQL fixture IDs and must have one runner at a time.
-    concurrency:
-      group: edra-cloud-database-tests
-      cancel-in-progress: false
-    env:
-      EDRA_DB_TEST_URL: ${{ secrets.EDRA_DB_TEST_URL }}
-      EDRA_DB_TEST_TARGET: ${{ vars.EDRA_DB_TEST_TARGET }}
-      NEXT_PUBLIC_SUPABASE_URL: https://fgbcjlibwgxylfwmocgx.supabase.co
+    # Each run builds its own disposable Supabase database on this runner from the checkout's
+    # migrations, so no cloud credentials or shared-target serialization are needed.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: supabase/setup-cli@v1
         with:
-          node-version: 22
+          version: 2.117.0
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      # The isolated cloud project must already have the repository migrations applied.
-      # The runner validates its marker and migration history; it never resets or migrates it.
-      - run: npm run test:db -- --check
-      - run: npm run test:db
+      - run: bash scripts/db-ci.sh
 
   edge:
     runs-on: ubuntu-latest

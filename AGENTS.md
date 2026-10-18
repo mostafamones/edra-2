@@ -15,6 +15,7 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 
 - Edra uses a cloud-hosted Supabase database. A local Supabase database is not the default development or verification environment.
 - Use the configured cloud project through the available Supabase connection or tools. Do not look for a running local database, start a local Supabase/Docker stack, or require local database setup unless the owner explicitly requests it.
+- Automated GitHub Actions database tests may create, migrate, and discard a fresh Supabase instance on the GitHub runner. This exception does not authorize local developer stacks or changes to shared cloud databases. Cloud verification remains required for affected database behavior during implementation and for hosted integrations.
 - Repository migration files and Supabase configuration do not imply that a local database exists. Routine non-destructive migrations are pre-approved during authorized implementation; only destructive or hard-to-reverse migrations require explicit owner approval. Preserve cloud verification and history rules in `web/AGENTS.md`.
 
 ## Documentation and planning

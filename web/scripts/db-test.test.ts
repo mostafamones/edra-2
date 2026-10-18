@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -85,6 +85,9 @@ describe("db-test runner", () => {
     ["a different target", { FAKE_MARKER: "shared-dev" }, "expected 'edra-ci'"],
     ["a read-only replica", { FAKE_READ_ONLY: "true" }, "target is a read-only replica"],
     ["missing migrations", { FAKE_MISSING: "20261009100000" }, "missing: 20261009100000"],
+    ["migrations this checkout lacks", { FAKE_EXTRA: "20991231000000" }, "extra: 20991231000000"],
+    ["missing fixture privileges", { FAKE_PRIVILEGES: "set role authenticated" }, "lacks fixture privileges: set role"],
+    ["colliding fixtures", { FAKE_COLLISIONS: "academies 1" }, "fixtures already exist on the target (academies 1)"],
   ])("rejects %s after only the read-only preflight", (_, env, message) => {
     const { status, output, calls } = run(runner, [], env);
     expect(status).toBe(2);
@@ -133,6 +136,19 @@ describe("db-test runner", () => {
     expect(status).toBe(1);
     expect(output).toContain("FAILED sessions");
     expect(calls.some((call) => call.includes("FILES supabase/tests/attendance.sql"))).toBe(false);
+  });
+
+  it("registers every SQL suite exactly once and runs concurrency last", () => {
+    const registered = readFileSync(runner, "utf8")
+      .match(/^SQL_SUITES=\(([^)]*)\)/m)?.[1]
+      .split(/\s+/)
+      .filter(Boolean);
+    const files = readdirSync(join(web, "supabase/tests"))
+      .filter((name) => name.endsWith(".sql"))
+      .map((name) => name.slice(0, -4));
+    expect(registered && new Set(registered).size).toBe(registered?.length);
+    expect([...(registered ?? [])].sort()).toEqual(files.sort());
+    expect(readFileSync(runner, "utf8")).toContain('selected=("${SQL_SUITES[@]}" concurrency)');
   });
 
   it("rejects an unknown suite", () => {

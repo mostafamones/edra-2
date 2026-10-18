@@ -1,0 +1,47 @@
+# Supabase CLI config for the disposable GitHub Actions database only (scripts/db-ci.sh copies it
+# into a fresh RUNNER_TEMP workspace). Not the developer config: supabase/config.toml stays as is.
+# `supabase db start` runs only the database container plus short-lived Auth, Storage and Realtime
+# schema-migration jobs; the long-running API, Studio and other services are never started.
+project_id = "edra-ci-placeholder"
+
+[api]
+enabled = false
+# Left unset on purpose: CLI 2.117.0 then revokes the default Data API grants, and roles.sql
+# restores the cloud baseline explicitly instead of relying on the deprecated opt-in flag.
+# auto_expose_new_tables =
+
+[db]
+port = 54322
+shadow_port = 54320
+health_timeout = "2m"
+major_version = 17
+
+[db.pooler]
+enabled = false
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = false
+
+[realtime]
+enabled = true
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+
+[studio]
+enabled = false
+
+[local_smtp]
+enabled = false
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
