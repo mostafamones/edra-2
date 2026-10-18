@@ -5,8 +5,25 @@ enum APIError: Error, Equatable {
     case forbidden
     case network
     case server(String)
+    /// A structured error response; only thrown to callers that ask for `structuredErrors`.
+    case rejected(APIFailure)
     /// The calling task was cancelled. Not a failure to report: the work's owner has gone away.
     case cancelled
+}
+
+/// A backend error response: stable code, message, request id and optional `details` JSON.
+struct APIFailure: Equatable, Sendable {
+    let status: Int
+    let code: String
+    let message: String
+    let requestID: String?
+    let retryAfter: Int?
+    /// The raw `error.details` object, decoded by the caller that understands it.
+    let details: Data?
+
+    func decodeDetails<T: Decodable>(_ type: T.Type) -> T? {
+        details.flatMap { try? APIClient.decoder.decode(T.self, from: $0) }
+    }
 }
 
 /// Bearer-only HTTP adapter for the Edra API. No cookies, current token per request,
@@ -35,34 +52,39 @@ struct APIClient: Sendable {
         }
     }
 
-    func get<T: Decodable & Sendable>(_ path: String, as type: T.Type = T.self) async throws(APIError) -> T {
-        try await perform(path, method: "GET", body: nil, headers: [:])
+    /// `structuredErrors`: other failures with an error body throw `.rejected` instead of `.server`.
+    func get<T: Decodable & Sendable>(
+        _ path: String, as type: T.Type = T.self, structuredErrors: Bool = false
+    ) async throws(APIError) -> T {
+        try await perform(path, method: "GET", body: nil, headers: [:], structured: structuredErrors)
     }
 
-    /// POST with a JSON body. `idempotencyKey` must be created once per user action and reused on retries.
+    /// POST with a JSON body. `idempotencyKey` must be created once per user action and reused on retries;
+    /// read-only POSTs (lookups) send none.
     func post<B: Encodable, T: Decodable & Sendable>(
-        _ path: String, body: B, idempotencyKey: String, as type: T.Type = T.self
+        _ path: String, body: B, idempotencyKey: String?, as type: T.Type = T.self, structuredErrors: Bool = false
     ) async throws(APIError) -> T {
         guard let data = try? JSONEncoder().encode(body) else { throw .server("Couldn't encode the request.") }
-        return try await perform(path, method: "POST", body: data, headers: ["Idempotency-Key": idempotencyKey])
+        let headers = idempotencyKey.map { ["Idempotency-Key": $0] } ?? [:]
+        return try await perform(path, method: "POST", body: data, headers: headers, structured: structuredErrors)
     }
 
     /// PATCH with a JSON body; same idempotency rules as `post`.
     func patch<B: Encodable, T: Decodable & Sendable>(
-        _ path: String, body: B, idempotencyKey: String, as type: T.Type = T.self
+        _ path: String, body: B, idempotencyKey: String, as type: T.Type = T.self, structuredErrors: Bool = false
     ) async throws(APIError) -> T {
         guard let data = try? JSONEncoder().encode(body) else { throw .server("Couldn't encode the request.") }
-        return try await perform(path, method: "PATCH", body: data, headers: ["Idempotency-Key": idempotencyKey])
+        return try await perform(path, method: "PATCH", body: data, headers: ["Idempotency-Key": idempotencyKey], structured: structuredErrors)
     }
 
     private func perform<T: Decodable>(
-        _ path: String, method: String, body: Data?, headers: [String: String]
+        _ path: String, method: String, body: Data?, headers: [String: String], structured: Bool
     ) async throws(APIError) -> T {
         do {
             do {
-                return try await send(path, method: method, body: body, headers: headers, forceRefresh: false)
+                return try await send(path, method: method, body: body, headers: headers, structured: structured, forceRefresh: false)
             } catch APIError.unauthenticated {
-                return try await send(path, method: method, body: body, headers: headers, forceRefresh: true)
+                return try await send(path, method: method, body: body, headers: headers, structured: structured, forceRefresh: true)
             }
         } catch let error as APIError {
             throw error
@@ -74,7 +96,7 @@ struct APIClient: Sendable {
     }
 
     private func send<T: Decodable>(
-        _ path: String, method: String, body: Data?, headers: [String: String], forceRefresh: Bool
+        _ path: String, method: String, body: Data?, headers: [String: String], structured: Bool, forceRefresh: Bool
     ) async throws -> T {
         let bearer: String
         do { bearer = try await token(forceRefresh) } catch {
@@ -108,12 +130,27 @@ struct APIClient: Sendable {
         case 401: throw APIError.unauthenticated
         case 403: throw APIError.forbidden
         default:
-            let message = (try? JSONDecoder().decode(ErrorEnvelope.self, from: data))?.error.message
-            throw APIError.server(message ?? "Server error (\(http.statusCode)).")
+            let envelope = try? JSONDecoder().decode(ErrorEnvelope.self, from: data)
+            if structured, let body = envelope?.error, let code = body.code {
+                throw APIError.rejected(APIFailure(
+                    status: http.statusCode, code: code, message: body.message, requestID: body.requestId,
+                    retryAfter: (http.value(forHTTPHeaderField: "Retry-After")).flatMap { Int($0) },
+                    details: Self.details(in: data)
+                ))
+            }
+            throw APIError.server(envelope?.error.message ?? "Server error (\(http.statusCode)).")
         }
     }
 
-    private static let decoder: JSONDecoder = {
+    /// Re-encodes `error.details` so its owner can decode it with the shared decoder.
+    private static func details(in data: Data) -> Data? {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let error = object["error"] as? [String: Any], let details = error["details"],
+              JSONSerialization.isValidJSONObject(details) else { return nil }
+        return try? JSONSerialization.data(withJSONObject: details)
+    }
+
+    static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .custom { decoder in
@@ -126,7 +163,12 @@ struct APIClient: Sendable {
     }()
 
     private struct ErrorEnvelope: Decodable {
-        struct Body: Decodable { let message: String }
+        struct Body: Decodable {
+            let message: String
+            let code: String?
+            let requestId: String?
+            enum CodingKeys: String, CodingKey { case message, code, requestId = "request_id" }
+        }
         let error: Body
     }
 }
