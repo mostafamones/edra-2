@@ -52,6 +52,9 @@ insert into auth.users (id, phone, phone_confirmed_at) values
   ('8b000014-0000-4000-8000-000000000014', '201281000014', now());  -- First Secondary (not offered)
 
 update public.profiles set full_name = 'Account Name ' || right(id::text, 2) where id::text like '8b%';
+-- Display names: a genuinely new record uses it; existing and returning records keep their names.
+update public.profiles set display_name = 'Ignored Display' where id in ('8b000001-0000-4000-8000-000000000001', '8b000003-0000-4000-8000-000000000003');
+update public.profiles set display_name = 'مريم أحمد' where id = '8b000005-0000-4000-8000-000000000005';
 insert into public.student_profiles (user_id, parent_phone, parent_phone_verified_at, level_id)
 select id, '+201289999999', now(), 'preparatory-3' from auth.users
 where id::text like '8b%' and id <> '8b000007-0000-4000-8000-000000000007';
@@ -270,7 +273,8 @@ begin
   perform pg_temp.check(pg_temp.result(public.complete_student_invite(token, null, null)) = 'connected', 'new without group');
   select r.* into created from public.annual_student_records r where r.student_phone = '+201281000005';
   perform pg_temp.check(created.participation_type = 'online_only' and created.primary_group_id is null
-    and created.level_id = 'preparatory-3' and created.track_id is null, 'new record uses the account level');
+    and created.level_id = 'preparatory-3' and created.track_id is null and created.full_name = 'مريم أحمد',
+    'new record uses the account level and display name');
   perform pg_temp.check((select user_id from public.academy_student_profiles where id = created.academy_student_profile_id)
     = '8b000005-0000-4000-8000-000000000005', 'new profile linked');
 

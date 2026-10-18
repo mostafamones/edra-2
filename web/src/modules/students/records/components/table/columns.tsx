@@ -15,6 +15,7 @@ import { formatPhone, PARTICIPATION_LABELS } from "../../validation";
 import {
   ACTIONS_COLUMN, ACTIONS_WIDTH, COLUMN_LABELS, COLUMN_WIDTHS, SELECT_COLUMN, SELECT_WIDTH, type DataColumnId,
 } from "../../table/config";
+import { AccountDot } from "./account-dot";
 import { CellText } from "./cell-text";
 
 export type ColumnOptions = {
@@ -78,13 +79,17 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
       return code ? <CellText text={code} className="font-mono">{code}</CellText> : muted("—", "No code");
     }),
     data("name", ({ row }) => (
-      <button
-        type="button"
-        onClick={() => options.onOpen(row.original)}
-        className="block w-full min-w-0 rounded-sm text-left font-medium text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        <CellText text={row.original.fullName}>{row.original.fullName}</CellText>
-      </button>
+      // dir="auto" puts the dot after the name in its reading direction, including Arabic names.
+      <div dir="auto" className="inline-flex max-w-full min-w-0 items-center gap-1.5 align-middle">
+        <button
+          type="button"
+          onClick={() => options.onOpen(row.original)}
+          className="min-w-0 rounded-sm text-start font-medium text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <CellText text={row.original.fullName}>{row.original.fullName}</CellText>
+        </button>
+        <AccountDot state={row.original.onlineAccount} />
+      </div>
     )),
     data("studentPhone", ({ row }) => (
       <CellText text={formatPhone(row.original.studentPhone)} dir="ltr" className="tabular-nums">{formatPhone(row.original.studentPhone)}</CellText>

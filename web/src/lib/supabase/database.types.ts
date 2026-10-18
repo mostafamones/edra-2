@@ -272,6 +272,139 @@ export type Database = {
           },
         ]
       }
+      account_contact_changes: {
+        Row: {
+          attempts: number
+          code_hash: string | null
+          commit_attempts: number
+          expires_at: string | null
+          new_phone: string
+          new_sends: number
+          new_sent_at: string | null
+          new_window_started_at: string | null
+          old_phone: string
+          old_sends: number
+          old_sent_at: string | null
+          old_window_started_at: string | null
+          operation_id: string
+          purpose: string
+          session_id: string
+          stage: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash?: string | null
+          commit_attempts?: number
+          expires_at?: string | null
+          new_phone: string
+          new_sends?: number
+          new_sent_at?: string | null
+          new_window_started_at?: string | null
+          old_phone: string
+          old_sends?: number
+          old_sent_at?: string | null
+          old_window_started_at?: string | null
+          operation_id: string
+          purpose: string
+          session_id: string
+          stage: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string | null
+          commit_attempts?: number
+          expires_at?: string | null
+          new_phone?: string
+          new_sends?: number
+          new_sent_at?: string | null
+          new_window_started_at?: string | null
+          old_phone?: string
+          old_sends?: number
+          old_sent_at?: string | null
+          old_window_started_at?: string | null
+          operation_id?: string
+          purpose?: string
+          session_id?: string
+          stage?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_contact_changes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_password_challenges: {
+        Row: {
+          attempts: number
+          challenge_id: string
+          claimed_until: string | null
+          code_hash: string
+          completion_attempts: number
+          consumed_at: string | null
+          expires_at: string
+          grant_expires_at: string | null
+          phone: string
+          sends_in_window: number
+          sent_at: string
+          session_id: string
+          user_id: string
+          verified_at: string | null
+          window_started_at: string
+        }
+        Insert: {
+          attempts?: number
+          challenge_id: string
+          claimed_until?: string | null
+          code_hash: string
+          completion_attempts?: number
+          consumed_at?: string | null
+          expires_at: string
+          grant_expires_at?: string | null
+          phone: string
+          sends_in_window?: number
+          sent_at: string
+          session_id: string
+          user_id: string
+          verified_at?: string | null
+          window_started_at: string
+        }
+        Update: {
+          attempts?: number
+          challenge_id?: string
+          claimed_until?: string | null
+          code_hash?: string
+          completion_attempts?: number
+          consumed_at?: string | null
+          expires_at?: string
+          grant_expires_at?: string | null
+          phone?: string
+          sends_in_window?: number
+          sent_at?: string
+          session_id?: string
+          user_id?: string
+          verified_at?: string | null
+          window_started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_password_challenges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       annual_student_records: {
         Row: {
           academic_year_id: string
@@ -2718,21 +2851,27 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_path: string | null
           created_at: string
+          display_name: string | null
           full_name: string | null
           id: string
           phone: string | null
           updated_at: string
         }
         Insert: {
+          avatar_path?: string | null
           created_at?: string
+          display_name?: string | null
           full_name?: string | null
           id: string
           phone?: string | null
           updated_at?: string
         }
         Update: {
+          avatar_path?: string | null
           created_at?: string
+          display_name?: string | null
           full_name?: string | null
           id?: string
           phone?: string | null
@@ -5198,6 +5337,14 @@ export type Database = {
         Args: { p_topic: string }
         Returns: boolean
       }
+      cancel_account_password_challenge: {
+        Args: { p_challenge_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      cancel_contact_change: {
+        Args: { p_operation_id: string; p_user_id: string }
+        Returns: string
+      }
       cancel_student_import: {
         Args: { p_session_id: string }
         Returns: undefined
@@ -5258,6 +5405,18 @@ export type Database = {
           p_student_phone: string
         }
         Returns: Record<string, unknown>
+      }
+      claim_account_password_change: {
+        Args: {
+          p_challenge_id: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      claim_login_phone_change: {
+        Args: { p_operation_id: string; p_session_id: string; p_user_id: string }
+        Returns: Json
       }
       complete_student_invite: {
         Args: { p_group_id: string; p_token: string; p_track_id: string }
@@ -5461,6 +5620,10 @@ export type Database = {
       finalize_student_import: {
         Args: { p_session_id: string }
         Returns: number
+      }
+      finish_account_password_change: {
+        Args: { p_challenge_id: string; p_changed: boolean; p_user_id: string }
+        Returns: undefined
       }
       finish_student_profile: {
         Args: { p_level_id: string; p_user_id: string }
@@ -5753,6 +5916,7 @@ export type Database = {
           slug: string
         }[]
       }
+      owns_avatar_object: { Args: { p_name: string }; Returns: boolean }
       peek_next_student_code: {
         Args: { p_academy_id: string; p_record_id: string }
         Returns: string
@@ -5895,6 +6059,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      resend_contact_change_code: {
+        Args: { p_code_hash: string; p_operation_id: string; p_session_id: string; p_stage: string; p_user_id: string }
+        Returns: Json
+      }
       resolve_assignment_student: {
         Args: { p_academy_id: string; p_assignment_id: string; p_code: string }
         Returns: Json
@@ -6020,6 +6188,10 @@ export type Database = {
         Args: { p_now: string; p_schedule_id: string }
         Returns: string
       }
+      set_my_avatar: {
+        Args: { p_expected: string; p_path: string }
+        Returns: Json
+      }
       set_student_import_row_excluded: {
         Args: {
           p_excluded: boolean
@@ -6050,6 +6222,10 @@ export type Database = {
           p_records: Json
         }
         Returns: Json
+      }
+      settle_login_phone_change: {
+        Args: { p_end: boolean; p_operation_id: string; p_user_id: string }
+        Returns: string
       }
       shares_academy_with: {
         Args: { target_user_id: string }
@@ -6098,8 +6274,29 @@ export type Database = {
         Args: { p_rows: Json; p_session_id: string }
         Returns: number
       }
+      start_account_password_challenge: {
+        Args: {
+          p_challenge_id: string
+          p_code_hash: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       start_exam_attempt: { Args: { p_exam_id: string }; Returns: Json }
       start_quiz_attempt: { Args: { p_quiz_id: string }; Returns: Json }
+      start_contact_change: {
+        Args: {
+          p_code_hash: string
+          p_expected_old: string
+          p_new_phone: string
+          p_operation_id: string
+          p_purpose: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       start_session: {
         Args: {
           p_academy_id: string
@@ -6318,6 +6515,19 @@ export type Database = {
         }[]
       }
       verified_account_phone: { Args: { p_user_id: string }; Returns: string }
+      verify_account_password_challenge: {
+        Args: {
+          p_challenge_id: string
+          p_code_hash: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      verify_contact_change_code: {
+        Args: { p_code_hash: string; p_operation_id: string; p_session_id: string; p_stage: string; p_user_id: string }
+        Returns: string
+      }
       verify_student_parent_challenge: {
         Args: { p_challenge_id: string; p_code_hash: string; p_user_id: string }
         Returns: string

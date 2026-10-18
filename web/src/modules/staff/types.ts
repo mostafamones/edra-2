@@ -12,7 +12,7 @@ export const teamMemberRowsSchema = z.array(z.object({
   created_at: z.string(),
   /** Set while the member's access to this academy is suspended; the role is retained. */
   suspended_at: z.string().nullable(),
-  profiles: z.object({ full_name: z.string().nullable(), phone: z.string().nullable() }),
+  profiles: z.object({ full_name: z.string().nullable(), display_name: z.string().nullable(), phone: z.string().nullable() }),
 }));
 
 export type TeamMember = z.infer<typeof teamMemberRowsSchema>[number];

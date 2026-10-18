@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { IconAlertCircle, IconCalendar, IconDots, IconPhone, IconShieldCheck, IconUserCheck, IconUserMinus, IconUserOff, IconUsers } from "@tabler/icons-react";
 
 import type { AcademyEntry } from "@/modules/academies";
+import { accountName } from "@/modules/account/contract";
 import { FilterPopover } from "@/components/shared/filter-popover";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -105,7 +106,7 @@ export function TeamMembers({ academy, userId, canManage }: {
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {members.map((member) => {
-            const name = member.profiles.full_name?.trim() || "Team member";
+            const name = accountName(member.profiles) || "Team member";
             const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
             const suspended = Boolean(member.suspended_at);
             const choices = roleChoices(academy.role, member.role, userId, member.user_id);

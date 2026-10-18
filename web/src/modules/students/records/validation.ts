@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { phoneSchema } from "../../../lib/phone";
+import type { OnlineAccount } from "./types";
 
 export const PARTICIPATION_TYPES = ["in_person", "online_only"] as const;
 export type ParticipationType = (typeof PARTICIPATION_TYPES)[number];
@@ -8,6 +9,12 @@ export const PARTICIPATION_LABELS: Record<ParticipationType, string> = {
   in_person: "In person",
   online_only: "Online only",
 };
+/** Mirrors list_student_records and edra_private.student_access_suspended: either cause suspends a linked account. */
+export function onlineAccountState(userId: string | null | undefined, archivedAt: string | null, accessSuspendedAt: string | null | undefined): OnlineAccount {
+  if (!userId) return "not_connected";
+  return archivedAt || accessSuspendedAt ? "suspended" : "connected";
+}
+
 export const isParticipationType = (value: unknown): value is ParticipationType =>
   PARTICIPATION_TYPES.includes(value as ParticipationType);
 

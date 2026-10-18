@@ -2,14 +2,13 @@ import { notFound, redirect } from "next/navigation";
 
 import { StaffPreview } from "@/modules/navigation/components/staff-preview";
 import { findStaffItem } from "@/modules/navigation/manifest";
-import { platformOrigin, staffAcademyPath } from "@/lib/routing";
+import { staffAcademyPath } from "@/lib/routing";
 
 export default async function StaffPreviewPage({ params }: { params: Promise<{ academySlug: string; slug: string[] }> }) {
   const { academySlug, slug } = await params;
   // The sessions pages moved to /app/attendance; keep older links working.
   if (slug[0] === "sessions") redirect(staffAcademyPath(academySlug, `/attendance${slug.slice(1).map((part) => `/${part}`).join("")}`));
   const href = `/app/${slug.join("/")}`;
-  if (href === "/app/manage/account") redirect(`${platformOrigin("staff")}/account`);
   const previousRoutes: Record<string, string> = {
     "/app/bookings": "/app/manage/bookings",
     "/app/bookings/review": "/app/manage/bookings/review",

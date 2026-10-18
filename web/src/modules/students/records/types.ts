@@ -18,14 +18,16 @@ export type StudentRecordRow = {
   createdAt: string;
   updatedAt: string;
   version: number;
+  /** Online account connection; `suspended` when connected but archived or independently suspended. */
+  onlineAccount: OnlineAccount;
 };
+
+export type OnlineAccount = "not_connected" | "connected" | "suspended";
 
 /** One record as loaded fresh for the edit sheet. */
 export type StudentRecord = Omit<StudentRecordRow, "levelName" | "trackName" | "groupName"> & {
   academyId: string;
   academicYearId: string;
-  /** Online account connection; `suspended` when connected but archived or independently suspended. */
-  onlineAccount: "not_connected" | "connected" | "suspended";
 };
 
 export type StudentListResult = {

@@ -1,5 +1,6 @@
 import { createClient } from "../../lib/supabase/client";
 import { academyRoleRank } from "@/modules/academies/roles";
+import { accountName } from "@/modules/account/contract";
 
 import { getStaffInvitationLinks } from "./actions";
 import { invitationPageSchema, teamMemberRowsSchema, type TeamMember } from "./types";
@@ -27,7 +28,7 @@ export async function fetchTeamMembers(academyId: string, signal?: AbortSignal):
   // Read every page so the Data API's row limit cannot silently hide part of the team.
   for (let offset = 0; ; offset += batchSize) {
     let request = createClient().from("academy_memberships")
-      .select("user_id, role, created_at, suspended_at, profiles!academy_memberships_user_id_fkey(full_name, phone)")
+      .select("user_id, role, created_at, suspended_at, profiles!academy_memberships_user_id_fkey(full_name, display_name, phone)")
       .eq("academy_id", academyId)
       .order("user_id")
       .range(offset, offset + batchSize - 1);
@@ -44,7 +45,7 @@ export async function fetchTeamMembers(academyId: string, signal?: AbortSignal):
 /** Owner first, then Head Admins, Admins and Instructors, each by name. */
 export function sortTeamMembers(members: TeamMember[]) {
   return members.sort((a, b) => academyRoleRank(a.role) - academyRoleRank(b.role)
-    || (a.profiles.full_name ?? "").localeCompare(b.profiles.full_name ?? "")
+    || (accountName(a.profiles) ?? "").localeCompare(accountName(b.profiles) ?? "")
     || a.user_id.localeCompare(b.user_id));
 }
 
