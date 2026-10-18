@@ -3,12 +3,12 @@ import { createClient } from "@/lib/supabase/client";
 export type PasswordChallenge = { id: string; phoneLast4: string; expiresAt: string; retryAt: string };
 
 export type PasswordFailure = { ok: false; error: string; retryAt?: string | null; message?: string | null };
-type Result<T> = { ok: true; value: T } | PasswordFailure;
+export type FunctionResult<T> = { ok: true; value: T } | PasswordFailure;
 
-/** Calls the account-password Edge Function with the current session's access token. */
-async function invoke<T>(body: Record<string, string>): Promise<Result<T>> {
+/** Calls an account Edge Function with the current session's access token. */
+export async function invokeAccountFunction<T>(name: string, body: Record<string, string>): Promise<FunctionResult<T>> {
   try {
-    const { data, error } = await createClient().functions.invoke("account-password", { body });
+    const { data, error } = await createClient().functions.invoke(name, { body });
     if (error) {
       const context = (error as { context?: unknown }).context;
       if (context instanceof Response) {
@@ -24,6 +24,8 @@ async function invoke<T>(body: Record<string, string>): Promise<Result<T>> {
     return { ok: false, error: "unavailable" };
   }
 }
+
+const invoke = <T>(body: Record<string, string>) => invokeAccountFunction<T>("account-password", body);
 
 export function requestPasswordCode() {
   return invoke<{ challenge: PasswordChallenge }>({ action: "request" });

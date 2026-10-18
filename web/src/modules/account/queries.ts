@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/modules/auth";
 
+import { fetchContacts } from "./contact";
 import { accountName } from "./validation";
 
 export type AccountProfile = { fullName: string | null; displayName: string | null; avatarPath: string | null };
@@ -13,6 +14,7 @@ export const accountQueryKeys = {
   all: ["account"] as const,
   profile: (userId: string) => ["account", "profile", userId] as const,
   avatar: (path: string) => ["account", "avatar", path] as const,
+  contacts: (userId: string, sessionId: string) => ["account", "contacts", userId, sessionId] as const,
 };
 
 const SIGNED_URL_SECONDS = 60 * 60;
@@ -58,4 +60,34 @@ export function useAccountProfile() {
     error: profile.error,
     refetch: profile.refetch,
   };
+}
+
+/**
+ * The caller's verified login and parent phones and this session's unfinished contact changes,
+ * read through the account-contact function. Keyed by session so another session's operation is
+ * never resumed here.
+ */
+export function useAccountContacts() {
+  const { user, session } = useAuth();
+  const userId = user?.id ?? null;
+  const sessionKey = session?.access_token ? sessionIdOf(session.access_token) : "none";
+  return useQuery({
+    queryKey: accountQueryKeys.contacts(userId ?? "none", sessionKey),
+    queryFn: async () => {
+      const result = await fetchContacts();
+      if (!result.ok) throw new Error(result.error);
+      return result.value;
+    },
+    enabled: Boolean(userId),
+    staleTime: 0,
+  });
+}
+
+function sessionIdOf(token: string) {
+  try {
+    const claims = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof claims.session_id === "string" ? claims.session_id : "none";
+  } catch {
+    return "none";
+  }
 }

@@ -1,6 +1,6 @@
 # Personal account settings
 
-Implements EDRA-126. Product rules: [account settings](../../../docs/product/domains/account-settings.md) (Ownership and entry, Names, Profile picture, Password changes). Login-phone and parent-contact changes and the student-table indicator are EDRA-127.
+Implements EDRA-126 and EDRA-127. Product rules: [account settings](../../../docs/product/domains/account-settings.md) (Ownership and entry, Names, Profile picture, Password changes, Login-phone changes, Parent-contact changes). The student-table indicator lives in the [student records module](../students/records/README.md).
 
 ## Entry and authority
 
@@ -34,6 +34,17 @@ The challenge (`account_password_challenges`, service-role functions) binds the 
 
 Hosted Auth currently has secure password change (reauthentication) and current-password requirement off, so no native nonce is needed. If either is enabled, Auth rejects the update and the flow reports the error; adapt `updatePassword` in the function before enabling them.
 
+## Contact changes
+
+`ContactChange` (`components/contact.tsx`) drives the [`account-contact`](../../../supabase/functions/account-contact/README.md) Edge Function for the Account phone and, for an account with a completed student profile (including staff who are also students), the Parent phone: new number → code to the current number → code to the new number → commit. No password is asked for. `useAccountContacts` reads the verified contacts and this session's unfinished operations from the function's `status` action, keyed by account and Auth session, so a reload resumes the current stage and another session's operation is never shown; `profiles.phone` is not edited by the client. The current number stays displayed until the commit succeeds. After a login change the client refreshes its session so the header and menus show the new phone; the account ID, memberships, academy records and history are untouched.
+
+Storage and rules are in `account_contact_changes` (migration `20261018210000`): one operation per account and purpose, bound to the originating live session, the expected old contact and the normalized replacement. Codes are per stage and hashed with purpose, stage, account, operation and recipient. Every step rechecks the session and that the old contact is still current (otherwise the operation becomes `stale` and ends). A new start supersedes the previous operation; send limits are kept per stage across operations. A replacement equal to the current number, the account's other phone, or (for login) another account's login phone is refused at start and again at commit; parent numbers may be shared.
+
+- Parent: verifying the new code updates `student_profiles.parent_phone` and its verification time in the same transaction, conditional on the old value, without touching `level_id`.
+- Login: after both proofs the function claims the commit and calls Auth's admin user update for this user (`phone`, `phone_confirm`). The `guard_auth_phone_change` trigger on `auth.users` accepts a change of a confirmed phone only for that account's committing operation with matching old and new numbers, and completes the operation inside Auth's transaction, so the change and proof consumption commit together. `settle_login_phone_change` then reads the outcome under the operation's row lock: completed, or the claim is released (any delayed Auth write is then rejected) and the user may retry, up to three attempts in ten minutes. A lost response is reconciled by the next `status`.
+
+The trigger also refuses Auth's own phone change API (`updateUser({ phone })` with `phone_change` verification) and dashboard or administrator edits of a confirmed phone, so the old-number proof cannot be skipped through Auth. Phones that were never confirmed are not guarded. If the old number is unreachable, the change cannot be completed in settings; the future support process will need its own deliberate path through this guard.
+
 ## Not implemented
 
-EDRA-127 contact changes and indicators, native settings, avatar originals or re-cropping without re-selecting the source, and Auth-wide enforcement of the code: a signed-in session can still call Auth's own password update directly, as before this feature.
+Native settings, a support path for unreachable old numbers, avatar originals or re-cropping without re-selecting the source, and Auth-wide enforcement of the code: a signed-in session can still call Auth's own password update directly, as before this feature.
