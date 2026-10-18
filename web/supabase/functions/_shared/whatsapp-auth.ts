@@ -215,7 +215,7 @@ export async function handleWhatsAppAuthHook(
     // This development-only route deliberately logs all signed OTP requests so
     // fake test accounts can be verified manually from the Edge Function Logs.
     console.log("EDRA_DEV_AUTH_CODE", {
-      phone: payload.phone,
+      phoneLast4: payload.phone.slice(-4),
       code: payload.otp,
     });
   } else if (isTemporaryDevLogTarget) {
