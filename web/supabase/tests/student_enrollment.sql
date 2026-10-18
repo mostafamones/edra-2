@@ -183,7 +183,9 @@ begin
   perform pg_temp.act('8b000007-0000-4000-8000-000000000007');
   perform pg_temp.check(pg_temp.result(public.preview_student_invite(token)) = 'setup_required', 'setup first');
   perform pg_temp.act('8b000001-0000-4000-8000-000000000001');
-  perform pg_temp.check(pg_temp.result(public.preview_student_invite('x' || substr(token, 2))) = 'invalid', 'unknown token');
+  -- Always change the token, including when the generated token already starts with x.
+  perform pg_temp.check(pg_temp.result(public.preview_student_invite(
+    (case when left(token, 1) = 'x' then 'y' else 'x' end) || substr(token, 2))) = 'invalid', 'unknown token');
 
   preview := public.preview_student_invite(token);
   perform pg_temp.check(pg_temp.result(preview) = 'existing' and preview #>> '{student,fullName}' = 'Staff Entered Name'
