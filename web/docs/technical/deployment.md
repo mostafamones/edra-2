@@ -16,17 +16,19 @@ Deploy application and schema changes compatibly. In particular, the standalone 
 
 ## 3. Configure authentication delivery
 
-Use the source-specific setup for [send-whatsapp-auth](../../supabase/functions/send-whatsapp-auth/README.md) and [student-onboarding](../../supabase/functions/student-onboarding/README.md). The first authenticates a signed hook; the second authenticates a student JWT. Their JWT deployment flags are not interchangeable.
+Use the source-specific setup for [send-whatsapp-auth](../../supabase/functions/send-whatsapp-auth/README.md), [student-onboarding](../../supabase/functions/student-onboarding/README.md) and [account-password](../../supabase/functions/account-password/README.md). The first authenticates a signed hook; the others authenticate a user JWT. Their JWT deployment flags are not interchangeable.
 
 Enable phone confirmation and configure the Send SMS Hook secret. Supply the approved production Authentication template/language, Meta sender ID/token and applicable provider configuration. Production uses the actual requested phone, not a redirected test recipient.
 
-Disable WHATSAPP_DEVELOPMENT_MODE and remove development recipient/OTP-log overrides. Check both functions for production logging behavior. Keep template payload instructions matched to source; a development utility template is not the production authentication template.
+Disable WHATSAPP_DEVELOPMENT_MODE and remove development recipient/OTP-log overrides. Check every function for production logging behavior. Keep template payload instructions matched to source; a development utility template is not the production authentication template.
 
 ### Current authentication/session behavior
 
 Web uses cookie authority; v1 uses verified bearer authority. Both reject recovery-only phone-code sessions. Database request checks also enforce revoked/recovery session restrictions; public project keys are not staff identity. See [authority](../../src/lib/supabase/authority.ts).
 
 Password recovery verifies the OTP server-side, keeps the resulting tokens in the HttpOnly recovery-route cookie for the ten-minute recovery window, sets the password, then attempts global sign-out. A password rejection can be retried within that window; a sign-out failure after password update is a distinct outcome. Do not repeat the older server-memory recovery description. See [recovery source](../../src/modules/auth/recovery.ts).
+
+Settings password change verifies a code to the current account phone, updates the password under the user's own session and keeps it; hosted Auth revokes the other sessions. Keep Auth's secure password change and current-password requirement off unless the function's adapter is updated first (see [account settings](../../src/modules/account/README.md)). The `avatars` Storage bucket and its policies come from migration `20261018150000_account_profile_settings.sql`; no dashboard bucket setup is needed.
 
 Account/parent verification is global student setup, not academy enrollment. The product invite/returning rules do not establish that the source's academy joining flow is deployed.
 

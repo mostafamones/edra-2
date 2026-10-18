@@ -23,6 +23,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toggle } from "@/components/ui/toggle";
 import type { AcademyEntry } from "@/modules/academies";
+import { useAccountProfile } from "@/modules/account";
 import { AcademyGate, useAuth } from "@/modules/auth";
 import { sessionsRootKey } from "@/modules/sessions";
 import { AttendanceRequestError, attendanceQueryKey, fetchAttendance } from "../queries";
@@ -69,9 +70,9 @@ function SheetContent({ academy, sessionId }: { academy: AcademyEntry; sessionId
   const onSessionChange = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: sessionsRootKey(academy.id) });
   }, [queryClient, academy.id]);
-  const metadata = user?.user_metadata as { full_name?: string } | undefined;
+  const { name: accountDisplayName } = useAccountProfile();
   const channel = useAttendanceChannel({
-    academyId: academy.id, sessionId, userId: user?.id ?? null, name: metadata?.full_name || "Staff member", onInvalidate, onSessionChange,
+    academyId: academy.id, sessionId, userId: user?.id ?? null, name: accountDisplayName || "Staff member", onInvalidate, onSessionChange,
   });
 
   const query = useQuery({
