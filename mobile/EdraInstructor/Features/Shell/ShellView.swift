@@ -90,8 +90,8 @@ struct ShellView: View {
         }
     }
 
-    /// An invisible Menu over the tab bar's trailing circle: it opens a native menu, and having no
-    /// glass label of its own avoids the square flash while the menu morphs out.
+    /// A system glass Menu over the tab bar's trailing circle. The system button style (not a custom
+    /// glass label) is what keeps the menu's morph animation from flashing a square.
     private var academyMenu: some View {
         Menu {
             Section("Your academies") {
@@ -109,8 +109,11 @@ struct ShellView: View {
                 }
             }
         } label: {
-            Color.clear.frame(width: 64, height: 64).contentShape(.circle)
+            Image(model.selected?.iconAsset ?? "tabler-building-community")
+                .resizable().scaledToFit().frame(width: 26, height: 26)
+                .frame(width: 62, height: 62)
         }
+        .nativeGlass()
         .accessibilityLabel(model.selected.map { "Switch academy, current: \($0.name)" } ?? "Switch academy")
         .padding(.trailing, 20)
         .padding(.bottom, 22)
@@ -131,7 +134,7 @@ struct ShellView: View {
 
     private var startButton: some View {
         Button { start.presentPicker() } label: {
-            Image("tabler-plus").frame(width: 28, height: 28)
+            Image("tabler-plus").frame(width: 24, height: 24).frame(width: 44, height: 44)
         }
         .nativeGlass()
         .accessibilityLabel("Start session")
@@ -176,17 +179,18 @@ private struct PageHeader<Trailing: View>: View {
     let trailing: Trailing
 
     var body: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 6) {
+            // The button shares the title's row, centered on it; the academy sits beneath.
+            HStack {
                 Text(title).font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-                Text(academy.name).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
+                Spacer()
+                trailing
             }
-            Spacer()
-            trailing
+            Text(academy.name).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
         }
         .padding(.horizontal, 20)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
+        .padding(.top, 32)
+        .padding(.bottom, 14)
     }
 }
 
