@@ -4,6 +4,7 @@ import { fetchAllPages } from "@/lib/supabase/paginate";
 import { createClient } from "@/lib/supabase/server";
 import type { StaffRole } from "./permissions";
 import type { StudentListParams } from "./list-params";
+import { onlineAccountState } from "./validation";
 import type {
   GroupChangePreview, GroupChangeRow, RecordVersion, StudentListResult, StudentRecord, StudentRecordRow,
 } from "./types";
@@ -56,6 +57,7 @@ const listRowSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   version: z.number().int(),
+  online_account: z.enum(["not_connected", "connected", "suspended"]),
 });
 const listResponseSchema = z.object({ rows: z.array(listRowSchema), total: z.number().int().nonnegative() });
 
@@ -76,6 +78,7 @@ const toRow = (row: z.infer<typeof listRowSchema>): StudentRecordRow => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   version: row.version,
+  onlineAccount: row.online_account,
 });
 
 /** One page of the academy's records for its open academic year. */
@@ -135,7 +138,7 @@ export async function getStudentRecord(academyId: string, recordId: string): Pro
   return {
     ok: true,
     data: {
-      onlineAccount: !profile?.user_id ? "not_connected" : data.archived_at || profile.access_suspended_at ? "suspended" : "connected",
+      onlineAccount: onlineAccountState(profile?.user_id, data.archived_at, profile?.access_suspended_at),
       id: data.id,
       academyId: data.academy_id,
       academicYearId: data.academic_year_id,
