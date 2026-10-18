@@ -5,13 +5,12 @@ struct RootView: View {
     let configuration: Result<AppConfiguration, AppConfiguration.LoadError>
 
     var body: some View {
-        NavigationStack {
-            switch configuration {
-            case .success(let config):
-                AuthenticatedRoot(config: config)
-            case .failure(let error):
-                NotConfiguredView(issues: error.issues)
-            }
+        // Signed-in destinations own their navigation stacks, so none wraps the whole app.
+        switch configuration {
+        case .success(let config):
+            AuthenticatedRoot(config: config)
+        case .failure(let error):
+            NavigationStack { NotConfiguredView(issues: error.issues) }
         }
     }
 }
@@ -79,7 +78,7 @@ private struct SignedInRoot: View {
     }
 
     var body: some View {
-        MainView(model: academies, sessions: sessions, schedules: schedules, start: start, makeSessionModel: { [academies, scope] session in
+        ShellView(model: academies, sessions: sessions, schedules: schedules, start: start, makeSessionModel: { [academies, scope] session in
             SessionDetailModel(
                 session: session,
                 api: api,

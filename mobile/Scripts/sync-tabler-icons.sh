@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 
 SRC=../web/node_modules/@tabler/icons
 DEST=EdraInstructor/Resources/Assets.xcassets/Icons
-ICONS=(building-community book school microscope code palette music trophy world selector check logout plus scan clock bolt bolt-off dots user-x users)
+ICONS=(calendar-clock file-pencil building-community book school microscope code palette music trophy world selector check logout plus scan clock bolt bolt-off dots user-x users)
 
 VERSION=$(python3 -c "import json;print(json.load(open('$SRC/package.json'))['version'])")
 rm -rf "$DEST"; mkdir -p "$DEST"
