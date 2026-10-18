@@ -4,14 +4,10 @@ import SwiftUI
 struct WorkspaceView: View {
     @State private var model: WorkspaceModel
     @Environment(\.scenePhase) private var scenePhase
-    enum Tab { case students, scan }
+    enum Pane: Hashable { case students, scan, search }
 
     @State private var searchText = ""
-    @State private var searching = false
-    @FocusState private var searchFocused: Bool
-    @State private var showCodeEntry = false
-    @State private var codeText = ""
-    @State private var tab = Tab.students
+    @State private var pane = Pane.students
     @State private var scan = AssignmentScanModel()
 
     init(summary: AssignmentSummary, context: AcademyContext, parent: AssignmentsModel) {
@@ -22,11 +18,10 @@ struct WorkspaceView: View {
         content
             .navigationTitle(model.detail?.title ?? model.summary.title)
             .navigationBarTitleDisplayMode(.inline)
-            // This screen has its own bottom navigation instead of the app's tab bar.
+            // This screen has its own tab bar (Students, Scan, search) instead of the app's.
             .toolbar(.hidden, for: .tabBar)
             .navigationBarBackButtonHidden(model.isSelecting)
             .toolbar { toolbar }
-            .safeAreaInset(edge: .bottom, spacing: 0) { bottomControls }
             // Loaded once; returning from another tab keeps the list, its paging and any selection.
             .task { if model.detail == nil { await model.load() } }
             // Search runs on the server across every student; debounce typing.
@@ -38,14 +33,10 @@ struct WorkspaceView: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active, model.marking == nil { Task { await model.reloadStudents() } }
             }
-            .onChange(of: model.nextStudentRequest) { codeText = ""; showCodeEntry = true }
-            .alert("Student code", isPresented: $showCodeEntry) {
-                TextField("Code", text: $codeText).textInputAutocapitalization(.characters).autocorrectionDisabled()
-                Button("Open") { Task { await model.lookUp(code: codeText, from: .code) } }
-                Button("Cancel", role: .cancel) {}
-            }
+            // Leaving search shows every student again.
+            .onChange(of: pane) { _, new in if new != .search { searchText = "" } }
             .alert("Code not accepted", isPresented: Binding(
-                get: { model.lookupError != nil && tab == .students }, set: { if !$0 { model.lookupError = nil } }
+                get: { model.lookupError != nil && pane != .scan }, set: { if !$0 { model.lookupError = nil } }
             )) {
                 Button("OK", role: .cancel) {}
             } message: { Text(model.lookupError ?? "") }
@@ -67,18 +58,47 @@ struct WorkspaceView: View {
         case .failed(let message):
             UnavailableView(title: "Couldn't load this assignment", message: message, action: "Retry") { await model.load() }
         case .loaded:
-            if tab == .scan {
-                AssignmentScanView(workspace: model, scan: scan)
-            } else {
-                VStack(spacing: 0) {
-                    filters
-                    if let status = accessStatus {
-                        Text(status).font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20).padding(.bottom, 6)
-                    }
-                    students
+            tabs
+        }
+    }
+
+    /// Native tab bar: Students, Scan (when codes can be used) and the system search tab. While
+    /// selecting, the search tab becomes the confirm button that announces the selection.
+    @ViewBuilder private var tabs: some View {
+        let selection = Binding(get: { pane }, set: { new in
+            if new == .search && model.isSelecting { model.reviewSelection() } else { pane = new }
+        })
+        if #available(iOS 26, *) {
+            TabView(selection: selection) {
+                Tab("Students", image: "tabler-users", value: Pane.students) { studentsPage }
+                if scanAvailable && !model.isSelecting {
+                    Tab("Scan", image: "tabler-scan", value: Pane.scan) { AssignmentScanView(workspace: model, scan: scan) }
+                }
+                Tab(value: Pane.search, role: .search) { studentsPage } label: {
+                    if model.isSelecting { Label("Announce selected", image: "tabler-check") } else { Label("Search", image: "tabler-search") }
+                }
+                .badge(model.isSelecting ? model.selection.count : 0)
+            }
+            .searchable(text: $searchText, prompt: "Name or code")
+        } else {
+            TabView(selection: selection) {
+                studentsPage.tabItem { Label("Students", image: "tabler-users") }.tag(Pane.students)
+                if scanAvailable && !model.isSelecting {
+                    AssignmentScanView(workspace: model, scan: scan).tabItem { Label("Scan", image: "tabler-scan") }.tag(Pane.scan)
                 }
             }
+            .searchable(text: $searchText, prompt: "Name or code")
+        }
+    }
+
+    private var studentsPage: some View {
+        VStack(spacing: 0) {
+            filters
+            if let status = accessStatus {
+                Text(status).font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20).padding(.bottom, 6)
+            }
+            students
         }
     }
 
@@ -203,103 +223,19 @@ struct WorkspaceView: View {
             ToolbarItem(placement: .topBarLeading) {
                 Button { model.isSelecting = false } label: { Image("tabler-x") }.accessibilityLabel("Cancel selection")
             }
-        } else if tab == .students, model.actions.mark, model.detail?.studentCodesEnabled == true {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { codeText = ""; showCodeEntry = true } label: { Image("tabler-code") }.accessibilityLabel("Enter student code")
+            // Before iOS 26 there is no search tab to turn into the confirm button.
+            if Self.needsToolbarConfirm {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Announce \(model.selection.count)") { model.reviewSelection() }.disabled(model.selection.isEmpty)
+                }
             }
         }
     }
 
     private var scanAvailable: Bool { model.actions.mark && model.detail?.studentCodesEnabled == true }
 
-    /// Bottom navigation (Students / Scan) with the search or confirm button at the right.
-    @ViewBuilder private var bottomControls: some View {
-        if model.state == .loaded {
-            VStack(spacing: 8) {
-                if searching, tab == .students, !model.isSelecting { searchField }
-                HStack(alignment: .bottom) {
-                    if scanAvailable && !model.isSelecting { nav }
-                    Spacer()
-                    if tab == .students { roundButton }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
-        }
-    }
-
-    private var nav: some View {
-        HStack(spacing: 4) {
-            navItem("Students", "tabler-users", .students)
-            navItem("Scan", "tabler-scan", .scan)
-        }
-        .padding(4)
-        .background(.regularMaterial, in: .capsule)
-    }
-
-    private func navItem(_ title: String, _ icon: String, _ target: Tab) -> some View {
-        let selected = tab == target
-        return Button {
-            tab = target
-            if target == .scan { searching = false }
-        } label: {
-            VStack(spacing: 2) {
-                Image(icon).resizable().scaledToFit().frame(width: 24, height: 24)
-                Text(title).font(.caption2.weight(.semibold))
-            }
-            .frame(width: 96, height: 52)
-            .foregroundStyle(selected ? Color.accentColor : Color.primary)
-            .background(selected ? Color.accentColor.opacity(0.18) : .clear, in: .capsule)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    /// Search while browsing; announce the selection while selecting.
-    @ViewBuilder private var roundButton: some View {
-        if model.isSelecting {
-            Button { model.reviewSelection() } label: {
-                Image("tabler-check").resizable().scaledToFit().frame(width: 26, height: 26)
-                    .frame(width: 56, height: 56)
-                    .foregroundStyle(.white)
-                    .background(Color.accentColor, in: .circle)
-                    .overlay(alignment: .topTrailing) {
-                        if !model.selection.isEmpty {
-                            Text("\(model.selection.count)").font(.caption2.weight(.bold).monospacedDigit())
-                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(.red, in: .capsule).foregroundStyle(.white)
-                                .offset(x: 4, y: -4)
-                        }
-                    }
-            }
-            .buttonStyle(.plain)
-            .disabled(model.selection.isEmpty)
-            .opacity(model.selection.isEmpty ? 0.5 : 1)
-            .accessibilityLabel(model.selection.isEmpty ? "Announce selected results" : "Announce \(model.selection.count) selected results")
-        } else {
-            Button {
-                searching.toggle()
-                if searching { searchFocused = true } else { searchFocused = false; searchText = "" }
-            } label: {
-                Image(searching ? "tabler-x" : "tabler-search").resizable().scaledToFit().frame(width: 24, height: 24)
-                    .frame(width: 56, height: 56)
-                    .background(.regularMaterial, in: .circle)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(searching ? "Close search" : "Search students")
-        }
-    }
-
-    private var searchField: some View {
-        HStack(spacing: 8) {
-            Image("tabler-search").resizable().scaledToFit().frame(width: 20, height: 20).foregroundStyle(.secondary)
-            TextField("Name or code", text: $searchText)
-                .focused($searchFocused)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-        }
-        .padding(.horizontal, 14).frame(height: 48)
-        .background(.regularMaterial, in: .capsule)
+    private static var needsToolbarConfirm: Bool {
+        if #available(iOS 26, *) { false } else { true }
     }
 }
 

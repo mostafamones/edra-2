@@ -41,8 +41,9 @@ struct AssignmentScanView: View {
             }
             .frame(maxWidth: .infinity)
         }
+        // Air between the preview and the tab bar.
         .padding(.horizontal, 16)
-        .padding(.top, 8)
+        .padding(.vertical, 12)
         .task { access = await CameraPermission.request() }
     }
 
@@ -68,7 +69,7 @@ struct AssignmentScanView: View {
                         }
                         .onEnded { _ in pinchBase = nil }
                 )
-                .overlay(alignment: .bottom) { controls }
+                .overlay(alignment: .bottom) { CameraControls(camera: camera) }
             case .denied:
                 VStack(spacing: 12) {
                     Text("Camera access is off").foregroundStyle(.secondary)
@@ -84,33 +85,5 @@ struct AssignmentScanView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 20))
-    }
-
-    private var controls: some View {
-        HStack(spacing: 10) {
-            if camera.hasTorch {
-                Button { camera.toggleTorch() } label: {
-                    Image(camera.torchOn ? "tabler-bolt" : "tabler-bolt-off").frame(width: 44, height: 44)
-                }
-                .tint(camera.torchOn ? .yellow : nil)
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.circle)
-                .accessibilityLabel(camera.torchOn ? "Turn torch off" : "Turn torch on")
-            }
-            Spacer(minLength: 0)
-            if camera.maxZoom > 1 {
-                HStack(spacing: 4) {
-                    ForEach([1, 2, 4].map { CGFloat($0) }.filter { $0 <= camera.maxZoom }, id: \.self) { factor in
-                        Button { camera.setZoom(factor) } label: {
-                            Text("\(Int(factor))×").font(.subheadline.weight(.semibold)).frame(width: 40, height: 36)
-                                .foregroundStyle(abs(camera.zoom - factor) < 0.25 ? Color.yellow : .white)
-                        }
-                    }
-                }
-                .padding(4)
-                .background(.ultraThinMaterial, in: .capsule)
-            }
-        }
-        .padding(12)
     }
 }
