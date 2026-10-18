@@ -177,10 +177,13 @@ private struct GlassCircle: ViewModifier {
     }
 }
 
-private struct GlassCapsule: ViewModifier {
+/// Liquid Glass capsule (material before iOS 26). `interactive` for tappable controls.
+struct GlassCapsule: ViewModifier {
+    var interactive = false
+
     func body(content: Content) -> some View {
         if #available(iOS 26, *) {
-            content.glassEffect(.regular, in: .capsule)
+            content.glassEffect(interactive ? .regular.interactive() : .regular, in: .capsule)
         } else {
             content.background(.ultraThinMaterial, in: .capsule)
         }

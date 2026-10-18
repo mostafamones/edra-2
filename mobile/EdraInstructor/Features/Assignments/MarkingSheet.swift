@@ -29,7 +29,18 @@ struct MarkingSheet: View {
                     }
                     if model.mode == .byQuestion, model.part?.takesAnswers == true { questions } else if model.part?.takesTotal == true { fastMark }
                     if showFeedback {
-                        card("Feedback") {
+                        card {
+                            HStack {
+                                Text("Feedback").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                                Spacer()
+                                if model.canEdit {
+                                    // Removing clears the text; a saved feedback is removed on the next Save.
+                                    Button { model.feedback = ""; showFeedback = false } label: { icon("tabler-x", size: 16) }
+                                        .buttonStyle(.plain)
+                                        .foregroundStyle(.secondary)
+                                        .accessibilityLabel("Remove feedback")
+                                }
+                            }
                             TextField("Feedback", text: Binding(get: { model.feedback }, set: { model.feedback = $0 }), axis: .vertical)
                                 .lineLimit(2...6)
                                 .disabled(!model.canEdit)
@@ -332,7 +343,13 @@ struct MarkingSheet: View {
             quick("tabler-check", "Full marks", disabled: model.quickValue(.full) == nil) { model.applyQuick(.full) }
         }
         .frame(maxWidth: .infinity)
+        .padding(.top, 24)
         .padding(.bottom, 6)
+        // Soft fade so the chips read over scrolling content.
+        .background(
+            LinearGradient(colors: [.clear, Color(.systemBackground).opacity(0.85)], startPoint: .top, endPoint: .bottom)
+                .allowsHitTesting(false)
+        )
     }
 
     private func quick(_ asset: String?, _ label: String, text: String? = nil, disabled: Bool, action: @escaping () -> Void) -> some View {
@@ -342,8 +359,8 @@ struct MarkingSheet: View {
                 if let asset { icon(asset, size: 18) } else { Text(text ?? "").font(.body.weight(.semibold)) }
             }
             .frame(width: 52, height: 36)
-            .background(.regularMaterial, in: .capsule)
             .opacity(off ? 0.4 : 1)
+            .modifier(GlassCapsule(interactive: true))
         }
         .buttonStyle(.plain)
         .disabled(off)
