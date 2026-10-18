@@ -68,17 +68,14 @@ struct ShellView: View {
         }
     }
 
-    /// The system tab bar (floating Liquid Glass on iOS 26). Academy is a trailing action tab, like
-    /// Photos' search: it never stays selected, it opens the academy list.
+    /// The system tab bar (floating Liquid Glass on iOS 26) with the academy menu as a separate glass
+    /// circle beside it. Before iOS 26 the academy is a tab item that opens a dialog.
     @ViewBuilder private var tabs: some View {
-        // Before iOS 26 the academy tab opens a dialog; from 26 a Menu overlays its circle instead.
         let selection = Binding(get: { tab }, set: { if $0 == .academy { showAcademies = true } else { tab = $0 } })
         if #available(iOS 26, *) {
-            // Taps that slip past the menu overlay (while it dismisses) must not select the action tab.
-            TabView(selection: Binding(get: { tab }, set: { if $0 != .academy { tab = $0 } })) {
+            TabView(selection: $tab) {
                 Tab("Sessions", image: "tabler-calendar-clock", value: Destination.sessions) { sessionsStack }
                 Tab("Assessments", image: "tabler-file-pencil", value: Destination.assessments) { assessmentsStack }
-                Tab(value: Destination.academy, role: .search) { Color.clear } label: { academyLabel }
             }
             .overlay(alignment: .bottomTrailing) { academyMenu }
         } else {
@@ -90,8 +87,8 @@ struct ShellView: View {
         }
     }
 
-    /// A system glass Menu over the tab bar's trailing circle. The system button style (not a custom
-    /// glass label) is what keeps the menu's morph animation from flashing a square.
+    /// The academy menu circle. The system glass button style (not a custom glass label) keeps the
+    /// menu's morph animation from flashing a square.
     private var academyMenu: some View {
         Menu {
             Section("Your academies") {
@@ -111,15 +108,15 @@ struct ShellView: View {
         } label: {
             Image(model.selected?.iconAsset ?? "tabler-building-community")
                 .resizable().scaledToFit().frame(width: 26, height: 26)
-                // The glass style adds ~6.5 pt per side: 48 + 13 matches the tab bar's 61 pt circle.
-                .frame(width: 48, height: 48)
+                // The glass style adds ~6.5 pt per side: 47 + 13 matches the 60 pt tab bar pill.
+                .frame(width: 47, height: 47)
         }
         .nativeGlass()
         .accessibilityLabel(model.selected.map { "Switch academy, current: \($0.name)" } ?? "Switch academy")
-        // Measured on device: the tab circle ends 21 pt from the right edge and 13 pt below the
-        // bottom safe-area line, so the menu must cover it exactly or both circles show.
-        .padding(.trailing, 16)
-        .offset(y: 13)
+        // Measured on device: the pill sits 21 pt from the screen edge and 12 pt below the bottom
+        // safe-area line; the circle mirrors it on the trailing side.
+        .padding(.trailing, 21)
+        .offset(y: 12)
     }
 
     private var academyLabel: some View {
@@ -135,10 +132,11 @@ struct ShellView: View {
     }
 
     private func startButton(diameter: CGFloat) -> some View {
+        // `diameter` is the visible circle; the glass style adds ~13 pt around the label.
         Button { start.presentPicker() } label: {
             Image("tabler-plus").resizable().scaledToFit()
-                .frame(width: diameter * 0.5, height: diameter * 0.5)
-                .frame(width: diameter, height: diameter)
+                .frame(width: diameter * 0.45, height: diameter * 0.45)
+                .frame(width: diameter - 13, height: diameter - 13)
         }
         .nativeGlass()
         .accessibilityLabel("Start session")
@@ -184,19 +182,19 @@ private struct PageHeader<Trailing: View>: View {
     @State var width: CGFloat = 393
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 2) {
             // The button shares the title's row, centered on it; the academy sits beneath.
             HStack {
-                Text(title).font(.system(size: width * 108 / 1180, weight: .bold)).accessibilityAddTraits(.isHeader)
+                Text(title).font(.system(size: width * 29 / 393, weight: .bold)).accessibilityAddTraits(.isHeader)
                 Spacer()
-                trailing(width * 132 / 1180)
+                trailing(width * 43 / 393)
             }
             Text(academy.name).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
         }
         .padding(.horizontal, 20)
-        .padding(.top, 32)
+        .padding(.top, 8)
         .padding(.bottom, 14)
-        // Owner's Photos-matched ratios at 1180 px wide: title 108 px, button 132 px.
+        // Sizes measured from Photos on a 393 pt wide iPhone, scaled to this width.
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     }
 }
