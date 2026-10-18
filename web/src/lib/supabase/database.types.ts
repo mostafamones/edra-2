@@ -188,21 +188,30 @@ export type Database = {
       academy_student_profiles: {
         Row: {
           academy_id: string
+          access_suspended_at: string | null
           created_at: string
           created_by: string
           id: string
+          linked_at: string | null
+          user_id: string | null
         }
         Insert: {
           academy_id: string
+          access_suspended_at?: string | null
           created_at?: string
           created_by: string
           id?: string
+          linked_at?: string | null
+          user_id?: string | null
         }
         Update: {
           academy_id?: string
+          access_suspended_at?: string | null
           created_at?: string
           created_by?: string
           id?: string
+          linked_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -215,6 +224,13 @@ export type Database = {
           {
             foreignKeyName: "academy_student_profiles_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_student_profiles_user_fk"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -4682,6 +4698,48 @@ export type Database = {
           },
         ]
       }
+      student_enrollment_settings: {
+        Row: {
+          academy_id: string
+          enrollment_open: boolean
+          invite_token: string | null
+          new_student_participation_type: Database["public"]["Enums"]["student_participation_type"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          academy_id: string
+          enrollment_open?: boolean
+          invite_token?: string | null
+          new_student_participation_type?: Database["public"]["Enums"]["student_participation_type"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          academy_id?: string
+          enrollment_open?: boolean
+          invite_token?: string | null
+          new_student_participation_type?: Database["public"]["Enums"]["student_participation_type"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_enrollment_settings_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: true
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_enrollment_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_import_counters: {
         Row: {
           academy_id: string
@@ -5165,6 +5223,10 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      complete_student_invite: {
+        Args: { p_group_id: string; p_token: string; p_track_id: string }
+        Returns: Json
+      }
       configure_exam_availability: {
         Args: {
           p_academy_id: string
@@ -5404,6 +5466,7 @@ export type Database = {
       }
       get_my_exam: { Args: { p_exam_id: string }; Returns: Json }
       get_my_quiz: { Args: { p_quiz_id: string }; Returns: Json }
+      get_my_student_academy: { Args: { p_slug: string }; Returns: Json }
       get_quiz: {
         Args: { p_academy_id: string; p_quiz_id: string }
         Returns: Json
@@ -5426,6 +5489,10 @@ export type Database = {
       }
       get_student_codes: {
         Args: { p_academy_id: string; p_record_ids: string[] }
+        Returns: Json
+      }
+      get_student_enrollment_settings: {
+        Args: { p_academy_id: string }
         Returns: Json
       }
       is_academy_manager: {
@@ -5477,6 +5544,7 @@ export type Database = {
         }
         Returns: Json
       }
+      list_my_student_academies: { Args: never; Returns: Json }
       list_past_sessions: {
         Args: {
           p_academy_id: string
@@ -5698,6 +5766,7 @@ export type Database = {
         }
         Returns: Json
       }
+      preview_student_invite: { Args: { p_token: string }; Returns: Json }
       process_student_import_batch: {
         Args: { p_batch_index: number; p_session_id: string }
         Returns: Json
@@ -5923,6 +5992,10 @@ export type Database = {
           p_session_id: string
         }
         Returns: number
+      }
+      set_student_invite: {
+        Args: { p_academy_id: string; p_active: boolean }
+        Returns: Json
       }
       set_student_records_archived: {
         Args: {
@@ -6185,6 +6258,10 @@ export type Database = {
           p_track_id: string
         }
         Returns: boolean
+      }
+      update_student_enrollment_settings: {
+        Args: { p_academy_id: string; p_enrollment_open: boolean }
+        Returns: Json
       }
       update_student_record: {
         Args: {

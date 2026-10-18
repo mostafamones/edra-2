@@ -49,6 +49,8 @@ export function VerifyForm({ mode }: { mode: PendingAuthKind }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
+  // Once verified the pending flow is cleared; the "no request" message must not flash while navigating away.
+  const [done, setDone] = useState(false);
   const [cooldown, setCooldown] = useState(60);
   const pendingPhone = useSyncExternalStore<string | null | undefined>(
     subscribeToPendingFlow,
@@ -93,6 +95,7 @@ export function VerifyForm({ mode }: { mode: PendingAuthKind }) {
     }
 
     const nextPath = safeNextPath(readPendingAuthFlow("signup")?.nextPath);
+    setDone(true);
     clearPendingAuthFlow();
     authDraft.updateDraft({ phone: parsed.phone, password: "" });
     if (!verification.signedIn) {
@@ -148,7 +151,7 @@ export function VerifyForm({ mode }: { mode: PendingAuthKind }) {
           Enter the 6-digit code sent to your number ending in <span className="font-medium text-foreground">***{pendingPhone.slice(-4)}</span> via Whatsapp.
         </p>
       )}
-      <AuthFormMessage message={formError ?? (flowLoaded && !pendingPhone ? "No verification request found. Go back and request a new code." : null)} />
+      <AuthFormMessage message={formError ?? (flowLoaded && !pendingPhone && !done ? "No verification request found. Go back and request a new code." : null)} />
       {notice && <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm">{notice}</p>}
       <Field className="gap-3">
         <div className="flex w-full items-center gap-2 sm:gap-3">

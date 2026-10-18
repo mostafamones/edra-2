@@ -55,6 +55,7 @@ export function staffEntryHref() { return platformOrigin("staff") + "/"; }
 export function authHref(path = "login", platform: "staff" | "student" = "staff", next?: string) { return `${platformOrigin(platform)}/auth/${path}${next ? `?next=${encodeURIComponent(next)}` : ""}`; }
 export function onboardingHref(path = "", platform: "staff" | "student" = "staff") { return `${platformOrigin(platform)}/onboarding${suffix(path)}`; }
 export function staffInviteHref(token: string) { return `${platformOrigin("staff")}/invite/staff/${encodeURIComponent(token)}`; }
+export function studentInviteHref(token: string) { return `${platformOrigin("student")}/invite/student/${encodeURIComponent(token)}`; }
 /** Manifest identifiers remain internal, while rendered hrefs are canonical. */
 export function publicHref(internal: string, slug?: string) {
   if (internal === "/app/manage/account") return platformOrigin("staff") + "/account";

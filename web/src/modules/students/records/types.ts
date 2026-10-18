@@ -24,6 +24,8 @@ export type StudentRecordRow = {
 export type StudentRecord = Omit<StudentRecordRow, "levelName" | "trackName" | "groupName"> & {
   academyId: string;
   academicYearId: string;
+  /** Online account connection; `suspended` when connected but archived or independently suspended. */
+  onlineAccount: "not_connected" | "connected" | "suspended";
 };
 
 export type StudentListResult = {

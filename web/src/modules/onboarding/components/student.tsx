@@ -28,6 +28,11 @@ import { OnboardingContentTransition } from "./content-transition";
 import { OnboardingFooter } from "./footer";
 import { OnboardingFrame } from "./frame";
 
+const STAGES = [
+  { prefix: "preparatory-", title: "Preparatory" },
+  { prefix: "secondary-", title: "Secondary" },
+] as const;
+
 export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: string | null }) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
@@ -37,6 +42,7 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
   const [verified, setVerified] = useState(Boolean(initialParentPhone));
   const [challenge, setChallenge] = useState<ParentChallenge | null>(null);
   const [code, setCode] = useState("");
+  const [stage, setStage] = useState<(typeof STAGES)[number] | null>(null);
   const [levelId, setLevelId] = useState<LevelId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -135,7 +141,8 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
       setError(getParentCodeErrorMessage(result.ok ? "unavailable" : result.error));
       return;
     }
-    window.location.assign(studentHref());
+    // The server continues to a pending academy invite or opens the student portal.
+    window.location.assign(studentHref("/onboarding/student"));
     router.refresh();
   }
 
@@ -146,6 +153,11 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
       return;
     }
     setDirection(-1);
+    if (stage) {
+      setStage(null);
+      setLevelId(null);
+      return;
+    }
     setStep(1);
   }
 
@@ -270,31 +282,46 @@ export function StudentOnboarding({ initialParentPhone }: { initialParentPhone: 
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2" role="group" aria-label={studentOnboardingCopy.screens.level.groupLabel}>
-                    {GLOBAL_LEVELS.map((level) => {
-                      const selected = levelId === level.id;
+                  <motion.div
+                    key={stage?.prefix ?? "stage"}
+                    initial={{ opacity: 0, x: reduceMotion ? 0 : 20 * direction }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.24, ease: "easeOut" }}
+                    className="grid gap-2"
+                    role="group" aria-label={stage ? stage.title : studentOnboardingCopy.screens.level.groupLabel}
+                  >
+                    {(stage ? GLOBAL_LEVELS.filter((level) => level.id.startsWith(stage.prefix)) : STAGES).map((option) => {
+                      const id = "id" in option ? option.id : option.prefix;
+                      const label = "id" in option ? option.label : option.title;
+                      const selected = "id" in option && levelId === option.id;
                       return (
-                        <motion.div key={level.id} whileTap={reduceMotion ? undefined : { scale: 0.985 }}>
+                        <motion.div key={id} whileTap={reduceMotion ? undefined : { scale: 0.985 }}>
                           <Button
                             type="button"
                             variant="outline"
-                            aria-pressed={selected}
-                            onClick={() => { setLevelId(level.id); setError(null); }}
+                            aria-pressed={"id" in option ? selected : undefined}
+                            onClick={() => {
+                              setError(null);
+                              if ("id" in option) setLevelId(option.id);
+                              else { setDirection(1); setStage(option); }
+                            }}
                             className={cn(
                               "h-16 w-full justify-between rounded-lg border-border/80 px-4 text-base font-medium",
                               selected && "border-primary bg-primary/8 text-primary ring-1 ring-primary/40",
                             )}
                           >
-                            {level.label}
-                            <span className={cn("grid size-5 place-items-center rounded border border-border", selected && "border-primary bg-primary text-primary-foreground")}>
-                              {selected && <Check className="size-3.5" aria-hidden="true" />}
-                            </span>
+                            {label}
+                            {"id" in option ? (
+                              <span className={cn("grid size-5 place-items-center rounded border border-border", selected && "border-primary bg-primary text-primary-foreground")}>
+                                {selected && <Check className="size-3.5" aria-hidden="true" />}
+                              </span>
+                            ) : <ArrowRight className="size-4 text-muted-foreground" aria-hidden="true" />}
                           </Button>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              )}
+                        </motion.div>
+                      );
+                    })}
+                  </motion.div>
+                )}
               </motion.div>
             </AnimatePresence>
           </OnboardingContentTransition>

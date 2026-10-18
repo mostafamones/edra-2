@@ -27,6 +27,12 @@ type Props = {
   onClose: () => void;
 };
 
+const ONLINE_ACCOUNT_LABELS = {
+  not_connected: "Not connected",
+  connected: "Connected",
+  suspended: "Connected, access suspended",
+} as const;
+
 /** Side sheet that edits one student. Saving blocks dismissal; unsaved edits ask first. Archived records open read-only. */
 export function StudentEditSheet({ academy, recordId, onClose }: Props) {
   const [status, setStatus] = useState<FormStatus>({ dirty: false, saving: false });
@@ -129,6 +135,11 @@ function SheetBody({ academy, recordId, onSaved, onCancel, onStatusChange, onBus
           {archived ? "Archived student: " : "Edit student: "}
           <span className="font-[Noto_Sans_Arabic] font-semibold">{record?.fullName ?? "Loading..."}</span>
         </SheetTitle>
+        {record && (
+          <p className="text-sm text-muted-foreground">
+            Online account: {ONLINE_ACCOUNT_LABELS[record.onlineAccount]}
+          </p>
+        )}
         {record && !archived && codesEnabled && (
           <Button type="button" variant="outline" size="sm" className="mt-2 w-fit" onClick={() => setCodeOpen(true)}>
             <IconId data-icon="inline-start" />Student code

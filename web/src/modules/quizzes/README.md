@@ -36,7 +36,7 @@ Exact decimal helpers live in `src/lib/score.ts` and academy-time helpers in `sr
 
 ## Integration dependencies (not implemented here)
 
-- **Student accounts:** `edra_private.quiz_caller_record` returns nobody until an authoritative account-to-annual-record link exists, so the public student wrappers fail with `student_link_unavailable`. Do not replace it with a caller-supplied record id or phone match.
+- **Student accounts:** `edra_private.quiz_caller_record` resolves the caller through `edra_private.student_caller_record` (EDRA-80): the account's connected, non-archived, not independently suspended annual record in the quiz's academy and open year. Unconnected or suspended callers fail with `student_link_unavailable`. Never replace it with a caller-supplied record id or phone match.
 - **Content release:** quizzes have no content attachment yet and `edra_private.quiz_content_access` denies, so online access fails with `content_unavailable`. Physical work, marking and announcement do not depend on it.
 - **EDRA-82:** the student answering UI, autosave/recovery and departure detection call the record-based trusted functions through those wrappers once both dependencies exist.
 - **Evidence and solution assets:** written answers are text; file evidence uploads and private solution assets (with ownership, type, size and existence validation) are not implemented. Solution release currently covers the key, model answers and solution notes.

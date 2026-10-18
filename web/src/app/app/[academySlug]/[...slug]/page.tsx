@@ -18,7 +18,7 @@ export default async function StaffPreviewPage({ params }: { params: Promise<{ a
     "/app/settings": "/app/manage",
     "/app/settings/academy": "/app/manage/academy",
     "/app/settings/structure": "/app/manage/structure",
-    "/app/settings/booking": "/app/manage/booking-form",
+    "/app/settings/booking": "/app/manage/student-enrollment",
     "/app/settings/team": "/app/manage/team",
     "/app/settings/notifications": "/app/manage/notifications",
     "/app/settings/integrations": "/app/manage/integrations",
