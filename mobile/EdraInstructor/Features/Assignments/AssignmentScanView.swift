@@ -19,46 +19,31 @@ final class AssignmentScanModel {
     }
 }
 
+/// The Scan tab of a workspace. The scan model is owned by the workspace so a handled code stays
+/// suppressed even when the camera is torn down and recreated.
 struct AssignmentScanView: View {
     let workspace: WorkspaceModel
+    let scan: AssignmentScanModel
 
-    @Environment(\.dismiss) private var dismiss
-    @State private var scan = AssignmentScanModel()
     @State private var access: CameraAccess?
     @State private var camera = CameraController()
     @State private var pinchBase: CGFloat?
 
     var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
-                Text(workspace.detail?.title ?? workspace.summary.title).font(.title3.bold()).padding(.horizontal, 16)
-                cameraBox.padding(.horizontal, 16)
-                Group {
-                    if workspace.isLookingUp {
-                        ProgressView()
-                    } else if let error = workspace.lookupError {
-                        Text(error).foregroundStyle(.red)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 16)
-                Spacer(minLength: 0)
-            }
-            .padding(.top, 8)
-            .navigationTitle("Scan")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { workspace.lookupError = nil; dismiss() }.disabled(workspace.marking != nil)
+        VStack(spacing: 12) {
+            cameraBox
+            Group {
+                if workspace.isLookingUp {
+                    ProgressView()
+                } else if let error = workspace.lookupError {
+                    Text(error).foregroundStyle(.red)
                 }
             }
+            .frame(maxWidth: .infinity)
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
         .task { access = await CameraPermission.request() }
-        .sheet(isPresented: Binding(
-            get: { workspace.marking != nil && workspace.origin == .camera }, set: { if !$0 { workspace.closeMarking() } }
-        )) {
-            if let marking = workspace.marking { MarkingSheet(model: marking) { workspace.closeMarking() } }
-        }
     }
 
     @ViewBuilder private var cameraBox: some View {
@@ -96,8 +81,7 @@ struct AssignmentScanView: View {
                 ProgressView()
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 340)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 20))
     }
