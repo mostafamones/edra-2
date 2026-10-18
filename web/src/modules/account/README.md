@@ -4,7 +4,7 @@ Implements EDRA-126 and EDRA-127. Product rules: [account settings](../../../doc
 
 ## Entry and authority
 
-Staff `/account` (`src/app/account/page.tsx`) and student `/profile` (`src/app/learn/profile/page.tsx`) render the same `AccountSettings`. Neither requires an academy; the student page keeps the learn layout's completed-setup gate. Every mutation acts as the caller with a live password session: Server Actions use `cookieAuthority` (phone-code sessions refused), the database adds RLS/column grants and `edra_auth.session_allowed`, and Storage policies call `owns_avatar_object`. A suspended membership does not affect any of it.
+Staff settings open inside the academy shell at `/{academy}/manage/account` (`src/app/app/[academySlug]/manage/account/page.tsx`); `/account` redirects there for the last-used or first academy and renders standalone only for an account with no staff academy. The staff page and student `/profile` (`src/app/learn/profile/page.tsx`) render the same `AccountSettings`. Neither requires an academy; the student page keeps the learn layout's completed-setup gate. Every mutation acts as the caller with a live password session: Server Actions use `cookieAuthority` (phone-code sessions refused), the database adds RLS/column grants and `edra_auth.session_allowed`, and Storage policies call `owns_avatar_object`. A suspended membership does not affect any of it.
 
 ## Names
 

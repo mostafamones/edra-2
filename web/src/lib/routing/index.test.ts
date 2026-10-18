@@ -28,7 +28,8 @@ describe("trusted platform routes", () => {
   it("keeps manifest identifiers separate from hrefs and matches public or rewritten pathnames", () => {
     local();
     expect(publicHref("/app/students/new", "magd")).toBe("http://app.lvh.me:3000/magd/students/new");
-    expect(publicHref("/app/manage/account", "magd")).toBe("http://app.lvh.me:3000/account");
+    expect(publicHref("/app/manage/account", "magd")).toBe("http://app.lvh.me:3000/magd/manage/account");
+    expect(publicHref("/app/manage/account")).toBe("http://app.lvh.me:3000/account");
     expect(publicHref("/learn/profile")).toBe("http://learn.lvh.me:3000/profile");
     expect(internalStaffPath("/magd/students", "magd")).toBe("/app/students");
     expect(internalStaffPath("/app/magd/students", "magd")).toBe("/app/students");
