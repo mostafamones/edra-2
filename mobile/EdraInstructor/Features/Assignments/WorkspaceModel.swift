@@ -220,13 +220,13 @@ final class WorkspaceModel {
     func closeMarking() {
         marking = nil
         parent.activeMarking = nil
+        // A code run is ready for the next student once the sheet is gone.
+        if origin == .code { nextStudentRequest += 1 }
     }
 
-    /// Acknowledged save: update the row, then prepare the next student for a run.
+    /// Acknowledged save: update the row. The sheet stays open; closing it ends the student.
     private func saved(_ student: StudentWork) {
         if let index = students.firstIndex(where: { $0.id == student.id }) { students[index] = student }
-        closeMarking()
-        if origin == .code { nextStudentRequest += 1 }
     }
 
     /// Typed or scanned code: the server resolves it among this assignment's students. Writes nothing.

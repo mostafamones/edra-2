@@ -61,6 +61,8 @@ struct AssignmentDetail: Decodable, Equatable, Sendable {
     struct Choice: Decodable, Equatable, Identifiable, Sendable {
         let id: String
         let position: Int
+        /// The staff answer key; nil when the server doesn't send it.
+        let isCorrect: Bool?
         /// A, B, C… from the position.
         var letter: String { String(UnicodeScalar(UInt8(64 + min(max(position, 1), 26)))) }
     }

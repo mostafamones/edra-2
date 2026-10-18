@@ -159,10 +159,29 @@ final class MarkingModel {
         startEditing(partID, as: .byQuestion)
     }
 
-    /// Written Work toolbar actions: they change the current question and never move.
-    func setCurrentScore(zero: Bool) {
-        guard let question = currentQuestion else { return }
-        setEntry(question.id, .score(zero ? "0" : Score.display(question.maxScore)))
+    enum Quick { case zero, half, full }
+
+    /// What a shortcut would enter: the current Written Work question, or the part total in Fast mark.
+    /// Half is nil when the maximum doesn't divide exactly into hundredths.
+    func quickValue(_ quick: Quick) -> String? {
+        guard let limit = Score.hundredths(mode == .fast ? part?.maxScore ?? "" : currentQuestion?.maxScore ?? "") else { return nil }
+        switch quick {
+        case .zero: return "0"
+        case .full: return Score.format(limit)
+        case .half: return limit % 2 == 0 ? Score.format(limit / 2) : nil
+        }
+    }
+
+    /// Shortcut entry: it changes the current question (or total) and never moves.
+    func applyQuick(_ quick: Quick) {
+        guard let value = quickValue(quick) else { return }
+        if mode == .fast {
+            var draft = total
+            draft.text = value
+            setTotal(draft)
+        } else if let question = currentQuestion {
+            setEntry(question.id, .score(value))
+        }
     }
 
     func clearCurrent() {

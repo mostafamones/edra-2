@@ -8,6 +8,7 @@ struct MarkingSheet: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @FocusState private var focus: String?
+    private static let fastField = "fast"
     @State private var confirmLeave = false
     @State private var confirmReplace = false
 
@@ -37,13 +38,25 @@ struct MarkingSheet: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Color(.systemGroupedBackground))
-            .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
+            .safeAreaInset(edge: .bottom, spacing: 0) { if showsQuickBar { quickBar } }
             .navigationTitle(model.assignment.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { if model.hasChanges || model.isUncertain { confirmLeave = true } else { onClose() } }
-                        .disabled(model.isSaving)
+                    Button { if model.hasChanges || model.isUncertain { confirmLeave = true } else { onClose() } } label: {
+                        icon("tabler-x")
+                    }
+                    .disabled(model.isSaving)
+                    .accessibilityLabel("Close")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if model.isSaving {
+                        ProgressView()
+                    } else {
+                        Button(model.isUncertain ? "Retry" : "Save") { requestSave() }
+                            .fontWeight(.semibold)
+                            .disabled(!model.canSave && !model.isUncertain)
+                    }
                 }
             }
             .interactiveDismissDisabled(model.hasChanges || model.isSaving || model.isUncertain)
@@ -84,13 +97,19 @@ struct MarkingSheet: View {
         .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
     }
 
-    private func chip(_ title: String, selected: Bool, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+    private func icon(_ name: String, size: CGFloat = 20) -> some View {
+        Image(name).resizable().scaledToFit().frame(width: size, height: size)
+    }
+
+    /// `verdict`: true/false colours a selected chip green/red from the answer key; nil keeps the accent.
+    private func chip(_ title: String, selected: Bool, verdict: Bool? = nil, label: String, action: @escaping () -> Void) -> some View {
+        let fill: Color = !selected ? Color(.tertiarySystemFill) : verdict == nil ? .accentColor : verdict == true ? .green : .red
+        return Button(action: action) {
             Text(title)
                 .font(.body.weight(.semibold))
                 .frame(minWidth: 40, minHeight: 40)
                 .padding(.horizontal, title.count > 1 ? 8 : 0)
-                .background(selected ? Color.accentColor : Color(.tertiarySystemFill), in: .rect(cornerRadius: 10))
+                .background(fill, in: .rect(cornerRadius: 10))
                 .foregroundStyle(selected ? Color.white : Color.primary)
         }
         .buttonStyle(.plain)
@@ -168,7 +187,7 @@ struct MarkingSheet: View {
                 Text("Questions \(first + 1)–\(first + model.pageQuestions.count) of \(model.questions.count)")
                     .font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
                 Spacer()
-                Text("\(model.enteredCount) entered").font(.footnote).foregroundStyle(.secondary)
+                Text(entered).font(.footnote.monospacedDigit()).foregroundStyle(.secondary)
             }
             ForEach(Array(model.pageQuestions.enumerated()), id: \.element.id) { offset, question in
                 if offset > 0 { Divider() }
@@ -190,26 +209,21 @@ struct MarkingSheet: View {
 
     private func choiceRow(_ question: AssignmentDetail.Question) -> some View {
         let entry = model.entry(question.id)
-        return HStack(alignment: .top, spacing: 12) {
+        // Only a key the server sent can mark an answer right or wrong.
+        let hasKey = question.choices.contains { $0.isCorrect == true }
+        // Tapping the selected chip again returns the question to not entered.
+        func pick(_ target: MarkingModel.Entry) { model.setEntry(question.id, entry == target ? .notEntered : target) }
+        // Wraps only when the choices don't fit one line (many letters, large text).
+        return HStack(alignment: .top, spacing: 10) {
             Text("\(question.position)")
                 .font(.headline.monospacedDigit())
-                .frame(width: 30, height: 40, alignment: .trailing)
+                .frame(width: 26, height: 40, alignment: .trailing)
             WrapLayout(spacing: 6) {
                 ForEach(question.choices) { choice in
-                    chip(choice.letter, selected: entry == .choice(choice.id), label: "Question \(question.position), choice \(choice.letter)") {
-                        model.setEntry(question.id, .choice(choice.id))
-                    }
+                    chip(choice.letter, selected: entry == .choice(choice.id), verdict: hasKey ? choice.isCorrect == true : nil,
+                         label: "Question \(question.position), choice \(choice.letter)") { pick(.choice(choice.id)) }
                 }
-                chip("Blank", selected: entry == .choice(nil), label: "Question \(question.position), blank") {
-                    model.setEntry(question.id, .choice(nil))
-                }
-                if entry != .notEntered {
-                    Button("Clear") { model.setEntry(question.id, .notEntered) }
-                        .font(.subheadline)
-                        .frame(minHeight: 40)
-                        .padding(.horizontal, 6)
-                        .accessibilityLabel("Question \(question.position), clear")
-                }
+                chip("—", selected: entry == .choice(nil), label: "Question \(question.position), blank") { pick(.choice(nil)) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -247,6 +261,7 @@ struct MarkingSheet: View {
                 TextField("Mark", text: Binding(get: { total.text }, set: { var t = model.total; t.text = $0; model.setTotal(t) }))
                     .keyboardType(.decimalPad)
                     .font(.title3.monospacedDigit())
+                    .focused($focus, equals: Self.fastField)
                     .padding(.horizontal, 12).frame(minHeight: 44)
                     .background(Color(.tertiarySystemFill), in: .rect(cornerRadius: 10))
                     .accessibilityLabel("\(model.part?.title ?? "Part") mark")
@@ -278,59 +293,48 @@ struct MarkingSheet: View {
         }
     }
 
-    // MARK: - Bottom bar
+    // MARK: - Shortcuts
+
+    private var entered: String {
+        let count = "\(model.enteredCount) of \(model.questions.count) entered"
+        return model.draftWrittenTotal.map { "\(count) · \($0) / \(Score.display(model.part?.maxScore))" } ?? count
+    }
 
     private var showsQuickBar: Bool {
-        model.part?.kind == .writtenWork && model.mode == .byQuestion && focus != nil
+        guard focus != nil else { return false }
+        return model.mode == .fast || (model.part?.kind == .writtenWork && model.mode == .byQuestion)
     }
 
-    /// Written Work shortcuts: actions stay on the current question; navigation is explicit.
+    /// ‹ › | ✕ ½ ✓ — shortcuts change the current question (or the total) and never move on their own.
     private var quickBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                quick("Previous") { model.goToQuestion(model.questionIndex - 1) }.disabled(model.questionIndex == 0)
-                Text("\(model.questionIndex + 1) of \(model.questions.count)").font(.footnote.monospacedDigit()).foregroundStyle(.secondary)
-                quick("Next") { model.goToQuestion(model.questionIndex + 1) }.disabled(model.questionIndex >= model.questions.count - 1)
+        HStack(spacing: 8) {
+            if model.mode == .byQuestion {
+                quick("tabler-chevron-left", "Previous question", disabled: model.questionIndex == 0) { model.goToQuestion(model.questionIndex - 1) }
+                quick("tabler-chevron-right", "Next question", disabled: model.questionIndex >= model.questions.count - 1) {
+                    model.goToQuestion(model.questionIndex + 1)
+                }
                 Divider().frame(height: 24)
-                quick("Zero") { model.setCurrentScore(zero: true) }
-                quick("Full marks") { model.setCurrentScore(zero: false) }
-                quick("Clear") { model.clearCurrent() }
             }
-            .padding(.horizontal, 16)
+            quick("tabler-x", "Zero", disabled: model.quickValue(.zero) == nil) { model.applyQuick(.zero) }
+            quick(nil, "Half marks", text: "½", disabled: model.quickValue(.half) == nil) { model.applyQuick(.half) }
+            quick("tabler-check", "Full marks", disabled: model.quickValue(.full) == nil) { model.applyQuick(.full) }
         }
-    }
-
-    private func quick(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(title, action: action).buttonStyle(.bordered).controlSize(.regular)
-    }
-
-    private var bottomBar: some View {
-        VStack(spacing: 8) {
-            if showsQuickBar { quickBar }
-            HStack {
-                if model.mode == .byQuestion, model.part?.takesAnswers == true {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("\(model.enteredCount) of \(model.questions.count) entered").font(.footnote).foregroundStyle(.secondary)
-                        if let draft = model.draftWrittenTotal {
-                            Text("\(draft) / \(Score.display(model.part?.maxScore))").font(.subheadline.weight(.semibold).monospacedDigit())
-                        }
-                    }
-                }
-                Spacer()
-                if model.isSaving {
-                    ProgressView().frame(minWidth: 96, minHeight: 44)
-                } else {
-                    Button { requestSave() } label: {
-                        Text(model.isUncertain ? "Retry" : "Save").frame(minWidth: 96, minHeight: 44)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!model.canSave && !model.isUncertain)
-                }
-            }
-            .padding(.horizontal, 16)
-        }
+        .padding(.horizontal, 16)
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
         .background(.bar)
+    }
+
+    private func quick(_ asset: String?, _ label: String, text: String? = nil, disabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Group {
+                if let asset { icon(asset) } else { Text(text ?? "").font(.title3.weight(.semibold)) }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(.bordered)
+        .disabled(disabled || !model.canEdit)
+        .accessibilityLabel(label)
     }
 }
 
