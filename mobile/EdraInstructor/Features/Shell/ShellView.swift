@@ -51,12 +51,6 @@ struct ShellView: View {
                 StartSessionView(academy: academy, context: context, schedules: schedules, start: start)
             }
         }
-        .confirmationDialog("Your academies", isPresented: $showAcademies, titleVisibility: .visible) {
-            ForEach(model.academies) { academy in
-                Button(academy.id == model.selectedID ? "✓ \(academy.name)" : academy.name) { model.select(academy) }
-            }
-            Button("Sign out", role: .destructive, action: onSignOut)
-        }
         // Revalidate access when returning to the app; missed changes surface here or as a 403.
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
@@ -68,55 +62,72 @@ struct ShellView: View {
         }
     }
 
-    /// The system tab bar (floating Liquid Glass on iOS 26) with the academy menu as a separate glass
-    /// circle beside it. Before iOS 26 the academy is a tab item that opens a dialog.
+    /// The system tab bar (floating Liquid Glass on iOS 26). Academy is a trailing search-role tab,
+    /// drawn as Photos' separate circle: it never stays selected, it opens the academy popover.
     @ViewBuilder private var tabs: some View {
         let selection = Binding(get: { tab }, set: { if $0 == .academy { showAcademies = true } else { tab = $0 } })
-        if #available(iOS 26, *) {
-            TabView(selection: $tab) {
-                Tab("Sessions", image: "tabler-calendar-clock", value: Destination.sessions) { sessionsStack }
-                Tab("Assessments", image: "tabler-file-pencil", value: Destination.assessments) { assessmentsStack }
+        Group {
+            if #available(iOS 26, *) {
+                TabView(selection: selection) {
+                    Tab("Sessions", image: "tabler-calendar-clock", value: Destination.sessions) { sessionsStack }
+                    Tab("Assessments", image: "tabler-file-pencil", value: Destination.assessments) { assessmentsStack }
+                    Tab(value: Destination.academy, role: .search) { Color.clear } label: { academyLabel }
+                }
+            } else {
+                TabView(selection: selection) {
+                    sessionsStack.tabItem { Label("Sessions", image: "tabler-calendar-clock") }.tag(Destination.sessions)
+                    assessmentsStack.tabItem { Label("Assessments", image: "tabler-file-pencil") }.tag(Destination.assessments)
+                    Color.clear.tabItem { academyLabel }.tag(Destination.academy)
+                }
             }
-            .overlay(alignment: .bottomTrailing) { academyMenu }
-        } else {
-            TabView(selection: selection) {
-                sessionsStack.tabItem { Label("Sessions", image: "tabler-calendar-clock") }.tag(Destination.sessions)
-                assessmentsStack.tabItem { Label("Assessments", image: "tabler-file-pencil") }.tag(Destination.assessments)
-                Color.clear.tabItem { academyLabel }.tag(Destination.academy)
-            }
+        }
+        // The tab item can't anchor a popover, so an inert view over the circle does.
+        .overlay(alignment: .bottomTrailing) {
+            Color.clear.frame(width: 60, height: 60)
+                .padding(.trailing, 21)
+                .offset(y: 12)
+                .allowsHitTesting(false)
+                .popover(isPresented: $showAcademies, arrowEdge: .bottom) {
+                    academyList.presentationCompactAdaptation(.popover)
+                }
         }
     }
 
-    /// The academy menu circle. The system glass button style (not a custom glass label) keeps the
-    /// menu's morph animation from flashing a square.
-    private var academyMenu: some View {
-        Menu {
-            Section("Your academies") {
-                ForEach(model.academies) { academy in
-                    Button { model.select(academy) } label: {
-                        Label { Text(academy.name) } icon: {
-                            Image(academy.id == model.selectedID ? "tabler-check" : academy.iconAsset)
-                        }
-                    }
+    /// Menu-style list: academies (current one checked) and Sign out.
+    private var academyList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(model.academies) { academy in
+                Button {
+                    showAcademies = false
+                    model.select(academy)
+                } label: {
+                    row(academy.name, icon: academy.iconAsset, checked: academy.id == model.selectedID)
                 }
+                .accessibilityAddTraits(academy.id == model.selectedID ? .isSelected : [])
             }
-            Section {
-                Button(role: .destructive, action: onSignOut) {
-                    Label { Text("Sign out") } icon: { Image("tabler-logout") }
-                }
+            Divider().padding(.vertical, 4)
+            Button(role: .destructive) {
+                showAcademies = false
+                onSignOut()
+            } label: {
+                row("Sign out", icon: "tabler-logout", checked: false).foregroundStyle(.red)
             }
-        } label: {
-            Image(model.selected?.iconAsset ?? "tabler-building-community")
-                .resizable().scaledToFit().frame(width: 26, height: 26)
-                // The glass style adds ~6.5 pt per side: 47 + 13 matches the 60 pt tab bar pill.
-                .frame(width: 47, height: 47)
         }
-        .nativeGlass()
-        .accessibilityLabel(model.selected.map { "Switch academy, current: \($0.name)" } ?? "Switch academy")
-        // Measured on device: the pill sits 21 pt from the screen edge and 12 pt below the bottom
-        // safe-area line; the circle mirrors it on the trailing side.
-        .padding(.trailing, 21)
-        .offset(y: 12)
+        .buttonStyle(.plain)
+        .padding(.vertical, 8)
+        .frame(minWidth: 250)
+    }
+
+    private func row(_ title: String, icon: String, checked: Bool) -> some View {
+        HStack(spacing: 12) {
+            Image(icon).resizable().scaledToFit().frame(width: 22, height: 22)
+            Text(title).lineLimit(1)
+            Spacer(minLength: 16)
+            if checked { Image("tabler-check").resizable().scaledToFit().frame(width: 18, height: 18) }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
+        .contentShape(.rect)
     }
 
     private var academyLabel: some View {
@@ -132,18 +143,25 @@ struct ShellView: View {
     }
 
     private func startButton(diameter: CGFloat) -> some View {
-        // `diameter` is the visible circle; the glass style adds ~13 pt around the label.
-        Button { start.presentPicker() } label: {
-            Image("tabler-plus").resizable().scaledToFit()
-                .frame(width: diameter * 0.45, height: diameter * 0.45)
-                .frame(width: diameter - 13, height: diameter - 13)
-        }
-        .nativeGlass()
-        .accessibilityLabel("Start session")
+        Button { start.presentPicker() } label: { headerIcon("tabler-plus", diameter: diameter) }
+            .nativeGlass()
+            .accessibilityLabel("Start session")
+    }
+
+    /// `diameter` is the visible circle; the glass style adds ~13 pt around the label.
+    private func headerIcon(_ name: String, diameter: CGFloat) -> some View {
+        Image(name).resizable().scaledToFit()
+            .frame(width: diameter * 0.45, height: diameter * 0.45)
+            .frame(width: diameter - 13, height: diameter - 13)
     }
 
     private var assessmentsStack: some View {
-        NavigationStack(path: $assessmentsPath) { page("Assessments", trailing: { _ in EmptyView() }) { AssessmentsPlaceholderView() } }
+        NavigationStack(path: $assessmentsPath) { page("Assessments", trailing: { diameter in
+            // Placeholder: its actions arrive with assessment content.
+            Menu {} label: { headerIcon("tabler-dots", diameter: diameter) }
+                .nativeGlass()
+                .accessibilityLabel("More")
+        }) { AssessmentsPlaceholderView() } }
     }
 
     /// A destination's root: its content only while an academy is selected, never a stale one.
