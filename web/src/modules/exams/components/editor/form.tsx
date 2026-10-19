@@ -56,7 +56,7 @@ async function commit(academyId: string, context: FormContext, base: Exam | unde
   const result = base
     ? await saveExam({ academyId, examId: base.id, expectedVersion: base.version, draft })
     : await createNewExam({ academyId, academicYearId: context.academicYearId, examId: createId, draft });
-  return result.ok ? { ok: true, entity: result.exam } : { ok: false, message: result.message, conflict: result.code === "exam_conflict" };
+  return result.ok ? { ok: true, entity: result.exam } : { ok: false, message: result.message, conflict: result.code === "exam_conflict", uncertain: result.code === "unavailable" };
 }
 
 function ExamFields({ academy, exam, onSaved, onCancel, onStatusChange, context }: Props & { context: FormContext }) {

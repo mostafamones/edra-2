@@ -1,6 +1,8 @@
 import type { AssignmentErrorCode, AssignmentFailure } from "./types";
 
 const MESSAGES: Record<AssignmentErrorCode, string> = {
+  stale_basis: "The scoring basis changed. Review the latest key and exclusions before correcting it.",
+  question_excluded: "This question is excluded and cannot be changed or marked.",
   validation: "Some details aren’t valid. Check the fields and try again.",
   forbidden: "You don’t have permission to do this in this academy.",
   not_found: "This assignment no longer exists in this academy.",

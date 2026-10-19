@@ -7,7 +7,7 @@ import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { useCanonicalHref } from "@/modules/navigation";
 import { DiscardDialog } from "./discard";
 
-export type FormStatus = { dirty: boolean; saving: boolean };
+export type FormStatus = { dirty: boolean; saving: boolean; uncertain?: boolean; discard?: () => Promise<boolean> };
 
 type Handlers<E> = { onSaved: (entity: E) => void; onCancel: () => void; onStatusChange: (status: FormStatus) => void };
 
@@ -28,7 +28,9 @@ export function AssessmentFormPage<E extends { id: string }>({ noun, route, titl
   const [status, setStatus] = useState<FormStatus>({ dirty: false, saving: false });
   const [confirming, setConfirming] = useState(false);
   useBreadcrumbTitle(`${entity ? "Edit" : "New"} ${noun}`);
-  const onStatusChange = useCallback((next: FormStatus) => setStatus(next), []);
+  const onStatusChange = useCallback((next: FormStatus) => {
+    setStatus((before) => before.dirty === next.dirty && before.saving === next.saving && before.uncertain === next.uncertain ? before : next);
+  }, []);
   const leave = () => router.push(href(entity ? `/app/${route}/${entity.id}` : `/app/${route}`));
 
   return (
@@ -36,10 +38,10 @@ export function AssessmentFormPage<E extends { id: string }>({ noun, route, titl
       <h1 className="mb-8 font-heading text-2xl font-semibold">{title}</h1>
       {children({
         onSaved: (saved) => router.push(href(`/app/${route}/${saved.id}`)),
-        onCancel: () => { if (status.saving) return; if (status.dirty) setConfirming(true); else leave(); },
+        onCancel: () => { if (status.dirty || status.saving || status.uncertain) setConfirming(true); else leave(); },
         onStatusChange,
       })}
-      <DiscardDialog noun={noun} open={confirming} onOpenChange={setConfirming} onDiscard={leave} />
+      <DiscardDialog noun={noun} open={confirming} onOpenChange={setConfirming} saving={status.saving} uncertain={status.uncertain} onDiscard={async () => { if (await status.discard?.() !== false) leave(); }} />
     </main>
   );
 }

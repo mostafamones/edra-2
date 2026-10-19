@@ -1,5 +1,5 @@
 export {
-  assignmentAcademy, changeAssignmentState, createAssignment, getAssignment, listAssignments, listMarks, previewAudience, publishResults,
+  assignmentAcademy, changeAssignmentState, correctScoring, createAssignment, getAssignment, listAssignments, listMarks, previewAudience, publishResults,
   recordWork, resolveStudent, saveMarks, studentCodesEnabled, updateAssignment,
 } from "./data";
 export {

@@ -107,7 +107,7 @@ export function QuizStudents({ academy, quiz, permissions }: Props) {
         emptyText={quiz.audience === null ? "Choose who the quiz is for in its setup." : "No active student matches the audience yet. Students who join it later appear here."}
       />
       <StudentMarkSheet student={students?.find((row) => row.recordId === marking) ?? null} onClose={() => setMarking(null)}
-        form={(student, { onSaved }) => <QuizMarks key={student.version} academy={academy} quiz={quiz} student={student} onSaved={onSaved} />} />
+        form={(student, { onSaved }) => <QuizMarks key={student.recordId} academy={academy} quiz={quiz} student={student} onSaved={onSaved} />} />
       <StudentDetails academy={academy} quiz={quiz} recordId={details} name={students?.find((row) => row.recordId === details)?.fullName ?? ""} onClose={() => setDetails(null)} />
     </>
   );

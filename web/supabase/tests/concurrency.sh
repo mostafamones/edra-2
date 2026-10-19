@@ -851,6 +851,44 @@ psqlx -tA -c "select count(*)=1 from public.academy_student_profiles p join publ
 psqlx >/dev/null -c "begin; $as_admin select public.create_assignment('$ACADEMY','$YEAR','$COHORT_E','$cohort_draft'); commit;"
 LATE26="$(new_student 'Year-close optional' 01088880023 null)"
 
+# 34. Assignment correction wins the assignment lock: an old-basis mark and announcement
+#     both wait and then report stale, without applying any part of their commands.
+ASSIGNMENT="$(uuid)"
+psqlx >/dev/null -c "begin; $as_admin select public.create_assignment('$ACADEMY','$YEAR','$ASSIGNMENT','{\"title\":\"Scoring race\",\"audience\":\"level\",\"level_id\":\"secondary-1\",\"parts\":[{\"title\":\"P\",\"kind\":\"answer_sheet\",\"questions\":[{\"max_score\":\"2.5\",\"choices\":[{\"label\":\"\",\"is_correct\":true},{\"label\":\"\",\"is_correct\":false}]},{\"max_score\":\"1.5\",\"choices\":[{\"label\":\"\",\"is_correct\":true},{\"label\":\"\",\"is_correct\":false}]}]}]}'); commit;"
+AP="$(psqlx -tA -c "select id from public.assignment_parts where assignment_id = '$ASSIGNMENT'")"
+AQ="$(psqlx -tA -c "select id from public.assignment_part_questions where assignment_id = '$ASSIGNMENT' and position = 1")"
+AQ2="$(psqlx -tA -c "select id from public.assignment_part_questions where assignment_id = '$ASSIGNMENT' and position = 2")"
+ACB="$(psqlx -tA -c "select id from public.assignment_question_choices where question_id = '$AQ' and position = 2")"
+psqlx >/dev/null -c "begin; $as_admin select public.save_assignment_marks('$ACADEMY','$ASSIGNMENT','$QR1',null,1,jsonb_build_object('marks',jsonb_build_array(jsonb_build_object('part_id','$AP','score','3.5'))),gen_random_uuid()); commit;"
+AV="$(psqlx -tA -c "select version from public.assignment_recipients where assignment_id = '$ASSIGNMENT' and annual_student_record_id = '$QR1'")"
+hold a34a a34b "$as_admin select public.correct_assignment_key('$ACADEMY','$ASSIGNMENT','$AQ','$ACB',1,gen_random_uuid());"
+start a34b "$as_admin select public.save_assignment_marks('$ACADEMY','$ASSIGNMENT','$QR1',null,$AV,'{\"feedback\":\"stale scoring\"}',gen_random_uuid());"
+start a34c "$as_admin select public.publish_assignment_results('$ACADEMY','$ASSIGNMENT','[{\"annual_student_record_id\":\"$QR1\",\"expected_version\":$AV}]',gen_random_uuid());"
+wait
+expect_ok a34a "assignment correction holder failed"
+expect_ok a34b "old-basis marking did not return its conflict"
+expect_ok a34c "old-basis announcement did not return a rejection"
+grep -q conflict "$OUT/a34b" || fail "an old-basis mark applied after correction"
+grep -q stale "$OUT/a34c" || fail "an old-basis announcement applied after correction"
+
+# 35. Marking wins first: correction waits, preserves the acknowledged direct total in immutable
+#     history and invalidates it for manual re-marking against the reduced maximum.
+hold a35a a35b "$as_admin select public.save_assignment_marks('$ACADEMY','$ASSIGNMENT','$QR1',null,$((AV+1)),jsonb_build_object('marks',jsonb_build_array(jsonb_build_object('part_id','$AP','score','3'))),gen_random_uuid());"
+start a35b "$as_admin select public.exclude_assignment_question('$ACADEMY','$ASSIGNMENT','$AQ2',2,gen_random_uuid());"
+wait
+expect_ok a35a "assignment mark holder failed"
+expect_ok a35b "assignment exclusion waiting behind a mark failed"
+psqlx -tA -c "select m.requires_remark and m.score = 3 and exists(select 1 from public.assignment_mark_basis_history h where h.assignment_id = m.assignment_id and h.revision = 3 and h.annual_student_record_id = m.annual_student_record_id and (h.mark->>'score')::numeric = 3) from public.assignment_marks m where m.assignment_id = '$ASSIGNMENT' and m.annual_student_record_id = '$QR1'" | grep -qx t \
+  || fail "exclusion did not preserve the committed direct mark and require re-marking"
+
+# 36. Concurrent corrections reviewed on one revision serialize: only the first can apply.
+ACA="$(psqlx -tA -c "select id from public.assignment_question_choices where question_id = '$AQ' and position = 1")"
+hold a36a a36b "$as_admin select public.correct_assignment_key('$ACADEMY','$ASSIGNMENT','$AQ','$ACA',3,gen_random_uuid());"
+start a36b "$as_admin select public.exclude_assignment_question('$ACADEMY','$ASSIGNMENT','$AQ',3,gen_random_uuid());"
+wait
+expect_ok a36a "first assignment correction failed"
+expect_rejected a36b "a stale concurrent correction applied" stale_basis
+
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
 #     neither deadlocks. After the commit the worker finds a closed year and the command is refused.
@@ -861,6 +899,7 @@ start 26b "select edra_private.settle_quiz_closure('$QUIZ');"
 start 26c "$as_admin select public.save_quiz_marks('$ACADEMY','$QUIZ','$QR1',1,'{\"feedback\":\"late\"}',gen_random_uuid());"
 start 26d "select edra_private.settle_exam_closure('$EXAM');"
 start 26f "$as_admin select public.record_assignment_work('$ACADEMY','$COHORT_E','$LATE26',1,'submitted',now(),'');"
+start 26g "$as_admin select public.exclude_assignment_question('$ACADEMY','$ASSIGNMENT','$AQ',4,gen_random_uuid());"
 start 26e "$as_admin select public.save_exam_marks('$ACADEMY','$EXAM','$ER1',1,'{\"feedback\":\"late\"}',gen_random_uuid());"
 wait
 expect_rejected 26f "optional assignment work crossed year closure" year_unavailable
@@ -868,8 +907,9 @@ expect_ok 26a "the year closure holding the year and quiz rows failed"
 expect_ok 26b "the worker settlement queued behind the year closure failed"
 expect_rejected 26c "a staff command wrote into a year closed concurrently" year_unavailable
 expect_ok 26d "the exam worker settlement queued behind the year closure failed"
+expect_rejected 26g "an assignment correction wrote into a year closed concurrently" year_unavailable
 expect_rejected 26e "an exam staff command wrote into a year closed concurrently" year_unavailable
 psqlx -tA -c "select closed_at is not null from public.academic_years where id = '$YEAR'" | grep -qx t || fail "the year did not close"
-grep -qi deadlock "$OUT/26a" "$OUT/26b" "$OUT/26c" "$OUT/26d" "$OUT/26e" "$OUT/26f" && fail "the year closure deadlocked with quiz or exam work"
+grep -qi deadlock "$OUT/26a" "$OUT/26b" "$OUT/26c" "$OUT/26d" "$OUT/26e" "$OUT/26f" "$OUT/26g" && fail "the year closure deadlocked with quiz or exam work"
 
 echo "concurrency checks passed"

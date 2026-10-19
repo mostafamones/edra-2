@@ -184,6 +184,7 @@ export function PartEntry({ part, saved, fastEnabled, mode, onModeChange, drafts
         <div className="flex min-w-0 items-center gap-2">
           <p className="truncate font-medium">{part.title}</p>
           {fastMarked && <Badge variant="secondary"><IconBolt aria-hidden="true" />Fast marked</Badge>}
+          {saved?.requiresRemark && <Badge variant="destructive">Re-mark required</Badge>}
           {fastEnabled && saved?.kind === "excused" && <Badge variant="secondary">Excused</Badge>}
         </div>
         <div className="ml-auto flex items-center gap-2 empty:hidden">

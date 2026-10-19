@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { MarkBaseline } from "./snapshot";
 
 /**
  * What the marking sheet needs to know about an assessment's parts and a student's work, whatever the
@@ -37,7 +38,7 @@ export type MarkPart = {
 };
 
 /** A mark typed for a whole part (fast marking), or an excused adjustment. */
-export type FastMark = { partId: string; kind: "mark" | "excused"; score: string; reason: string | null; fromAnswers: boolean };
+export type FastMark = { requiresRemark?: boolean; partId: string; kind: "mark" | "excused"; score: string; reason: string | null; fromAnswers: boolean };
 
 /** One question changed: a choice id, `BLANK`, a mark as typed, or "" to clear. */
 export type AnswerEdit = { questionId: string; value: string };
@@ -55,4 +56,4 @@ export type SavePayload = {
 };
 
 /** `saved` is false when the server reported a conflict: the form keeps its place and reloads. */
-export type SaveOutcome = { ok: false; message: string } | { ok: true; saved: boolean };
+export type SaveOutcome = { ok: false; message: string; uncertain?: boolean; baseline?: MarkBaseline } | { ok: true; saved: boolean; baseline?: MarkBaseline; message?: string };

@@ -12,6 +12,7 @@ import { formatScore, sumScores } from "@/lib/score";
 import type { AcademyEntry } from "@/modules/academies";
 import { loadQuizStudents, quizStudentsQueryKey } from "../../queries";
 import type { Quiz } from "../../types";
+import { QuizScoring } from "./scoring";
 import { ISSUE_LABELS, KIND_LABELS } from "../shared/labels";
 
 const number = new Intl.NumberFormat("en");
@@ -65,6 +66,7 @@ export function QuizOverview({ academy, quiz, onViewStudents }: { academy: Acade
           <TopStudents students={scored} maxScore={quiz.effectiveMaxScore} onViewAll={onViewStudents} />
         </div>
       )}
+      <QuizScoring quiz={quiz} role={academy.role} />
     </div>
   );
 }

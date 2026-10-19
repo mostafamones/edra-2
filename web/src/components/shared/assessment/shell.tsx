@@ -12,6 +12,7 @@ import { newUuid } from "@/lib/uuid";
 import type { AcademyEntry } from "@/modules/academies";
 import { useAcademyScope } from "@/modules/auth";
 import { useCanonicalHref } from "@/modules/navigation";
+import { adoptStoredIds, identifyDraft } from "./authoring";
 import { StepFooter } from "./footer";
 import type { FormStatus } from "./page";
 import { StepPanel, StepTabs } from "./steps";
@@ -21,7 +22,7 @@ type Step = (typeof STEPS)[number];
 const LABELS: Record<Step, string> = { basics: "Basics", parts: "Parts", review: "Review" };
 
 /** The outcome of one save, as the shell needs it. Each module maps its own result type onto this. */
-export type SaveResult<E> = { ok: true; entity: E } | { ok: false; message: string; conflict?: boolean };
+export type SaveResult<E> = { ok: true; entity: E } | { ok: false; message: string; conflict?: boolean; uncertain?: boolean };
 
 type Props<V extends FieldValues & { parts: unknown[] }, D, E extends { id: string }> = {
   /** The parent re-mounts the form when the academy changes. */
@@ -57,18 +58,6 @@ type Props<V extends FieldValues & { parts: unknown[] }, D, E extends { id: stri
 
 type FormError = { title: string; message: string; conflict?: boolean };
 
-/** Writes every stored `id` in `next` that differs from the form's value at the same path. */
-function adoptIds(next: unknown, path: string, set: (path: string, id: unknown) => void, get: (path: string) => unknown) {
-  if (Array.isArray(next)) {
-    next.forEach((item, index) => adoptIds(item, `${path}.${index}`, set, get));
-  } else if (next && typeof next === "object") {
-    for (const [key, value] of Object.entries(next)) {
-      const child = path ? `${path}.${key}` : key;
-      if (key === "id") { if (get(child) !== value) set(child, value); } else adoptIds(value, child, set, get);
-    }
-  }
-}
-
 /**
  * The create/edit form every assessment shares: Basics, Parts and Review steps, one part edited on its
  * own page, automatic saving until work starts, and the pinned step footer. Modules supply the fields,
@@ -81,104 +70,151 @@ export function AssessmentFormShell<V extends FieldValues & { parts: unknown[] }
   const href = useCanonicalHref();
   // One id per create action: a retried submit returns the same entity instead of a second one.
   const [createId] = useState(newUuid);
-  const form = useForm<V, unknown, D>({ resolver, defaultValues: useMemo(() => toValues(entity) as never, [toValues, entity]) });
+  const form = useForm<V, unknown, D>({ resolver, defaultValues: useMemo(() => identifyDraft(toValues(entity)) as never, [toValues, entity]) });
   const { formState: { isDirty, isSubmitting } } = form;
   const [step, setStep] = useState<Step>("basics");
   // The part open in the editor, which replaces the steps until it is closed.
   const [editing, setEditing] = useState<number | null>(null);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [formError, setFormError] = useState<FormError | null>(null);
-  const [autosave, setAutosave] = useState<"idle" | "saving" | "saved">("idle");
+  const [pendingCount, setPendingCount] = useState(0);
+  const [uncertain, setUncertain] = useState(false);
   const auto = !locked;
-  // The latest saved entity, and a queue so an automatic and an explicit save never overlap.
   const current = useRef<E | undefined>(entity);
-  const queue = useRef<Promise<unknown>>(Promise.resolve());
-
-  // What automatic saving last stored: the form is not dirty while it still matches.
-  const [saved, setSaved] = useState<string | null>(null);
+  const mounted = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const active = useRef<Promise<boolean> | null>(null);
+  const queued = useRef(false);
+  const paused = useRef(false);
+  const unresolved = useRef<{ base: E | undefined; draft: D; values: V } | null>(null);
+  const [hasSaved, setHasSaved] = useState(Boolean(entity));
+  const [saved, setSaved] = useState(() => JSON.stringify(form.getValues()));
+  const acknowledged = useRef(saved);
   const values = useWatch({ control: form.control });
-  const dirty = isDirty && (saved === null || JSON.stringify(values) !== saved);
-  useEffect(() => { onStatusChange?.({ dirty, saving: isSubmitting }); }, [dirty, isSubmitting, onStatusChange]);
-
-  function run(draft: D): Promise<SaveResult<E>> {
-    const next = queue.current.then(async () => {
-      const result = await commit(current.current, draft, createId);
-      if (result.ok) current.current = result.entity;
-      return result;
-    });
-    queue.current = next.catch(() => undefined);
-    return next;
-  }
+  const dirty = JSON.stringify(values) !== saved;
+  const saving = pendingCount > 0 || isSubmitting;
 
   function failed(result: Extract<SaveResult<E>, { ok: false }>) {
     setFormError({ title: `Couldn’t ${current.current ? "save" : "create"} the ${noun}`, message: result.message, conflict: result.conflict });
   }
 
-  // Automatic saving: after a pause in editing, a valid form is saved quietly. Invalid or unfinished
-  // input is skipped without errors; it is checked only when the form is submitted.
-  useEffect(() => {
-    if (!auto) return;
-    const targetAcademyId = academy.id;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let stopped = false;
-    let lastSaved = JSON.stringify(form.getValues());
-    async function saveQuietly() {
-      const values = form.getValues();
-      const snapshot = JSON.stringify(values);
-      if (stopped || snapshot === lastSaved) return;
-      const draft = parse(values);
-      if (draft === null) return;
-      setAutosave("saving");
-      try {
-        const result = await run(draft);
-        if (!isCurrentAcademy(targetAcademyId)) return;
-        if (!result.ok) {
-          stopped = Boolean(result.conflict);
-          failed(result);
-          setAutosave("idle");
-          return;
-        }
-        setFormError(null);
-        void queryClient.invalidateQueries({ queryKey: rootKey });
-        lastSaved = snapshot;
-        // Adopt the stored ids when nothing changed meanwhile; otherwise the next pause saves the newer edits.
-        // Only the ids are written, in place: replacing the values would re-create every list item, which
-        // remounts the editors (losing focus) and replays their animations.
-        if (JSON.stringify(form.getValues()) === snapshot) {
-          adoptIds(toValues(result.entity), "", (path, id) => form.setValue(path as never, id as never, { shouldDirty: false }), (path) => form.getValues(path as never));
-          lastSaved = JSON.stringify(form.getValues());
-          setSaved(lastSaved);
-        }
-        setAutosave("saved");
-      } catch {
-        setAutosave("idle");
+  function writeIds(next: V) {
+    const write = (value: unknown, path: string) => {
+      if (Array.isArray(value)) value.forEach((item, index) => write(item, `${path}.${index}`));
+      else if (value && typeof value === "object") for (const [key, child] of Object.entries(value)) {
+        const childPath = path ? `${path}.${key}` : key;
+        if (key === "id" || key === "_draftId") {
+          if (form.getValues(childPath as never) !== child) form.setValue(childPath as never, child as never, { shouldDirty: false });
+        } else write(child, childPath);
       }
-    }
-    const unsubscribe = form.subscribe({
-      formState: { values: true },
-      callback: () => {
-        clearTimeout(timer);
-        timer = setTimeout(() => void saveQuietly(), 1200);
-      },
-    });
-    return () => { clearTimeout(timer); unsubscribe(); };
+    };
+    write(next, "");
+  }
+
+  async function persist(): Promise<boolean> {
+    if (active.current) { queued.current = true; await active.current; }
+    if (!mounted.current || paused.current) return false;
+    const targetAcademyId = academy.id;
+    const captured = identifyDraft(form.getValues());
+    writeIds(captured);
+    const draft = parse(captured);
+    if (!unresolved.current && draft === null) return false;
+    if (!unresolved.current && JSON.stringify(captured) === acknowledged.current && current.current) return true;
+    const request = unresolved.current ?? { base: current.current, draft: draft as D, values: captured };
+    unresolved.current = request;
+    setPendingCount(1);
+    const work = (async () => {
+      try {
+        const result = await commit(request.base, request.draft, createId);
+        if (!mounted.current || !isCurrentAcademy(targetAcademyId)) return false;
+        if (!result.ok) {
+          failed(result);
+          if (!result.uncertain) unresolved.current = null;
+          paused.current = Boolean(result.conflict);
+          setUncertain(Boolean(result.uncertain));
+          return false;
+        }
+        if (!request.base && "version" in result.entity && Number(result.entity.version) > 1) {
+          unresolved.current = null; paused.current = true; setUncertain(false);
+          failed({ ok: false, conflict: true, message: "This assessment changed after it was created. Your entries are kept; compare the latest version before continuing." });
+          return false;
+        }
+        current.current = result.entity;
+        setHasSaved(true);
+        unresolved.current = null;
+        setUncertain(false);
+        setFormError(null);
+        const stored = toValues(result.entity);
+        const acceptedValues = adoptStoredIds(request.values, stored, request.values);
+        // Only IDs are adopted into live fields. No reset/remount and no lost input focus.
+        writeIds(adoptStoredIds(request.values, stored, form.getValues()));
+        acknowledged.current = JSON.stringify(acceptedValues);
+        setSaved(acknowledged.current);
+        void queryClient.invalidateQueries({ queryKey: rootKey });
+        return JSON.stringify(form.getValues()) === JSON.stringify(acceptedValues);
+      } catch {
+        if (mounted.current && isCurrentAcademy(targetAcademyId)) {
+          setUncertain(true);
+          setFormError({ title: "Save outcome unknown", message: "Retry the original save to check its outcome. Your newer entries are kept." });
+        }
+        return false;
+      } finally {
+        active.current = null;
+        if (mounted.current) setPendingCount(0);
+      }
+    })();
+    active.current = work;
+    return work;
+  }
+
+  useEffect(() => {
+    mounted.current = true;
+    const unsubscribe = form.subscribe({ formState: { values: true }, callback: () => {
+      clearTimeout(timer.current);
+      if (!auto || paused.current || unresolved.current) { queued.current = Boolean(active.current); return; }
+      queued.current = true;
+      setPendingCount(1);
+      timer.current = setTimeout(async () => {
+        // Coalesce each later edit into a fresh snapshot after the previous acknowledgement.
+        do {
+          queued.current = false;
+          await persist();
+        } while (queued.current && !unresolved.current && !paused.current && mounted.current);
+        if (!active.current && mounted.current) setPendingCount(0);
+      }, 1200);
+    } });
+    return () => { mounted.current = false; clearTimeout(timer.current); queued.current = false; unsubscribe(); };
+    // The subscription reads current form values; an entity refresh never replaces this draft owner.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auto, academy.id]);
 
-  async function save(draft: D) {
-    // Capture the academy before awaiting: the user may switch academies while this is pending.
-    const targetAcademyId = academy.id;
-    setFormError(null);
-    try {
-      const result = await run(draft);
-      if (!isCurrentAcademy(targetAcademyId)) return;
-      if (!result.ok) { failed(result); return; }
-      await queryClient.invalidateQueries({ queryKey: rootKey });
-      if (!isCurrentAcademy(targetAcademyId)) return;
-      toast.success(savedMessage(result.entity, !entity));
-      onSaved(result.entity);
-    } catch {
-      if (isCurrentAcademy(targetAcademyId)) setFormError({ title: `Couldn’t save the ${noun}`, message: "Check your connection and try again." });
+  async function discard(): Promise<boolean> {
+    paused.current = true;
+    clearTimeout(timer.current);
+    queued.current = false;
+    if (active.current) await active.current;
+    clearTimeout(timer.current);
+    queued.current = false;
+    setPendingCount(0);
+    // An unknown result cannot be described as discarded; the original request remains retryable.
+    if (unresolved.current) { paused.current = false; return false; }
+    return true;
+  }
+
+  useEffect(() => { onStatusChange?.({ dirty, saving, uncertain, discard }); });
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => { if (dirty || saving || uncertain) event.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, saving, uncertain]);
+
+  async function save() {
+    clearTimeout(timer.current);
+    queued.current = false;
+    const clean = await persist();
+    if (clean && current.current && isCurrentAcademy(academy.id)) {
+      toast.success(savedMessage(current.current, !entity));
+      onSaved(current.current);
     }
   }
 
@@ -231,6 +267,7 @@ export function AssessmentFormShell<V extends FieldValues & { parts: unknown[] }
             <AlertTitle>{formError.title}</AlertTitle>
             <AlertDescription className="flex flex-col items-start gap-2">
               <span>{formError.message}</span>
+              {uncertain && <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => void persist()}>Retry original save</Button>}
               {formError.conflict && entity && (
                 <span>Your edits are still here. <a className="underline" href={href(`/app/${route}/${entity.id}`)} target="_blank" rel="noreferrer">Open the latest version</a> in a new tab to compare, then reload this page to start from it.</span>
               )}
@@ -241,10 +278,10 @@ export function AssessmentFormShell<V extends FieldValues & { parts: unknown[] }
 
       <StepFooter value={((stepIndex + 1) / STEPS.length) * 100} label="Progress through the steps">
         <div className="flex items-center gap-3">
-          <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
-          {auto && autosave !== "idle" && (
+          <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+          {auto && (saving || (hasSaved && !dirty && !uncertain)) && (
             <span role="status" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              {autosave === "saving" ? <><IconLoader2 className="size-4 animate-spin" />Saving…</> : <><IconCheck className="size-4" />Saved</>}
+              {saving ? <><IconLoader2 className="size-4 animate-spin" />Saving…</> : <><IconCheck className="size-4" />Saved</>}
             </span>
           )}
         </div>
