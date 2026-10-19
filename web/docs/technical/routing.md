@@ -15,6 +15,7 @@ Development defaults are lvh.me:3000, app.lvh.me:3000 and learn.lvh.me:3000. NEX
 | Academy staff | /<slug> | src/app/app/[academySlug]/ |
 | Students/imports, groups, schedules | /<slug>/students, /groups, /schedules and their concrete subroutes | Same feature folders under the academy |
 | Assignments | /<slug>/assignments, /new, /<id>, /<id>/edit | Concrete assignment routes |
+| Staff content | /<slug>/content, /content/<id>, /releases | Content library/program workspace, unit editor and published filter |
 | Sessions/attendance | /<slug>/attendance, /new, /<id> | Concrete attendance routes; legacy detail suffix redirects |
 | Team/codes | /<slug>/manage/team, /manage/student-codes | Concrete management routes |
 | Student global area | / and supported global paths on student host | src/app/learn/ |
