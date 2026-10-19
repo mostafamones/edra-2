@@ -67,7 +67,7 @@ function Workspace({ academy, assignment }: { academy: AcademyEntry; assignment:
       more={<LifecycleActions assignment={assignment} permissions={permissions} />}
       yearOpen={assignment.yearOpen} archived={assignment.state === "archived"} ready={assignment.ready}
       setup="Finish every part’s questions and marks before recording work or marking. Nothing needs to be published."
-      studentCount={assignment.recipientCount}
+      studentCount={`${assignment.currentRequiredCount ?? assignment.recipientCount} required · ${assignment.optionalEligibleCount ?? 0} optional`}
       overview={({ showStudents }) => (
         <AssignmentOverview assignment={assignment} onViewStudents={showStudents}
           onSelectBar={(target) => { setFocus({ ...target, outcome: "lost" }); showStudents(); }} />

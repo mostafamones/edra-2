@@ -58,8 +58,13 @@ export type Assignment = {
   /** Sum of the part maxima, maintained by the database. */
   maxScore: string;
   partCount: number;
-  /** Size of the recipient snapshot, refreshed on each save until activity starts. */
+  /** Captured required cohort, including ended requirements; never includes optional late work. */
   recipientCount: number;
+  cohortRevision?: number;
+  cohort?: { revision: number; source: "existing_recipients" | "first_audience" | "audience_reset"; capturedAt: string; audienceBasis: { audience: AssignmentAudience; levelId: string | null; trackId: string | null; groupIds: string[] } } | null;
+  currentRequiredCount?: number;
+  eligibleCount?: number;
+  optionalEligibleCount?: number;
   version: number;
   createdBy: string;
   createdAt: string;
@@ -70,7 +75,7 @@ export type Assignment = {
   closedAt: string | null;
   archivedAt: string | null;
   yearOpen: boolean;
-  /** True once a recipient has activity (work, marks, or a result) that freezes the structure and recipients. */
+  /** True once a recipient has activity (work, marks, or a result) that locks structure and the configured target audience. */
   hasActivity: boolean;
   /** Every part is complete, so work can be recorded, marked, and announced. */
   ready: boolean;
@@ -145,6 +150,13 @@ export type StudentAnswer = { questionId: string; partId: string; choiceId: stri
 /** One recipient's work, marks, and result state: the row staff mark and announce. */
 export type StudentWork = {
   recordId: string;
+  /** Additive cohort contract. Older payloads default to required, never retroactively optional. */
+  required?: boolean;
+  requirementEndedAt?: string | null;
+  requirementSource?: "required_cohort" | "late_eligibility";
+  cohortRevision?: number | null;
+  /** Matches current active academy/year placement; delivery state is checked by commands. */
+  eligible?: boolean;
   fullName: string;
   archived: boolean;
   groupName: string | null;

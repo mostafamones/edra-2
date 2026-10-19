@@ -74,7 +74,7 @@ const updateInput = z.object({ academyId: z.uuid(), assignmentId: z.uuid(), expe
 
 /**
  * Saves an edit made against `expectedVersion`; a stale version writes nothing (assignment_conflict).
- * Until marking starts the whole setup is replaced and recipients are refreshed from the audience.
+ * Until marking starts the setup may be replaced; only a deliberate audience change resets the required cohort.
  * Afterwards (or once closed) only Owner/Head Admin/Admin may save, and only text details.
  */
 export async function updateAssignment(input: z.input<typeof updateInput>, authority?: Authority | null): Promise<AssignmentResult> {

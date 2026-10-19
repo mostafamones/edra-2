@@ -11,6 +11,7 @@ import type { AcademyEntry } from "@/modules/academies";
 import { useAcademyScope } from "@/modules/auth";
 import { announceStudentResults } from "../../../actions";
 import { focusScore, focusTarget, matchesFocus, type MarkFocus } from "../../../focus";
+import { isRequiredNotReceived, requirementLabel } from "../../../eligibility";
 import { useMarks } from "../../../hooks/use-marks";
 import { assignmentPermissions } from "../../../permissions";
 import { assignmentsRootKey } from "../../../queries";
@@ -23,7 +24,7 @@ import { FocusFilter } from "./focus";
 
 const STATUSES: { value: MarkFilter; label: string }[] = [
   { value: "all", label: "All statuses" },
-  { value: "not_received", label: "Not received" },
+  { value: "not_received", label: "Required · Not received" },
   { value: "needs_marking", label: "Needs marking" },
   { value: "marked", label: "Marked" },
   { value: "unpublished", label: "Ready to announce" },
@@ -31,7 +32,7 @@ const STATUSES: { value: MarkFilter; label: string }[] = [
 
 const MATCHES: Record<MarkFilter, (row: StudentWork) => boolean> = {
   all: () => true,
-  not_received: (row) => row.workStatus === "expected" || row.workStatus === "missing",
+  not_received: isRequiredNotReceived,
   needs_marking: (row) => (row.workStatus === "submitted" || row.workStatus === "late") && row.marking !== "complete",
   marked: (row) => row.marking === "complete",
   unpublished: (row) => row.marking === "complete" && row.publicationState !== "published",
@@ -67,6 +68,9 @@ function filters(rows: StudentWork[]): FilterSpec<StudentWork>[] {
   const tracks = new Map(rows.flatMap((row) => row.placement?.trackId ? [[row.placement.trackId, row.placement.trackName ?? "Unnamed track"] as const] : []));
   return [
     { id: "status", label: "Status", defaultValue: "all", options: STATUSES, match: (row, value) => MATCHES[value as MarkFilter](row) },
+    { id: "requirement", label: "Requirement", defaultValue: "all",
+      options: [{ value: "all", label: "All requirements" }, { value: "Required", label: "Required" }, { value: "Optional", label: "Optional" }, { value: "Requirement ended", label: "Requirement ended" }],
+      match: (row, value) => requirementLabel(row) === value },
     {
       id: "group", label: "Group", defaultValue: "all",
       options: [{ value: "all", label: "All groups" }, ...options(groups), ...(rows.some((row) => row.placement?.groupId === null) ? [{ value: "none", label: "No group" }] : [])],
@@ -110,6 +114,7 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
   const typedParts = new Set(assignment.parts.filter((part) => part.kind !== null).map((part) => part.id));
   const maxScore = formatScore(assignment.maxScore);
   const columns: StudentColumn<StudentWork>[] = [
+    { id: "requirement", head: "Requirement", className: "w-40", cell: (row) => <Badge variant="outline">{requirementLabel(row)}</Badge> },
     { id: "work", head: "Work", className: "w-36", cell: (row) => <Badge variant={WORK_BADGE[row.workStatus]}>{WORK_LABELS[row.workStatus]}</Badge> },
     { id: "result", head: "Result", className: "w-44", cell: (row) => <Badge variant={RESULT_BADGE[row.publicationState]}>{RESULT_LABELS[row.publicationState]}</Badge> },
     ...(focus && target ? [{
@@ -154,9 +159,7 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
         query={query} rows={students} filters={filters} sort={SORT} scope={scope} columns={columns} announce={announce}
         toolbar={focus && target ? <FocusFilter focus={focus} onChange={onFocusChange} /> : undefined}
         actions={canMark ? (row) => <Button size="sm" variant="ghost" onClick={() => setEditing(row.recordId)}>Edit</Button> : undefined}
-        emptyText={permissions.editStructure
-          ? "No active students matched its audience when it was last saved. Saving it again adds students who have joined since."
-          : "This assignment has no students."}
+        emptyText="This assignment has no matching students or recorded work."
         noMatchText={focus ? (focus.outcome === "unmarked"
           ? "Every student has a question-level mark on this part or question, or no student matches the other filters."
           : "Only students marked question by question on this part or question are counted.") : undefined}
