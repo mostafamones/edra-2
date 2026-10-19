@@ -5,8 +5,12 @@ struct ScannerView: View {
     let model: ScannerModel
     let academyName: String
     let sessionTitle: String
+    /// Opens the explicit add-attendee search for a code that isn't on the roster.
+    var makeAttendeeModel: ((String) -> AddAttendeeModel)?
 
     @Environment(\.dismiss) private var dismiss
+    @State private var attendee: AddAttendeeModel?
+    @State private var attendeeCode: String?
     @State private var access: CameraAccess?
     @State private var camera = CameraController()
     @State private var pinchBase: CGFloat?
@@ -33,6 +37,12 @@ struct ScannerView: View {
             }
         }
         .task { access = await CameraPermission.request() }
+        .sheet(item: $attendee, onDismiss: {
+            if let code = attendeeCode { model.returnFromAdd(code: code) }
+            attendeeCode = nil
+        }) { attendee in
+            AddAttendeeView(model: attendee)
+        }
     }
 
     @ViewBuilder private var cameraBox: some View {
@@ -97,16 +107,45 @@ struct ScannerView: View {
             }
         case .awaitingDecision(let card):
             decisionCard(card, status: nil, canConfirm: true)
-        case .submitting(let card):
-            decisionCard(card, status: nil, canConfirm: false, busy: true)
-        case .uncertain(let card, let text):
-            decisionCard(card, status: text, canConfirm: true)
+        case .submitting(let attempt):
+            decisionCard(attempt.card, status: nil, canConfirm: false, busy: true)
+        case .uncertain(let attempt, let text):
+            decisionCard(attempt.card, status: text, canConfirm: true, confirmTitle: "Retry")
         case .rejected(let card, let text):
             decisionCard(card, status: text, canConfirm: false)
+        case .notOnRoster(let code):
+            notOnRosterCard(code)
         }
     }
 
-    private func decisionCard(_ card: ScannerModel.Card, status: String?, canConfirm: Bool, busy: Bool = false) -> some View {
+    private func notOnRosterCard(_ code: String) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Code \(code) isn't on this session's roster.")
+                .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 12) {
+                Button { model.dismiss() } label: {
+                    Text("Dismiss").frame(maxWidth: .infinity, minHeight: 52)
+                }
+                .buttonStyle(.bordered)
+                if model.canAddAttendee, let makeAttendeeModel {
+                    Button {
+                        attendeeCode = code
+                        attendee = makeAttendeeModel(code)
+                    } label: {
+                        Label { Text("Find student") } icon: { Image("tabler-user-plus") }
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+            .controlSize(.large)
+        }
+    }
+
+    private func decisionCard(
+        _ card: ScannerModel.Card, status: String?, canConfirm: Bool, busy: Bool = false, confirmTitle: String = "✓ Confirm"
+    ) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             StudentCard(entry: card.entry)
             if let status { Text(status).font(.footnote).foregroundStyle(.red) }
@@ -118,7 +157,7 @@ struct ScannerView: View {
                 .disabled(busy)
 
                 Button { Task { await model.confirm() } } label: {
-                    Group { if busy { ProgressView() } else { Text("✓ Confirm") } }
+                    Group { if busy { ProgressView() } else { Text(confirmTitle) } }
                         .frame(maxWidth: .infinity, minHeight: 52)
                 }
                 .buttonStyle(.borderedProminent)
