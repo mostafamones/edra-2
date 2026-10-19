@@ -3,9 +3,8 @@
 import { studentsRootKey } from "../../records/queries";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { IconAlertTriangle, IconChevronDown, IconCircleCheck, IconLoader2 } from "@tabler/icons-react";
+import { IconAlertTriangle, IconChevronDown, IconLoader2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,13 +28,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useAcademyScope } from "@/modules/auth";
 import { groupListQueryKey, loadGroups } from "@/modules/groups";
-import { useCanonicalHref } from "@/modules/navigation";
 
 import { generateStudentCodes, previewStudentCodeGeneration } from "../actions";
 import { newRequestKey } from "../request-key";
 import {
   DEFAULT_GENERATION_OPTIONS,
-  type GenerationMode, type GenerationOptions, type GenerationPreview, type GenerationResult, type StudentCodeFailure,
+  type GenerationMode, type GenerationOptions, type GenerationPreview, type StudentCodeFailure,
 } from "../types";
 import { NumberInput } from "@/components/shared/app-input";
 
@@ -77,7 +75,6 @@ function useDebounced<T>(value: T, delay = 300): T {
 export function BulkStudentCodes({ academyId, enabled, settingsVersion, levels }: Props) {
   const isCurrentAcademy = useAcademyScope();
   const queryClient = useQueryClient();
-  const href = useCanonicalHref();
   const [mode, setMode] = useState<GenerationMode>("all");
   const [levelIds, setLevelIds] = useState<string[]>([]);
   const [groupIds, setGroupIds] = useState<string[]>([]);
@@ -89,7 +86,6 @@ export function BulkStudentCodes({ academyId, enabled, settingsVersion, levels }
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
   const [unknown, setUnknown] = useState<Attempt | null>(null);
-  const [result, setResult] = useState<{ data: GenerationResult; scope: string; link: string } | null>(null);
 
   const groupsQuery = useQuery({
     queryKey: groupListQueryKey(academyId, false),
@@ -139,7 +135,6 @@ export function BulkStudentCodes({ academyId, enabled, settingsVersion, levels }
   function changeScope(apply: () => void) {
     apply();
     setError("");
-    setResult(null);
     setUnknown(null);
   }
 
@@ -156,12 +151,6 @@ export function BulkStudentCodes({ academyId, enabled, settingsVersion, levels }
       ? ids.map((id) => levelNames[id] ?? id)
       : ids.map((id) => groupOptions.find((option) => option.value === id)?.label ?? "a group");
     return names.join(", ");
-  }
-
-  function studentsLink() {
-    if (mode === "levels" && ids.length === 1) return href(`/app/students?level=${encodeURIComponent(ids[0])}`);
-    if (mode === "groups" && ids.length === 1) return href(`/app/students?group=${encodeURIComponent(ids[0])}`);
-    return href("/app/students");
   }
 
   async function run(attempt: Attempt) {
@@ -185,7 +174,6 @@ export function BulkStudentCodes({ academyId, enabled, settingsVersion, levels }
       }
       const { assigned } = response.data;
       toast.success(assigned === 0 ? "No codes were missing." : `Generated ${assigned.toLocaleString("en")} ${assigned === 1 ? "code" : "codes"}.`);
-      setResult({ data: response.data, scope: scopeLabel(), link: studentsLink() });
     } catch {
       if (isCurrentAcademy(academyId)) setUnknown(attempt);
     } finally {
@@ -267,16 +255,6 @@ export function BulkStudentCodes({ academyId, enabled, settingsVersion, levels }
 
             {summary}
 
-          {result && (
-            <Alert>
-              <IconCircleCheck aria-hidden="true" />
-              <AlertTitle>
-                {result.data.assigned === 0
-                  ? "Nothing to generate"
-                  : `Generated ${result.data.assigned.toLocaleString("en")} ${result.data.assigned === 1 ? "code" : "codes"}`}
-              </AlertTitle>
-            </Alert>
-          )}
           {error && <FieldError>{error}</FieldError>}
         </CardContent>
         <CardFooter className="justify-between gap-2">

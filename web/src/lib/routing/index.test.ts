@@ -4,7 +4,7 @@ import { classifyHost, describeRoute, internalStaffPath, internalStudentPath, pl
 afterEach(() => vi.unstubAllEnvs());
 function local() {
   vi.stubEnv("NODE_ENV", "development");
-  for (const key of ["EDRA_APP_ORIGIN", "EDRA_LEARN_ORIGIN", "EDRA_MARKETING_ORIGIN", "NEXT_PUBLIC_EDRA_APP_ORIGIN", "NEXT_PUBLIC_EDRA_LEARN_ORIGIN", "NEXT_PUBLIC_EDRA_MARKETING_ORIGIN"]) vi.stubEnv(key, "");
+  for (const key of ["EDRA_DEV_TUNNEL_HOST", "EDRA_APP_ORIGIN", "EDRA_LEARN_ORIGIN", "EDRA_MARKETING_ORIGIN", "NEXT_PUBLIC_EDRA_APP_ORIGIN", "NEXT_PUBLIC_EDRA_LEARN_ORIGIN", "NEXT_PUBLIC_EDRA_MARKETING_ORIGIN"]) vi.stubEnv(key, "");
 }
 describe("trusted platform routes", () => {
   it("classifies exact hosts including ports without substring or suffix trust", () => {
@@ -13,6 +13,30 @@ describe("trusted platform routes", () => {
     expect(classifyHost("learn.lvh.me:3000")).toBe("student");
     expect(classifyHost("lvh.me:3000")).toBe("marketing");
     for (const host of ["app.lvh.me.attacker:3000", "app.lvh.me:4000", "evil-app.lvh.me:3000", "preview.vercel.app", "app.lvh.me:3000@evil.test"]) expect(classifyHost(host)).toBeNull();
+  });
+  it("accepts no development tunnel unless one exact host is configured", () => {
+    local();
+    expect(classifyHost("mones.ddns.net:3000")).toBeNull();
+    vi.stubEnv("EDRA_DEV_TUNNEL_HOST", "Tunnel.Example.net:3000");
+    expect(classifyHost("tunnel.example.net:3000")).toBe("staff");
+    expect(classifyHost("TUNNEL.example.NET:3000")).toBe("staff");
+    for (const host of ["tunnel.example.net", "tunnel.example.net:3001", "evil.tunnel.example.net:3000", "tunnel.example.net.evil:3000", "tunnel.example.net:30000", "mones.ddns.net:3000"]) expect(classifyHost(host)).toBeNull();
+  });
+  it("ignores malformed development tunnel values", () => {
+    local();
+    for (const value of ["http://tunnel.example.net:3000", "tunnel.example.net:3000/path", "user@tunnel.example.net:3000", "*.example.net:3000", "tunnel.example.net:3000\n", " tunnel.example.net:3000", "tunnel.example.net:port"]) {
+      vi.stubEnv("EDRA_DEV_TUNNEL_HOST", value);
+      for (const host of [value, "tunnel.example.net:3000"]) expect(classifyHost(host)).toBeNull();
+    }
+  });
+  it("ignores a populated development tunnel in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("EDRA_MARKETING_ORIGIN", "https://edra.example"); vi.stubEnv("NEXT_PUBLIC_EDRA_MARKETING_ORIGIN", "https://edra.example");
+    vi.stubEnv("EDRA_APP_ORIGIN", "https://app.edra.example"); vi.stubEnv("NEXT_PUBLIC_EDRA_APP_ORIGIN", "https://app.edra.example");
+    vi.stubEnv("EDRA_LEARN_ORIGIN", "https://learn.edra.example"); vi.stubEnv("NEXT_PUBLIC_EDRA_LEARN_ORIGIN", "https://learn.edra.example");
+    vi.stubEnv("EDRA_DEV_TUNNEL_HOST", "tunnel.example.net:3000");
+    expect(classifyHost("app.edra.example")).toBe("staff");
+    expect(classifyHost("tunnel.example.net:3000")).toBeNull();
   });
   it("routes roots, staff academy links, globals and unavailable scoped learning separately", () => {
     local();
@@ -28,7 +52,8 @@ describe("trusted platform routes", () => {
   it("keeps manifest identifiers separate from hrefs and matches public or rewritten pathnames", () => {
     local();
     expect(publicHref("/app/students/new", "magd")).toBe("http://app.lvh.me:3000/magd/students/new");
-    expect(publicHref("/app/manage/account", "magd")).toBe("http://app.lvh.me:3000/account");
+    expect(publicHref("/app/manage/account", "magd")).toBe("http://app.lvh.me:3000/magd/manage/account");
+    expect(publicHref("/app/manage/account")).toBe("http://app.lvh.me:3000/account");
     expect(publicHref("/learn/profile")).toBe("http://learn.lvh.me:3000/profile");
     expect(internalStaffPath("/magd/students", "magd")).toBe("/app/students");
     expect(internalStaffPath("/app/magd/students", "magd")).toBe("/app/students");

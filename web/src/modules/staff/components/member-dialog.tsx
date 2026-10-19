@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAcademyScope } from "@/modules/auth";
 import { changeStaffMemberRole, removeStaffMember, restoreStaffMember, suspendStaffMember } from "../actions";
+import { accountName } from "@/modules/account/contract";
+
 import { ROLE_LABELS } from "../format";
 import type { InvitableRole } from "../permissions";
 import { sortTeamMembers, staffQueryKeys } from "../queries";
@@ -84,7 +86,7 @@ export function MemberActionDialog({ academyId, userId, action, onClose }: {
   if (action && action !== shown) setShown(action);
 
   const copy = shown ? copyFor(shown) : null;
-  const name = shown?.member.profiles.full_name?.trim() || "this member";
+  const name = accountName(shown?.member.profiles) || "this member";
 
   async function submit() {
     if (!action || pending) return;

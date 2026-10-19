@@ -730,7 +730,7 @@ select pg_temp.as_user('fa222222-2222-4222-8222-222222222222');
 do $$ begin
   perform public.create_exam(pg_temp.academy(), pg_temp.year(), 'fd000000-0000-4000-8000-000000000006', jsonb_build_object(
     'title', 'Running', 'audience', 'level', 'level_id', 'preparatory-3', 'time_limit_minutes', 120,
-    'parts', jsonb_build_array(jsonb_build_object('title', 'W', 'kind', 'written_work', 'questions', jsonb_build_array(jsonb_build_object('max_score', '1'))))));
+    'parts', jsonb_build_array(jsonb_build_object('title', 'W', 'kind', 'written_work', 'questions', jsonb_build_array(jsonb_build_object('prompt', 'Q', 'max_score', '1'))))));
   perform public.configure_exam_availability(pg_temp.academy(), 'fd000000-0000-4000-8000-000000000006', 1, now() - interval '1 minute', now() + interval '1 hour');
 end $$;
 reset role;

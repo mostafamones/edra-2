@@ -15,6 +15,7 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 
 - Edra uses a cloud-hosted Supabase database. A local Supabase database is not the default development or verification environment.
 - Use the configured cloud project through the available Supabase connection or tools. Do not look for a running local database, start a local Supabase/Docker stack, or require local database setup unless the owner explicitly requests it.
+- Automated GitHub Actions database tests may create, migrate, and discard a fresh Supabase instance on the GitHub runner. This exception does not authorize local developer stacks or changes to shared cloud databases. Cloud verification remains required for affected database behavior during implementation and for hosted integrations.
 - Repository migration files and Supabase configuration do not imply that a local database exists. Routine non-destructive migrations are pre-approved during authorized implementation; only destructive or hard-to-reverse migrations require explicit owner approval. Preserve cloud verification and history rules in `web/AGENTS.md`.
 
 ## Documentation and planning
@@ -30,6 +31,12 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 - Group related changes into focused, coherent commits. Stage each group separately, using partial staging when a file contains changes belonging to different groups. Create as many commits as needed to represent the work clearly.
 - Give each commit a clear subject and a detailed message explaining what changed and why. Include relevant verification results and material limitations.
 - Do not push commits unless the owner explicitly requests it.
+
+## UI copy and helper text
+
+- Do not add helper text by default anywhere in either application. This includes descriptions under fields, page subtitles, section introductions, card descriptions, and explanatory text beside controls. Add helper text only when the owner explicitly requests it.
+- Use clear, concise labels and self-explanatory controls instead of explaining each field or part of a screen. Do not replace omitted helper text with unsolicited tooltips, info icons, or placeholder instructions.
+- Keep actionable validation errors, required status feedback, and accessible labels available; these are functional UI feedback, not optional helper text.
 
 ## Table empty states
 

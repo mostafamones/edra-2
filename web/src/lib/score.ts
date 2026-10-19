@@ -44,3 +44,9 @@ export function isValidScoreText(value: string, max: string): boolean {
   const limit = toHundredths(max);
   return hundredths !== null && limit !== null && hundredths <= limit;
 }
+
+/** A question maximum: positive, at most 1000, at most two fractional digits. */
+export function isValidMaxScore(value: string): boolean {
+  const hundredths = toHundredths(value);
+  return hundredths !== null && hundredths > 0 && hundredths <= 100000;
+}

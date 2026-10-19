@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  formatPhone, isCompatibleGroup, placementIssues, studentFormDefaults, studentFormSchema, studentRecordInputSchema, toDomesticPhone,
+  formatPhone, isCompatibleGroup, onlineAccountState, placementIssues, studentFormDefaults, studentFormSchema, studentRecordInputSchema, toDomesticPhone,
 } from "./validation";
 
 const ACADEMY = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -139,5 +139,15 @@ describe("group compatibility", () => {
     expect(isCompatibleGroup(placement("g9", "", "all"), context)).toBe(false);
     expect(isCompatibleGroup(placement("g9", "", "nine"), context)).toBe(true);
     expect(isCompatibleGroup(placement("g11", "sci", "missing"), context)).toBe(false);
+  });
+});
+
+describe("onlineAccountState", () => {
+  it("matches the list and edit-sheet rule for every link and suspension combination", () => {
+    expect(onlineAccountState(null, null, null)).toBe("not_connected");
+    expect(onlineAccountState(null, "2030-01-01", "2030-01-01")).toBe("not_connected");
+    expect(onlineAccountState("u", null, null)).toBe("connected");
+    expect(onlineAccountState("u", "2030-01-01", null)).toBe("suspended");
+    expect(onlineAccountState("u", null, "2030-01-01")).toBe("suspended");
   });
 });

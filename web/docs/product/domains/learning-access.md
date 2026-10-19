@@ -54,6 +54,8 @@ Revoking an unused code prevents redemption. Removing access already granted by 
 
 Owners, Head Admins and Admins may suspend or restore a student's online access within their academy. Suspension preserves the student record, participation type, academic history and parent reporting. It does not suspend the student's Edra account or access to another academy.
 
+Archiving annual participation also adds online-access suspension caused by archival. Restoring that participation removes only the archival suspension; an independent staff suspension applied before or during archival remains until explicitly removed by staff. Removing an independent suspension does not remove the archival suspension while the record remains archived. Both actions preserve the account connection and history.
+
 Suspension prevents protected learning access and coupon redemption. Restoring access does not restart grant periods or reset coupon and extension usage; the student's grants retain their original timing.
 
 Managers may revoke explanation access and, for invalid qualifying work, answer access. These actions retain their reason and history. Ordinary attendance corrections do not silently decide revocation; the correction policy must be settled before that workflow is implemented.

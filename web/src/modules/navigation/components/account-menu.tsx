@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { isAcademyManager } from "@/modules/academies";
+import { useAccountProfile } from "@/modules/account";
 import { useAuth } from "@/modules/auth";
 
 export function AccountMenu({ portal }: { portal: "staff" | "student" }) {
@@ -23,10 +24,11 @@ export function AccountMenu({ portal }: { portal: "staff" | "student" }) {
   const { user, activeAcademy } = useAuth();
   const { isMobile } = useSidebar();
   const signOutForm = useRef<HTMLFormElement>(null);
-  const name = typeof user?.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "Your account";
+  const account = useAccountProfile();
+  const name = account.name ?? "Your account";
   const contact = user?.phone || user?.email || "";
-  const avatar = typeof user?.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : undefined;
-  const initials = name === "Your account" ? "E" : name.trim().slice(0, 1).toUpperCase();
+  const avatar = account.avatarUrl;
+  const initials = account.name ? account.name.slice(0, 1).toUpperCase() : "E";
 
   return (
     <SidebarMenu>

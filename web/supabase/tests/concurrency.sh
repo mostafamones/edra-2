@@ -519,15 +519,16 @@ psqlx -tA -c "select count(*) from public.attendance_effect_suppressions where e
 psqlx -tA -c "select edra_private.claim_attendance_effect('$E21') is null" | grep -qx t \
   || fail "a dispatched effect could be claimed again"
 
+# Quiz student phones use a separate range from the import fixtures above.
 # 22-25. Quiz races. Per-student commands take the quiz key-share lock and the student's work row;
 #     quiz-wide commands (corrections, closure settlement) take the quiz exclusively.
 QUIZ="$(uuid)"
-QR1="$(new_student 'Quiz race 1' 01088880001 null)"
-QR2="$(new_student 'Quiz race 2' 01088880002 null)"
+QR1="$(new_student 'Quiz race 1' 01088880021 null)"
+QR2="$(new_student 'Quiz race 2' 01088880022 null)"
 [ -n "$QR1" ] && [ -n "$QR2" ] || fail "could not create quiz race students"
 psqlx >/dev/null <<SQL
 begin; $as_admin
-select public.create_quiz('$ACADEMY','$YEAR','$QUIZ','{"title":"Race quiz","audience":"level","level_id":"secondary-1","parts":[{"title":"P","kind":"question_sheet","questions":[{"max_score":"1","choices":[{"label":"A","is_correct":true},{"label":"B"}]}]}]}');
+select public.create_quiz('$ACADEMY','$YEAR','$QUIZ','{"title":"Race quiz","audience":"level","level_id":"secondary-1","parts":[{"title":"P","kind":"question_sheet","questions":[{"prompt":"Q","max_score":"1","choices":[{"label":"A","is_correct":true},{"label":"B"}]}]}]}');
 select public.configure_quiz_availability('$ACADEMY','$QUIZ',1,now() - interval '1 minute',now() + interval '1 hour');
 commit;
 SQL
@@ -592,7 +593,7 @@ ER4="$(new_student 'Exam race 4' 01088880014 null)"
 [ -n "$ER1" ] && [ -n "$ER2" ] && [ -n "$ER3" ] && [ -n "$ER4" ] || fail "could not create exam race students"
 psqlx >/dev/null <<SQL
 begin; $as_admin
-select public.create_exam('$ACADEMY','$YEAR','$EXAM','{"title":"Race exam","audience":"level","level_id":"secondary-1","time_limit_minutes":60,"parts":[{"title":"P","kind":"question_sheet","questions":[{"max_score":"1","choices":[{"label":"A","is_correct":true},{"label":"B"}]}]}]}');
+select public.create_exam('$ACADEMY','$YEAR','$EXAM','{"title":"Race exam","audience":"level","level_id":"secondary-1","time_limit_minutes":60,"parts":[{"title":"P","kind":"question_sheet","questions":[{"prompt":"Q","max_score":"1","choices":[{"label":"A","is_correct":true},{"label":"B"}]}]}]}');
 select public.configure_exam_availability('$ACADEMY','$EXAM',1,now() - interval '1 minute',now() + interval '1 hour');
 commit;
 SQL
@@ -670,8 +671,8 @@ psqlx -tA -c "select s.reason = 'window_closed' and s.submitted_at = z.actual_cl
 # 33. Preparation holds a fresh exam exclusively; a concurrent first physical confirmation waits, then
 #     confirms against the saved structure and locks it. Neither deadlocks.
 EXAM2="$(uuid)"
-psqlx >/dev/null -c "begin; $as_admin select public.create_exam('$ACADEMY','$YEAR','$EXAM2','{\"title\":\"Race exam 2\",\"audience\":\"level\",\"level_id\":\"secondary-1\",\"time_limit_minutes\":30,\"parts\":[{\"title\":\"P\",\"kind\":\"written_work\",\"questions\":[{\"max_score\":\"2\"}]}]}'); commit;"
-hold 33a 33b "$as_admin select public.update_exam('$ACADEMY','$EXAM2',1,'{\"title\":\"Race exam 2 (edited)\",\"audience\":\"level\",\"level_id\":\"secondary-1\",\"time_limit_minutes\":30,\"parts\":[{\"title\":\"P\",\"kind\":\"written_work\",\"questions\":[{\"max_score\":\"3\"}]}]}');"
+psqlx >/dev/null -c "begin; $as_admin select public.create_exam('$ACADEMY','$YEAR','$EXAM2','{\"title\":\"Race exam 2\",\"audience\":\"level\",\"level_id\":\"secondary-1\",\"time_limit_minutes\":30,\"parts\":[{\"title\":\"P\",\"kind\":\"written_work\",\"questions\":[{\"prompt\":\"Q\",\"max_score\":\"2\"}]}]}'); commit;"
+hold 33a 33b "$as_admin select public.update_exam('$ACADEMY','$EXAM2',1,'{\"title\":\"Race exam 2 (edited)\",\"audience\":\"level\",\"level_id\":\"secondary-1\",\"time_limit_minutes\":30,\"parts\":[{\"title\":\"P\",\"kind\":\"written_work\",\"questions\":[{\"prompt\":\"Q\",\"max_score\":\"3\"}]}]}');"
 start 33b "$as_admin select public.confirm_exam_physical('$ACADEMY','$EXAM2','$ER2',0,gen_random_uuid());"
 wait
 expect_ok 33a "the preparation holding the exam failed"

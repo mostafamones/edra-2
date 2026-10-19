@@ -15,7 +15,7 @@ cp Configuration/Development.xcconfig.example Configuration/Local.xcconfig   # g
 # fill in: Supabase URL + publishable key, API origin (reachable from the phone), DEVELOPMENT_TEAM
 ```
 
-Only public values go in there. The phone cannot reach `app.lvh.me`/`localhost`, so `EDRA_API_ORIGIN` must be reachable from the phone and accepted by the web proxy; plain http is allowed only for `mones.ddns.net` (ATS exception in `Configuration/Info.plist`).
+Only public values go in there. The phone cannot reach `app.lvh.me`/`localhost`, so `EDRA_API_ORIGIN` must be reachable from the phone and accepted by the web proxy; plain http is allowed only in Debug builds and only for `mones.ddns.net` (the ATS exception in `Configuration/Info-Debug.plist`; the app also rejects any other http origin). Release builds use `Configuration/Info.plist`, which has no ATS exception, and refuse every http API origin, so a Release `EDRA_API_ORIGIN` must be https. `run.sh` builds Debug.
 
 On the iPhone: enable Developer Mode (Settings > Privacy & Security), connect via USB, unlock, tap Trust.
 
@@ -39,9 +39,9 @@ Unit tests (`EdraInstructorTests`, Swift Testing) need a runtime to execute; run
 
 ## Source and verification
 
-The source includes staff sign-in, a bearer HTTP adapter, academy selection, live-session/attendance screens, a schedule picker that starts or opens sessions, student-code scanner components and bundled Tabler icons. The authenticated root connects sign-in, academy selection and session navigation.
+The source includes staff sign-in, a bearer HTTP adapter, academy selection, live-session/attendance screens, a schedule picker that starts or opens sessions, student-code scanner components, assignment marking (Assessments tab: workspace, marking sheet, code/camera identification, announcement) and bundled Tabler icons. The authenticated root connects sign-in, academy selection and session navigation.
 
-This description was checked against source on 2026-10-12. It does not establish that every workflow is complete or verified on a device. Build, device, secure-session-storage and deployed-API behavior require their own verification; use the setup and run instructions above for the intended target.
+This description was checked against source on 2026-10-18. It does not establish that every workflow is complete or verified on a device. Build, device, secure-session-storage and deployed-API behavior require their own verification; use the setup and run instructions above for the intended target.
 
 ## Documentation
 

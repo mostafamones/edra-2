@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   IconAlertCircle, IconChevronLeft, IconChevronRight, IconListCheck, IconPlus, IconSearch, IconSearchOff,
 } from "@tabler/icons-react";
 
+import { AssessmentCard } from "@/components/shared/assessment/list/card";
 import { FilterPopover } from "@/components/shared/filter-popover";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatScore } from "@/lib/score";
 import type { AcademyEntry } from "@/modules/academies";
 import { AcademyGate } from "@/modules/auth";
@@ -24,9 +23,9 @@ import {
   ALL, DEFAULT_QUIZ_FILTERS, loadQuizYears, loadQuizzes, QUIZ_PAGE_SIZE, quizListQueryKey, quizYearsQueryKey, type QuizListFilters,
 } from "../../queries";
 import { QUIZ_AUDIENCES, QUIZ_PHASES } from "../../types";
-import { AUDIENCE_LABELS, describeAudience, PHASE_BADGE, PHASE_LABELS } from "../shared/labels";
+import { AUDIENCE_LABELS, PHASE_BADGE, PHASE_LABELS } from "../shared/labels";
 import { QuizTime } from "../shared/time";
-import { useAudienceNames } from "../shared/use-names";
+import { describeAudience, useAudienceNames } from "@/components/shared/assessment/workspace/names";
 
 /** `/app/quizzes`: every quiz in the academy, searchable and filterable by year, phase and audience. */
 export function QuizzesPage() {
@@ -47,7 +46,6 @@ const yearLabel = (startYear: number) => `${startYear}–${String(startYear + 1)
 
 function ListContent({ academy }: { academy: AcademyEntry }) {
   const href = useCanonicalHref();
-  const router = useRouter();
   const academyId = academy.id;
   const names = useAudienceNames(academyId);
   const yearsQuery = useQuery({ queryKey: quizYearsQueryKey(academyId), queryFn: () => loadQuizYears(academyId) });
@@ -123,8 +121,8 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
       )}
 
       {!data && !failed && (
-        <div role="status" aria-label="Loading quizzes" className="flex flex-col gap-2">
-          {Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-12 rounded-lg" />)}
+        <div role="status" aria-label="Loading quizzes" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-32 rounded-lg" />)}
         </div>
       )}
 
@@ -150,53 +148,21 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
         </Empty>
       )) : (
         <div className="flex flex-col gap-3">
-          <div className="overflow-x-auto rounded-xl border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Quiz</TableHead>
-                  <TableHead className="w-32">Status</TableHead>
-                  <TableHead className="w-56">Window</TableHead>
-                  <TableHead className="w-28 text-right">Submitted</TableHead>
-                  <TableHead className="w-28 text-right">Announced</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.quizzes.map((quiz) => {
-                  const link = href(`/app/quizzes/${quiz.id}`);
-                  return (
-                    <TableRow key={quiz.id} className="cursor-pointer" onClick={() => router.push(link)}>
-                      <TableCell>
-                        <Link href={link} className="font-medium outline-none hover:underline focus-visible:underline" onClick={(event) => event.stopPropagation()}>
-                          {quiz.title}
-                        </Link>
-                        <span className="block text-xs text-muted-foreground">
-                          {describeAudience(quiz, names)} · {quiz.questionCount} question{quiz.questionCount === 1 ? "" : "s"} · {formatScore(quiz.effectiveMaxScore)} marks
-                          {quiz.timeLimitMinutes ? ` · ${quiz.timeLimitMinutes} min` : ""}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={PHASE_BADGE[quiz.phase]}>{PHASE_LABELS[quiz.phase]}</Badge>
-                        {quiz.processingPending && <span className="mt-0.5 block text-xs text-muted-foreground">Processing closure</span>}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {quiz.opensAt ? (
-                          <span className="flex flex-col">
-                            <span><span className="text-muted-foreground">Opens </span><QuizTime value={quiz.opensAt} /></span>
-                            <span><span className="text-muted-foreground">Closes </span><QuizTime value={quiz.closesAt} /></span>
-                          </span>
-                        ) : <span className="text-muted-foreground">No online window</span>}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {quiz.submitted}
-                        {quiz.inProgress > 0 && <span className="block text-xs text-muted-foreground">{quiz.inProgress} answering</span>}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{quiz.announced}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {data.quizzes.map((quiz) => (
+              <AssessmentCard
+                key={quiz.id} href={href(`/app/quizzes/${quiz.id}`)} title={quiz.title}
+                meta={`${describeAudience(quiz, names)} · ${formatScore(quiz.effectiveMaxScore)} marks${quiz.timeLimitMinutes ? ` · ${quiz.timeLimitMinutes} min` : ""}`}
+                badge={(
+                  <div className="flex flex-col items-end gap-0.5">
+                    <Badge variant={PHASE_BADGE[quiz.phase]}>{PHASE_LABELS[quiz.phase]}</Badge>
+                    {quiz.processingPending && <span className="text-xs text-muted-foreground">Processing closure</span>}
+                  </div>
+                )}
+                questions={quiz.questionCount} submitted={quiz.submitted} answering={quiz.inProgress} announced={quiz.announced}
+                window={quiz.opensAt ? { opens: <QuizTime value={quiz.opensAt} />, closes: <QuizTime value={quiz.closesAt} /> } : null}
+              />
+            ))}
           </div>
           {pageCount > 1 && (
             <nav aria-label="Quiz pages" className="flex items-center justify-end gap-2 text-sm">

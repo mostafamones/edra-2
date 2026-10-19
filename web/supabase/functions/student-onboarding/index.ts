@@ -194,7 +194,7 @@ Deno.serve(async (request) => {
     if (settings.developmentMode) {
       // The development Supabase project uses fake numbers. Every code is logged
       // for manual verification, regardless of Meta's test-recipient delivery.
-      console.log("EDRA_DEV_PARENT_CODE", { phone, code });
+      console.log("EDRA_DEV_PARENT_CODE", { phoneLast4: phone.slice(-4), code });
     }
 
     const deliveryPhone = settings.developmentMode

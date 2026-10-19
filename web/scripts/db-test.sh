@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Runs the database assertions and the concurrency harness against an explicitly configured,
-# isolated cloud test target. It never starts infrastructure, resets a database, or applies
+# isolated test target: a prepared cloud target, or the disposable instance scripts/db-ci.sh builds
+# on a GitHub-hosted runner. It never starts infrastructure, resets a database, or applies
 # migrations: apply them to the target first with the normal migration workflow.
 #
 #   EDRA_DB_TEST_URL     postgres:// URL of the isolated target (direct or session pooler; not :6543)
@@ -15,7 +16,7 @@ cd "$(dirname "$0")/.."
 TESTS=supabase/tests
 SQL_SUITES=(groups_schedules student_records student_imports student_import_logs staff_invitations sessions
   attendance session_authority student_codes student_code_changes student_code_generation student_code_checkin
-  assignments assignment_marks session_archival staff_access quizzes exams level_wide_groups level_catalog content content_options)
+  assignments assignment_marks session_archival staff_access quizzes exams level_wide_groups level_catalog student_enrollment account_settings account_contacts content content_options)
 
 reject() { echo "db-test: $*" >&2; exit 2; }
 
@@ -100,6 +101,11 @@ select to_regclass('supabase_migrations.schema_migrations') is not null as has_h
 \else
   select 'missing_migrations=history table supabase_migrations.schema_migrations is absent';
 \endif
+\if :has_history
+  select 'extra_migrations=' || coalesce(string_agg(m.version, ',' order by m.version), '')
+  from supabase_migrations.schema_migrations m
+  where m.version <> all(string_to_array(:'versions', ','));
+\endif
 select 'privileges=' || concat_ws(',',
   case when not has_table_privilege('auth.users', 'insert') then 'insert into auth.users' end,
   case when not pg_has_role('authenticated', 'member') then 'set role authenticated' end,
@@ -125,6 +131,9 @@ marker="$(value marker)"
 missing="$(value missing_migrations)"
 [ -z "$missing" ] || reject "target schema is behind the repository (missing: $missing). Apply migrations with the
   normal migration workflow first; test:db never applies or replays them"
+extra="$(value extra_migrations)"
+[ -z "$extra" ] || reject "target has migrations this checkout does not (extra: $extra); test a checkout that
+  includes them or use a target that matches this checkout"
 privileges="$(value privileges)"
 [ -z "$privileges" ] || reject "connection role lacks fixture privileges: $privileges"
 collisions="$(value collisions)"

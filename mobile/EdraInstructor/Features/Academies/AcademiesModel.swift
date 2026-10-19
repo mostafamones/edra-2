@@ -73,6 +73,8 @@ final class AcademiesModel {
             state = academies.isEmpty ? .failed("Can't reach the server. Check your connection and try again.") : .loaded
         case .failure(.server(let message)):
             state = academies.isEmpty ? .failed(message) : .loaded
+        case .failure(.rejected(let failure)):
+            state = academies.isEmpty ? .failed(failure.message) : .loaded
         case .failure(.cancelled):
             // The owner went away mid-load; leave the last good state without reporting an error.
             if !academies.isEmpty { state = .loaded }

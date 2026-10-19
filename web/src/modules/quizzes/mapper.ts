@@ -41,7 +41,7 @@ const quizSchema = z.object({
   ready: z.boolean(),
   issues: z.array(z.object({
     scope: z.enum(["quiz", "part", "question"]), id: z.string(),
-    issue: z.enum(["target", "parts", "questions", "choices", "correct_choice", "choice_text"]),
+    issue: z.enum(["target", "parts", "questions", "choices", "correct_choice", "choice_text", "prompt"]),
   })),
   phase: z.enum(QUIZ_PHASES),
   server_now: timestamp,

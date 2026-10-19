@@ -2,13 +2,20 @@
 import { useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
-import { IconSchool as GraduationCap } from "@tabler/icons-react";
+import { usePathname } from "next/navigation";
+import { IconBuilding, IconSchool as GraduationCap } from "@tabler/icons-react";
 
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
 
@@ -16,8 +23,12 @@ import { STUDENT_GROUPS } from "../manifest";
 import { AccountMenu } from "./account-menu";
 import { SidebarNavigation } from "./sidebar-nav";
 
-export function StudentSidebar() {
+/** Academies the student is connected to; each links to its academy home. */
+export type StudentSidebarAcademy = { name: string; slug: string };
+
+export function StudentSidebar({ academies = [] }: { academies?: StudentSidebarAcademy[] }) {
   const href = useCanonicalHref();
+  const pathname = usePathname();
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -28,7 +39,28 @@ export function StudentSidebar() {
           <span className="truncate group-data-[collapsible=icon]:hidden">Edra Learning</span>
         </Link>
       </SidebarHeader>
-      <SidebarContent><SidebarNavigation groups={STUDENT_GROUPS} /></SidebarContent>
+      <SidebarContent>
+        {academies.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Academies</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {academies.map((academy) => (
+                  <SidebarMenuItem key={academy.slug}>
+                    <SidebarMenuButton asChild tooltip={academy.name} isActive={pathname === `/${academy.slug}`}>
+                      <Link href={`/${academy.slug}`}>
+                        <IconBuilding aria-hidden="true" />
+                        <span>{academy.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+        <SidebarNavigation groups={STUDENT_GROUPS} />
+      </SidebarContent>
       <SidebarFooter><AccountMenu portal="student" /></SidebarFooter>
       <SidebarRail />
     </Sidebar>

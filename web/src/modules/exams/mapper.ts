@@ -41,7 +41,7 @@ const examSchema = z.object({
   ready: z.boolean(),
   issues: z.array(z.object({
     scope: z.enum(["exam", "part", "question"]), id: z.string(),
-    issue: z.enum(["target", "timer", "parts", "questions", "choices", "correct_choice", "choice_text"]),
+    issue: z.enum(["target", "timer", "parts", "questions", "choices", "correct_choice", "choice_text", "prompt"]),
   })),
   phase: z.enum(EXAM_PHASES),
   server_now: timestamp,

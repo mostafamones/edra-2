@@ -9,9 +9,9 @@ describe("canonical navigation", () => {
     expect(internalStudentPath("/profile")).toBe("/learn/profile");
     expect(publicHref("/learn/profile")).toBe("http://learn.lvh.me:3000/profile");
   });
-  it("keeps personal account outside academy scope", () => {
-    expect(publicHref("/app/manage/account", "science")).toBe("http://app.lvh.me:3000/account");
-    expect(academySwitchHref("/account", "science", { slug: "math", role: "admin" })).toBe("http://app.lvh.me:3000/account");
+  it("renders personal account inside the academy layout", () => {
+    expect(publicHref("/app/manage/account", "science")).toBe("http://app.lvh.me:3000/science/manage/account");
+    expect(academySwitchHref("/science/manage/account", "science", { slug: "math", role: "admin" })).toBe("http://app.lvh.me:3000/math/manage/account");
   });
   it("switches the academy while discarding record IDs and query filters", () => {
     expect(academySwitchHref("/science/schedules/private-id/edit?group=source", "science", { slug: "math", role: "admin" })).toBe("http://app.lvh.me:3000/math/schedules");

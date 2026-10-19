@@ -26,6 +26,8 @@ A student phone may appear only once within an academy and academic year, includ
 
 Academy-entered information remains preserved when an online account is connected. Account information does not silently overwrite the academy's values.
 
+The academy record name is the primary student display name throughout that academy. For a genuinely new online student, onboarding initializes it from the optional account display name, falling back to the full account name. Staff may then edit it independently. Account-name changes do not overwrite academy records. See [personal account settings](account-settings.md) for the agreed name precedence and linked/suspended table indicator; student profile pictures do not appear in staff student-record views.
+
 ## Placement
 
 Every annual student record has a level and may have a track. Together these are called the student's program.
@@ -58,7 +60,7 @@ Archiving removes a student record from ordinary active student lists while reta
 
 An archived record's phone remains reserved within that academy and year. Creating another record with that phone is not a substitute for reviewing or restoring the existing record.
 
-Archival, online-access suspension and account disconnection are distinct actions. Their effects on student-facing access are defined in the enrollment and access rules.
+Archiving annual participation also adds online-access suspension caused by archival. Restoring that participation removes only the archival suspension. An independent staff suspension, whether applied before or during archival, remains until explicitly removed by staff. Neither action disconnects the account or removes academic history.
 
 ## Staff permissions
 

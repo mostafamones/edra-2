@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { newUuid } from "@/lib/uuid";
 import { loadMarks, marksQueryKey } from "../queries";
 import type { Assignment, StudentWork } from "../types";
 
@@ -20,19 +19,4 @@ export function useMarks(assignment: Assignment) {
       current ? { ...current, students: current.students.map((row) => (row.recordId === student.recordId ? { ...student, placement: row.placement } : row)) } : current);
   }, [queryClient, queryKey]);
   return { query, replace, queryKey };
-}
-
-/**
- * One idempotency key per distinct payload. A retry of the same unsent or unconfirmed payload
- * reuses its key (the server replays instead of applying twice); a changed payload gets a new key.
- */
-export function useAttemptKey() {
-  const attempt = useRef<{ fingerprint: string; key: string } | null>(null);
-  return {
-    keyFor(fingerprint: string): string {
-      if (attempt.current?.fingerprint !== fingerprint) attempt.current = { fingerprint, key: newUuid() };
-      return attempt.current.key;
-    },
-    reset() { attempt.current = null; },
-  };
 }

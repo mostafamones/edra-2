@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { academyDateTime, academyInstant, weekFromNow } from "./due";
-import { MAX_QUESTION_IMAGES, questionImageCount } from "./images";
+import { MAX_QUESTION_IMAGES, questionImageCount } from "@/components/shared/assessment/images/tokens";
 import { isValidMaxScore, MAX_PART_TOTAL, sumScores, toHundredths } from "./score";
 import { ASSIGNMENT_AUDIENCES, PART_KINDS, type Assignment, type AssignmentDraft, type DraftPart } from "./types";
 

@@ -31,3 +31,12 @@ export { canConfigureStudentCodes, canViewStudentCodeSettings } from "./codes/pe
 export type {
   GenerationMode, GenerationPreview, GenerationResult, LevelPattern, StudentCodeSettings, StudentCodeState,
 } from "./codes/types";
+export {
+  clearStudentInvite, completeStudentInvite, getStudentEnrollmentSettings, previewStudentInvite, setStudentInvite,
+  updateStudentEnrollmentSettings,
+} from "./enrollment/actions";
+export type { EnrollmentProgram, EnrollmentSettings, StudentAcademy, StudentJoinState } from "./enrollment/types";
+export { StudentEnrollmentPage } from "./enrollment/components/page";
+export { StudentAcademyHome } from "./enrollment/components/academy-home";
+export { openStudentInviteLink } from "./enrollment/actions";
+export { parseStudentInviteLink } from "./enrollment/link";

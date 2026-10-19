@@ -10,12 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { useAttemptKey } from "@/lib/attempt-key";
 import { useAcademyScope } from "@/modules/auth";
 import { correctExamKey, excludeExamQuestion } from "../../actions";
 import { examsRootKey } from "../../queries";
 import type { Exam, ExamQuestion } from "../../types";
 import { choiceLetter } from "../shared/labels";
-import { useAttemptKey } from "../shared/use-attempt-key";
 
 type Props = { exam: Exam; question: ExamQuestion | null; mode: "key" | "exclude"; onClose: () => void };
 

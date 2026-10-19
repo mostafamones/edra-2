@@ -1,9 +1,11 @@
 import { z } from "zod";
 
 import { fetchAllPages } from "@/lib/supabase/paginate";
-import { createClient } from "@/lib/supabase/server";
+import type { Db } from "@/lib/supabase/authority";
+import { academyMember } from "@/lib/supabase/membership";
 import type { StaffRole } from "./permissions";
 import type { StudentListParams } from "./list-params";
+import { onlineAccountState } from "./validation";
 import type {
   GroupChangePreview, GroupChangeRow, RecordVersion, StudentListResult, StudentRecord, StudentRecordRow,
 } from "./types";
@@ -17,19 +19,13 @@ type Nullable<T> = { [K in keyof T]: T[K] | null };
  * membership and runs through the caller's Supabase session, so RLS applies as well.
  */
 
-export type StaffContext = { db: Awaited<ReturnType<typeof createClient>>; userId: string; role: StaffRole };
+export type StaffContext = { db: Db; userId: string; role: StaffRole };
 
 export type ReadResult<T> = { ok: true; data: T } | { ok: false; status: 400 | 401 | 403 | 404 | 500 };
 
-/** The signed-in user's session and role in the academy, or null when they are not a member. */
+/** The signed-in user's session and role in the academy, or null when they are not an active staff member. */
 export async function staffContext(academyId: string): Promise<StaffContext | null> {
-  if (!z.uuid().safeParse(academyId).success) return null;
-  const db = await createClient();
-  const { data: auth } = await db.auth.getClaims();
-  if (!auth?.claims) return null;
-  const { data } = await db.from("academy_memberships").select("role")
-    .eq("academy_id", academyId).eq("user_id", auth.claims.sub).is("suspended_at", null).maybeSingle();
-  return data ? { db, userId: auth.claims.sub, role: data.role } : null;
+  return academyMember(academyId);
 }
 
 async function openYearId(db: StaffContext["db"], academyId: string) {
@@ -56,6 +52,7 @@ const listRowSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   version: z.number().int(),
+  online_account: z.enum(["not_connected", "connected", "suspended"]),
 });
 const listResponseSchema = z.object({ rows: z.array(listRowSchema), total: z.number().int().nonnegative() });
 
@@ -76,6 +73,7 @@ const toRow = (row: z.infer<typeof listRowSchema>): StudentRecordRow => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   version: row.version,
+  onlineAccount: row.online_account,
 });
 
 /** One page of the academy's records for its open academic year. */
@@ -129,9 +127,13 @@ export async function getStudentRecord(academyId: string, recordId: string): Pro
     .eq("academy_id", academyId).eq("id", recordId).maybeSingle();
   if (error) return { ok: false, status: 500 };
   if (!data) return { ok: false, status: 404 };
+  const { data: profile, error: profileError } = await actor.db.from("academy_student_profiles")
+    .select("user_id,access_suspended_at").eq("academy_id", academyId).eq("id", data.academy_student_profile_id).maybeSingle();
+  if (profileError) return { ok: false, status: 500 };
   return {
     ok: true,
     data: {
+      onlineAccount: onlineAccountState(profile?.user_id, data.archived_at, profile?.access_suspended_at),
       id: data.id,
       academyId: data.academy_id,
       academicYearId: data.academic_year_id,

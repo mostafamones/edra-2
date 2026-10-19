@@ -65,6 +65,23 @@ struct AcademiesOwnershipTests {
         #expect(defaults.string(forKey: "selectedAcademyID") == "B")
     }
 
+    /// The shell resets its stacks only when the context changes, so reselecting must keep it.
+    @Test func reselectingTheCurrentAcademyKeepsItsContext() async {
+        let transport = ControlledTransport()
+        let (model, _) = makeModel(transport)
+        let load = Task { await model.load() }
+        await transport.waitForRequests(1)
+        transport.respond(0, json: Fixture.academies(["A", "B"]))
+        await load.value
+        let context = model.context
+
+        model.select(model.academies[0])
+        #expect(model.context == context)
+        model.select(model.academies[1])
+        model.select(model.academies[0])
+        #expect(model.context != context) // A → B → A is a new visit
+    }
+
     @Test func revokedSelectionFallsBackToAnAuthorizedAcademy() async {
         let transport = ControlledTransport()
         let (model, _) = makeModel(transport)

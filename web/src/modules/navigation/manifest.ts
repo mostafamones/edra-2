@@ -1,4 +1,4 @@
-import { IconChartBar as BarChart3, IconBell as Bell, IconBook as BookOpen, IconBuilding as Building2, IconCalendar as CalendarDays, IconCalendarClock as CalendarClock, IconClipboardCheck as ClipboardCheck, IconClipboardList as ClipboardList, IconFilePencil as FilePenLine, IconFileText as FileText, IconSchool as GraduationCap, IconHome as House, IconId as IdCard, IconBooks as Library, IconListCheck as ListChecks, IconMessageCircle as MessageCircle, IconSitemap as Network, IconPlug as Plug, IconZoomCheck as SearchCheck, IconSettings as Settings, IconTicket as Ticket, IconUserCog as UserCog, IconUser as UserRound, IconUsers as Users, IconUsersGroup as UsersRound, type Icon as TablerIcon } from "@tabler/icons-react";
+import { IconChartBar as BarChart3, IconBell as Bell, IconBook as BookOpen, IconBuilding as Building2, IconCalendar as CalendarDays, IconCalendarClock as CalendarClock, IconClipboardCheck as ClipboardCheck, IconClipboardList as ClipboardList, IconFilePencil as FilePenLine, IconFileText as FileText, IconSchool as GraduationCap, IconHome as House, IconId as IdCard, IconUserPlus as UserPlus, IconBooks as Library, IconListCheck as ListChecks, IconMessageCircle as MessageCircle, IconSitemap as Network, IconPlug as Plug, IconZoomCheck as SearchCheck, IconSettings as Settings, IconTicket as Ticket, IconUserCog as UserCog, IconUser as UserRound, IconUsers as Users, IconUsersGroup as UsersRound, type Icon as TablerIcon } from "@tabler/icons-react";
 
 import type { AcademyRole } from "@/modules/academies/roles";
 
@@ -25,7 +25,7 @@ export const NAV_ICONS = {
   academy: Building2,
   structure: Network,
   studentCodes: IdCard,
-  bookingForm: ClipboardList,
+  studentEnrollment: UserPlus,
   team: UserCog,
   notifications: Bell,
   integrations: Plug,
@@ -76,7 +76,7 @@ export const STAFF_MANAGEMENT_GROUPS: readonly StaffNavSection[] = [
   { label: "Personal", hrefs: ["/app/manage/account"] },
   { label: "Intake", hrefs: ["/app/manage/bookings", "/app/manage/bookings/review"] },
   { label: "Access & delivery", hrefs: ["/app/manage/access", "/app/manage/messages"] },
-  { label: "Academy", hrefs: ["/app/manage/academy", "/app/manage/structure", "/app/manage/student-codes", "/app/manage/booking-form", "/app/manage/team"] },
+  { label: "Academy", hrefs: ["/app/manage/academy", "/app/manage/structure", "/app/manage/student-codes", "/app/manage/student-enrollment", "/app/manage/team"] },
   { label: "Services", hrefs: ["/app/manage/notifications", "/app/manage/integrations"] },
 ];
 
@@ -376,18 +376,9 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             icon: "studentCodes",
           },
           {
-            label: "Booking form",
-            href: "/app/manage/booking-form",
-            icon: "bookingForm",
-            preview: {
-              title: "Booking form",
-              purpose: "Configure the academy's public student-intake form.",
-              sections: [
-                "Open or closed state and the shareable public link.",
-                "Program and group choices, capacity behavior, and required contact details.",
-                "What happens after submission, including account matching and review.",
-              ],
-            },
+            label: "Student enrollment",
+            href: "/app/manage/student-enrollment",
+            icon: "studentEnrollment",
           },
           {
             label: "Team",

@@ -4,13 +4,13 @@ import { IconAlertCircle } from "@tabler/icons-react";
 
 import { AssessmentEditGate } from "@/components/shared/assessment/edit";
 import { AssessmentFormPage } from "@/components/shared/assessment/page";
+import { WorkspaceMissing } from "@/components/shared/assessment/workspace/missing";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { AcademyEntry } from "@/modules/academies";
 import { AcademyGate } from "@/modules/auth";
 import { quizPermissions } from "../../permissions";
 import { loadQuiz, quizQueryKey } from "../../queries";
 import type { Quiz } from "../../types";
-import { QuizNotFound } from "../shared/not-found";
 import { QuizForm } from "./form";
 
 /** `/app/quizzes/new`: any staff member may create and prepare a quiz. */
@@ -26,7 +26,7 @@ export function EditQuizPage({ id }: { id: string }) {
 function EditContent({ academy, quizId }: { academy: AcademyEntry; quizId: string }) {
   return (
     <AssessmentEditGate
-      academy={academy} noun="quiz" queryKey={quizQueryKey(academy.id, quizId)} load={() => loadQuiz(academy.id, quizId)} notFound={<QuizNotFound />}
+      academy={academy} noun="quiz" queryKey={quizQueryKey(academy.id, quizId)} load={() => loadQuiz(academy.id, quizId)} notFound={<WorkspaceMissing noun="quiz" route="quizzes" />}
       blocked={(quiz) => quizPermissions(academy.role, quiz).edit ? null : (
         <Alert><IconAlertCircle /><AlertTitle>Read-only</AlertTitle><AlertDescription>This quiz is archived or belongs to a closed academic year.</AlertDescription></Alert>
       )}

@@ -63,6 +63,8 @@ final class SessionsModel {
             state = .failed("Can't reach the server. Check your connection and try again.")
         case .failure(.server(let message)):
             state = .failed(message)
+        case .failure(.rejected(let failure)):
+            state = .failed(failure.message)
         case .failure(.cancelled):
             // The screen went away mid-load; no error to report.
             state = sessions.isEmpty ? .idle : .loaded

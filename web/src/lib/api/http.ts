@@ -33,6 +33,7 @@ export type ApiErrorCode =
   | "INVALID_SCORE"
   | "UNKNOWN_PART"
   | "HAS_MARKS"
+  | "PUBLICATION_REJECTED"
   | "THROTTLED"
   | "INTERNAL";
 
@@ -65,6 +66,7 @@ const STATUS: Record<ApiErrorCode, number> = {
   INVALID_SCORE: 422,
   UNKNOWN_PART: 422,
   HAS_MARKS: 409,
+  PUBLICATION_REJECTED: 409,
   THROTTLED: 429,
   INTERNAL: 500,
 };
@@ -91,13 +93,14 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   STUDENT_CODE_NOT_FOUND: "No student in this session's academy has this code.",
   STUDENT_CODE_AMBIGUOUS: "This code was issued to more than one student. Use annual_student_record_id; staff must issue a new code.",
   ASSIGNMENT_CONFLICT: "Someone else changed this assignment first. Review the latest version and try again.",
-  ASSIGNMENT_NOT_OPEN: "Marks can only be entered once the assignment is published or closed.",
+  ASSIGNMENT_NOT_OPEN: "This assignment is not ready for marking, or it is archived.",
   ASSIGNMENT_CLOSED: "This assignment is closed, so no newly received work can be recorded.",
   MARKS_CONFLICT: "This student's marks changed after you loaded them. Review the current values and try again.",
   NOT_A_RECIPIENT: "This student is not a recipient of this assignment.",
   INVALID_SCORE: "A score must be a string from 0 up to the part's maximum with at most two decimals.",
   UNKNOWN_PART: "A part_id does not belong to this assignment.",
   HAS_MARKS: "This student already has marks. Clear them first.",
+  PUBLICATION_REJECTED: "Nothing was announced: some selected results are stale, incomplete, or not eligible. See details.failures.",
   THROTTLED: "Too many requests. Retry after the indicated delay.",
   INTERNAL: "Something went wrong. Retry with the same Idempotency-Key.",
 };

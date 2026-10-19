@@ -48,27 +48,6 @@ export const AUDIENCE_LABELS: Record<AssignmentAudience, string> = {
   groups: "Selected groups",
 };
 
-export type AudienceNames = {
-  levelNames: Record<string, string>;
-  trackNames: Map<string, string>;
-  groupNames: Map<string, string>;
-};
-
-/** "Second Secondary", "First Secondary · Science", or "Group A, Group B" (unknown ids fall back to a count). */
-export function describeAudience(
-  value: { audience: AssignmentAudience; levelId: string | null; trackId: string | null; groupIds: readonly string[] },
-  names: AudienceNames,
-): string {
-  if (value.audience === "groups") {
-    const known = value.groupIds.map((id) => names.groupNames.get(id)).filter((name): name is string => Boolean(name));
-    if (known.length === value.groupIds.length && known.length <= 3) return known.join(", ");
-    return `${value.groupIds.length} group${value.groupIds.length === 1 ? "" : "s"}`;
-  }
-  const level = value.levelId ? names.levelNames[value.levelId] ?? value.levelId : "";
-  const track = value.trackId ? names.trackNames.get(value.trackId) : undefined;
-  return track ? `${level} · ${track}` : level;
-}
-
 export const PART_KIND_HINTS: Record<PartKind, string> = {
   online_questions: "Questions are written here, with choices; students answer them in Edra",
   answer_sheet: "Questions are on a separate sheet; you set the correct answer and marks for each",

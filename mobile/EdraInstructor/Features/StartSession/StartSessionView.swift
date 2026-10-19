@@ -80,7 +80,8 @@ struct StartSessionView: View {
                 } else {
                     unavailable("No matching schedules", "No schedule title matches “\(search)”.")
                 }
-            case .loaded:
+            // Rows prefetched before the picker opened stay visible while they refresh.
+            case .loaded, .loading where !schedules.schedules.isEmpty:
                 rows
             default:
                 HStack { Spacer(); ProgressView("Loading schedules…"); Spacer() }

@@ -8,6 +8,8 @@ A new student gains online academy access through its student invite link. The l
 
 The flow connects an existing academy record or enrolls a genuinely new student. It preserves the student’s academic identity and earlier work.
 
+Academy onboarding uses the same full-screen split design as existing onboarding and staff invitations. After any required account setup, the system automatically determines the student’s path; students do not choose whether they are new, returning or already registered. An existing eligible current-year record goes directly to confirmation. A new or returning student without a current-year record chooses a program from the academy’s offerings, then optionally chooses a group on a second screen. There is no separate academy-details form or review screen. Successful completion transitions with an animation into the student portal.
+
 Signing in outside the invite flow does not join an academy merely because a phone matches its records. Once connected, a student can return through their normal academy navigation without using the invite each time.
 
 ## Student invites
@@ -32,19 +34,23 @@ A parent phone alone does not choose a student record when the same parent conta
 
 When no existing record matches, the invite flow offers enrollment if the academy is accepting new students.
 
-The student supplies the required name and contacts and chooses from the academy’s available levels, tracks, participation options and groups. Group placement may remain unassigned where the enrollment configuration permits it.
+The flow reuses the student’s name and contacts from account setup rather than asking for them again. The student first chooses a program from the academy’s available offerings, then optionally chooses a compatible group on a second screen.
 
-The student reviews the information before submitting. A valid submission creates their academy profile and annual participation and connects their account within the onboarding flow. Ordinary valid enrollment does not require a separate staff approval step.
+For a genuinely new student, the initial record name uses the optional account display name, falling back to the full account name. The resulting academy record name becomes primary within that academy and remains staff-editable independently of account names. Existing record names are preserved. See [personal account settings](account-settings.md) for verified contact changes and name ownership.
 
-If the academy is not accepting new enrollment, the flow explains how to contact staff. It does not create a record merely because the student opened an invite.
+Completing those choices creates their academy profile and annual participation and connects their account within the onboarding flow. There is no separate review screen or routine staff approval step. After successful completion, an animation takes the student into the student portal.
+
+If the academy is not accepting new enrollment, a valid invite may still connect an eligible existing current-year record. Creating annual participation is blocked for both genuinely new students and returning students without a current-year record. The flow explains how to contact staff and does not create a record merely because the student opened an invite.
 
 ## Returning students
 
 Returning students previously participated in this academy and are joining its new academic year without a current-year record.
 
+When no account connection or current-year record exists, onboarding compares the account’s verified student phone with historical student phones within that academy. A match to exactly one academy student profile identifies the returning student, even when that profile has several annual records. Matches to different profiles or a conflicting account connection require staff resolution; onboarding does not merge profiles or create a replacement identity.
+
 For a signed-in returning student, the public booking link serves as the academy invite. It skips the public form and opens the same online academy onboarding used by invited students.
 
-The student chooses their current academy program—level and track where applicable—and group. The school level selected during account setup does not replace this academy program choice.
+The student first chooses their current academy program—level and track where applicable—from the academy’s offerings, then optionally chooses a compatible group on a second screen. The school level selected during account setup does not replace this academy program choice.
 
 Completing onboarding creates the new annual record under their existing academy profile, connects their account and grants online academy access without a separately sent invite. Their in-person or online-only participation type and earlier history are preserved.
 
@@ -63,6 +69,8 @@ Shared parent phones and similar names do not alone block enrollment or cause re
 ## After connection
 
 The student can navigate the academy and see the learning, performance and other information their annual participation and access permit.
+
+Archiving annual participation adds online-access suspension caused by archival. Restoring that participation removes only that suspension; any suspension applied independently by staff, before or during archival, remains until staff explicitly remove it. The account connection and academic history remain intact.
 
 Connection is separate from entitlement to learning material. Attendance, coupons, staff grants, submissions and announced results continue to control their respective learning access.
 

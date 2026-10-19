@@ -8,7 +8,7 @@ Keep views/models/services in native feature folders, with small configuration/a
 
 Scope pending work/cache to account, academy and academic record. Clear affected context on sign-out/membership loss and reject late results for a different context. Success requires server acknowledgment; retries preserve mutation identity. Local edits do not authorize offline finalization or silent conflict overwrites.
 
-Use current credentials per request, controlled refresh and secure platform storage. Public URL/key/API origin configuration is visible in the binary; backend/provider/signing secrets do not belong there. Secure persistence must be verified rather than inferred from a sign-in screen.
+Use current credentials per request, controlled refresh and secure platform storage. Temporary auth-service failures keep credentials; only a missing session, a definitive rejection or explicit sign-out clears them. Debug builds may use plain HTTP only to the exact development host in their ATS exception; Release builds have no ATS exception and require HTTPS API and Supabase origins. Public URL/key/API origin configuration is visible in the binary; backend/provider/signing secrets do not belong there. Secure persistence must be verified rather than inferred from a sign-in screen.
 
 ## UI and dependencies
 
