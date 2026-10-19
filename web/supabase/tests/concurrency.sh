@@ -735,11 +735,11 @@ COHORT_D="$(uuid)"
 COHORT_E="$(uuid)"
 cohort_draft='{"title":"Cohort race","audience":"level","level_id":"secondary-1","parts":[{"title":"P","kind":"file_upload","questions":[{"prompt":"","max_score":"2"}]}]}'
 hold 34a 34b "$as_admin select public.create_assignment('$ACADEMY','$YEAR','$COHORT_A','$cohort_draft');"
-start 34b "$as_admin $(create_student 'Cohort late concurrent' 01088880021 null)"
+start 34b "$as_admin $(create_student 'Cohort late concurrent' 01088880031 null)"
 wait
 expect_ok 34a "cohort capture failed"
 expect_ok 34b "concurrent enrollment failed"
-LATE34="$(psqlx -tA -c "select id from public.annual_student_records where academy_id='$ACADEMY' and student_phone='+201088880021'")"
+LATE34="$(psqlx -tA -c "select id from public.annual_student_records where academy_id='$ACADEMY' and student_phone='+201088880031'")"
 psqlx -tA -c "select not exists(select 1 from public.assignment_cohort_members where assignment_id='$COHORT_A' and annual_student_record_id='$LATE34')
  and (edra_private.assignment_recipient_context('$COHORT_A','$LATE34')->>'eligible')::boolean" | grep -qx t || fail "late enrollment was required or was undiscoverable"
 
@@ -772,7 +772,7 @@ psqlx -tA -c "select requirement_ended_at is not null from public.assignment_coh
 # 38. Optional first marking holds the annual record; placement waits. After both commits its work
 #     and mark survive and the required denominator remains exactly the captured count.
 psqlx >/dev/null -c "begin; $as_admin select public.create_assignment('$ACADEMY','$YEAR','$COHORT_D','$cohort_draft'); commit;"
-LATE38="$(new_student 'Optional mark race' 01088880022 null)"
+LATE38="$(new_student 'Optional mark race' 01088880032 null)"
 PART38="$(psqlx -tA -c "select id from public.assignment_parts where assignment_id='$COHORT_D'")"
 COUNT38="$(psqlx -tA -c "select recipient_count from public.assignments where id='$COHORT_D'")"
 hold 38a 38b "$as_admin select public.save_assignment_marks('$ACADEMY','$COHORT_D','$LATE38',null,1,'{\"marks\":[{\"part_id\":\"$PART38\",\"score\":\"1\"}]}',gen_random_uuid());"
