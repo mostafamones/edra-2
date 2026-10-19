@@ -88,6 +88,7 @@ export function SheetTable({ total, rows, editable, pending, selected, onSelect,
                 <div className="flex min-h-10 flex-col justify-center gap-0.5">
                   <span className="flex flex-wrap items-center gap-1.5 font-medium">
                     {entry.fullName}
+                    {entry.origin === "unexpected" && <Badge variant="outline" className="text-[11px] text-muted-foreground">Added</Badge>}
                     {entry.archived && <Badge variant="outline" className="text-[11px] text-muted-foreground">Archived</Badge>}
                   </span>
                   {entry.updatedAt && (
