@@ -859,7 +859,7 @@ AP="$(psqlx -tA -c "select id from public.assignment_parts where assignment_id =
 AQ="$(psqlx -tA -c "select id from public.assignment_part_questions where assignment_id = '$ASSIGNMENT' and position = 1")"
 AQ2="$(psqlx -tA -c "select id from public.assignment_part_questions where assignment_id = '$ASSIGNMENT' and position = 2")"
 ACB="$(psqlx -tA -c "select id from public.assignment_question_choices where question_id = '$AQ' and position = 2")"
-psqlx >/dev/null -c "begin; $as_admin select public.save_assignment_marks('$ACADEMY','$ASSIGNMENT','$QR1',null,0,jsonb_build_object('marks',jsonb_build_array(jsonb_build_object('part_id','$AP','score','3.5'))),gen_random_uuid()); commit;"
+psqlx >/dev/null -c "begin; $as_admin select public.save_assignment_marks('$ACADEMY','$ASSIGNMENT','$QR1',null,1,jsonb_build_object('marks',jsonb_build_array(jsonb_build_object('part_id','$AP','score','3.5'))),gen_random_uuid()); commit;"
 AV="$(psqlx -tA -c "select version from public.assignment_recipients where assignment_id = '$ASSIGNMENT' and annual_student_record_id = '$QR1'")"
 hold a34a a34b "$as_admin select public.correct_assignment_key('$ACADEMY','$ASSIGNMENT','$AQ','$ACB',1,gen_random_uuid());"
 start a34b "$as_admin select public.save_assignment_marks('$ACADEMY','$ASSIGNMENT','$QR1',null,$AV,'{\"feedback\":\"stale scoring\"}',gen_random_uuid());"
