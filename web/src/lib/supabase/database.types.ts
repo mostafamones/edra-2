@@ -4672,6 +4672,13 @@ export type Database = {
             referencedRelation: "sessions"
             referencedColumns: ["academy_id", "academic_year_id", "id"]
           },
+          {
+            foreignKeyName: "session_roster_entries_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       session_start_requests: {
