@@ -160,7 +160,41 @@ Staff can distinguish completed attempts from attempts ended or invalidated unde
 
 For quizzes and exams whose final submission can be fully graded automatically, the complete score is announced immediately on final submission. This includes automatic submissions caused by individual-timer expiry, the applicable departure limit or actual window closure. Correct answers and solution videos remain locked until the availability window closes. A submission requiring manual marking remains private until complete staff review and announcement. Later answer-key corrections and exclusions still follow private recalculation and explicit staff correction announcement.
 
-The exam-specific student flow will be reviewed with the owner when planning the exam layer. Fullscreen requirements, leaving-attempt consequences, timing, permitted navigation, recovery, retakes and solution visibility are defined in the quiz and exam workflow rules before implementation. These controls do not change the separation between received work, private marking and official results.
+The exam-specific student web flow is confirmed in the following section. These controls do not change the separation between received work, private marking and official results.
+
+## Student web exam flow — EDRA-83
+
+Confirmed during owner shaping: deliver standalone exams first, independently of content-unit delivery. Content-attached exam access remains a separate coordinated integration. These are approved product requirements, not a statement of implementation or deployment.
+
+### Discovery and entry
+
+Each connected academy's student area has an Exams page. Show available and upcoming exams matching the student's audience, plus exams the student previously participated in; hide closed exams they never participated in. This discovery rule does not bypass identity, suspension or other access authority. Upcoming exams expose overview and timing information, never question material.
+
+The exam overview shows instructions, duration and availability. One explicit Start exam action requests fullscreen and starts the server-timed attempt only after fullscreen succeeds; no additional start-confirmation dialog is required. Opening the overview never starts the timer. An unfinished attempt offers Resume exam, preserving the original deadline and departure count.
+
+### Answering and recovery
+
+Show one question at a time with Previous/Next and a numbered question navigator. Students may freely revisit questions. Skip excluded questions without renumbering. Submit exam opens a confirmation showing the unanswered count with actions to return or submit; unanswered questions do not block submission.
+
+During connection loss, students may edit already loaded questions. Clearly distinguish pending local answers from server-acknowledged saved answers. Persist pending answers for the authenticated account and attempt across refresh or accidental page close in the same browser, recover and retry while authorized, and clear acknowledged entries or remaining pending data on finalization or sign-out. Recovery must not overwrite newer acknowledged work. The original timer continues; only answers accepted by the server before finalization count. Local persistence does not extend deadlines or reopen work.
+
+Only one tab/device may actively answer an attempt. Block a second editor while the active editor exists; there is no takeover flow. Enforce editor ownership at the trusted mutation boundary. Legitimate recovery after refresh, closure or connection loss resumes the same unfinished attempt without allowing competing editors or stale-editor writes.
+
+### Fullscreen and departures
+
+Browsers/devices without the required fullscreen capability cannot start or resume answering; show an actionable unsupported-browser status while keeping the overview and permitted results accessible. Verify actual browser capabilities during implementation. Failed or cancelled initial fullscreen acquisition must not start an attempt.
+
+Count a departure when the active exam becomes hidden through tab/app switching or minimizing, or when fullscreen is exited. Window focus loss alone while the page remains visible does not count. Count a detected refresh or page close once, deduplicating associated fullscreen and visibility signals from the same departure. Browser lifecycle signals are best effort; an unreported crash or network outage alone must not manufacture a penalty on recovery.
+
+Preserve the existing first-two-warnings, question logging/advancement and third-departure submission rules. After a counted fullscreen exit below the ending limit, pause answer editing behind an explicit Return to fullscreen action while the original timer continues. Recovery retains the same attempt and departure count; it does not create a fresh allowance.
+
+### Submission, results and solutions
+
+Use the same exam detail page for submission status, published results and eligible solutions. After final submission and before that student qualifies for released solutions, show submission status and any officially published result only; do not expose question/answer review. This narrows post-submission review beyond the general own-attempt question gate above. Enforce the review restriction in trusted projections as well as the UI.
+
+Once solutions are available to the student under the existing qualification rules, reveal the answer-review view and eligible solutions. Result announcement and solution release remain separate. Show the officially announced total score only, without per-part or per-question awarded/max mark breakdowns, including after solution release. Private marks and unannounced corrections remain hidden.
+
+When a corrected total is officially announced, show the current total with a Corrected status and correction date. Do not add a student result-revision-history view; preserve official history in storage. Timer, kicked and window_closed submissions retain their normal grading and solution qualification; their flags do not automatically assign zero or invalidate work.
 
 ## Exam staff delivery boundary — EDRA-78
 
