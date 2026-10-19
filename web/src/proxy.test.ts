@@ -44,6 +44,13 @@ describe("platform proxy", () => {
     expect(response.status).toBe(421);
     expect(refresh).not.toHaveBeenCalled();
   });
+  it("serves a configured development tunnel as the staff host only outside production", async () => {
+    vi.stubEnv("EDRA_DEV_TUNNEL_HOST", "tunnel.example.net:3000");
+    expect((await proxy(request("tunnel.example.net:3000", "/magd/students"))).headers.get("x-middleware-rewrite")).toContain("/app/magd/students");
+    expect((await proxy(request("tunnel.example.net:3001", "/magd/students"))).status).toBe(421);
+    vi.stubEnv("EDRA_DEV_TUNNEL_HOST", "");
+    expect((await proxy(request("tunnel.example.net:3000", "/magd/students"))).status).toBe(421);
+  });
   it("overwrites caller-supplied routing headers", async () => {
     await proxy(request("learn.lvh.me:3000", "/profile", "GET", { "x-edra-platform": "staff", "x-edra-public-path": "/magd/students" }));
     const forwarded = refresh.mock.calls[0][0] as NextRequest;

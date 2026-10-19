@@ -25,6 +25,7 @@
 		A00000000000000000000003 /* EdraInstructorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EdraInstructorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000004 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		A00000000000000000000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A00000000000000000000008 /* Info-Debug.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-Debug.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -87,6 +88,7 @@
 			children = (
 				A00000000000000000000004 /* Base.xcconfig */,
 				A00000000000000000000005 /* Info.plist */,
+				A00000000000000000000008 /* Info-Debug.plist */,
 			);
 			path = Configuration;
 			sourceTree = "<group>";
@@ -280,7 +282,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Configuration/Info.plist;
+				INFOPLIST_FILE = "Configuration/Info-Debug.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Edra;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
