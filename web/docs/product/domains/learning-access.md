@@ -70,4 +70,6 @@ Students watch provider-hosted streamed video through Edra. Playback checks curr
 
 Playback records resume position and learning progress. Video processing and replacement preserve the content release's identity and existing access history. Expired or revoked access and online suspension prevent further playback authorization.
 
-Provider selection, simultaneous-playback behavior and watermark details are settled before video implementation. Those decisions must work consistently across the student surfaces that support playback.
+Development provider confirmed by the owner, 2026-10-16: use Mux with signed playback authorization. Store provider asset/playback identifiers and processing status on the trusted backend; authorization is issued after Edra checks the viewer's current access. Provider credentials and playback-signing secrets remain server-only. This is a selected integration, not a claim of implemented or verified delivery.
+
+Production provider economics and DRM remain for review before launch. Signed playback is access control, not DRM or a guarantee against downloading, screen recording or rebroadcasting. Simultaneous-playback behavior and watermark details still require decisions before those protections are implemented. Those decisions must work consistently across the student surfaces that support playback.

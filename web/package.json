@@ -19,6 +19,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.9.1",
+    "@mux/mux-player-react": "^3.14.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.0",
     "@tabler/icons-react": "^3.47.0",

@@ -32,6 +32,18 @@ Settings password change verifies a code to the current account phone, updates t
 
 Account/parent verification is global student setup, not academy enrollment. The product invite/returning rules do not establish that the source's academy joining flow is deployed.
 
+## Development video setup (Mux)
+
+Mux is the owner-selected development video provider. The staff content module implements direct uploads, processing-state checks and short-lived signed staff previews. Student learning/access integration remains separate. See the [content module](../../src/modules/content/README.md) for the current source boundary; credentials alone do not establish browser/provider verification.
+
+Use an Edra-owned Mux account and a development environment separate from production. Create an environment-scoped API access token with Video Read/Write permissions. If implementation will provision signing keys or webhooks through the API, the setup token also needs the corresponding System permissions; an owner can instead create those resources in the dashboard without broadening the runtime token. Keep API Token ID/Secret in the ignored web/.env.local as MUX_TOKEN_ID and MUX_TOKEN_SECRET, never in NEXT_PUBLIC_ variables or committed files.
+
+Signed playback uses MUX_SIGNING_KEY_ID and MUX_SIGNING_PRIVATE_KEY (Mux's base64-encoded PEM), both server-only. The optional /api/webhooks/mux endpoint needs the matching MUX_WEBHOOK_SECRET from a configured Mux webhook. Configure it only on a deliberately reachable deployment; the editor also checks processing status without a callback. The official packaged Mux CLI has no Windows binary at the time of implementation; Windows setup can use the Mux REST API directly. Do not point development webhooks at production.
+
+The implementation must authorize uploads, use provider direct uploads, verify processing callbacks and issue signed playback only after Edra's access checks. Retain the configured cloud Supabase application target and an isolated cloud test target for schema/RLS verification; Mux does not replace either. No local Supabase database is required.
+
+References: [Mux API credentials and permissions](https://www.mux.com/docs/core/make-api-requests), [signed playback](https://www.mux.com/docs/guides/secure-video-playback), and [local webhook forwarding](https://www.mux.com/docs/core/listen-for-webhooks). These are setup instructions, not evidence of provider verification or deployment.
+
 ## 4. Run release checks
 
 Run the relevant [web checks](../engineering.md#verification). Verify required database operations/policies on the authorized target. Confirm HTTPS, origins, authentication authority and operational error reporting.

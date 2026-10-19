@@ -24,6 +24,10 @@ Attachment compatibility, confirmed 2026-10-13: an assessment and its content-un
 
 An assignment's initial required-student list is established when staff first save a valid target audience. It does not wait for content release or a separate assignment Publish action, so standalone physical work can proceed. Saving incomplete preparation without a valid audience does not establish that list.
 
+Required-cohort maintenance, confirmed by the owner, 2026-10-19: routine saves do not refresh that list. If staff deliberately change the configured target audience before any work begins, reset the required-student list to the students matching the new audience at that change. Subsequent matching students are optionally eligible under the late-joining rule. Once work begins, the ordinary audience lock still applies.
+
+Existing-assignment transition, confirmed by the owner, 2026-10-19: preserve each existing assignment's currently stored recipients as its required cohort rather than attempting to reconstruct an earlier first-save roster. Later matching students are optional unless an allowed deliberate audience change resets the required cohort. Preserve all recorded work, marks and official results.
+
 Students who join the targeted level, track or group after the initial required-student list was established are automatically eligible to submit that work, but it is optional for them. Staff do not need to add them individually. The academy may encourage completion; not submitting does not count as missing or overdue work for those students.
 
 Eligibility to submit is distinct from being expected to complete the assignment. Late eligibility still follows content visibility and submission blocking. This rule does not convert the original students' expected work into optional work.
@@ -63,6 +67,8 @@ For quizzes and exams, reject an exclusion that would leave the assessment with 
 The online student answering flow skips excluded questions and does not allow them to be answered. For example, Next from question 12 goes to question 14 when question 13 is excluded. This changes participation in the assessment, not the numbering or retained historical answers.
 
 Exclusion recalculates affected marks and effective maxima privately. Previously announced scores and maxima remain official until staff review and announce the correction. Exclusion does not automatically announce revised results, including results originally announced by automatic grading.
+
+Assignment fast-mark corrections, confirmed by the owner, 2026-10-19: when an exclusion changes a part's maximum and its current mark was entered only as a fast part total, that part requires manual re-marking. Do not infer per-question scores, prorate the total or silently clamp it to the new maximum. Preserve the earlier official result and the prior private mark as history. The affected revised result cannot be announced until the required re-marking is complete.
 
 ## Instructor entry of physical answers
 
@@ -123,6 +129,8 @@ Owners, Head Admins, Admins and Instructors may prepare assignments, record work
 Owners, Head Admins and Admins manage submission availability and archival. Locked structure applies to all roles. Only Owners, Head Admins and Admins may correct the shared answer key or exclude questions after work has begun, for assignments, quizzes and exams. Instructors retain ordinary marking and announcement permissions, including announcing complete recalculated corrections; they cannot change the shared answer key or exclusion rules. No role may bypass scoring maxima, result completeness or history-preservation rules.
 
 ## Quizzes and exams
+
+Question visibility, confirmed by the owner, 2026-10-19: a student may receive quiz or exam questions and choices only after starting their own online attempt or qualifying for released solutions. Before either condition, return overview and timing information without question material. Physical draft work or a confirmed physical submission alone does not reveal questions before solution qualification. This visibility rule does not start a timer on a read, create another attempt, extend a deadline, release answer keys early or expose private marks. Normal identity, academy/year, suspension and content-access authority still applies.
 
 Question marks and written-work shortcuts, confirmed 2026-10-17: quiz and exam question maxima use whole or half marks only, such as 2 or 2.5, not 2.25. Awarded written-work marks may include quarter marks: half credit for a question worth 2.5 is exactly 1.25, with no rounding.
 

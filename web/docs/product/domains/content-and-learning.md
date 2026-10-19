@@ -6,11 +6,15 @@ Approved by the owner, 2026-10-11. Detailed workflow decisions remain in the sep
 
 A content unit organizes a portion of learning material. It brings together explanation videos, assignments, quizzes, homework and quiz answer videos, and supporting resources such as PDFs.
 
-Content units belong to the academy’s reusable library. Staff can prepare material before it is ready for students and use it across groups, sessions and academic years.
+Content units belong to a program in an academy. Staff can prepare material before it is ready for students. Reuse across programs or academic years is an explicit copy operation, not automatic carry-over or shared editing of the same unit.
+
+Creation details confirmed by the owner, 2026-10-16: a unit requires a title; its description is optional. Staff can save a unit before adding any learning material. The existing track-removal and historical-preservation rules still apply.
+
+Program scope clarified by the owner, 2026-10-18: the academic year, one grade (level) and optional track within that grade are specified in program scope. A unit resides in that program and inherits all three; staff do not select them separately for each unit. This defines the product context, not a requirement for a particular database table or storage design.
 
 ## Learning releases
 
-A release makes a content unit available within one academic year to a level or a level and track. A level-wide release serves eligible students across that level’s tracks and groups.
+A release is the explicit publication of a unit within its program's academic year and grade/track scope. A level-wide program serves eligible students across that level's tracks and groups. Creating a unit inside the program establishes its draft context directly; staff do not perform a separate yearly-release setup action.
 
 The release holds that year’s student progress, learning-access relationships and assessment activity. Reusing material in another year does not reset or rewrite the earlier students’ work.
 
@@ -22,7 +26,11 @@ Owners, Head Admins, Admins and Instructors can create content units, prepare dr
 
 Owners, Head Admins and Admins release content, manage its published audience and archive units or releases. Instructors prepare learning material but do not release it to students.
 
+Draft ownership and review confirmed by the owner, 2026-10-16: instructors edit only their own draft units and submit them to Admins or Head Admins for checking and publication. Instructors can continue editing their own drafts while manager review is pending; submission for review does not lock their editing. Managers can leave feedback and request changes inside Edra. Only managers may publish or edit published units; the existing Owner authority remains applicable. Detailed review handoff and resubmission behavior remain to be specified. These content-unit permissions do not change assessment preparation, marking or announcement permissions.
+
 Materials can be arranged in a teaching order within the unit. Adding an assignment or quiz makes it part of the unit’s learning experience; assessment rules still govern submissions, marking and results.
+
+Confirmed by the owner, 2026-10-16: the unit editor supports adding explanation videos, attaching assessments and their answer videos, and attaching documents and supporting resources. Staff can both select an existing assessment and create a new assessment from the unit editor. Both paths follow the same assessment ownership, audience, attachment and history rules.
 
 ## Assessments within content
 
@@ -56,12 +64,20 @@ The association records the material actually covered. Finalized attendance and 
 
 Staff may revise draft material. Once students have activity on a release, changes preserve their submissions, results, progress and the material needed to explain that history.
 
-Archiving a release removes it from active student learning while retaining its records. Archiving reusable material does not delete its earlier releases or academic history.
+Confirmed by the owner, 2026-10-16: manager edits to a published unit remain unpublished until the manager explicitly publishes the changes. Saving edits alone does not change what students see. The currently published material remains the student-visible version while edits are being prepared. Publishing changes still obeys assessment locks and academic-history preservation.
+
+Archiving a unit removes its published release from active student learning while retaining its records. Managers can archive and restore units. Restoration returns a unit to a draft, not directly to student visibility; a manager must explicitly publish it again under the usual readiness and history rules. This does not authorize deleting stored video assets, resetting access periods or rewriting earlier academic history. Closed-year records remain read-only under the academic-year rules.
 
 When a track is removed, affected content units and their current released audiences become level-wide under the approved track-removal rules. Earlier activity and snapshots retain their historical identity.
 
 ## Academic-year reuse
 
-An academy can reuse library material for a new year by preparing a new release. New-year student progress and access are established for that release; the previous year’s activity remains separate.
+Confirmed by the owner, 2026-10-16: a program starts with no units in a new academic year. Opening the year does not automatically carry over old units or create drafts from them. New content and new units are prepared for that year; earlier academic history is preserved.
+
+An academy can explicitly reuse earlier material for a new year by copying it into the destination program and preparing its release. New-year student progress and access are established for that release; the previous year’s activity remains separate.
+
+Optional cross-program reuse confirmed by the owner, 2026-10-16: instructors and managers can explicitly choose to reuse a whole unit or individual learning material from another program within the same academy, including during the term. Reuse creates an independent copy, not a linked instance: edits to either copy do not change the other. Instructors may reuse published material only, not other instructors' unfinished drafts. Reuse is an available action, not the default or an automatic carry-over, and does not grant instructors permission to publish content. Manager source-draft reuse permissions remain to be agreed; existing assessment attachment, audience and historical-record rules remain in force. Logical independence does not require duplicating stored video/document binaries; asset storage is an engineering detail that must preserve that independence.
+
+Whole-unit copying confirmed by the owner, 2026-10-16: copy all of the unit's learning material as a starting point, including explanation videos, documents, attached assessments and their answer videos. Copied assessments are fresh assessment definitions with their questions and settings, not another attachment to the source assessment; student answers, marks, results, progress and access are not copied. Clear copied assessment dates, including deadlines and opening/closing dates, so staff set new ones. Copied assessments target the whole destination program by default, using its grade and optional track; source group selections are not carried over. An instructor can edit their copied draft before submitting it for manager review, and managers can edit it before publication. The normal draft/review/publication and assessment compatibility rules apply. Copying does not authorize retaining an incompatible source audience or academic year.
 
 Closing a year ends its learning access and preserves its academic history. Student and parent visibility of historical results is governed by the reporting rules.
