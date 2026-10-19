@@ -48,12 +48,12 @@ create trigger assignment_mark_basis_history_immutable before update or delete o
 create function edra_private.assignment_part_max(p_part_id uuid) returns numeric
 language sql stable security definer set search_path = '' as $$
   select case when p.kind is null then p.max_score else coalesce((select sum(q.max_score)
-    from public.assignment_part_questions q where q.part_id = p.id and not q.excluded), 0) end
+    from public.assignment_part_questions q where q.part_id = p.id and not q.excluded), 0.00) end
   from public.assignment_parts p where p.id = p_part_id;
 $$;
 create function edra_private.assignment_max(p_assignment_id uuid) returns numeric
 language sql stable security definer set search_path = '' as $$
-  select coalesce(sum(edra_private.assignment_part_max(p.id)), 0) from public.assignment_parts p where p.assignment_id = p_assignment_id;
+  select coalesce(sum(edra_private.assignment_part_max(p.id)), 0.00) from public.assignment_parts p where p.assignment_id = p_assignment_id;
 $$;
 
 -- A partial question entry cannot satisfy a part's completeness. Excluded questions need no entry.
