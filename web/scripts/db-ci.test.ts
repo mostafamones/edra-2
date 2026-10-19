@@ -20,6 +20,7 @@ case "$*" in
     (cd "$work" && find . -type f | sort | sed 's/^/WORKFILE /' && grep -h '^project_id' supabase/config.toml) >>"$FAKE_LOG"
     [ -z "\${FAKE_START_FAIL:-}" ] || exit 4 ;;
   stop*) [ -z "\${FAKE_STOP_FAIL:-}" ] || exit 5 ;;
+  "gen types"*) echo 'export type Database = {}' ;;
 esac
 `;
 
@@ -138,5 +139,16 @@ describe("db-ci wrapper", () => {
     const { status, output } = run({ FAKE_STOP_FAIL: "1" });
     expect(status).toBe(1);
     expect(output).toContain("cleanup of project");
+  });
+
+  it("exports types from the disposable schema without using linked cloud connectivity", () => {
+    const typesPath = join(dir, "database.types.ts");
+    const { status, log } = run({ EDRA_DB_TYPES_OUTPUT: typesPath });
+    expect(status).toBe(0);
+    expect(readFileSync(typesPath, "utf8")).toContain("export type Database");
+    expect(lines(log, "supabase gen types")).toEqual([
+      "supabase gen types typescript --db-url postgresql://postgres:postgres@127.0.0.1:54322/postgres --schema public",
+    ]);
+    expect(log).not.toContain("--linked");
   });
 });

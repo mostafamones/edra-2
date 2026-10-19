@@ -68,6 +68,11 @@ docker ps --filter "name=^supabase_db_$project\$" --format 'db-ci: database imag
 phase "verifying bootstrap and marking target"
 psql "$conn" -X -q -tA -v ON_ERROR_STOP=1 -v target="$project" -f scripts/ci/prepare.sql
 
+if [ -n "${EDRA_DB_TYPES_OUTPUT:-}" ]; then
+  phase "exporting types from the isolated schema"
+  supabase gen types typescript --db-url "$conn" --schema public >"$EDRA_DB_TYPES_OUTPUT"
+fi
+
 phase "running database suites"
 EDRA_DB_TEST_URL="$conn" EDRA_DB_TEST_TARGET="$project" bash scripts/db-test.sh
 phase "database suites passed"
