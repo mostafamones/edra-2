@@ -1,0 +1,64 @@
+import "server-only";
+import { z } from "zod";
+import { cookieAuthority } from "@/lib/supabase/authority";
+import { fetchAllPages } from "@/lib/supabase/paginate";
+import { isAcademyManager } from "@/modules/academies/roles";
+import { documentSchema, type ContentUnit, type ContentResult } from "./types";
+
+/** Return safe action errors explicitly; Next.js hides thrown server errors in production. */
+export async function contentResult<T>(run: () => Promise<T>): Promise<ContentResult<T>> {
+  try { return { ok: true, value: await run() }; }
+  catch (error) { return { ok: false, message: error instanceof z.ZodError ? "Check the fields and try again." : error instanceof Error ? error.message : "Could not complete this change. Please retry." }; }
+}
+
+export async function contentCaller(academyId: string) {
+  if (!z.uuid().safeParse(academyId).success) throw new Error("Invalid academy.");
+  const caller = await cookieAuthority();
+  if (!caller) throw new Error("Sign in to continue.");
+  const { data, error } = await caller.db.from("academy_memberships").select("role").eq("academy_id", academyId).eq("user_id", caller.userId).is("suspended_at", null).maybeSingle();
+  if (error || !data) throw new Error("You no longer have access to this academy.");
+  return { ...caller, manager: isAcademyManager(data.role) };
+}
+export function contentError(error: { message?: string } | null) {
+  if (!error) return;
+  const messages: Record<string, string> = {
+    asset_in_use: "This video is still used by a saved draft or published history. Remove it from drafts and save first. Published videos must be preserved.", asset_deleting: "This video is being permanently deleted and cannot be attached.",
+    forbidden: "You do not have permission to make this change.", content_conflict: "Someone changed this unit. Reload it before saving again.", year_closed: "This academic year is closed. Its content is read-only.", archived: "Restore this unit before editing it.", explanation_required: "Add at least one ready explanation video before publishing.", assets_not_ready: "Wait until every attached upload is ready before publishing.", incompatible_assessment: "The assessment must belong to this academy/year and fit the entire program audience.", assessment_already_attached: "This assessment already belongs to another unit. Copy it instead.", attachment_locked: "This assessment has recorded work and cannot be detached or moved.", published_source_required: "Choose a published unit to copy.", answer_requires_assessment: "Attach the assessment before adding its answer video.", invalid_asset: "This file is not available to this unit.", validation: "Check the unit fields and materials.",
+  };
+  throw new Error(messages[error.message ?? ""] ?? "Could not complete this change. Please retry.");
+}
+export async function readContentWorkspace(academyId: string) {
+  const { db, userId, manager } = await contentCaller(academyId);
+  const [units, programs, years, levels, tracks, names] = await Promise.all([
+    fetchAllPages((from, to) => db.from("content_units").select("*").eq("academy_id", academyId).order("updated_at", { ascending: false }).order("id").range(from, to)),
+    db.from("content_programs").select("*").eq("academy_id", academyId), db.from("academic_years").select("id,start_year,closed_at").eq("academy_id", academyId).order("start_year", { ascending: false }),
+    db.from("academy_levels").select("level_id,sort_order").eq("academy_id", academyId).order("sort_order"), db.from("academy_tracks").select("id,level_id,name").eq("academy_id", academyId), db.from("global_levels").select("id,name"),
+  ]);
+  for (const response of [programs, years, levels, tracks, names]) contentError(response.error);
+  return { units: units.map(u => ({ ...u, draft: documentSchema.parse(u.draft) })) as ContentUnit[], programs: programs.data ?? [], years: years.data ?? [], levels: levels.data ?? [], tracks: tracks.data ?? [], levelNames: Object.fromEntries((names.data ?? []).map(l => [l.id, l.name])) as Record<string, string>, userId, manager };
+}
+export type ContentWorkspace = Awaited<ReturnType<typeof readContentWorkspace>>;
+export async function readContentUnit(academyId: string, unitId: string) {
+  z.uuid().parse(unitId);
+  const { db, userId, manager } = await contentCaller(academyId);
+  const { data: unit, error } = await db.from("content_units").select("*").eq("academy_id", academyId).eq("id", unitId).single();
+  contentError(error);
+  if (!unit) throw new Error("Unit not found.");
+  const document = documentSchema.parse(unit.draft);
+  const referencedAssets = [...new Set(document.items.flatMap(item => item.assetId ? [item.assetId] : []))];
+  const [program, assets, feedback, revisions] = await Promise.all([
+    db.from("content_programs").select("*,academic_years(start_year,closed_at)").eq("id", unit.program_id).single(),
+    fetchAllPages((from, to) => db.from("content_assets").select("*").eq("academy_id", academyId)
+      .or(`unit_id.eq.${unitId}${referencedAssets.length ? `,id.in.(${referencedAssets.join(",")})` : ""}`).order("created_at").order("id").range(from, to)),
+    db.from("content_feedback").select("*").eq("academy_id", academyId).eq("unit_id", unitId).order("created_at"), db.from("content_revisions").select("revision,document,published_at").eq("academy_id", academyId).eq("unit_id", unitId).order("revision", { ascending: false }),
+  ]);
+  for (const response of [program, feedback, revisions]) contentError(response.error);
+  const [level, track] = await Promise.all([
+    db.from("global_levels").select("name").eq("id", program.data!.level_id).single(),
+    program.data!.track_id ? db.from("academy_tracks").select("name").eq("id", program.data!.track_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+  ]);
+  contentError(level.error); contentError(track.error);
+  const programLabel = `${level.data?.name ?? program.data!.level_id}${track.data ? ` · ${track.data.name}` : " · All tracks"}`;
+  return { unit: { ...unit, draft: document } as ContentUnit, program: program.data!, programLabel, assets, feedback: feedback.data ?? [], revisions: revisions.data ?? [], userId, manager };
+}
+export type ContentDetail = Awaited<ReturnType<typeof readContentUnit>>;
