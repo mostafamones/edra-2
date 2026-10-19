@@ -562,6 +562,84 @@ export type Database = {
           },
         ]
       }
+      assignment_cohort_members: {
+        Row: {
+          annual_student_record_id: string
+          assignment_id: string
+          cohort_revision: number
+          requirement_ended_at: string | null
+        }
+        Insert: {
+          annual_student_record_id: string
+          assignment_id: string
+          cohort_revision: number
+          requirement_ended_at?: string | null
+        }
+        Update: {
+          annual_student_record_id?: string
+          assignment_id?: string
+          cohort_revision?: number
+          requirement_ended_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_cohort_members_annual_student_record_id_fkey"
+            columns: ["annual_student_record_id"]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_cohort_members_assignment_id_cohort_revision_fkey"
+            columns: ["assignment_id", "cohort_revision"]
+            isOneToOne: false
+            referencedRelation: "assignment_cohorts"
+            referencedColumns: ["assignment_id", "revision"]
+          },
+        ]
+      }
+      assignment_cohorts: {
+        Row: {
+          assignment_id: string
+          audience_basis: Json
+          captured_at: string
+          captured_by: string | null
+          revision: number
+          source: string
+        }
+        Insert: {
+          assignment_id: string
+          audience_basis: Json
+          captured_at?: string
+          captured_by?: string | null
+          revision: number
+          source: string
+        }
+        Update: {
+          assignment_id?: string
+          audience_basis?: Json
+          captured_at?: string
+          captured_by?: string | null
+          revision?: number
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_cohorts_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_cohorts_captured_by_fkey"
+            columns: ["captured_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_marks: {
         Row: {
           academy_id: string
@@ -1102,6 +1180,7 @@ export type Database = {
           audience: Database["public"]["Enums"]["assignment_audience"]
           closed_at: string | null
           closed_by: string | null
+          cohort_revision: number
           created_at: string
           created_by: string
           due_at: string | null
@@ -1128,6 +1207,7 @@ export type Database = {
           audience: Database["public"]["Enums"]["assignment_audience"]
           closed_at?: string | null
           closed_by?: string | null
+          cohort_revision?: number
           created_at?: string
           created_by: string
           due_at?: string | null
@@ -1154,6 +1234,7 @@ export type Database = {
           audience?: Database["public"]["Enums"]["assignment_audience"]
           closed_at?: string | null
           closed_by?: string | null
+          cohort_revision?: number
           created_at?: string
           created_by?: string
           due_at?: string | null
@@ -4591,6 +4672,13 @@ export type Database = {
             referencedRelation: "sessions"
             referencedColumns: ["academy_id", "academic_year_id", "id"]
           },
+          {
+            foreignKeyName: "session_roster_entries_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       session_start_requests: {
@@ -7282,3 +7370,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -45,3 +45,9 @@ Exact decimal helpers live in `src/lib/score.ts` and academy-time helpers in `sr
 ## Verification
 
 `supabase/tests/quizzes.sql` covers grants, authority (including suspended and cross-academy staff), preparation and locks, availability, attempts, departures, first-final-submission-wins, deadlines (timer, headroom, tie, window_closed, delayed worker), marks, announcement, corrections, exclusions, solution qualification, archive and year closure. `supabase/tests/concurrency.sh` scenarios 22–25 cover concurrent starts, physical-vs-online acceptance, correction-vs-announcement and worker-vs-late-save races. Pure helpers have Vitest coverage.
+
+## Task 4 question exposure — R01, 2026-10-19
+
+The private `quiz_student_state` projection returns `parts: []` and `excluded_question_ids: []` until that record has genuinely started its own single online attempt or `quiz_solutions_available` qualifies it. Physical draft/confirmed/announced work alone before actual closure does not reveal questions. The same predicate drives solution qualification and question release: accepted online work at actual closure; physical work only at actual closure plus announcement. Reads never start/reset an attempt, extend its deadline or create a retake. Keys/model answers remain in `solutions` only; private marks stay absent. Inline image references follow the question gate; Storage signing/reading remains staff-only in the current image integration.
+
+Connected ownership uses the shared ordinary-session student resolver. `assessment_exposure.sql` checks field-by-field leaks, own versus unrelated attempts, physical ordering, closure/announcement, storage denial and actual public standalone-exam wrappers. Quiz public wrappers still require the unavailable content integration; tests exercise the authorized internal projection without weakening it. No student answering UI or media product is added. CI tests establish isolated-schema behavior, not hosted deployment.

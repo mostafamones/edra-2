@@ -368,4 +368,32 @@ begin
   perform pg_temp.check(edra_private.exam_caller_record('8f999999-9999-4999-8999-999999999999') is null, 'unknown exam resolves nobody');
 end $$;
 
+-- Privileged student boundaries deny recovery/revoked sessions even without the REST pre-hook.
+do $$
+declare
+  account uuid := '8b000001-0000-4000-8000-000000000001';
+  session_id uuid := gen_random_uuid();
+  academy uuid := '8aaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  year_id uuid := '8e000030-0000-4000-8000-000000000030';
+begin
+  insert into auth.sessions(id,user_id,created_at,updated_at) values(session_id,account,now(),now());
+  perform set_config('edra.verified_session','',true);
+  perform set_config('request.jwt.claims',jsonb_build_object('role','authenticated','sub',account,'session_id',session_id,
+    'amr',jsonb_build_array(jsonb_build_object('method','password')))::text,true);
+  perform pg_temp.check(edra_private.student_caller_record(academy,year_id) is not null, 'live password session resolves');
+  perform set_config('request.jwt.claims',jsonb_build_object('role','authenticated','sub',account,'session_id',session_id,
+    'amr',jsonb_build_array(jsonb_build_object('method','recovery')))::text,true);
+  perform pg_temp.check(edra_private.student_caller_record(academy,year_id) is null
+    and public.list_my_student_academies()='[]'::jsonb
+    and public.get_my_student_academy('enroll-academy-n') is null,'recovery cannot use established connection');
+  perform pg_temp.check(public.preview_student_invite(current_setting('test.token_m'))->>'result'='unauthenticated'
+    and public.complete_student_invite(current_setting('test.token_m'),null,null)->>'result'='unauthenticated',
+    'recovery cannot preview or complete enrollment');
+  delete from auth.sessions where id=session_id;
+  perform set_config('request.jwt.claims',jsonb_build_object('role','authenticated','sub',account,'session_id',session_id,
+    'amr',jsonb_build_array(jsonb_build_object('method','password')))::text,true);
+  perform pg_temp.check(edra_private.student_caller_record(academy,year_id) is null,'revoked session cannot resolve');
+  perform set_config('request.jwt.claims','',true);
+end $$;
+
 rollback;

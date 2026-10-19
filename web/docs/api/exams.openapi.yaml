@@ -13,17 +13,12 @@ info:
     corrections and exclusions) are cookie web actions over the same database operations; they are not
     part of this HTTP contract.
 
-    **Not operational: the student contract (EDRA-83 handoff).** The trusted student operations exist
-    in the database (`edra_private.start_exam_attempt_for`, `save_exam_answers_for`,
-    `record_exam_departure_for`, `submit_exam_attempt_for`, `exam_student_state`) and their public
-    wrappers (`get_my_exam`, `start_exam_attempt`, `save_exam_answers`, `record_exam_departure`,
-    `submit_exam_attempt`) are deployed, but every wrapper is denied with `student_link_unavailable`
-    because there is no authoritative student-account-to-annual-record link. Exams have no content
-    attachment yet, so they are standalone and need no released content once identity resolves; an
-    attached exam (future) must pass authoritative release authorization (`content_unavailable`). No
-    HTTP route exposes these operations. They are documented under `components.schemas.StudentExamState`
-    and `x-edra-student-operations`; an annual record id or phone number supplied by a student is never
-    ownership.
+    **Student database contract (EDRA-83 handoff).** Trusted public wrappers derive the caller's
+    connected academy/year record through the shared ordinary-session resolver. Standalone exams
+    need no content release. Before an own online attempt starts or solutions qualify, state returns
+    empty question parts; physical drafts/submissions alone do not reveal material. Reads never start
+    or extend an attempt. No student HTTP route or answering UI is delivered here. A client-supplied
+    annual record id or phone is never ownership. Source behavior is not a deployment assertion.
 
     **Rules.** An exam has ordered Question Sheet (choices, one correct, scored automatically) and
     Written Work (staff-marked) parts; Answer Sheet parts do not exist. Every exam needs an individual
@@ -190,8 +185,8 @@ paths:
         "429": { $ref: "#/components/responses/Error" }
         "500": { $ref: "#/components/responses/Error" }
 x-edra-student-operations:
-  status: not-operational
-  reason: No authoritative student-account link (student_link_unavailable). Exams are standalone (no content attachment exists), so no release is required once identity resolves.
+  status: database-contract-only
+  reason: Connected ordinary-session accounts resolve through student_caller_record. Standalone wrappers are reachable; no student HTTP route or answering UI exists. Question material requires an own start or qualified solutions.
   operations:
     - name: get_my_exam(exam_id)
       returns: StudentExamState
@@ -373,8 +368,8 @@ components:
         time_limit_minutes: { type: integer }
         phase: { $ref: "#/components/schemas/Phase" }
         eligible: { type: boolean }
-        excluded_question_ids: { type: array, items: { type: string }, description: Skip these when navigating; they cannot be answered. }
-        parts: { type: array, items: { type: object }, description: Stable order; questions carry their original `number`; choices without correctness. }
+        excluded_question_ids: { type: array, items: { type: string }, description: Empty until question material is permitted; then skip these when navigating; they cannot be answered. }
+        parts: { type: array, items: { type: object }, description: Empty before an own online attempt starts or solutions qualify; then stable order with original question numbers and choices without correctness. Physical drafts/submissions alone do not reveal material. }
         attempt:
           type: [object, "null"]
           properties:

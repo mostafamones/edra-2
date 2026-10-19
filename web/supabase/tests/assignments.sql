@@ -190,7 +190,7 @@ do $$ begin
   end if;
 end $$;
 
--- Saving refreshes the snapshot from active matching records, including uncoded students.
+-- Saving the same audience preserves the first required cohort, including uncoded students.
 do $$ declare saved jsonb; begin
   saved := public.update_assignment('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', 2,
     pg_temp.draft('{"audience":"level","level_id":"preparatory-3","title":"Unit 3 v2"}', jsonb_build_array(
@@ -227,12 +227,12 @@ do $$ begin
   end if;
 end $$;
 
--- The same enrollment is picked up by the next save while an assignment has no activity.
+-- A routine save never makes a late eligible student required, even before activity.
 do $$ declare saved jsonb; begin
   saved := public.update_assignment('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000003', 1,
     pg_temp.draft('{"audience":"level","level_id":"preparatory-3"}'));
-  if (saved->>'recipient_count')::int <> 4 or (saved->>'has_activity')::boolean then
-    raise exception 'Pre-activity save did not refresh recipients: %', saved;
+  if (saved->>'recipient_count')::int <> 3 or (saved->>'optional_eligible_count')::int <> 1 or (saved->>'has_activity')::boolean then
+    raise exception 'Pre-activity save changed the required cohort: %', saved;
   end if;
 end $$;
 

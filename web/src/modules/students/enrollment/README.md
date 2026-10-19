@@ -8,7 +8,7 @@ Implements EDRA-80. Product rules: [student enrollment](../../../../docs/product
 2. A student with no academy who finishes setup lands on a join prompt (paste an invite link, or skip into the portal with the same entry transition). The join page sends signed-out visitors to login and unfinished accounts to global student setup (`/onboarding/student`), which returns to the join page once complete while the cookie remains.
 3. `preview_student_invite` decides the path from the account's verified phone, the invited academy and its open year: `existing` (confirm, then link), `enroll` (track where the account's level has tracks, then optional group; `returning` marks a historical profile), `connected`, `closed`, `unavailable`, `level_unavailable` (the academy doesn't offer the account's level), `staff_help` (`archived`, `conflict`, `details`), `invalid`, `unverified`.
 4. `complete_student_invite` rechecks everything under locks and either links the existing record or creates current-year participation (under the returning profile or a new one) and links it, atomically. A retry after success returns `connected`. On success the client navigates to `/<academySlug>` with the `academy-join` view transition (instant under reduced motion).
-5. The cookie is cleared on `connected` and `invalid`; other outcomes stay retryable after staff action.
+5. The cookie is cleared on `connected` and `invalid` by server actions (and terminal page cleanup); other outcomes stay retryable after staff action. Completion rejects extra client level/record identifiers. GET/render/prefetch never links or enrolls.
 
 Connected students reach `/<academySlug>` through the student sidebar; `get_my_student_academy` shows their current participation and access status. Unconnected accounts get not found.
 
@@ -27,3 +27,7 @@ A signed-in returning student's booking entry must reach `/onboarding/student/jo
 ## Not implemented
 
 Staff UI for independent suspension (EDRA-155), per-program enrollment restrictions, invite lookup rate limiting (tokens are 256-bit), mobile bottom-nav academy entries, and academy pages beyond the landing.
+
+## Task 4 resolution evidence — 2026-10-19
+
+G01's historical missing-implementation assertion is superseded at source level by the existing enrollment migrations/module, not by a second linking flow. Task 4 adds ordinary-session checks inside the shared student resolver, preview/completion and connected-academy reads; recovery/revoked sessions cannot use those privileged boundaries even without the REST hook. Completion locks and rechecks an existing annual-record match before linking so concurrent staff contact/archive edits cannot leave a stale match. Account-level, compatible placement, existing/returning identity and independent suspension behavior remain covered by `student_enrollment.sql`. The original audit snapshot is unchanged. CI validation and hosted deployment are distinct; these source changes do not establish a production rollout.

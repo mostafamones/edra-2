@@ -70,7 +70,7 @@ export function AssignmentCard({ href, title, audience, state, maxScore, parts, 
         </Tooltip>
         <span className="flex items-center gap-1.5">
           <IconUsers className="size-3.5" aria-hidden="true" />
-          <span className="font-medium tabular-nums text-foreground">{students}</span> students
+          <span className="font-medium tabular-nums text-foreground">{students}</span> required
         </span>
         <span className="ml-auto flex items-center gap-1.5 whitespace-nowrap">
           {dueAt ? (

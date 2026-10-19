@@ -41,6 +41,14 @@ jobs:
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - run: bash scripts/db-ci.sh
+        env:
+          EDRA_DB_TYPES_OUTPUT: ${{ runner.temp }}/edra-database.types.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: database-types
+          path: ${{ runner.temp }}/edra-database.types.ts
+          if-no-files-found: ignore
 
   edge:
     runs-on: ubuntu-latest

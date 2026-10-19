@@ -726,6 +726,131 @@ grep -qi deadlock "$OUT/33a" "$OUT/33b" && fail "preparation and the first physi
 psqlx -tA -c "select structure_locked_at is not null and max_score = 3 from public.exams where id = '$EXAM2'" | grep -qx t \
   || fail "the confirmation did not lock the saved structure"
 
+# 37-45. Assignment required cohorts/late eligibility. Keep assignment -> year -> recipient,
+# with the annual-record lock before receiving first work and no reverse assignment lock on moves.
+COHORT_A="$(uuid)"
+COHORT_B="$(uuid)"
+COHORT_C="$(uuid)"
+COHORT_D="$(uuid)"
+COHORT_E="$(uuid)"
+cohort_draft='{"title":"Cohort race","audience":"level","level_id":"secondary-1","parts":[{"title":"P","kind":"file_upload","questions":[{"prompt":"","max_score":"2"}]}]}'
+hold 37a 37b "$as_admin select public.create_assignment('$ACADEMY','$YEAR','$COHORT_A','$cohort_draft');"
+start 37b "$as_admin $(create_student 'Cohort late concurrent' 01088880031 null)"
+wait
+expect_ok 37a "cohort capture failed"
+expect_ok 37b "concurrent enrollment failed"
+LATE34="$(psqlx -tA -c "select id from public.annual_student_records where academy_id='$ACADEMY' and student_phone='+201088880031'")"
+psqlx -tA -c "select not exists(select 1 from public.assignment_cohort_members where assignment_id='$COHORT_A' and annual_student_record_id='$LATE34')
+ and (edra_private.assignment_recipient_context('$COHORT_A','$LATE34')->>'eligible')::boolean" | grep -qx t || fail "late enrollment was required or was undiscoverable"
+
+# 38. Audience change wins the assignment lock; first work for an excluded record is rejected.
+hold 38a 38b "$as_admin select public.update_assignment('$ACADEMY','$COHORT_A',1,'$cohort_draft'::jsonb || '{\"level_id\":\"secondary-2\"}'::jsonb);"
+start 38b "$as_admin select public.record_assignment_work('$ACADEMY','$COHORT_A','$ER2',1,'submitted',now(),'');"
+wait
+expect_ok 38a "audience reset failed"
+expect_rejected 38b "work entered after audience reset excluded the student" not_recipient
+
+# 39. First work wins; a simultaneous audience reset is refused and membership is retained.
+psqlx >/dev/null -c "begin; $as_admin select public.create_assignment('$ACADEMY','$YEAR','$COHORT_B','$cohort_draft'); commit;"
+hold 39a 39b "$as_admin select public.record_assignment_work('$ACADEMY','$COHORT_B','$ER2',1,'submitted',now(),'');"
+start 39b "$as_admin select public.update_assignment('$ACADEMY','$COHORT_B',1,'$cohort_draft'::jsonb || '{\"level_id\":\"secondary-2\"}'::jsonb);"
+wait
+expect_ok 39a "first work holding the assignment failed"
+expect_rejected 39b "audience reset removed a student whose work began concurrently" structure_locked
+psqlx -tA -c "select work_status='submitted' from public.assignment_recipients where assignment_id='$COHORT_B' and annual_student_record_id='$ER2'" | grep -qx t || fail "first work lost after audience race"
+
+# 40. Placement wins the annual row. First work sees the committed new placement; the requirement
+#     ends without deleting the existing recipient. No assignment lock is taken by placement.
+psqlx >/dev/null -c "begin; $as_admin select public.create_assignment('$ACADEMY','$YEAR','$COHORT_C','$cohort_draft'); commit;"
+hold 40a 40b "update public.annual_student_records set level_id='secondary-2' where id='$ER1';"
+start 40b "$as_admin select public.record_assignment_work('$ACADEMY','$COHORT_C','$ER1',1,'submitted',now(),'');"
+wait
+expect_ok 40a "placement exit holding annual record failed"
+expect_rejected 40b "first work accepted after placement exit" not_recipient
+psqlx -tA -c "select requirement_ended_at is not null from public.assignment_cohort_members where assignment_id='$COHORT_C' and annual_student_record_id='$ER1'" | grep -qx t || fail "unfinished requirement not ended"
+
+# 41. Optional first marking holds the annual record; placement waits. After both commits its work
+#     and mark survive and the required denominator remains exactly the captured count.
+psqlx >/dev/null -c "begin; $as_admin select public.create_assignment('$ACADEMY','$YEAR','$COHORT_D','$cohort_draft'); commit;"
+LATE38="$(new_student 'Optional mark race' 01088880032 null)"
+PART38="$(psqlx -tA -c "select id from public.assignment_parts where assignment_id='$COHORT_D'")"
+COUNT38="$(psqlx -tA -c "select recipient_count from public.assignments where id='$COHORT_D'")"
+hold 41a 41b "$as_admin select public.save_assignment_marks('$ACADEMY','$COHORT_D','$LATE38',null,1,'{\"marks\":[{\"part_id\":\"$PART38\",\"score\":\"1\"}]}',gen_random_uuid());"
+start 41b "update public.annual_student_records set level_id='secondary-2' where id='$LATE38';"
+wait
+expect_ok 41a "optional marking holding annual record failed"
+expect_ok 41b "placement after optional marking failed"
+psqlx -tA -c "select a.recipient_count=$COUNT38 and x.work_status='submitted' and m.score=1
+ from public.assignments a join public.assignment_recipients x on x.assignment_id=a.id
+ join public.assignment_marks m on m.assignment_id=x.assignment_id and m.annual_student_record_id=x.annual_student_record_id
+ where a.id='$COHORT_D' and x.annual_student_record_id='$LATE38'" | grep -qx t || fail "placement erased optional work or changed required count"
+
+# 42. A GET projection while start is uncommitted sees an overview; after commit it sees the same
+#     started attempt's questions. Read transactions never create attempts or extend deadlines.
+psqlx >/dev/null -c "begin; $as_admin select public.configure_exam_availability('$ACADEMY','$EXAM2',(select version from public.exams where id='$EXAM2'),now()-interval '1 minute',now()+interval '1 hour'); commit;"
+# ER1 left secondary-1 in scenario 37; restore placement for this independent exam read/start race.
+psqlx >/dev/null -c "update public.annual_student_records set level_id='secondary-1' where id='$ER1';"
+hold 42a 42b "select edra_private.start_exam_attempt_for('$EXAM2','$ER1');"
+start 42b "select edra_private.exam_student_state('$EXAM2','$ER1')->'parts';"
+wait
+expect_ok 42a "attempt start during projection race failed"
+expect_ok 42b "projection during start failed"
+grep -q '\[\]' "$OUT/42b" || fail "pre-commit projection exposed questions"
+psqlx -tA -c "select jsonb_array_length(edra_private.exam_student_state('$EXAM2','$ER1')->'parts')=1" | grep -qx t || fail "committed own start did not reveal material"
+psqlx >/dev/null -c "select edra_private.submit_exam_attempt_for('$EXAM2','$ER1',gen_random_uuid());"
+
+# 43. An optional student's announcement and placement exit commit without a reverse lock or
+#     changed result basis. Placement cannot turn the optional recipient into required work.
+psqlx >/dev/null -c "update public.annual_student_records set level_id='secondary-1' where id='$LATE38';"
+hold 43a 43b "$as_admin select public.publish_assignment_results('$ACADEMY','$COHORT_D','[{\"annual_student_record_id\":\"$LATE38\",\"expected_version\":2}]',gen_random_uuid());"
+start 43b "update public.annual_student_records set level_id='secondary-2' where id='$LATE38';"
+wait
+expect_ok 43a "optional announcement failed during placement exit"
+expect_ok 43b "placement exit failed during optional announcement"
+psqlx -tA -c "select edra_private.assignment_recipient_json('$COHORT_D','$LATE38')->>'publication_state'='published'
+ and not exists(select 1 from public.assignment_cohort_members where assignment_id='$COHORT_D' and annual_student_record_id='$LATE38')" | grep -qx t || fail "placement changed optional official history"
+
+# 44. A staff contact edit wins the annual row while an existing-record completion is waiting.
+#     Completion rechecks its locked match, reports changed, and links/creates no replacement profile.
+USER41="$(uuid)"
+RECORD41="$(new_student 'Invite contact race' 01088880024 null)"
+psqlx >/dev/null <<SQL
+insert into auth.users(id,phone,phone_confirmed_at) values('$USER41','201088880024',now());
+update public.profiles set full_name='Invite race student' where id='$USER41';
+insert into public.student_profiles(user_id,parent_phone,parent_phone_verified_at,level_id)
+ values('$USER41','+201100000000',now(),'secondary-1');
+SQL
+TOKEN41="$(psqlx -tA -c "begin; $as_admin select public.set_student_invite('$ACADEMY',true)->>'inviteToken'; commit;" | tail -1)"
+hold 44a 44b "update public.annual_student_records set student_phone='+201088880026' where id='$RECORD41';"
+start 44b "set local role authenticated; set local request.jwt.claim.sub='$USER41'; select public.complete_student_invite('$TOKEN41',null,null);"
+wait
+expect_ok 44a "staff contact change failed"
+expect_ok 44b "invite completion failed during contact change"
+grep -q changed "$OUT/44b" || fail "stale existing-record confirmation did not report changed"
+psqlx -tA -c "select not exists(select 1 from public.academy_student_profiles where academy_id='$ACADEMY' and user_id='$USER41')" | grep -qx t || fail "stale confirmation linked or created a profile"
+
+# 45. Concurrent completions for one new student serialize on the existing academy/verified-phone
+#     lock. A repeated completion gets connected, with one profile and one annual participation.
+USER42="$(uuid)"
+psqlx >/dev/null <<SQL
+insert into auth.users(id,phone,phone_confirmed_at) values('$USER42','201088880025',now());
+update public.profiles set full_name='Concurrent invite student' where id='$USER42';
+insert into public.student_profiles(user_id,parent_phone,parent_phone_verified_at,level_id)
+ values('$USER42','+201100000000',now(),'secondary-1');
+SQL
+hold 45a 45b "set local role authenticated; set local request.jwt.claim.sub='$USER42'; select public.complete_student_invite('$TOKEN41',null,null);"
+start 45b "set local role authenticated; set local request.jwt.claim.sub='$USER42'; select public.complete_student_invite('$TOKEN41',null,null);"
+wait
+expect_ok 45a "first invite completion failed"
+expect_ok 45b "concurrent invite retry failed"
+grep -q connected "$OUT/45a" && grep -q connected "$OUT/45b" || fail "concurrent invitation completion did not connect both callers"
+psqlx -tA -c "select count(*)=1 from public.academy_student_profiles p join public.annual_student_records r on r.academy_student_profile_id=p.id
+ where p.academy_id='$ACADEMY' and p.user_id='$USER42' and r.academic_year_id='$YEAR'" | grep -qx t || fail "concurrent completion duplicated participation"
+
+# Late optional assignment work must also queue behind and fail a year close (scenario 26).
+psqlx >/dev/null -c "begin; $as_admin select public.create_assignment('$ACADEMY','$YEAR','$COHORT_E','$cohort_draft'); commit;"
+LATE26="$(new_student 'Year-close optional' 01088880023 null)"
+
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
 #     neither deadlocks. After the commit the worker finds a closed year and the command is refused.
@@ -735,14 +860,16 @@ hold 26a 26b "update public.academic_years set closed_at = now() where id = '$YE
 start 26b "select edra_private.settle_quiz_closure('$QUIZ');"
 start 26c "$as_admin select public.save_quiz_marks('$ACADEMY','$QUIZ','$QR1',1,'{\"feedback\":\"late\"}',gen_random_uuid());"
 start 26d "select edra_private.settle_exam_closure('$EXAM');"
+start 26f "$as_admin select public.record_assignment_work('$ACADEMY','$COHORT_E','$LATE26',1,'submitted',now(),'');"
 start 26e "$as_admin select public.save_exam_marks('$ACADEMY','$EXAM','$ER1',1,'{\"feedback\":\"late\"}',gen_random_uuid());"
 wait
+expect_rejected 26f "optional assignment work crossed year closure" year_unavailable
 expect_ok 26a "the year closure holding the year and quiz rows failed"
 expect_ok 26b "the worker settlement queued behind the year closure failed"
 expect_rejected 26c "a staff command wrote into a year closed concurrently" year_unavailable
 expect_ok 26d "the exam worker settlement queued behind the year closure failed"
 expect_rejected 26e "an exam staff command wrote into a year closed concurrently" year_unavailable
 psqlx -tA -c "select closed_at is not null from public.academic_years where id = '$YEAR'" | grep -qx t || fail "the year did not close"
-grep -qi deadlock "$OUT/26a" "$OUT/26b" "$OUT/26c" "$OUT/26d" "$OUT/26e" && fail "the year closure deadlocked with quiz or exam work"
+grep -qi deadlock "$OUT/26a" "$OUT/26b" "$OUT/26c" "$OUT/26d" "$OUT/26e" "$OUT/26f" && fail "the year closure deadlocked with quiz or exam work"
 
 echo "concurrency checks passed"

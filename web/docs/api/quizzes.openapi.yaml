@@ -13,15 +13,12 @@ info:
     corrections and exclusions) are cookie web actions over the same database operations; they are not
     part of this HTTP contract.
 
-    **Not operational: the student contract.** The trusted student operations exist in the database
-    (`edra_private.start_quiz_attempt_for`, `save_quiz_answers_for`, `record_quiz_departure_for`,
-    `submit_quiz_attempt_for`, `quiz_student_state`) and their public wrappers (`get_my_quiz`,
-    `start_quiz_attempt`, `save_quiz_answers`, `record_quiz_departure`, `submit_quiz_attempt`) are
-    deployed, but every wrapper is denied with `student_link_unavailable` because there is no
-    authoritative student-account-to-annual-record link, and online access additionally needs released
-    content (`content_unavailable`). No HTTP route exposes them. They are documented under
-    `components.schemas.StudentQuizState` and `x-edra-student-operations` as the EDRA-82 handoff; an
-    annual record id or phone number supplied by a student is never ownership.
+    **Student database contract (EDRA-82 handoff).** Public wrappers derive the caller's connected
+    academy/year record through the shared ordinary-session resolver. Quiz content access still
+    denies pending its separate integration (`content_unavailable`). The authorized internal state
+    returns empty question parts before an own online start or qualified solutions; physical work
+    alone does not reveal material. No student HTTP route or answering UI is delivered here. Client
+    annual record ids or phones are never ownership. Source behavior is not a deployment assertion.
 
     **Rules.** A quiz has ordered Question Sheet (choices, one correct, scored automatically) and
     Written Work (staff-marked) parts; Answer Sheet parts do not exist. Scores are decimal **strings**
@@ -174,7 +171,7 @@ paths:
         "500": { $ref: "#/components/responses/Error" }
 x-edra-student-operations:
   status: not-operational
-  reason: No authoritative student-account link (student_link_unavailable) and no released-content authorization (content_unavailable).
+  reason: Connected ordinary-session ownership resolves; released-content integration remains unavailable (content_unavailable).
   operations:
     - name: get_my_quiz(quiz_id)
       returns: StudentQuizState
@@ -333,8 +330,8 @@ components:
         time_limit_minutes: { type: [integer, "null"] }
         phase: { $ref: "#/components/schemas/Phase" }
         eligible: { type: boolean }
-        excluded_question_ids: { type: array, items: { type: string }, description: Skip these when navigating. }
-        parts: { type: array, items: { type: object }, description: Stable order; choices without correctness. }
+        excluded_question_ids: { type: array, items: { type: string }, description: Empty until question material is permitted; then skip these when navigating. }
+        parts: { type: array, items: { type: object }, description: Empty before an own online attempt starts or solutions qualify; then stable question order and choices without correctness. Physical drafts/submissions alone do not reveal material. }
         attempt:
           type: [object, "null"]
           properties:

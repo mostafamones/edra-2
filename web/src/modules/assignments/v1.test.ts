@@ -118,6 +118,20 @@ describe("assignment answers, search and announcement API", () => {
     ] } });
   });
 
+  it("preserves optional eligibility and ended requirements in the native-facing rows", async () => {
+    state.result = { data: { total: 2, items: [
+      { ...recipient(1), required: false, eligible: true, requirement_ended_at: null, requirement_source: "late_eligibility", cohort_revision: null },
+      { ...recipient(2), required: true, eligible: false, requirement_ended_at: "2026-10-19T10:00:00Z", requirement_source: "required_cohort", cohort_revision: 1 },
+    ] }, error: null };
+    const response = await marksResponse(context, ACADEMY, ASSIGNMENT, new URLSearchParams());
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.students).toMatchObject([
+      { required: false, eligible: true, requirement_source: "late_eligibility", cohort_revision: null },
+      { required: true, eligible: false, requirement_ended_at: "2026-10-19T10:00:00Z", cohort_revision: 1 },
+    ]);
+  });
+
   it("refuses mixed or duplicate answer edits before the database", async () => {
     const bad = [
       [{ question_id: QUESTION, choice_id: CHOICE, score: "1" }],
