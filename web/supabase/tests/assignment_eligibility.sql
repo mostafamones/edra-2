@@ -62,8 +62,8 @@ select public.create_assignment(pg_temp.id('academy'),pg_temp.id('year'),pg_temp
 select pg_temp.check(pg_temp.document('assignment')->>'recipient_count'='2' and pg_temp.document('assignment')->>'cohort_revision'='1','first valid audience captures required');
 select pg_temp.check(pg_temp.document('empty')->>'recipient_count'='0' and pg_temp.document('empty')->>'cohort_revision'='1','valid empty cohort initialized');
 reset role;
-insert into cohort_ids(name,id) values('s3',(public.create_student_record(pg_temp.id('academy'),pg_temp.id('year'),'Late Optional','01061000003','01100000000','preparatory-3',null,pg_temp.id('g1'),'in_person')).id),
- ('s4',(public.create_student_record(pg_temp.id('academy'),pg_temp.id('year'),'Empty Late','01061000004','01100000000','secondary-1',null,null,'online_only')).id);
+insert into cohort_ids(name,id) select 's3',id from public.create_student_record(pg_temp.id('academy'),pg_temp.id('year'),'Late Optional','01061000003','01100000000','preparatory-3',null,pg_temp.id('g1'),'in_person');
+insert into cohort_ids(name,id) select 's4',id from public.create_student_record(pg_temp.id('academy'),pg_temp.id('year'),'Empty Late','01061000004','01100000000','secondary-1',null,null,'online_only');
 set local role authenticated;
 -- No author save or read write is needed to discover either late student.
 select pg_temp.check(public.list_assignment_marks(pg_temp.id('academy'),pg_temp.id('assignment'))->>'total'='3'
