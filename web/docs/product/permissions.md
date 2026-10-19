@@ -13,8 +13,10 @@ These are intended product permissions. Current source enforces the Owner, Head 
 | One-off schedules | Yes | Yes | Yes | Create/edit; archive own only |
 | Start/end sessions; record/finalize/correct attendance | Yes | Yes | Yes | Yes |
 | Archive/restore sessions in an open academic year | Yes | Yes | Yes | Read preserved history only |
-| Prepare material and assessments; mark/announce complete results | Yes | Yes | Yes | Yes |
-| Release/archive content | Yes | Yes | Yes | No |
+| Prepare assessments; mark/announce complete results | Yes | Yes | Yes | Yes |
+| Prepare draft content units | Yes | Yes | Yes | Own drafts only, including during review; submit for manager review |
+| Review submitted content units; edit published units | Yes | Yes | Yes | No |
+| Publish changes; archive/restore content (restores as draft) | Yes | Yes | Yes | No |
 | Correct shared answer keys/exclude questions after work begins | Yes | Yes | Yes | No |
 | Assignment submission availability/archive | Yes | Yes | Yes | No |
 | Quiz/exam availability windows/archive | Yes | Yes | Yes | No |

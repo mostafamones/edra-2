@@ -33,7 +33,7 @@ Track names must be unique within their academy level. Different academies may u
 
 A program names a student’s level, or their level and track together. For example, Secondary 2 Scientific and Secondary 2 Literature are different programs within the same level.
 
-Every student’s annual participation has a program: a level, with a track when applicable. “Program” is a naming convention for that placement, not a separate academic entity or additional set of rules.
+Every student's annual participation has a program: a level, with a track when applicable. For content authoring, the owner confirmed on 2026-10-18 that program scope includes its academic year, one level and optional track. Units reside in that program and inherit this context, rather than selecting a year/level/track independently. This product scope does not prescribe a separate database entity or change existing student-placement history.
 
 A group and the students placed in it must use compatible academy, academic-year, level and track relationships.
 
@@ -85,7 +85,7 @@ The academy establishes the new year’s groups and student participation explic
 
 Returning students retain their academy identity and history. Their new annual participation records the level, track and group applicable to the new year.
 
-Reusable learning material remains part of the academy’s library. Its availability in a new year follows the content-release and access rules for that year.
+Each program starts with no units in a new academic year. Staff may explicitly copy published learning material within the academy under the content reuse rules; units do not carry over automatically. Previous-year material and student activity retain their original academic context and history.
 
 ## Related rules
 
