@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Separate-session race tests for staff access, schedule/group/slot, student-record, import,
-# student-code, check-in, quiz and exam locking. Run only through `npm run test:db`, which validates the isolated target and
+# student-code, check-in, attendance-correction, quiz and exam locking. Run only through `npm run test:db`, which validates the isolated target and
 # exports its connection. Races need real concurrent transactions, so fixtures are committed under a
 # run-specific academy, admin and ids. They are retained: preserved history (sessions, attendance,
 # code ledger) cannot be removed through normal flows. Fresh identities keep reruns collision-free.
@@ -518,6 +518,51 @@ psqlx -tA -c "select count(*) from public.attendance_effect_suppressions where e
   || fail "archival suppressed an effect that was already dispatched"
 psqlx -tA -c "select edra_private.claim_attendance_effect('$E21') is null" | grep -qx t \
   || fail "a dispatched effect could be claimed again"
+
+# 34-36. Attendance correction races. Every command takes the session row first.
+# 34. Two adds of the same unexpected attendee: one appends, the other waits and reports the existing
+#     entry. Exactly one roster snapshot exists.
+S34="$(new_session 'Attendee race 34')"
+[ -n "$S34" ] || fail "could not start the attendee race session 34"
+hold 34a 34b "$as_admin select public.add_session_attendee('$ACADEMY','$S34','$R12',0,gen_random_uuid());"
+start 34b "$as_admin select public.add_session_attendee('$ACADEMY','$S34','$R12',0,gen_random_uuid());"
+wait
+expect_ok 34a "the add holding the session lock failed"
+expect_ok 34b "a concurrent duplicate add failed"
+grep -q '"added"' "$OUT/34a" || fail "the first add did not append: $(out 34a)"
+grep -q already_on_roster "$OUT/34b" || fail "a concurrent duplicate add did not report the existing entry: $(out 34b)"
+psqlx -tA -c "select count(*) from public.session_roster_entries where session_id = '$S34' and annual_student_record_id = '$R12' and origin = 'unexpected'" | grep -qx 1 \
+  || fail "duplicate adds did not produce exactly one unexpected roster entry"
+
+# 35. All-remaining absence holds the session; a concurrent manual edit made against version 0
+#     waits, then conflicts. The unexpected attendee from an add is never marked absent.
+S35="$(new_session 'Absence race 35')"
+[ -n "$S35" ] || fail "could not start the absence race session 35"
+psqlx -c "begin; $as_admin select public.add_session_attendee('$ACADEMY','$S35','$R12',0,gen_random_uuid()); commit;" >/dev/null
+hold 35a 35b "$as_admin select public.mark_unrecorded_absent('$ACADEMY','$S35',1,gen_random_uuid());"
+start 35b "$as_admin select public.apply_attendance_changes('$ACADEMY','$S35','[{\"annual_student_record_id\":\"$R14\",\"status\":\"present\",\"expected_version\":0}]'::jsonb,'set',gen_random_uuid());"
+wait
+expect_ok 35a "the absence command holding the session lock failed"
+expect_ok 35b "a concurrent manual edit failed"
+grep -q '"updated"' "$OUT/35a" || fail "the absence command did not apply: $(out 35a)"
+grep -q conflict "$OUT/35b" || fail "a manual edit over a concurrent absence did not conflict: $(out 35b)"
+psqlx -tA -c "select status from public.attendance_records where session_id = '$S35' and annual_student_record_id = '$R14'" | grep -qx absent \
+  || fail "the absence command result was overwritten"
+psqlx -tA -c "select count(*) from public.attendance_records where session_id = '$S35' and annual_student_record_id = '$R12'" | grep -qx 0 \
+  || fail "the unexpected attendee was marked absent"
+
+# 36. A Late check-in holds the session; a concurrent finalization of the reviewed revision waits,
+#     then publishes Late. No transient Present is ever official.
+S36="$(new_session 'Late race 36')"
+[ -n "$S36" ] || fail "could not start the late race session 36"
+psqlx >/dev/null -c "begin; set local session_replication_role = replica; update public.sessions set started_at = started_at - interval '30 minutes' where id = '$S36'; commit;"
+hold 36a 36b "$as_admin select public.check_in_attendance_with_late('$ACADEMY','$S36','$R14',gen_random_uuid(),10);"
+start 36b "$as_admin select public.publish_attendance('$ACADEMY','$S36',1,gen_random_uuid());"
+wait
+expect_ok 36a "the Late check-in holding the session lock failed"
+expect_ok 36b "the finalization waiting on the check-in failed"
+psqlx -tA -c "select status || ':' || coalesce(published_status::text, '-') from public.attendance_records where session_id = '$S36' and annual_student_record_id = '$R14'" | grep -qx late:late \
+  || fail "finalization did not publish the atomic Late check-in"
 
 # Quiz student phones use a separate range from the import fixtures above.
 # 22-25. Quiz races. Per-student commands take the quiz key-share lock and the student's work row;
