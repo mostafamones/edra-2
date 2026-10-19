@@ -12,6 +12,7 @@ export type ApiErrorCode =
   | "NOT_FOUND"
   | "STUDENT_NOT_FOUND"
   | "ATTENDANCE_CONFLICT"
+  | "ATTENDANCE_REVIEW_STALE"
   | "REVIEW_REQUIRED"
   | "PUBLICATION_STALE"
   | "SESSION_ENDED"
@@ -20,6 +21,7 @@ export type ApiErrorCode =
   | "SCHEDULE_UNAVAILABLE"
   | "IDEMPOTENCY_CONFLICT"
   | "NOT_ON_ROSTER"
+  | "STUDENT_ARCHIVED"
   | "STUDENT_CODES_DISABLED"
   | "STUDENT_CODE_RETIRED"
   | "STUDENT_CHANGED"
@@ -45,6 +47,7 @@ const STATUS: Record<ApiErrorCode, number> = {
   NOT_FOUND: 404,
   STUDENT_NOT_FOUND: 404,
   ATTENDANCE_CONFLICT: 409,
+  ATTENDANCE_REVIEW_STALE: 409,
   REVIEW_REQUIRED: 409,
   PUBLICATION_STALE: 409,
   SESSION_ENDED: 409,
@@ -53,6 +56,7 @@ const STATUS: Record<ApiErrorCode, number> = {
   SCHEDULE_UNAVAILABLE: 409,
   IDEMPOTENCY_CONFLICT: 409,
   NOT_ON_ROSTER: 422,
+  STUDENT_ARCHIVED: 409,
   STUDENT_CODES_DISABLED: 409,
   STUDENT_CODE_RETIRED: 409,
   STUDENT_CHANGED: 409,
@@ -79,6 +83,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   NOT_FOUND: "Not found.",
   STUDENT_NOT_FOUND: "No student with this identifier exists for this session's academy and year.",
   ATTENDANCE_CONFLICT: "Someone else changed this attendance first. Review the current values and try again.",
+  ATTENDANCE_REVIEW_STALE: "Attendance changed after you reviewed it. Nothing was saved; review the latest values (details.revision) and try again.",
   REVIEW_REQUIRED: "This student is marked absent or excused. A staff member must review the change.",
   PUBLICATION_STALE: "Attendance changed after you reviewed it. Refresh and review again before finalizing.",
   SESSION_ENDED: "This session has ended. Check-ins are only accepted while it is live.",
@@ -87,6 +92,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   SCHEDULE_UNAVAILABLE: "This schedule is archived or unavailable and can no longer start sessions.",
   IDEMPOTENCY_CONFLICT: "This Idempotency-Key was already used for a different request.",
   NOT_ON_ROSTER: "This student is not on the session's roster. A staff member must review it.",
+  STUDENT_ARCHIVED: "This student record is archived. Restore it before adding the student to a session.",
   STUDENT_CODES_DISABLED: "Student codes are turned off for this academy. Check the student in with annual_student_record_id.",
   STUDENT_CODE_RETIRED: "This code is no longer active. Use the student's current code or annual_student_record_id.",
   STUDENT_CHANGED: "This code now identifies a different student than the one previewed. Nothing was saved; resolve the code again.",

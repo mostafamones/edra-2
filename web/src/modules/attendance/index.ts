@@ -1,6 +1,7 @@
-export { publishReviewedAttendance, recordCheckIn, saveAttendanceChanges } from "./actions";
+export { addSessionAttendee, findAttendees, markRemainingAbsent, publishReviewedAttendance, recordCheckIn, saveAttendanceChanges } from "./actions";
 export { AttendanceRequestError, attendanceQueryKey, attendanceRootKey, fetchAttendance } from "./queries";
 export { ATTENDANCE_STATUSES } from "./types";
 export type {
-  AttendanceChange, AttendanceEntry, AttendanceSheet, AttendanceStatus, ChangeResult, CheckInResult, PublicationState, PublishResult, SheetEntry,
+  AddAttendeeResult, AttendanceChange, AttendanceEntry, AttendanceSheet, AttendanceStatus, AttendeeCandidate, AttendeeSearchResult, ChangeResult,
+  CheckInResult, PublicationState, PublishResult, SheetEntry, UnrecordedAbsenceResult,
 } from "./types";

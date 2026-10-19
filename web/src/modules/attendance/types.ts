@@ -81,6 +81,7 @@ export type AttendanceErrorCode =
   | "not_found"
   | "student_not_found"
   | "not_on_roster"
+  | "student_archived"
   | "student_codes_disabled"
   | "student_code_retired"
   | "student_code_not_found"
@@ -110,6 +111,29 @@ export type ChangeResult =
 export type PublishOutcome = "published" | "unchanged" | "already_published";
 export type PublishResult =
   | { ok: true; outcome: PublishOutcome; publicationId: string | null; revision: number; itemCount: number; replayed: boolean }
+  | AttendanceFailure;
+
+export type UnrecordedAbsenceResult =
+  /** `stale`: the sheet changed after the reviewed revision; nothing changed. */
+  | { ok: true; outcome: "updated" | "unchanged" | "stale"; changed: number; revision: number; replayed: boolean }
+  | AttendanceFailure;
+
+/** A record that can be added to a session's roster as an unexpected attendee. */
+export type AttendeeCandidate = {
+  annualStudentRecordId: string;
+  fullName: string;
+  levelName: string | null;
+  groupName: string | null;
+  participationType: Enums["student_participation_type"];
+  /** Current code while student codes are enabled, else null. */
+  studentCode: string | null;
+};
+export type AttendeeSearchResult = { ok: true; items: AttendeeCandidate[]; hasMore: boolean } | AttendanceFailure;
+
+export type AddAttendeeResult =
+  | { ok: true; outcome: "added" | "already_on_roster"; entry: AttendanceEntry; revision: number; replayed: boolean }
+  /** The sheet changed after the reviewed revision; nothing was added. */
+  | { ok: true; outcome: "stale"; entry: null; revision: number; replayed: boolean }
   | AttendanceFailure;
 
 export type ReadResult<T> = { ok: true; data: T } | { ok: false; status: 400 | 401 | 403 | 404 | 500 };

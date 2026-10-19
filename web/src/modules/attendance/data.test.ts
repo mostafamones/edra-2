@@ -10,7 +10,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({ cookieAuthority: async () => null }));
 
 import type { Authority } from "@/lib/supabase/authority";
-import { checkIn } from "./data";
+import { addAttendee, checkIn, markUnrecordedAbsent, searchAttendees } from "./data";
 
 const entry = (status: string, version: number) => ({
   annual_student_record_id: STUDENT, full_name: "Amal", archived: false, origin: "expected", group_name: null, status, version,
@@ -28,8 +28,13 @@ const authority = {
     from: (name: string) => table(name === "sessions" ? { started_at: "2030-01-01T10:00:00Z" } : { role: "instructor" }),
     rpc: async (name: string, args: Record<string, unknown>) => {
       state.rpc.push({ name, args });
-      if (name === "apply_attendance_changes") {
-        return { data: { outcome: "updated", changed: 1, entries: [entry("late", 2)], revision: 5, replayed: false }, error: null };
+      if (name === "mark_unrecorded_absent") return { data: { outcome: "stale", changed: 0, revision: 9, replayed: false }, error: null };
+      if (name === "search_attendee_candidates") {
+        return { data: { items: [{ annual_student_record_id: STUDENT, full_name: "Amal", level_name: "Grade 9", group_name: null,
+          participation_type: "online_only", student_code: null }], has_more: true }, error: null };
+      }
+      if (name === "add_session_attendee") {
+        return { data: { outcome: "added", entry: { ...entry("unknown", 0), origin: "unexpected" }, revision: 6, replayed: false }, error: null };
       }
       return { data: { outcome: "recorded", entry: entry("present", 1), revision: 4, correction_pending: false, replayed: state.replayed }, error: null };
     },
@@ -40,12 +45,12 @@ const base = { academyId: ACADEMY, sessionId: SESSION, idempotencyKey: KEY };
 beforeEach(() => { state.rpc = []; state.replayed = false; });
 
 describe("checkIn identifiers", () => {
-  it("keeps the UUID command and its payload unchanged", async () => {
+  it("sends a UUID check-in to the single Late-aware command, with omitted Late-after as 0", async () => {
     const result = await checkIn({ ...base, annualStudentRecordId: STUDENT }, authority);
     expect(result.ok && result.outcome).toBe("recorded");
     expect(state.rpc).toEqual([{
-      name: "check_in_attendance",
-      args: { p_academy_id: ACADEMY, p_session_id: SESSION, p_annual_record_id: STUDENT, p_key: KEY },
+      name: "check_in_attendance_with_late",
+      args: { p_academy_id: ACADEMY, p_session_id: SESSION, p_annual_record_id: STUDENT, p_key: KEY, p_late_after_minutes: 0 },
     }]);
   });
 
@@ -63,16 +68,34 @@ describe("checkIn identifiers", () => {
     expect(state.rpc).toEqual([]);
   });
 
-  it("applies Late-after to both identifiers, but never to a replay", async () => {
+  it("sends Late-after with the check-in itself and returns its acknowledgment with no follow-up write", async () => {
     for (const who of [{ annualStudentRecordId: STUDENT }, { studentCode: "0042" }]) {
       state.rpc = [];
-      const late = await checkIn({ ...base, ...who, lateAfterMinutes: 10 }, authority);
-      expect(late.ok && late.entry.status).toBe("late");
-      expect(state.rpc.at(-1)?.name).toBe("apply_attendance_changes");
+      const result = await checkIn({ ...base, ...who, lateAfterMinutes: 10 }, authority);
+      expect(result.ok && result.revision).toBe(4);
+      expect(state.rpc).toHaveLength(1);
+      expect(state.rpc[0].args).toMatchObject({ p_late_after_minutes: 10, p_key: KEY });
     }
-    state.rpc = []; state.replayed = true;
-    const replay = await checkIn({ ...base, studentCode: "0042", lateAfterMinutes: 10 }, authority);
-    expect(replay.ok && replay.entry.status).toBe("present");
-    expect(state.rpc.map((call) => call.name)).toEqual(["check_in_attendance_by_code"]);
+  });
+});
+
+describe("attendance corrections", () => {
+  it("reports a stale all-remaining absence review with the current revision", async () => {
+    const result = await markUnrecordedAbsent({ ...base, expectedRevision: 3 }, authority);
+    expect(result).toEqual({ ok: true, outcome: "stale", changed: 0, revision: 9, replayed: false });
+    expect(state.rpc).toEqual([{ name: "mark_unrecorded_absent", args: { p_academy_id: ACADEMY, p_session_id: SESSION, p_expected_revision: 3, p_key: KEY } }]);
+    expect((await markUnrecordedAbsent({ ...base, expectedRevision: -1 }, authority)).ok).toBe(false);
+  });
+
+  it("searches candidates with bounded paging and appends an unexpected attendee", async () => {
+    const found = await searchAttendees({ academyId: ACADEMY, sessionId: SESSION, query: "am" }, authority);
+    expect(found.ok && found.items[0]).toMatchObject({ annualStudentRecordId: STUDENT, participationType: "online_only" });
+    expect(state.rpc.at(-1)?.args).toEqual({ p_academy_id: ACADEMY, p_session_id: SESSION, p_query: "am", p_limit: 20, p_offset: 0 });
+    expect((await searchAttendees({ academyId: ACADEMY, sessionId: SESSION, query: "x", limit: 51 }, authority)).ok).toBe(false);
+    const added = await addAttendee({ ...base, annualStudentRecordId: STUDENT, expectedRevision: 5 }, authority);
+    expect(added.ok && added.outcome === "added" && added.entry.origin).toBe("unexpected");
+    expect(state.rpc.at(-1)).toEqual({ name: "add_session_attendee", args: {
+      p_academy_id: ACADEMY, p_session_id: SESSION, p_record_id: STUDENT, p_expected_revision: 5, p_key: KEY,
+    } });
   });
 });

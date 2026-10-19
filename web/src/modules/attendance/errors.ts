@@ -6,6 +6,7 @@ const MESSAGES: Record<AttendanceErrorCode, string> = {
   not_found: "This session no longer exists in this academy.",
   student_not_found: "This student isn’t in this session’s academy and year.",
   not_on_roster: "This student isn’t on the session roster.",
+  student_archived: "This student is archived. Restore them before adding them to a session.",
   student_codes_disabled: "Student codes are turned off for this academy. Check the student in by name.",
   student_code_retired: "This code is no longer active. Check the student in by name or use their current code.",
   student_code_not_found: "No student in this academy has this code.",
