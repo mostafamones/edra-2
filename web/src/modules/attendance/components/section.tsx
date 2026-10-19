@@ -3,16 +3,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  IconAlertCircle, IconChecklist, IconSearch, IconUsers, IconUserX, IconWifiOff, IconX,
+  IconAlertCircle, IconChecklist, IconSearch, IconUserPlus, IconUsers, IconUserX, IconWifiOff, IconX,
 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +23,10 @@ import { useAccountProfile } from "@/modules/account";
 import { AcademyGate, useAuth } from "@/modules/auth";
 import { sessionsRootKey } from "@/modules/sessions";
 import { AttendanceRequestError, attendanceQueryKey, fetchAttendance } from "../queries";
+import { MAX_SELECTED_CHANGES } from "../limits";
 import type { AttendanceSheet, AttendanceStatus, PublicationState } from "../types";
+import { AbsenceDialog } from "./absence-dialog";
+import { AddAttendeeDialog } from "./add-attendee";
 import { CheckIn } from "./check-in";
 import { formatClock, formatMoment, INPUT_STATUSES, STATUS_DOTS, STATUS_LABELS, statusName } from "./labels";
 import { AttendanceOverview } from "./overview";
@@ -167,6 +166,7 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [publishing, setPublishing] = useState(false);
   const [markingAbsent, setMarkingAbsent] = useState(false);
+  const [addingAttendee, setAddingAttendee] = useState(false);
   const editable = sheet.permittedActions.edit;
   const live = session.state === "live";
 
@@ -189,18 +189,15 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
     });
   }
 
+  const tooManySelected = selectedEntries.length > MAX_SELECTED_CHANGES;
+
   async function setSelectedStatus(status: AttendanceStatus) {
+    if (tooManySelected) return;
     const changes = selectedEntries.filter((entry) => entry.status !== status)
       .map((entry) => ({ annualStudentRecordId: entry.annualStudentRecordId, status, expectedVersion: entry.version }));
     if (changes.length === 0) { setSelected(new Set()); return; }
     const saved = await edits.applyBulk(changes, `${changes.length} ${changes.length === 1 ? "student" : "students"} marked ${STATUS_LABELS[status].toLowerCase()}.`);
     if (saved) setSelected(new Set());
-  }
-
-  async function markUnrecordedAbsent() {
-    const changes = unrecorded.map((entry) => ({ annualStudentRecordId: entry.annualStudentRecordId, status: "absent" as const, expectedVersion: entry.version }));
-    const saved = await edits.applyBulk(changes, `${changes.length} unrecorded ${changes.length === 1 ? "student" : "students"} marked absent.`);
-    if (saved) setMarkingAbsent(false);
   }
 
   const canPublish = sheet.permittedActions.publish && sheet.publication !== "published";
@@ -224,6 +221,11 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
           </CardTitle>
           <CardAction className="flex flex-wrap items-center justify-end gap-2">
             <SyncStatus status={channelStatus} syncedAt={syncedAt} peers={peers} />
+            {editable && (
+              <Button variant="outline" onClick={() => setAddingAttendee(true)}>
+                <IconUserPlus />Add attendee
+              </Button>
+            )}
             {sheet.permittedActions.publish && (
               <Button onClick={() => setPublishing(true)} disabled={!canPublish}>
                 <IconChecklist />{sheet.publicationCount > 0 ? "Finalize corrections" : "Finalize attendance"}
@@ -276,6 +278,7 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
                   <IconUserX />Mark {unrecorded.length} untracked absent
                 </Button>
               )}
+
               <InputGroup className="w-full sm:w-64">
                 <InputGroupInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search students" aria-label="Search students" />
                 <InputGroupAddon><IconSearch /></InputGroupAddon>
@@ -286,11 +289,16 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
 
         {editable && selected.size > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2">
-            <span className="text-sm font-medium">{selected.size} selected</span>
+            <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
+              {selected.size} selected
+              {tooManySelected && (
+                <span role="alert" className="font-normal text-destructive">Select at most {MAX_SELECTED_CHANGES} students at once.</span>
+              )}
+            </span>
             <div className="flex items-center gap-1.5">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm" disabled={edits.bulkBusy}>{edits.bulkBusy ? "Saving…" : "Set status"}</Button>
+                  <Button size="sm" disabled={edits.bulkBusy || tooManySelected || markingAbsent}>{edits.bulkBusy ? "Saving…" : "Set status"}</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {INPUT_STATUSES.map((status) => (
@@ -321,20 +329,8 @@ function Sheet({ sheet, syncedAt, channelStatus, peers }: { sheet: AttendanceShe
 
       {publishing && <PublishDialog sheet={sheet} onClose={() => setPublishing(false)} />}
 
-      <AlertDialog open={markingAbsent} onOpenChange={(next) => { if (!next && !edits.bulkBusy) setMarkingAbsent(false); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Mark {unrecorded.length} untracked {unrecorded.length === 1 ? "student" : "students"} absent?</AlertDialogTitle>
-            <AlertDialogDescription>Nothing is official until you finalize attendance.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={edits.bulkBusy}>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" disabled={edits.bulkBusy} onClick={(event) => { event.preventDefault(); void markUnrecordedAbsent(); }}>
-              {edits.bulkBusy ? "Saving…" : "Mark absent"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {markingAbsent && <AbsenceDialog sheet={sheet} unrecorded={unrecorded.length} onClose={() => setMarkingAbsent(false)} />}
+      {addingAttendee && <AddAttendeeDialog sheet={sheet} onClose={() => setAddingAttendee(false)} />}
     </>
   );
 }

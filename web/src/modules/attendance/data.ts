@@ -7,9 +7,10 @@ import { academyMember } from "@/lib/supabase/membership";
 import type { Json } from "@/lib/supabase/database.types";
 import { normalizeStudentCode } from "@/modules/students/contract";
 import { failure, failureFromDatabase } from "./errors";
+import { MAX_SELECTED_CHANGES } from "./limits";
 import {
-  ATTENDANCE_STATUSES, type AttendanceChange, type AttendanceEntry, type AttendanceSheet, type ChangeResult,
-  type CheckInResult, type PublishResult, type ReadResult,
+  ATTENDANCE_STATUSES, type AddAttendeeResult, type AttendanceChange, type AttendanceEntry, type AttendanceSheet, type AttendeeSearchResult,
+  type ChangeResult, type CheckInResult, type PublishResult, type ReadResult, type UnrecordedAbsenceResult,
 } from "./types";
 
 /**
@@ -25,7 +26,7 @@ const entrySchema = z.object({
   full_name: z.string(),
   student_code: z.string().nullish(),
   archived: z.boolean(),
-  origin: z.enum(["expected", "eligible"]),
+  origin: z.enum(["expected", "eligible", "unexpected"]),
   group_name: z.string().nullable(),
   status: statusSchema,
   version: z.number().int().nonnegative(),
@@ -172,9 +173,9 @@ export type CheckInInput = z.input<typeof checkInBase> & ({ annualStudentRecordI
 /**
  * Positive check-in for a roster student while the session is live, by permanent record UUID or by
  * academy-local student code (resolved by the database in the same transaction; the UUID is never
- * resolved here and sent separately). With `lateAfterMinutes` above 0, a first check-in made more
- * than that many minutes after the session started is recorded as Late; 0 or omitted never marks Late.
- * That is a second versioned write: a replay returns the original acknowledgment and never reapplies it.
+ * resolved here and sent separately). With `lateAfterMinutes` above 0, a first check-in accepted more
+ * than that many minutes after the session started is recorded as Late in the same transaction as the
+ * check-in and its receipt; 0 or omitted never marks Late. A replay returns the original acknowledgment.
  */
 export async function checkIn(input: CheckInInput, authority?: Authority | null): Promise<CheckInResult> {
   const parsed = checkInInput.safeParse(input);
@@ -189,49 +190,22 @@ export async function checkIn(input: CheckInInput, authority?: Authority | null)
       ? await caller.db.rpc("check_in_attendance_by_code", {
         p_academy_id: academyId, p_session_id: sessionId, p_code: code, p_key: idempotencyKey, p_late_after_minutes: lateAfterMinutes,
       })
-      : await caller.db.rpc("check_in_attendance", {
+      : await caller.db.rpc("check_in_attendance_with_late", {
         p_academy_id: academyId, p_session_id: sessionId, p_annual_record_id: (parsed.data as { annualStudentRecordId: string }).annualStudentRecordId,
-        p_key: idempotencyKey,
+        p_key: idempotencyKey, p_late_after_minutes: lateAfterMinutes,
       });
     if (error) return failureFromDatabase(error);
     const result = checkInSchema.parse(data);
-    const checkedIn: CheckInResult = {
+    return {
       ok: true, outcome: result.outcome, entry: toEntry(result.entry), revision: result.revision,
       correctionPending: result.correction_pending, replayed: result.replayed,
     };
-    if (result.outcome !== "recorded" || result.replayed || lateAfterMinutes === 0) return checkedIn;
-    return await markLateIfOverdue(caller, checkedIn, { academyId, sessionId, lateAfterMinutes });
   } catch {
     return failure("unavailable");
   }
 }
 
-/**
- * Turns a just-recorded Present into Late when the check-in came after the deadline. This is a second
- * versioned write; if it fails or conflicts, the student simply stays Present and staff can correct it.
- */
-async function markLateIfOverdue(
-  caller: Authority,
-  checkedIn: Extract<CheckInResult, { ok: true }>,
-  { academyId, sessionId, lateAfterMinutes }: { academyId: string; sessionId: string; lateAfterMinutes: number },
-): Promise<CheckInResult> {
-  try {
-    const { data: session } = await caller.db.from("sessions").select("started_at").eq("id", sessionId).eq("academy_id", academyId).maybeSingle();
-    if (!session) return checkedIn;
-    const checkedInAt = new Date(checkedIn.entry.checkedInAt ?? Date.now()).getTime();
-    if (checkedInAt - new Date(session.started_at).getTime() <= lateAfterMinutes * 60_000) return checkedIn;
-    const late = await changeAttendance({
-      academyId, sessionId, idempotencyKey: crypto.randomUUID(),
-      changes: [{ annualStudentRecordId: checkedIn.entry.annualStudentRecordId, status: "late", expectedVersion: checkedIn.entry.version }],
-    }, caller);
-    if (!late.ok || late.outcome !== "updated" || !late.entries[0]) return checkedIn;
-    return { ...checkedIn, entry: late.entries[0], revision: late.revision };
-  } catch {
-    return checkedIn;
-  }
-}
-
-export const MAX_BULK_CHANGES = 500;
+export const MAX_BULK_CHANGES = MAX_SELECTED_CHANGES;
 const changeItem = z.object({ annualStudentRecordId: z.uuid(), status: z.enum(ATTENDANCE_STATUSES), expectedVersion: z.number().int().min(0) });
 const changesInput = z.object({
   academyId: z.uuid(),
@@ -293,6 +267,114 @@ export async function publishAttendance(input: z.input<typeof publishInput>, aut
       ok: true, outcome: result.outcome, publicationId: result.publication_id, revision: result.revision,
       itemCount: result.item_count, replayed: result.replayed,
     };
+  } catch {
+    return failure("unavailable");
+  }
+}
+
+const reviewedInput = z.object({ academyId: z.uuid(), sessionId: z.uuid(), expectedRevision: z.number().int().min(0), idempotencyKey: z.uuid() });
+const unrecordedSchema = z.object({
+  outcome: z.enum(["updated", "unchanged", "stale"]),
+  changed: z.number().int().nonnegative(),
+  revision: z.number().int().nonnegative(),
+  replayed: z.boolean(),
+});
+
+/**
+ * Marks every expected student of a mandatory session who is still Unknown Absent, in one transaction at
+ * any roster size (the explicit batch stays capped at 500). Eligible and unexpected students and recorded
+ * values are never touched. `stale` means the sheet changed after `expectedRevision` was reviewed; nothing
+ * changed and the current revision is returned.
+ */
+export async function markUnrecordedAbsent(input: z.input<typeof reviewedInput>, authority?: Authority | null): Promise<UnrecordedAbsenceResult> {
+  const parsed = reviewedInput.safeParse(input);
+  if (!parsed.success) return failure("validation");
+  const { academyId, sessionId, expectedRevision, idempotencyKey } = parsed.data;
+  const caller = await academyMember(academyId, authority);
+  if (!caller) return failure("forbidden");
+  try {
+    const { data, error } = await caller.db.rpc("mark_unrecorded_absent", {
+      p_academy_id: academyId, p_session_id: sessionId, p_expected_revision: expectedRevision, p_key: idempotencyKey,
+    });
+    if (error) return failureFromDatabase(error);
+    const result = unrecordedSchema.parse(data);
+    return { ok: true, outcome: result.outcome, changed: result.changed, revision: result.revision, replayed: result.replayed };
+  } catch {
+    return failure("unavailable");
+  }
+}
+
+export const MAX_ATTENDEE_PAGE = 50;
+export const MAX_ATTENDEE_QUERY_LENGTH = 100;
+const searchInput = z.object({
+  academyId: z.uuid(), sessionId: z.uuid(), query: z.string().max(MAX_ATTENDEE_QUERY_LENGTH).default(""),
+  limit: z.number().int().min(1).max(MAX_ATTENDEE_PAGE).default(20), offset: z.number().int().min(0).max(10_000).default(0),
+});
+const candidateSchema = z.object({
+  items: z.array(z.object({
+    annual_student_record_id: z.string(),
+    full_name: z.string(),
+    level_name: z.string().nullable(),
+    group_name: z.string().nullable(),
+    participation_type: z.enum(["in_person", "online_only"]),
+    student_code: z.string().nullable(),
+  })),
+  has_more: z.boolean(),
+});
+
+/** Active records of the session's academy and year not on its roster, by name or exact current code. Read-only. */
+export async function searchAttendees(input: z.input<typeof searchInput>, authority?: Authority | null): Promise<AttendeeSearchResult> {
+  const parsed = searchInput.safeParse(input);
+  if (!parsed.success) return failure("validation");
+  const { academyId, sessionId, query, limit, offset } = parsed.data;
+  const caller = await academyMember(academyId, authority);
+  if (!caller) return failure("forbidden");
+  try {
+    const { data, error } = await caller.db.rpc("search_attendee_candidates", {
+      p_academy_id: academyId, p_session_id: sessionId, p_query: query, p_limit: limit, p_offset: offset,
+    });
+    if (error) return failureFromDatabase(error);
+    const result = candidateSchema.parse(data);
+    return {
+      ok: true,
+      hasMore: result.has_more,
+      items: result.items.map((item) => ({
+        annualStudentRecordId: item.annual_student_record_id, fullName: item.full_name, levelName: item.level_name,
+        groupName: item.group_name, participationType: item.participation_type, studentCode: item.student_code,
+      })),
+    };
+  } catch {
+    return failure("unavailable");
+  }
+}
+
+const addInput = reviewedInput.extend({ annualStudentRecordId: z.uuid() });
+const addSchema = z.discriminatedUnion("outcome", [
+  z.object({ outcome: z.enum(["added", "already_on_roster"]), entry: entrySchema, revision: z.number().int(), replayed: z.boolean() }),
+  z.object({ outcome: z.literal("stale"), entry: z.null(), revision: z.number().int(), replayed: z.boolean() }),
+]);
+
+/**
+ * Explicitly appends an active record of the session's academy and year to its roster as an unexpected
+ * attendee (Unknown; the original snapshot and the student's placement never change). Adding does not
+ * check the student in. `already_on_roster` returns the existing entry unchanged; `stale` writes nothing.
+ */
+export async function addAttendee(input: z.input<typeof addInput>, authority?: Authority | null): Promise<AddAttendeeResult> {
+  const parsed = addInput.safeParse(input);
+  if (!parsed.success) return failure("validation");
+  const { academyId, sessionId, annualStudentRecordId, expectedRevision, idempotencyKey } = parsed.data;
+  const caller = await academyMember(academyId, authority);
+  if (!caller) return failure("forbidden");
+  try {
+    const { data, error } = await caller.db.rpc("add_session_attendee", {
+      p_academy_id: academyId, p_session_id: sessionId, p_record_id: annualStudentRecordId,
+      p_expected_revision: expectedRevision, p_key: idempotencyKey,
+    });
+    if (error) return failureFromDatabase(error);
+    const result = addSchema.parse(data);
+    return result.outcome === "stale"
+      ? { ok: true, outcome: "stale", entry: null, revision: result.revision, replayed: result.replayed }
+      : { ok: true, outcome: result.outcome, entry: toEntry(result.entry), revision: result.revision, replayed: result.replayed };
   } catch {
     return failure("unavailable");
   }

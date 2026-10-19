@@ -4533,6 +4533,8 @@ export type Database = {
         Row: {
           academic_year_id: string
           academy_id: string
+          added_by: string | null
+          added_by_name: string | null
           annual_student_record_id: string
           created_at: string
           level_id: string
@@ -4545,6 +4547,8 @@ export type Database = {
         Insert: {
           academic_year_id: string
           academy_id: string
+          added_by?: string | null
+          added_by_name?: string | null
           annual_student_record_id: string
           created_at?: string
           level_id: string
@@ -4557,6 +4561,8 @@ export type Database = {
         Update: {
           academic_year_id?: string
           academy_id?: string
+          added_by?: string | null
+          added_by_name?: string | null
           annual_student_record_id?: string
           created_at?: string
           level_id?: string
@@ -5566,6 +5572,16 @@ export type Database = {
         Returns: boolean
       }
       accept_staff_invitation: { Args: { p_token: string }; Returns: Json }
+      add_session_attendee: {
+        Args: {
+          p_academy_id: string
+          p_expected_revision: number
+          p_key: string
+          p_record_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       allocate_student_code: {
         Args: { p_academy_id: string; p_level_id: string }
         Returns: string
@@ -5708,6 +5724,16 @@ export type Database = {
           p_code: string
           p_key: string
           p_late_after_minutes?: number
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      check_in_attendance_with_late: {
+        Args: {
+          p_academy_id: string
+          p_annual_record_id: string
+          p_key: string
+          p_late_after_minutes: number
           p_session_id: string
         }
         Returns: Json
@@ -6276,6 +6302,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mark_unrecorded_absent: {
+        Args: {
+          p_academy_id: string
+          p_expected_revision: number
+          p_key: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       normalize_egyptian_phone: { Args: { value: string }; Returns: string }
       normalize_import_label: { Args: { value: string }; Returns: string }
       normalize_student_code: { Args: { value: string }; Returns: string }
@@ -6590,6 +6625,16 @@ export type Database = {
           p_enabled: boolean
           p_expected_version: number
           p_levels: Json
+        }
+        Returns: Json
+      }
+      search_attendee_candidates: {
+        Args: {
+          p_academy_id: string
+          p_limit: number
+          p_offset: number
+          p_query: string
+          p_session_id: string
         }
         Returns: Json
       }
@@ -7015,7 +7060,7 @@ export type Database = {
       schedule_audience: "group" | "level" | "program"
       schedule_kind: "recurring" | "one_off"
       session_end_reason: "manual" | "auto"
-      session_roster_origin: "expected" | "eligible"
+      session_roster_origin: "expected" | "eligible" | "unexpected"
       session_state: "live" | "ended"
       staff_invitation_status: "pending" | "accepted" | "revoked" | "expired"
       student_code_retirement_reason:
@@ -7215,7 +7260,7 @@ export const Constants = {
       schedule_audience: ["group", "level", "program"],
       schedule_kind: ["recurring", "one_off"],
       session_end_reason: ["manual", "auto"],
-      session_roster_origin: ["expected", "eligible"],
+      session_roster_origin: ["expected", "eligible", "unexpected"],
       session_state: ["live", "ended"],
       staff_invitation_status: ["pending", "accepted", "revoked", "expired"],
       student_code_retirement_reason: [

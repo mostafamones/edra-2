@@ -10,7 +10,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({ cookieAuthority: async () => null }));
 
 import type { StaffApiContext } from "@/lib/api/handler";
-import { bulkResponse, patchResponse, publishResponse } from "./v1";
+import { addAttendeeResponse, attendeeSearchResponse, bulkResponse, patchResponse, publishResponse, unrecordedAbsenceResponse } from "./v1";
 
 const chain = { select: () => chain, eq: () => chain, is: () => chain, maybeSingle: async () => ({ data: { role: "admin" } }) };
 const context = {
@@ -69,5 +69,45 @@ describe("attendance v1 writes", () => {
     const published = await publishResponse(context, request({ expected_revision: 3 }), ACADEMY, SESSION);
     expect(await published.json()).toEqual({ outcome: "published", publication_id: "p-1", revision: 3, item_count: 5, replayed: false });
     expect((await publishResponse(context, request({ expected_revision: -1 }), ACADEMY, SESSION)).status).toBe(400);
+  });
+
+  it("marks every remaining expected absence against the reviewed revision, with a stable stale code", async () => {
+    state.result = { data: { outcome: "updated", changed: 1001, revision: 8, replayed: false }, error: null };
+    const ok = await unrecordedAbsenceResponse(context, request({ expected_revision: 7 }), ACADEMY, SESSION);
+    expect(await ok.json()).toEqual({ outcome: "updated", changed: 1001, revision: 8, replayed: false });
+    expect(state.calls.at(-1)).toEqual({ name: "mark_unrecorded_absent", args: { p_academy_id: ACADEMY, p_session_id: SESSION, p_expected_revision: 7, p_key: KEY } });
+
+    state.result = { data: { outcome: "stale", changed: 0, revision: 9, replayed: false }, error: null };
+    const stale = await unrecordedAbsenceResponse(context, request({ expected_revision: 7 }), ACADEMY, SESSION);
+    expect(stale.status).toBe(409);
+    expect((await stale.json()).error).toMatchObject({ code: "ATTENDANCE_REVIEW_STALE", details: { revision: 9 } });
+
+    state.calls = [];
+    expect((await unrecordedAbsenceResponse(context, request({ expected_revision: 7 }, null), ACADEMY, SESSION)).status).toBe(400);
+    expect((await unrecordedAbsenceResponse(context, request({}), ACADEMY, SESSION)).status).toBe(400);
+    expect((await unrecordedAbsenceResponse(context, request({ expected_revision: 7, changes: [] }), ACADEMY, SESSION)).status).toBe(400);
+    expect(state.calls).toEqual([]);
+  });
+
+  it("searches and adds unexpected attendees", async () => {
+    state.result = { data: { items: [], has_more: false }, error: null };
+    const search = await attendeeSearchResponse(context, new Request("http://app.lvh.me:3000/x?q=0042&limit=5&offset=10"), ACADEMY, SESSION);
+    expect(await search.json()).toEqual({ items: [], has_more: false });
+    expect(state.calls.at(-1)?.args).toEqual({ p_academy_id: ACADEMY, p_session_id: SESSION, p_query: "0042", p_limit: 5, p_offset: 10 });
+    expect((await attendeeSearchResponse(context, new Request("http://app.lvh.me:3000/x?limit=500"), ACADEMY, SESSION)).status).toBe(400);
+
+    state.result = { data: { outcome: "already_on_roster", entry: entry(1, "present"), revision: 4, replayed: false }, error: null };
+    const added = await addAttendeeResponse(context, request({ annual_student_record_id: STUDENT, expected_revision: 4 }), ACADEMY, SESSION);
+    expect(await added.json()).toMatchObject({ outcome: "already_on_roster", entry: { status: "present" }, revision: 4 });
+
+    state.result = { data: null, error: { code: "P0001", message: "student_archived" } };
+    const archived = await addAttendeeResponse(context, request({ annual_student_record_id: STUDENT, expected_revision: 4 }), ACADEMY, SESSION);
+    expect(archived.status).toBe(409);
+    expect((await archived.json()).error.code).toBe("STUDENT_ARCHIVED");
+
+    state.result = { data: { outcome: "stale", entry: null, revision: 6, replayed: false }, error: null };
+    const stale = await addAttendeeResponse(context, request({ annual_student_record_id: STUDENT, expected_revision: 4 }), ACADEMY, SESSION);
+    expect((await stale.json()).error).toMatchObject({ code: "ATTENDANCE_REVIEW_STALE", details: { revision: 6 } });
+    expect((await addAttendeeResponse(context, request({ annual_student_record_id: "x", expected_revision: 4 }), ACADEMY, SESSION)).status).toBe(400);
   });
 });

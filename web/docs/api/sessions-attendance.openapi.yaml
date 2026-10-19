@@ -18,8 +18,9 @@ info:
     on every retry of that action. A retry returns the stored result with `"replayed": true`
     (session starts retain the original session identity and read its current lifecycle). Reusing
     a key for a different request returns `409 IDEMPOTENCY_CONFLICT`. Keys are scoped to the signed-in
-    user and are currently kept indefinitely (at least 24 hours is guaranteed). Conflict and
-    `REVIEW_REQUIRED` answers are not stored, so the same key can be retried after review.
+    user and are currently kept indefinitely (at least 24 hours is guaranteed). Conflict,
+    `ATTENDANCE_REVIEW_STALE` and `REVIEW_REQUIRED` answers are not stored, so the same key can be
+    retried after review.
 
     **Responses** are JSON with snake_case fields, `Cache-Control: no-store`, and an `X-Request-Id`
     header. Errors use the `Error` schema with a stable `code`.
@@ -294,20 +295,24 @@ paths:
         Both, neither, unknown properties, or an invalid identifier or option are `400
         INVALID_REQUEST`.
 
-        **Late.** When `late_after_minutes` is above 0 and a first check-in happens more than that
-        many minutes after the session started, the server records the student as Late instead of
-        Present (`outcome` is still `recorded`). `0` or omitted never marks Late. This is a second,
-        versioned write after the check-in commits: if it fails, the student stays Present. For
-        `student_id` requests the option is part of the retry fingerprint (omitted equals 0).
+        **Late.** When `late_after_minutes` is above 0 and the server accepts a first check-in more
+        than that many minutes after the session started, the student is recorded as Late instead of
+        Present (`outcome` is still `recorded`); exactly at the deadline is Present. `0` or omitted
+        never marks Late. The status, the first check-in time (the same server instant), the entry
+        version, the sheet revision and the stored acknowledgment commit in one transaction, for both
+        identifiers: there is no separate Late write, and finalization never sees a transient Present.
+        The option is part of the retry fingerprint (omitted equals 0) for both identifiers.
+        Receipts stored before this contract for `annual_student_record_id` did not record the option:
+        retrying such a key replays its original acknowledgment unchanged and never applies Late.
 
         **Retries and receipts.** Reuse the same `Idempotency-Key` and identical body to retry.
         The stored acknowledgment is replayed (`replayed: true`) without writing again, without
         resolving a new code holder, and without reapplying Late, even if the code was retired or
         replaced, codes were disabled, or the session ended meanwhile (membership is still
         re-checked). A replay shows the **original acknowledgment**, not the latest attendance:
-        refetch the sheet for current state. The original acknowledgment of a Late-marked check-in
-        may show Present. A different identifier, identifier type, session, or option under the
-        same key is `409 IDEMPOTENCY_CONFLICT`.
+        refetch the sheet for current state. A different identifier, identifier type, session, or
+        option under the same key is `409 IDEMPOTENCY_CONFLICT`. Treat a dropped response, `429`, a
+        `5xx` or an unreadable `2xx` body as an unknown outcome: retry the identical body and key.
 
         **Student code failures** (fresh requests only): `409 STUDENT_CODES_DISABLED`, `404
         STUDENT_CODE_NOT_FOUND` (never issued in this academy), `409 STUDENT_CODE_RETIRED` (issued
@@ -427,7 +432,10 @@ paths:
     post:
       tags: [Attendance]
       summary: Reviewed draft changes, all or nothing
-      description: Up to 500 distinct students. If any version is stale nothing is applied.
+      description: |
+        Up to 500 distinct explicitly selected students; 501 or more is `400 INVALID_REQUEST` and
+        nothing is applied (never silently truncated). If any version is stale nothing is applied.
+        To mark every remaining expected student absent, use `.../attendance/unrecorded-absences`.
       operationId: bulkAttendance
       parameters:
         - $ref: "#/components/parameters/SessionId"
@@ -477,6 +485,148 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/sessions/{sessionId}/attendance/unrecorded-absences:
+    post:
+      tags: [Attendance]
+      summary: Mark every remaining expected student Absent (reviewed)
+      description: |
+        For a mandatory session only (`400 INVALID_REQUEST` for an optional one), live or ended, while
+        the year is open and the session unarchived. Every roster entry with `origin: expected` that
+        is still Unknown becomes draft Absent in **one transaction**, at any roster size. Eligible and
+        unexpected students and recorded values are never touched; nothing is finalized.
+        `expected_revision` is the sheet `revision` the user reviewed. If anyone saved since, nothing
+        changes and the answer is `409 ATTENDANCE_REVIEW_STALE` with `details.revision` (the current
+        revision); review again and send a new key. The command bumps the sheet revision once
+        (`changed` rows each get a new version) and stores one receipt; zero remaining students is
+        `unchanged`. A retry with the same key replays the original result without writing again.
+        Refetch the sheet for the rows.
+      operationId: markUnrecordedAbsent
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expected_revision]
+              properties:
+                expected_revision: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: "`updated` (`changed` > 0) or `unchanged`."
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [outcome, changed, revision, replayed]
+                properties:
+                  outcome: { type: string, enum: [updated, unchanged] }
+                  changed: { type: integer }
+                  revision: { type: integer }
+                  replayed: { type: boolean }
+              example: { outcome: updated, changed: 1001, revision: 14, replayed: false }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409":
+          description: "`ATTENDANCE_REVIEW_STALE` (details: `{ revision }`), `SESSION_ARCHIVED`, `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /api/v1/sessions/{sessionId}/attendance/attendees:
+    get:
+      tags: [Attendance]
+      summary: Candidates for an unexpected attendee
+      description: |
+        Read-only. Active (unarchived) annual records of the session's academy and academic year that
+        are not on its roster, including online-only students and students outside the schedule
+        audience. `q` matches a name fragment, or an exact current student code while codes are
+        enabled. Ordered by name, then record id; at most `limit` per page. Never returns contacts,
+        other academies or other years.
+      operationId: searchAttendees
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 10000, default: 0 } }
+      responses:
+        "200":
+          description: One page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/AttendeeCandidate" } }
+                  has_more: { type: boolean }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+    post:
+      tags: [Attendance]
+      summary: Add an unexpected attendee to the roster
+      description: |
+        Explicitly appends an active annual record of the session's academy and year to the roster with
+        `origin: unexpected` and an Unknown draft, live or ended, while the year is open and the
+        session unarchived. Every staff role may add. The original roster and the student's level,
+        track, participation and group never change; the appended entry keeps its own placement
+        snapshot and who added it. Adding does **not** check the student in (check-ins remain
+        live-only) and never makes the student expected: "mark rest absent" and expected-absence
+        effects ignore them. A real append bumps the sheet revision (invalidating open reviews).
+        A student already on the roster is `already_on_roster` with the existing entry unchanged.
+        `expected_revision` is the sheet revision shown when the student was chosen; a newer save is
+        `409 ATTENDANCE_REVIEW_STALE` (details `{ revision }`) and nothing is added. Errors: `404
+        STUDENT_NOT_FOUND` (not in this academy and year), `409 STUDENT_ARCHIVED` (restore the record
+        first), `SESSION_ARCHIVED`, `YEAR_CLOSED`, `IDEMPOTENCY_CONFLICT`.
+      operationId: addAttendee
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [annual_student_record_id, expected_revision]
+              properties:
+                annual_student_record_id: { type: string, format: uuid }
+                expected_revision: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: "`added` or `already_on_roster`."
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [outcome, entry, revision, replayed]
+                properties:
+                  outcome: { type: string, enum: [added, already_on_roster] }
+                  entry: { $ref: "#/components/schemas/AttendanceEntry" }
+                  revision: { type: integer }
+                  replayed: { type: boolean }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409":
+          description: "`ATTENDANCE_REVIEW_STALE` (details: `{ revision }`), `STUDENT_ARCHIVED`, `SESSION_ARCHIVED`, `YEAR_CLOSED`, or `IDEMPOTENCY_CONFLICT`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
         "429": { $ref: "#/components/responses/Error" }
         "500": { $ref: "#/components/responses/Error" }
   /api/v1/sessions/{sessionId}/attendance/publications:
@@ -572,6 +722,7 @@ components:
                 - STUDENT_NOT_FOUND          # 404 no such student in this session's academy and year
                 - STUDENT_CODE_NOT_FOUND     # 404 the code was never issued in this academy
                 - ATTENDANCE_CONFLICT        # 409 stale expected_version
+                - ATTENDANCE_REVIEW_STALE    # 409 the sheet changed after the reviewed expected_revision (details.revision)
                 - REVIEW_REQUIRED            # 409 scan over Absent/Excused
                 - PUBLICATION_STALE          # 409 attendance changed after review
                 - SESSION_ENDED              # 409 check-in after the session ended
@@ -582,6 +733,7 @@ components:
                 - STUDENT_CODES_DISABLED     # 409 the academy has student codes turned off
                 - STUDENT_CODE_RETIRED       # 409 issued but no longer active (retired, replaced, stale)
                 - STUDENT_CODE_AMBIGUOUS     # 409 issued to several students historically; use the record UUID
+                - STUDENT_ARCHIVED           # 409 the student record is archived; restore it first
                 - NOT_ON_ROSTER              # 422 student exists but is not on the roster
                 - THROTTLED                  # 429 see Retry-After
                 - INTERNAL                   # 500 retry with the same Idempotency-Key
@@ -713,7 +865,7 @@ components:
         annual_student_record_id: { type: string, format: uuid }
         full_name: { type: string }
         archived: { type: boolean }
-        origin: { type: string, enum: [expected, eligible], description: expected for mandatory classes, eligible for optional ones. }
+        origin: { type: string, enum: [expected, eligible, unexpected], description: "expected/eligible: captured when the session started (mandatory/optional class). unexpected: added explicitly by staff later; never expected." }
         group_name: { type: [string, "null"] }
         student_code: { type: [string, "null"], description: The student's current code while the academy has codes enabled; otherwise null. Not returned by check-in or change acknowledgments. }
         status: { $ref: "#/components/schemas/AttendanceStatus" }
@@ -781,3 +933,13 @@ components:
         revision: { type: integer }
         correction_pending: { type: boolean, description: Attendance was already published and this draft differs from the official value. }
         replayed: { type: boolean }
+    AttendeeCandidate:
+      type: object
+      required: [annual_student_record_id, full_name, level_name, group_name, participation_type, student_code]
+      properties:
+        annual_student_record_id: { type: string, format: uuid }
+        full_name: { type: string }
+        level_name: { type: [string, "null"] }
+        group_name: { type: [string, "null"] }
+        participation_type: { type: string, enum: [in_person, online_only] }
+        student_code: { type: [string, "null"], description: Current code while codes are enabled. }

@@ -21,6 +21,11 @@ struct APIFailure: Equatable, Sendable {
     /// The raw `error.details` object, decoded by the caller that understands it.
     let details: Data?
 
+    /// Client-assigned codes for structured callers: a 2xx body that couldn't be decoded, and an error
+    /// response without a backend code.
+    static let unreadableResponse = "UNREADABLE_RESPONSE"
+    static let uncodedError = "UNCODED_ERROR"
+
     func decodeDetails<T: Decodable>(_ type: T.Type) -> T? {
         details.flatMap { try? APIClient.decoder.decode(T.self, from: $0) }
     }
@@ -53,7 +58,8 @@ struct APIClient: Sendable {
         }
     }
 
-    /// `structuredErrors`: other failures with an error body throw `.rejected` instead of `.server`.
+    /// `structuredErrors`: other failures throw `.rejected` instead of `.server`, including an undecodable
+    /// 2xx body (`APIFailure.unreadableResponse`) and an error without a backend code (`uncodedError`).
     func get<T: Decodable & Sendable>(
         _ path: String, as type: T.Type = T.self, structuredErrors: Bool = false
     ) async throws(APIError) -> T {
@@ -135,7 +141,16 @@ struct APIClient: Sendable {
         switch http.statusCode {
         case 200..<300:
             do { return try Self.decoder.decode(T.self, from: data) }
-            catch { throw APIError.server("Unexpected response from the server.") }
+            catch {
+                // A 2xx can follow a committed write: structured callers must not read it as a rejection.
+                if structured {
+                    throw APIError.rejected(APIFailure(
+                        status: http.statusCode, code: APIFailure.unreadableResponse, message: "Unexpected response from the server.",
+                        requestID: nil, retryAfter: nil, details: nil
+                    ))
+                }
+                throw APIError.server("Unexpected response from the server.")
+            }
         case 401: throw APIError.unauthenticated
         case 403: throw APIError.forbidden
         default:
@@ -145,6 +160,14 @@ struct APIClient: Sendable {
                     status: http.statusCode, code: code, message: body.message, requestID: body.requestId,
                     retryAfter: (http.value(forHTTPHeaderField: "Retry-After")).flatMap { Int($0) },
                     details: Self.details(in: data)
+                ))
+            }
+            if structured {
+                // No stable code (a proxy page, or a server without this endpoint): keep the status.
+                throw APIError.rejected(APIFailure(
+                    status: http.statusCode, code: APIFailure.uncodedError,
+                    message: envelope?.error.message ?? "Server error (\(http.statusCode)).", requestID: envelope?.error.requestId,
+                    retryAfter: (http.value(forHTTPHeaderField: "Retry-After")).flatMap { Int($0) }, details: nil
                 ))
             }
             throw APIError.server(envelope?.error.message ?? "Server error (\(http.statusCode)).")
