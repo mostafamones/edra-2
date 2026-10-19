@@ -1,5 +1,6 @@
 /planning/
 /supabase/
+/docs/audits/*
 
 # macOS Finder metadata
 .DS_Store
