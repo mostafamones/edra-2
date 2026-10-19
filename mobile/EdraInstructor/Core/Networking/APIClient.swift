@@ -27,7 +27,8 @@ struct APIFailure: Equatable, Sendable {
 }
 
 /// Bearer-only HTTP adapter for the Edra API. No cookies, current token per request,
-/// one forced refresh + retry on 401. Cancellation surfaces as `.cancelled`, never as `.network`.
+/// one forced refresh + retry on 401. Cancellation surfaces as `.cancelled`, never as `.network`;
+/// a token that can't be obtained right now surfaces as `.network`, never as `.unauthenticated`.
 struct APIClient: Sendable {
     typealias TokenProvider = @Sendable (_ forceRefresh: Bool) async throws -> String
     /// Sends one request. Tests substitute a transport that completes requests in a chosen order.
@@ -84,8 +85,11 @@ struct APIClient: Sendable {
             do {
                 return try await send(path, method: method, body: body, headers: headers, structured: structured, forceRefresh: false)
             } catch APIError.unauthenticated {
+                // Only an actual 401 earns the retry; method, body and headers are reused unchanged.
                 return try await send(path, method: method, body: body, headers: headers, structured: structured, forceRefresh: true)
             }
+        } catch is SessionRejected {
+            throw .unauthenticated
         } catch let error as APIError {
             throw error
         } catch is CancellationError {
@@ -100,9 +104,14 @@ struct APIClient: Sendable {
     ) async throws -> T {
         let bearer: String
         do { bearer = try await token(forceRefresh) } catch {
-            // A cancelled token refresh is not evidence that the account is signed out.
+            // Only a definitive rejection means signed out. A cancelled or discarded refresh is stale
+            // work, and an unreachable or failing auth service keeps the credentials for a retry.
             if error is CancellationError || Task.isCancelled { throw CancellationError() }
-            throw APIError.unauthenticated
+            switch error as? AuthFailure {
+            case .signedOut?: throw SessionRejected()
+            case .cancelled?: throw CancellationError()
+            case .unavailable?, nil: throw APIError.network
+            }
         }
 
         guard let url = URL(string: path, relativeTo: origin.appending(path: "/")) else { throw APIError.network }
@@ -161,6 +170,9 @@ struct APIClient: Sendable {
         }
         return decoder
     }()
+
+    /// The auth authority has no usable session, so there is nothing to refresh and retry with.
+    private struct SessionRejected: Error {}
 
     private struct ErrorEnvelope: Decodable {
         struct Body: Decodable {

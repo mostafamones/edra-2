@@ -29,6 +29,13 @@ private struct AuthenticatedRoot: View {
             switch model.state {
             case .restoring:
                 ProgressView("Loading…")
+            case .restoreFailed:
+                // The stored session is kept; nothing academy-scoped loads until a retry succeeds.
+                UnavailableView(
+                    title: "Couldn't sign you in",
+                    message: "Can't reach the server. Check your connection and try again.",
+                    action: "Retry"
+                ) { await model.retryRestore() }
             case .signedOut, .signingIn:
                 SignInView(model: model)
             case .authenticated:
