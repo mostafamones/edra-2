@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { cookieAuthority, type Authority, type Db } from "@/lib/supabase/authority";
+import { academyMember } from "@/lib/supabase/membership";
 import type { Database } from "@/lib/supabase/database.types";
 import { decodeCursor, DEFAULT_PAGE_SIZE, encodeCursor, MAX_PAGE_SIZE } from "./cursor";
 import { HISTORY_ARCHIVE_FILTERS, type HistoryArchiveFilter, type LiveSessionPage, type PastSessionPage, type ReadResult, type SessionDetail } from "./types";
@@ -16,14 +17,9 @@ import { HISTORY_ARCHIVE_FILTERS, type HistoryArchiveFilter, type LiveSessionPag
 type Enums = Database["public"]["Enums"];
 type ListArgs = Database["public"]["Functions"]["list_live_sessions"]["Args"];
 
-/** The caller's client and role in the academy, or null when they are not a member. */
+/** The caller's client and role in the academy, or null when they are not an active staff member. */
 export async function sessionActor(academyId: string, authority?: Authority | null) {
-  if (!z.uuid().safeParse(academyId).success) return null;
-  const caller = authority ?? await cookieAuthority();
-  if (!caller) return null;
-  const { data } = await caller.db.from("academy_memberships").select("role")
-    .eq("academy_id", academyId).eq("user_id", caller.userId).is("suspended_at", null).maybeSingle();
-  return data ? { db: caller.db, userId: caller.userId, role: data.role } : null;
+  return academyMember(academyId, authority);
 }
 
 async function signedIn(authority?: Authority | null): Promise<Db | null> {
