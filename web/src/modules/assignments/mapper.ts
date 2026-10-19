@@ -5,7 +5,9 @@ import {
 } from "./types";
 
 /** Parses the database's snake_case assignment document (get_assignment and every command). */
+const correctionSchema = z.object({ revision: z.number().int(), question_id: z.string(), part_id: z.string(), operation: z.enum(["key", "exclusion"]), previous_choice_id: z.string().nullable(), choice_id: z.string().nullable(), previous_max_score: z.string(), max_score: z.string(), created_by: z.string(), created_at: z.string() });
 const assignmentSchema = z.object({
+  scoring_revision: z.number().int().default(1), authored_max_score: z.string().optional(), corrections: z.array(correctionSchema).default([]),
   id: z.string(),
   academy_id: z.string(),
   academic_year_id: z.string(),
@@ -40,11 +42,11 @@ const assignmentSchema = z.object({
   has_activity: z.boolean(),
   ready: z.boolean(),
   parts: z.array(z.object({
-    id: z.string(), position: z.number().int(), title: z.string(), instructions: z.string(), max_score: z.string(),
+    id: z.string(), position: z.number().int(), title: z.string(), instructions: z.string(), max_score: z.string(), authored_max_score: z.string().optional(),
     kind: z.enum(PART_KINDS).nullable(),
     issues: z.array(z.enum(["maximum", "questions", "choices", "correct_choice", "prompt", "choice_text"])),
     questions: z.array(z.object({
-      id: z.string(), position: z.number().int(), prompt: z.string(), max_score: z.string(),
+      id: z.string(), position: z.number().int(), prompt: z.string(), max_score: z.string(), excluded: z.boolean().default(false),
       choices: z.array(z.object({ id: z.string(), position: z.number().int(), label: z.string(), is_correct: z.boolean() })),
     })),
   })),
@@ -53,6 +55,8 @@ const assignmentSchema = z.object({
 export function toAssignment(value: unknown): Assignment {
   const row = assignmentSchema.parse(value);
   return {
+    scoringRevision: row.scoring_revision, authoredMaxScore: row.authored_max_score ?? row.max_score,
+    corrections: row.corrections.map((c) => ({ revision: c.revision, questionId: c.question_id, partId: c.part_id, operation: c.operation, previousChoiceId: c.previous_choice_id, choiceId: c.choice_id, previousMaxScore: c.previous_max_score, maxScore: c.max_score, createdBy: c.created_by, createdAt: c.created_at })),
     id: row.id,
     academyId: row.academy_id,
     academicYearId: row.academic_year_id,
@@ -86,9 +90,9 @@ export function toAssignment(value: unknown): Assignment {
     ready: row.ready,
     parts: row.parts.map((part) => ({
       id: part.id, position: part.position, title: part.title, instructions: part.instructions, maxScore: part.max_score,
-      kind: part.kind, issues: part.issues,
+      kind: part.kind, issues: part.issues, authoredMaxScore: part.authored_max_score ?? part.max_score,
       questions: part.questions.map((question) => ({
-        id: question.id, position: question.position, prompt: question.prompt, maxScore: question.max_score,
+        id: question.id, position: question.position, prompt: question.prompt, maxScore: question.max_score, excluded: question.excluded,
         choices: question.choices.map((choice) => ({ id: choice.id, position: choice.position, label: choice.label, isCorrect: choice.is_correct })),
       })),
     })),
@@ -104,6 +108,9 @@ export function toAudiencePreview(value: unknown): AudiencePreview {
 
 const workStatus = z.enum(WORK_STATUSES);
 const studentSchema = z.object({
+  scoring_revision: z.number().int().default(1),
+  mark_history: z.array(z.object({ revision: z.number().int(), part_id: z.string(), mark: z.object({ score: z.string(), max_score: z.string(), kind: z.enum(["mark", "excused"]), reason: z.string().nullable(), from_answers: z.boolean(), requires_remark: z.boolean(), scoring_revision: z.number().int() }) })).default([]),
+  publications: z.array(z.object({ revision: z.number().int(), scoring_revision: z.number().int(), total: z.string(), max_score: z.string(), feedback: z.string(), published_at: z.string() })).default([]),
   annual_student_record_id: z.string(),
   required: z.boolean().default(true),
   requirement_ended_at: z.string().nullable().default(null),
@@ -120,20 +127,23 @@ const studentSchema = z.object({
   feedback: z.string(),
   version: z.number().int(),
   marks: z.array(z.object({
-    part_id: z.string(), kind: z.enum(["mark", "excused"]), score: z.string(), reason: z.string().nullable(), from_answers: z.boolean().default(false),
+    part_id: z.string(), kind: z.enum(["mark", "excused"]), score: z.string(), reason: z.string().nullable(), from_answers: z.boolean().default(false), requires_remark: z.boolean().default(false),
   })),
   answers: z.array(z.object({ question_id: z.string(), part_id: z.string(), choice_id: z.string().nullable(), score: z.string() })).default([]),
   marked_parts: z.number().int(),
   updated_at: z.string().nullable().default(null),
   total: z.string().nullable(),
   marking: z.enum(["unmarked", "partial", "complete"]),
-  publication: z.object({ revision: z.number().int(), total: z.string(), work_status: workStatus, published_at: z.string() }).nullable(),
+  publication: z.object({ max_score: z.string().optional(), scoring_revision: z.number().int().optional(), revision: z.number().int(), total: z.string(), work_status: workStatus, published_at: z.string() }).nullable(),
   publication_state: z.enum(["unpublished", "published", "pending_correction"]),
 });
 
 export function toStudentWork(value: unknown): StudentWork {
   const row = studentSchema.parse(value);
   return {
+    scoringRevision: row.scoring_revision,
+    markHistory: row.mark_history.map((h) => ({ revision: h.revision, partId: h.part_id, mark: { score: h.mark.score, maxScore: h.mark.max_score, kind: h.mark.kind, reason: h.mark.reason, fromAnswers: h.mark.from_answers, requiresRemark: h.mark.requires_remark, scoringRevision: h.mark.scoring_revision } })),
+    publications: row.publications.map((p) => ({ revision: p.revision, scoringRevision: p.scoring_revision, total: p.total, maxScore: p.max_score, feedback: p.feedback, publishedAt: p.published_at })),
     recordId: row.annual_student_record_id,
     required: row.required,
     requirementEndedAt: row.requirement_ended_at,
@@ -149,14 +159,14 @@ export function toStudentWork(value: unknown): StudentWork {
     workNote: row.work_note,
     feedback: row.feedback,
     version: row.version,
-    marks: row.marks.map((mark) => ({ partId: mark.part_id, kind: mark.kind, score: mark.score, reason: mark.reason, fromAnswers: mark.from_answers })),
+    marks: row.marks.map((mark) => ({ partId: mark.part_id, kind: mark.kind, score: mark.score, reason: mark.reason, fromAnswers: mark.from_answers, requiresRemark: mark.requires_remark })),
     answers: row.answers.map((answer) => ({ questionId: answer.question_id, partId: answer.part_id, choiceId: answer.choice_id, score: answer.score })),
     markedParts: row.marked_parts,
     updatedAt: row.updated_at,
     total: row.total,
     marking: row.marking,
     publication: row.publication
-      ? { revision: row.publication.revision, total: row.publication.total, workStatus: row.publication.work_status, publishedAt: row.publication.published_at }
+      ? { maxScore: row.publication.max_score, scoringRevision: row.publication.scoring_revision, revision: row.publication.revision, total: row.publication.total, workStatus: row.publication.work_status, publishedAt: row.publication.published_at }
       : null,
     publicationState: row.publication_state,
   };

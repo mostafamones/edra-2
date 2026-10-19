@@ -56,7 +56,7 @@ async function commit(academyId: string, context: FormContext, base: Quiz | unde
   const result = base
     ? await saveQuiz({ academyId, quizId: base.id, expectedVersion: base.version, draft })
     : await createNewQuiz({ academyId, academicYearId: context.academicYearId, quizId: createId, draft });
-  return result.ok ? { ok: true, entity: result.quiz } : { ok: false, message: result.message, conflict: result.code === "quiz_conflict" };
+  return result.ok ? { ok: true, entity: result.quiz } : { ok: false, message: result.message, conflict: result.code === "quiz_conflict", uncertain: result.code === "unavailable" };
 }
 
 function QuizFields({ academy, quiz, onSaved, onCancel, onStatusChange, context }: Props & { context: FormContext }) {

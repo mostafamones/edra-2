@@ -8,6 +8,7 @@ import { NumberInput } from "@/components/shared/app-input";
 import { Segmented } from "@/components/shared/segmented";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { formatScore } from "@/lib/score";
+import { detachDraft } from "../authoring";
 import { PartFrame } from "../part-frame";
 import { countLabel, kindOf, type EditorChoice, type EditorPart, type EditorQuestion, type PartsConfig } from "./config";
 import { QuestionsEditor } from "./questions";
@@ -32,9 +33,7 @@ type Props = {
 };
 
 /** A question without stored ids: an autosave may already have deleted the original. */
-const withoutIds = (question: EditorQuestion): EditorQuestion => ({
-  ...question, id: undefined, choices: question.choices.map((choice) => ({ label: choice.label, isCorrect: choice.isCorrect })),
-});
+const withoutIds = (question: EditorQuestion): EditorQuestion => detachDraft(question);
 
 /** One part, edited on its own page: title, type and advanced settings, then its questions or entries. */
 export function PartEditor({ config, locked, index, stash, onSelect, onClose, tools }: Props) {

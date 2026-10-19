@@ -54,7 +54,7 @@ async function commit(academyId: string, context: FormContext, base: Assignment 
   const result = base
     ? await saveAssignment({ academyId, assignmentId: base.id, expectedVersion: base.version, draft })
     : await createNewAssignment({ academyId, academicYearId: context.academicYearId, assignmentId: createId, draft });
-  return result.ok ? { ok: true, entity: result.assignment } : { ok: false, message: result.message, conflict: result.code === "assignment_conflict" };
+  return result.ok ? { ok: true, entity: result.assignment } : { ok: false, message: result.message, conflict: result.code === "assignment_conflict", uncertain: result.code === "unavailable" };
 }
 
 function AssignmentFields({ academy, assignment, onSaved, onCancel, onStatusChange, context }: Props & { context: FormContext }) {

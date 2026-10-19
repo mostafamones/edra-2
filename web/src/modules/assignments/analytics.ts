@@ -21,6 +21,7 @@ export function markBars(assignment: Assignment, students: StudentWork[]): { par
       parts.push({ id: part.id, label: `P${part.position}`, title: part.title, percent: (average(scores) / max) * 100, count: scores.length });
     }
     for (const question of part.questions) {
+      if (question.excluded) continue;
       const questionMax = Number(question.maxScore);
       const answers = students.flatMap((student) =>
         student.answers.filter((answer) => answer.questionId === question.id).map((answer) => Number(answer.score)));

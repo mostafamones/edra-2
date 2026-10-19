@@ -16,7 +16,7 @@ export function focusTarget(assignment: Assignment, focus: Pick<MarkFocus, "kind
       return { label: `P${part.position}`, title: `Part ${part.position} · ${part.title}`, max: Number(part.maxScore) };
     }
     const question = focus.kind === "question" ? part.questions.find((entry) => entry.id === focus.id) : undefined;
-    if (question) {
+    if (question && !question.excluded) {
       return { label: `${part.position}.${question.position}`, title: `Question ${part.position}.${question.position} · ${part.title}`, max: Number(question.maxScore) };
     }
   }

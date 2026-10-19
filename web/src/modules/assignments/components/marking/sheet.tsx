@@ -16,7 +16,7 @@ export function AssignmentMarking({ assignment }: { assignment: Assignment }) {
       roster={{ isPending: query.isPending, isError: query.isError, rows: query.data?.students ?? [] }}
       summary={(row) => (row.total === null ? STATE_LABELS[row.marking] : `${formatScore(row.total)} / ${formatScore(assignment.maxScore)}`)}
       form={(student, { onSaved }) => (
-        <AssignmentMarks key={`${student.recordId}-${student.version}`} assignment={assignment} student={student} onChanged={replace} onSaved={onSaved} />
+        <AssignmentMarks key={student.recordId} assignment={assignment} student={student} onChanged={replace} onSaved={onSaved} />
       )}
     />
   );

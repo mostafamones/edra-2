@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { MarkingGuard } from "./guard";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 type Row = { recordId: string; fullName: string; studentCode: string | null; groupName: string | null };
@@ -16,7 +17,7 @@ type Props<R extends Row> = {
 /** All of one student's parts and feedback, opened from the student list. */
 export function StudentMarkSheet<R extends Row>({ student, onClose, form }: Props<R>) {
   return (
-    <Sheet open={student !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <MarkingGuard>{(request) => <Sheet open={student !== null} onOpenChange={(open) => { if (!open) request(onClose); }}>
       <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
         {student && (
           <>
@@ -29,6 +30,6 @@ export function StudentMarkSheet<R extends Row>({ student, onClose, form }: Prop
           </>
         )}
       </SheetContent>
-    </Sheet>
+    </Sheet>}</MarkingGuard>
   );
 }

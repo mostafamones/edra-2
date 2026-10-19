@@ -166,7 +166,7 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
         onClear={() => onFocusChange(null)}
       />
       <StudentMarkSheet student={students?.find((row) => row.recordId === editing) ?? null} onClose={() => setEditing(null)}
-        form={(student, { onSaved }) => <AssignmentMarks key={student.version} assignment={assignment} student={student} onChanged={replace} onSaved={onSaved} />} />
+        form={(student, { onSaved }) => <AssignmentMarks key={student.recordId} assignment={assignment} student={student} onChanged={replace} onSaved={onSaved} />} />
     </>
   );
 }

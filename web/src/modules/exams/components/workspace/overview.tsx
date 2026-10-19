@@ -12,6 +12,7 @@ import { formatScore, sumScores } from "@/lib/score";
 import type { AcademyEntry } from "@/modules/academies";
 import { loadExamStudents, examStudentsQueryKey } from "../../queries";
 import type { Exam } from "../../types";
+import { ExamScoring } from "./scoring";
 import { ISSUE_LABELS, KIND_LABELS } from "../shared/labels";
 
 const number = new Intl.NumberFormat("en");
@@ -65,6 +66,7 @@ export function ExamOverview({ academy, exam, onViewStudents }: { academy: Acade
           <TopStudents students={scored} maxScore={exam.effectiveMaxScore} onViewAll={onViewStudents} />
         </div>
       )}
+      <ExamScoring exam={exam} role={academy.role} />
     </div>
   );
 }

@@ -21,6 +21,7 @@ export type QuestionChoice = { id: string; position: number; label: string; isCo
 
 /** One question (online), numbered entry (answer sheet), or numbered entry (file upload). */
 export type PartQuestion = {
+  excluded?: boolean;
   id: string;
   position: number;
   prompt: string;
@@ -31,6 +32,7 @@ export type PartQuestion = {
 
 /** Staff contract: includes the answer key. A student-safe projection never carries `isCorrect`. */
 export type AssignmentPart = {
+  authoredMaxScore?: string;
   id: string;
   position: number;
   title: string;
@@ -42,7 +44,12 @@ export type AssignmentPart = {
   questions: PartQuestion[];
 };
 
+export type AssignmentCorrection = { revision: number; questionId: string; partId: string; operation: "key" | "exclusion"; previousChoiceId: string | null; choiceId: string | null; previousMaxScore: string; maxScore: string; createdBy: string; createdAt: string };
+
 export type Assignment = {
+  scoringRevision?: number;
+  authoredMaxScore?: string;
+  corrections?: AssignmentCorrection[];
   id: string;
   academyId: string;
   academicYearId: string;
@@ -116,6 +123,8 @@ export type AssignmentErrorCode =
   | "forbidden"
   | "not_found"
   | "year_unavailable"
+  | "stale_basis"
+  | "question_excluded"
   | "assignment_conflict"
   | "invalid_audience"
   | "invalid_state"
@@ -142,13 +151,18 @@ export type MarkingState = "unmarked" | "partial" | "complete";
 export type PublicationState = "unpublished" | "published" | "pending_correction";
 
 /** `fromAnswers`: derived from the part's per-question answers; false for a fast (typed) or excused mark. */
-export type StudentMark = { partId: string; kind: "mark" | "excused"; score: string; reason: string | null; fromAnswers: boolean };
+export type StudentMark = { requiresRemark?: boolean; partId: string; kind: "mark" | "excused"; score: string; reason: string | null; fromAnswers: boolean };
 
 /** One question's entry: the chosen choice (null = left blank) for choice parts, or the mark for manual parts. */
 export type StudentAnswer = { questionId: string; partId: string; choiceId: string | null; score: string };
 
 /** One recipient's work, marks, and result state: the row staff mark and announce. */
+export type MarkBasisHistory = { revision: number; partId: string; mark: { score: string; maxScore: string; kind: "mark" | "excused"; reason: string | null; fromAnswers: boolean; requiresRemark: boolean; scoringRevision: number } };
+export type AssignmentPublication = { revision: number; scoringRevision: number; total: string; maxScore: string; feedback: string; publishedAt: string };
 export type StudentWork = {
+  scoringRevision?: number;
+  markHistory?: MarkBasisHistory[];
+  publications?: AssignmentPublication[];
   recordId: string;
   /** Additive cohort contract. Older payloads default to required, never retroactively optional. */
   required?: boolean;
@@ -178,7 +192,7 @@ export type StudentWork = {
   total: string | null;
   marking: MarkingState;
   /** The official (announced) snapshot; null until the result is announced. */
-  publication: { revision: number; total: string; workStatus: WorkStatus; publishedAt: string } | null;
+  publication: { maxScore?: string; scoringRevision?: number; revision: number; total: string; workStatus: WorkStatus; publishedAt: string } | null;
   publicationState: PublicationState;
 };
 

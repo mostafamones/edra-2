@@ -33,7 +33,7 @@ export function AssessmentWorkspacePage<E extends { title: string }>({ id, noun,
   return (
     <AcademyGate>
       {(academy) => (
-        <Content academy={academy} id={id} noun={noun} route={route} queryKey={queryKey} load={load} refetchMs={refetchMs}>{children}</Content>
+        <Content key={`${academy.id}:${id}`} academy={academy} id={id} noun={noun} route={route} queryKey={queryKey} load={load} refetchMs={refetchMs}>{children}</Content>
       )}
     </AcademyGate>
   );
