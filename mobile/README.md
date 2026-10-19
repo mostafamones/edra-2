@@ -15,7 +15,7 @@ cp Configuration/Development.xcconfig.example Configuration/Local.xcconfig   # g
 # fill in: Supabase URL + publishable key, API origin (reachable from the phone), DEVELOPMENT_TEAM
 ```
 
-Only public values go in there. The phone cannot reach `app.lvh.me`/`localhost`, so `EDRA_API_ORIGIN` must be reachable from the phone and accepted by the web proxy; plain http is allowed only for `mones.ddns.net` (ATS exception in `Configuration/Info.plist`).
+Only public values go in there. The phone cannot reach `app.lvh.me`/`localhost`, so `EDRA_API_ORIGIN` must be reachable from the phone and accepted by the web proxy; plain http is allowed only in Debug builds and only for `mones.ddns.net` (the ATS exception in `Configuration/Info-Debug.plist`; the app also rejects any other http origin). Release builds use `Configuration/Info.plist`, which has no ATS exception, and refuse every http API origin, so a Release `EDRA_API_ORIGIN` must be https. `run.sh` builds Debug.
 
 On the iPhone: enable Developer Mode (Settings > Privacy & Security), connect via USB, unlock, tap Trust.
 
