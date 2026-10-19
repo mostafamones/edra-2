@@ -3,20 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { createClient } from "@/lib/supabase/server";
+import { academyMember } from "@/lib/supabase/membership";
 import { isAcademyManager } from "@/modules/academies/roles";
 import { groupInputSchema } from "./validation";
 
 type Result = { ok: true } | { ok: false; message: string };
 
+/** The caller's client when they manage the academy (Owner, Head Admin or Admin), else null. */
 async function manager(academyId: string) {
-  const db = await createClient();
-  const { data: auth } = await db.auth.getClaims();
-  if (!auth?.claims) return null;
-  const { data, error } = await db.from("academy_memberships")
-    .select("role").eq("academy_id", academyId).eq("user_id", auth.claims.sub).is("suspended_at", null).single();
-  if (error || !data || !isAcademyManager(data.role)) return null;
-  return db;
+  const actor = await academyMember(academyId);
+  return actor && isAcademyManager(actor.role) ? actor.db : null;
 }
 
 export async function createGroup(value: unknown): Promise<Result> {

@@ -7,7 +7,8 @@ EDRA_SUPABASE_URL = https:/$()/YOUR-PROJECT-REF.supabase.co
 EDRA_SUPABASE_PUBLISHABLE_KEY = sb_publishable_xxx
 
 // Edra web/API origin reachable FROM THE PHONE (not app.lvh.me / localhost).
-// Plain http is allowed for the dev host only, via the ATS exception in Info.plist (mones.ddns.net).
+// Plain http works only in Debug builds and only for the dev host excepted in Info-Debug.plist
+// (mones.ddns.net). Release builds require https.
 EDRA_API_ORIGIN = https:/$()/your-preview-or-tunnel-host.example
 
 // Your Apple developer Team ID (Xcode > Settings > Accounts), for on-device signing.

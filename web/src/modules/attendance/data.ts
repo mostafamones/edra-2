@@ -2,7 +2,8 @@ import "server-only";
 
 import { z } from "zod";
 
-import { cookieAuthority, type Authority } from "@/lib/supabase/authority";
+import type { Authority } from "@/lib/supabase/authority";
+import { academyMember } from "@/lib/supabase/membership";
 import type { Json } from "@/lib/supabase/database.types";
 import { normalizeStudentCode } from "@/modules/students/contract";
 import { failure, failureFromDatabase } from "./errors";
@@ -99,20 +100,10 @@ const toEntry = (row: z.infer<typeof entrySchema>): AttendanceEntry => ({
   publishedAt: row.published_at,
 });
 
-/** The caller when they are a staff member of the academy, else null. */
-async function member(academyId: string, authority?: Authority | null): Promise<Authority | null> {
-  if (!z.uuid().safeParse(academyId).success) return null;
-  const caller = authority ?? await cookieAuthority();
-  if (!caller) return null;
-  const { data } = await caller.db.from("academy_memberships").select("role")
-    .eq("academy_id", academyId).eq("user_id", caller.userId).is("suspended_at", null).maybeSingle();
-  return data ? caller : null;
-}
-
 /** A session's attendance: lifecycle, revision, publication state, counts, and every roster entry. */
 export async function getAttendance(academyId: string, sessionId: string, authority?: Authority | null): Promise<ReadResult<AttendanceSheet>> {
   if (!z.uuid().safeParse(sessionId).success) return { ok: false, status: 400 };
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
     const { data, error } = await caller.db.rpc("get_attendance", { p_academy_id: academyId, p_session_id: sessionId });
@@ -191,7 +182,7 @@ export async function checkIn(input: CheckInInput, authority?: Authority | null)
   const { academyId, sessionId, idempotencyKey, lateAfterMinutes = 0 } = parsed.data;
   const code = "studentCode" in parsed.data ? normalizeStudentCode(parsed.data.studentCode) : undefined;
   if ("studentCode" in parsed.data && code === null) return failure("validation");
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   try {
     const { data, error } = code
@@ -261,7 +252,7 @@ export async function changeAttendance(
   if (!parsed.success) return failure("validation");
   const { academyId, sessionId, changes, idempotencyKey } = parsed.data;
   if (new Set(changes.map((change) => change.annualStudentRecordId)).size !== changes.length) return failure("validation");
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   try {
     const { data, error } = await caller.db.rpc("apply_attendance_changes", {
@@ -290,7 +281,7 @@ export async function publishAttendance(input: z.input<typeof publishInput>, aut
   const parsed = publishInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, sessionId, expectedRevision, idempotencyKey } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   try {
     const { data, error } = await caller.db.rpc("publish_attendance", {

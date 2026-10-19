@@ -10,16 +10,5 @@
 	<string>$(EDRA_SUPABASE_URL)</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Edra uses the camera to scan student cards for attendance.</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>mones.ddns.net</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-			</dict>
-		</dict>
-	</dict>
 </dict>
 </plist>

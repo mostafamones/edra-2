@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { cookieAuthority, type Authority } from "@/lib/supabase/authority";
+import { academyMember } from "@/lib/supabase/membership";
 import type { Json } from "@/lib/supabase/database.types";
 import { failure, failureFromDatabase } from "./errors";
 import { toAssignment, toAudiencePreview, toPublish, toSaveMarks, toStudentList, toStudentWork } from "./mapper";
@@ -19,16 +20,6 @@ import { assignmentDraftSchema, MAX_AUDIENCE_GROUPS } from "./validation";
  * and the academic year inside one transaction. Pass `authority` for token-authenticated requests;
  * it defaults to the request's cookie session.
  */
-
-/** The caller when they are a staff member of the academy, else null. */
-async function member(academyId: string, authority?: Authority | null): Promise<Authority | null> {
-  if (!z.uuid().safeParse(academyId).success) return null;
-  const caller = authority ?? await cookieAuthority();
-  if (!caller) return null;
-  const { data } = await caller.db.from("academy_memberships").select("role")
-    .eq("academy_id", academyId).eq("user_id", caller.userId).is("suspended_at", null).maybeSingle();
-  return data ? caller : null;
-}
 
 function draftJson(draft: AssignmentDraft): Json {
   return {
@@ -72,7 +63,7 @@ export async function createAssignment(input: z.input<typeof createInput>, autho
   if (!parsed.success) return failure("validation");
   const { academyId, academicYearId, assignmentId, draft } = parsed.data;
   if (draft.parts.some((part) => part.id)) return failure("validation");
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   return command(() => caller.db.rpc("create_assignment", {
     p_academy_id: academyId, p_academic_year_id: academicYearId, p_assignment_id: assignmentId, p_draft: draftJson(draft),
@@ -90,7 +81,7 @@ export async function updateAssignment(input: z.input<typeof updateInput>, autho
   const parsed = updateInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, assignmentId, expectedVersion, draft } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   return command(() => caller.db.rpc("update_assignment", {
     p_academy_id: academyId, p_assignment_id: assignmentId, p_expected_version: expectedVersion, p_draft: draftJson(draft),
@@ -106,7 +97,7 @@ export async function changeAssignmentState(
   const parsed = stateInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, assignmentId, expectedVersion, action } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   return command(() => caller.db.rpc("change_assignment_state", {
     p_academy_id: academyId, p_assignment_id: assignmentId, p_expected_version: expectedVersion, p_action: action,
@@ -116,7 +107,7 @@ export async function changeAssignmentState(
 /** One assignment's staff view: structure, maxima, audience, state, and version. */
 export async function getAssignment(academyId: string, assignmentId: string, authority?: Authority | null): Promise<ReadResult<Assignment>> {
   if (!z.uuid().safeParse(assignmentId).success) return { ok: false, status: 400 };
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
     const { data, error } = await caller.db.rpc("get_assignment", { p_academy_id: academyId, p_assignment_id: assignmentId });
@@ -138,7 +129,7 @@ export async function previewAudience(input: z.input<typeof previewInput>, autho
   const parsed = previewInput.safeParse(input);
   if (!parsed.success) return { ok: false, status: 400 };
   const { academyId, academicYearId, audience, levelId, trackId, groupIds } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
     const { data, error } = await caller.db.rpc("preview_assignment_audience", {
@@ -197,7 +188,7 @@ export async function saveMarks(input: { academyId: string; assignmentId: string
   const parsed = saveInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, assignmentId, recordId, code, expectedRecordId, expectedVersion, marks, answers, feedback, key } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   const changes: Json = {
     marks: marks.map((mark) => ({ part_id: mark.partId, score: mark.score, ...(mark.excusedReason ? { excused_reason: mark.excusedReason } : {}) })),
@@ -238,7 +229,7 @@ export async function recordWork(
   const parsed = workInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, assignmentId, recordId, expectedVersion, status, receivedAt, note } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   try {
     const { data, error } = await caller.db.rpc("record_assignment_work", {
@@ -269,7 +260,7 @@ export async function publishResults(
   const parsed = publishInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, assignmentId, key, items } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   try {
     const { data, error } = await caller.db.rpc("publish_assignment_results", {
@@ -301,7 +292,7 @@ export async function listMarks(
   const parsed = listInput.safeParse({ filter: "all", limit: 1000, offset: 0, search: null, ...input });
   if (!parsed.success) return { ok: false, status: 400 };
   const { academyId, assignmentId, filter, limit, offset, search } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
     const { data, error } = await caller.db.rpc("list_assignment_marks", {
@@ -323,7 +314,7 @@ export async function resolveStudent(input: { academyId: string; assignmentId: s
   const parsed = resolveInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, assignmentId, code } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   try {
     const { data, error } = await caller.db.rpc("resolve_assignment_student", { p_academy_id: academyId, p_assignment_id: assignmentId, p_code: code });
@@ -339,7 +330,7 @@ export async function resolveStudent(input: { academyId: string; assignmentId: s
 
 /** Whether the academy issues student codes (code entry and scanning). False when unknown. */
 export async function studentCodesEnabled(academyId: string, authority?: Authority | null): Promise<boolean> {
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return false;
   const { data } = await caller.db.from("student_code_settings").select("enabled").eq("academy_id", academyId).maybeSingle();
   return data?.enabled ?? false;
@@ -374,7 +365,7 @@ export async function listAssignments(
   const parsed = listAssignmentsInput.safeParse({ state: null, limit: 50, offset: 0, ...input });
   if (!parsed.success) return { ok: false, status: 400 };
   const { academyId, state, limit, offset } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
     let query = caller.db.from("assignments")

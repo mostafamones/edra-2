@@ -34,10 +34,18 @@ export function platformOrigins() {
   return result;
 }
 export function platformOrigin(platform: Platform) { return platformOrigins()[platform]; }
+/** Optional server-only staff alias for a development tunnel: one exact host[:port], never used in production. */
+function developmentTunnelHost() {
+  if (process.env.NODE_ENV === "production") return null;
+  const value = process.env.EDRA_DEV_TUNNEL_HOST?.toLowerCase();
+  // Hostname labels plus an optional port only: a scheme, path, userinfo, wildcard or control character is rejected.
+  return value && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*(?::\d{1,5})?$/.test(value) ? value : null;
+}
 export function classifyHost(host: string): Platform | null {
   const origins = platformOrigins();
   for (const platform of ["marketing", "staff", "student"] as const) if (host.toLowerCase() === new URL(origins[platform]).host.toLowerCase()) return platform;
-  if (host.toLowerCase() === "mones.ddns.net:3000") return "staff";
+  const tunnel = developmentTunnelHost();
+  if (tunnel && host.toLowerCase() === tunnel) return "staff";
   // localhost is a bounded, development-only legacy marketing entry.
   if (process.env.NODE_ENV !== "production" && ["localhost:3000", "127.0.0.1:3000"].includes(host)) return "marketing";
   return null;

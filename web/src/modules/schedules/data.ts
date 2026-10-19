@@ -1,8 +1,7 @@
 import "server-only";
 
-import { z } from "zod";
-
-import { cookieAuthority, type Authority } from "@/lib/supabase/authority";
+import type { Authority } from "@/lib/supabase/authority";
+import { academyMember } from "@/lib/supabase/membership";
 import { fetchAllPages } from "@/lib/supabase/paginate";
 import type { Database } from "@/lib/supabase/database.types";
 import { ACADEMY_TIME_ZONE, academyNow } from "./time";
@@ -57,16 +56,6 @@ export type StartableSchedulePage = {
 export type ScheduleQuery = { academyId: string; search?: string | null; limit?: number | null; offset?: number | null };
 export type ScheduleReadResult<T> = { ok: true; data: T } | { ok: false; status: 400 | 403 | 500 };
 
-/** The caller when they are an active staff member of the academy, else null. */
-async function member(academyId: string, authority?: Authority | null): Promise<Authority | null> {
-  if (!z.uuid().safeParse(academyId).success) return null;
-  const caller = authority ?? await cookieAuthority();
-  if (!caller) return null;
-  const { data } = await caller.db.from("academy_memberships").select("role")
-    .eq("academy_id", academyId).eq("user_id", caller.userId).is("suspended_at", null).maybeSingle();
-  return data ? caller : null;
-}
-
 /** Escapes LIKE wildcards so search text matches literally. */
 const likePattern = (text: string) => `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
@@ -86,7 +75,7 @@ export async function listStartableSchedules(query: ScheduleQuery, authority?: A
     || search.length > MAX_SCHEDULE_SEARCH) {
     return { ok: false, status: 400 };
   }
-  const caller = await member(query.academyId, authority);
+  const caller = await academyMember(query.academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   const db = caller.db;
   const today = academyNow(now).slice(0, 10);

@@ -4,7 +4,7 @@ This guide describes the current setup sequence. It does not assert that product
 
 ## 1. Select the target and configure origins
 
-Confirm the owned marketing/staff/student domains and the intended cloud Supabase project. Bind the exact hosts to the web deployment. Set matching public/server origins and the trusted cookie domain described in [routing](routing.md). Set public Supabase URL/publishable key from .env.example; keep service-role, provider and invitation-encryption keys server-side.
+Confirm the owned marketing/staff/student domains and the intended cloud Supabase project. Bind the exact hosts to the web deployment. Set matching public/server origins and the trusted cookie domain described in [routing](routing.md). Set public Supabase URL/publishable key from .env.example; keep service-role, provider and invitation-encryption keys server-side. Production ignores the development-only EDRA_DEV_TUNNEL_HOST alias; leave it unset there and serve every public host through its canonical HTTPS origin.
 
 Configure only the authentication flows actually enabled. Existing phone/password, OTP and recovery flows do not require invented OAuth callbacks. If a redirect-based flow is enabled later, verify its exact URL allowlist at that time.
 

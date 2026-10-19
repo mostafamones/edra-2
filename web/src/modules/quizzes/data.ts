@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { cookieAuthority, type Authority } from "@/lib/supabase/authority";
+import { academyMember } from "@/lib/supabase/membership";
 import type { Json } from "@/lib/supabase/database.types";
 import { failure, failureFromDatabase } from "./errors";
 import { toAnnounce, toCorrection, toQuiz, toQuizPage, toStudentCommand, toStudentDetail, toStudentList } from "./mapper";
@@ -20,16 +21,6 @@ import { MAX_AUDIENCE_GROUPS, quizDraftSchema } from "./validation";
  */
 
 type DatabaseError = { code?: string; message?: string; details?: string };
-
-/** The caller when they are an active staff member of the academy, else null. */
-async function member(academyId: string, authority?: Authority | null): Promise<Authority | null> {
-  if (!z.uuid().safeParse(academyId).success) return null;
-  const caller = authority ?? await cookieAuthority();
-  if (!caller) return null;
-  const { data } = await caller.db.from("academy_memberships").select("role")
-    .eq("academy_id", academyId).eq("user_id", caller.userId).is("suspended_at", null).maybeSingle();
-  return data ? caller : null;
-}
 
 function draftJson(draft: QuizDraft): Json {
   return {
@@ -84,7 +75,7 @@ export async function createQuiz(input: z.input<typeof createInput>, authority?:
   if (draft.parts.some((part) => part.id || part.questions.some((question) => question.id || question.choices.some((choice) => choice.id)))) {
     return failure("validation");
   }
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   return quizCommand(() => caller.db.rpc("create_quiz", {
     p_academy_id: academyId, p_academic_year_id: academicYearId, p_quiz_id: quizId, p_draft: draftJson(draft),
@@ -101,7 +92,7 @@ export async function updateQuiz(input: z.input<typeof updateInput>, authority?:
   const parsed = updateInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, quizId, expectedVersion, draft } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   return quizCommand(() => caller.db.rpc("update_quiz", {
     p_academy_id: academyId, p_quiz_id: quizId, p_expected_version: expectedVersion, p_draft: draftJson(draft),
@@ -119,7 +110,7 @@ export async function configureAvailability(input: z.input<typeof availabilityIn
   const parsed = availabilityInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, quizId, expectedVersion, opensAt, closesAt } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   return quizCommand(() => caller.db.rpc("configure_quiz_availability", {
     p_academy_id: academyId, p_quiz_id: quizId, p_expected_version: expectedVersion,
@@ -134,7 +125,7 @@ export async function archiveQuiz(input: z.input<typeof archiveInput>, authority
   const parsed = archiveInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, quizId, expectedVersion } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   return quizCommand(() => caller.db.rpc("archive_quiz", { p_academy_id: academyId, p_quiz_id: quizId, p_expected_version: expectedVersion }));
 }
@@ -151,7 +142,7 @@ export async function correctKey(input: z.input<typeof correctionInput> & { choi
   const parsed = correctionInput.extend({ choiceId: z.uuid() }).safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, quizId, questionId, choiceId, expectedScoringRevision, key } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   return quizCommand(() => caller.db.rpc("correct_quiz_key", {
     p_academy_id: academyId, p_quiz_id: quizId, p_question_id: questionId, p_choice_id: choiceId,
@@ -164,7 +155,7 @@ export async function excludeQuestion(input: z.input<typeof correctionInput>, au
   const parsed = correctionInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, quizId, questionId, expectedScoringRevision, key } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   return quizCommand(() => caller.db.rpc("exclude_quiz_question", {
     p_academy_id: academyId, p_quiz_id: quizId, p_question_id: questionId, p_expected_scoring_revision: expectedScoringRevision, p_key: key,
@@ -186,7 +177,7 @@ export async function savePhysicalDraft(input: z.input<typeof physicalInput>, au
   const parsed = physicalInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, quizId, recordId, expectedVersion, answers, key } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   return studentCommand(() => caller.db.rpc("save_quiz_physical_draft", {
     p_academy_id: academyId, p_quiz_id: quizId, p_record_id: recordId, p_expected_version: expectedVersion,
@@ -201,7 +192,7 @@ export async function confirmPhysical(input: z.input<typeof confirmInput>, autho
   const parsed = confirmInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, quizId, recordId, expectedVersion, key } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   return studentCommand(() => caller.db.rpc("confirm_quiz_physical", {
     p_academy_id: academyId, p_quiz_id: quizId, p_record_id: recordId, p_expected_version: expectedVersion, p_key: key,
@@ -221,7 +212,7 @@ export async function saveMarks(input: z.input<typeof marksInput>, authority?: A
   const parsed = marksInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, quizId, recordId, expectedVersion, marks, feedback, key } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   const changes: Json = {
     ...(marks.length > 0 ? { marks: marks.map((mark) => ({ question_id: mark.questionId, score: mark.score })) } : {}),
@@ -243,7 +234,7 @@ export async function announceResults(input: z.input<typeof announceInput>, auth
   const parsed = announceInput.safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, quizId, expectedScoringRevision, key, items } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
   try {
     const { data, error } = await caller.db.rpc("announce_quiz_results", {
@@ -263,7 +254,7 @@ export async function announceResults(input: z.input<typeof announceInput>, auth
 /** One quiz's staff document, or 404 for unknown and foreign quizzes. */
 export async function getQuiz(academyId: string, quizId: string, authority?: Authority | null): Promise<ReadResult<Quiz>> {
   if (!z.uuid().safeParse(quizId).success) return { ok: false, status: 400 };
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
     const { data, error } = await caller.db.rpc("get_quiz", { p_academy_id: academyId, p_quiz_id: quizId });
@@ -286,7 +277,7 @@ export async function listQuizzes(input: Partial<QuizListInput> & { academyId: s
   const parsed = listInput.safeParse({ academicYearId: null, search: "", phase: null, audience: null, includeArchived: false, limit: 25, offset: 0, ...input });
   if (!parsed.success) return { ok: false, status: 400 };
   const { academyId, academicYearId, search, phase, audience, includeArchived, limit, offset } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
     const { data, error } = await caller.db.rpc("list_quizzes", {
@@ -304,7 +295,7 @@ export async function listQuizzes(input: Partial<QuizListInput> & { academyId: s
 /** The current eligible roster plus every historical participant, with work and result state. */
 export async function listStudents(academyId: string, quizId: string, authority?: Authority | null): Promise<ReadResult<{ total: number; students: QuizStudent[] }>> {
   if (!z.uuid().safeParse(quizId).success) return { ok: false, status: 400 };
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
     const { data, error } = await caller.db.rpc("list_quiz_students", { p_academy_id: academyId, p_quiz_id: quizId });
@@ -319,7 +310,7 @@ export async function listStudents(academyId: string, quizId: string, authority?
 /** One student's row and per-question detail (answers by source, marks, history). */
 export async function getStudent(academyId: string, quizId: string, recordId: string, authority?: Authority | null): Promise<ReadResult<{ student: QuizStudent; detail: StudentDetail }>> {
   if (!z.uuid().safeParse(quizId).success || !z.uuid().safeParse(recordId).success) return { ok: false, status: 400 };
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
     const { data, error } = await caller.db.rpc("get_quiz_student", { p_academy_id: academyId, p_quiz_id: quizId, p_record_id: recordId });
@@ -341,7 +332,7 @@ export async function previewAudience(input: z.input<typeof previewInput>, autho
   const parsed = previewInput.safeParse(input);
   if (!parsed.success) return { ok: false, status: 400 };
   const { academyId, academicYearId, audience, levelId, trackId, groupIds } = parsed.data;
-  const caller = await member(academyId, authority);
+  const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
     const { data, error } = await caller.db.rpc("preview_quiz_audience", {

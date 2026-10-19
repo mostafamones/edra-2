@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { createClient } from "@/lib/supabase/server";
+import type { Db } from "@/lib/supabase/authority";
+import { academyMember } from "@/lib/supabase/membership";
 import type { Database } from "@/lib/supabase/database.types";
 import { canArchiveSchedule, canCreateSchedule, canEditSchedule } from "./permissions";
 import { scheduleInputSchema, withinYear, type ScheduleInput } from "./validation";
@@ -22,18 +23,8 @@ type Result = { ok: true } | { ok: false; message: string };
 
 const invalid = (error: z.ZodError): Result => ({ ok: false, message: error.issues[0]?.message ?? "Check the schedule fields." });
 
-/** The signed-in user's id and role in the academy, or null when they are not a member. */
-async function member(academyId: string) {
-  const db = await createClient();
-  const { data: auth } = await db.auth.getClaims();
-  if (!auth?.claims) return null;
-  const { data } = await db.from("academy_memberships").select("role")
-    .eq("academy_id", academyId).eq("user_id", auth.claims.sub).is("suspended_at", null).maybeSingle();
-  return data ? { db, userId: auth.claims.sub, role: data.role } : null;
-}
-
 /** The active academic year, and whether every one-off session date falls inside it. */
-async function activeYear(db: Awaited<ReturnType<typeof createClient>>, input: ScheduleInput) {
+async function activeYear(db: Db, input: ScheduleInput) {
   const { data: year } = await db.from("academic_years").select("id,starts_on,ends_on")
     .eq("academy_id", input.academyId).is("closed_at", null).maybeSingle();
   if (!year?.starts_on || !year.ends_on) return { error: "The active academic year is unavailable." } as const;
@@ -54,7 +45,7 @@ export async function createSchedule(value: unknown): Promise<Result> {
   const parsed = scheduleInputSchema.safeParse(value);
   if (!parsed.success) return invalid(parsed.error);
   const input = parsed.data;
-  const actor = await member(input.academyId);
+  const actor = await academyMember(input.academyId);
   if (!actor || !canCreateSchedule(actor.role, input.kind))
     return { ok: false, message: "You do not have permission to create this schedule." };
   const year = await activeYear(actor.db, input);
@@ -72,7 +63,7 @@ export async function updateSchedule(scheduleId: string, value: unknown): Promis
   const parsed = scheduleInputSchema.safeParse(value);
   if (!parsed.success) return invalid(parsed.error);
   const input = parsed.data;
-  const actor = await member(input.academyId);
+  const actor = await academyMember(input.academyId);
   if (!actor) return { ok: false, message: "You do not have permission to edit this schedule." };
   const { data: existing } = await actor.db.from("schedules").select("kind,archived_at")
     .eq("id", scheduleId).eq("academy_id", input.academyId).maybeSingle();
@@ -94,7 +85,7 @@ export async function updateSchedule(scheduleId: string, value: unknown): Promis
 export async function archiveSchedule(academyId: string, scheduleId: string): Promise<Result> {
   if (!z.uuid().safeParse(academyId).success || !z.uuid().safeParse(scheduleId).success)
     return { ok: false, message: "Invalid schedule." };
-  const actor = await member(academyId);
+  const actor = await academyMember(academyId);
   if (!actor) return { ok: false, message: "You do not have permission to archive this schedule." };
   const { data: schedule } = await actor.db.from("schedules").select("kind,archived_at,created_by")
     .eq("id", scheduleId).eq("academy_id", academyId).maybeSingle();
