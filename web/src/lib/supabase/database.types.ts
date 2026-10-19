@@ -188,21 +188,30 @@ export type Database = {
       academy_student_profiles: {
         Row: {
           academy_id: string
+          access_suspended_at: string | null
           created_at: string
           created_by: string
           id: string
+          linked_at: string | null
+          user_id: string | null
         }
         Insert: {
           academy_id: string
+          access_suspended_at?: string | null
           created_at?: string
           created_by: string
           id?: string
+          linked_at?: string | null
+          user_id?: string | null
         }
         Update: {
           academy_id?: string
+          access_suspended_at?: string | null
           created_at?: string
           created_by?: string
           id?: string
+          linked_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -215,6 +224,13 @@ export type Database = {
           {
             foreignKeyName: "academy_student_profiles_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_student_profiles_user_fk"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -253,6 +269,139 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "academy_levels"
             referencedColumns: ["academy_id", "level_id"]
+          },
+        ]
+      }
+      account_contact_changes: {
+        Row: {
+          attempts: number
+          code_hash: string | null
+          commit_attempts: number
+          expires_at: string | null
+          new_phone: string
+          new_sends: number
+          new_sent_at: string | null
+          new_window_started_at: string | null
+          old_phone: string
+          old_sends: number
+          old_sent_at: string | null
+          old_window_started_at: string | null
+          operation_id: string
+          purpose: string
+          session_id: string
+          stage: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash?: string | null
+          commit_attempts?: number
+          expires_at?: string | null
+          new_phone: string
+          new_sends?: number
+          new_sent_at?: string | null
+          new_window_started_at?: string | null
+          old_phone: string
+          old_sends?: number
+          old_sent_at?: string | null
+          old_window_started_at?: string | null
+          operation_id: string
+          purpose: string
+          session_id: string
+          stage: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string | null
+          commit_attempts?: number
+          expires_at?: string | null
+          new_phone?: string
+          new_sends?: number
+          new_sent_at?: string | null
+          new_window_started_at?: string | null
+          old_phone?: string
+          old_sends?: number
+          old_sent_at?: string | null
+          old_window_started_at?: string | null
+          operation_id?: string
+          purpose?: string
+          session_id?: string
+          stage?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_contact_changes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_password_challenges: {
+        Row: {
+          attempts: number
+          challenge_id: string
+          claimed_until: string | null
+          code_hash: string
+          completion_attempts: number
+          consumed_at: string | null
+          expires_at: string
+          grant_expires_at: string | null
+          phone: string
+          sends_in_window: number
+          sent_at: string
+          session_id: string
+          user_id: string
+          verified_at: string | null
+          window_started_at: string
+        }
+        Insert: {
+          attempts?: number
+          challenge_id: string
+          claimed_until?: string | null
+          code_hash: string
+          completion_attempts?: number
+          consumed_at?: string | null
+          expires_at: string
+          grant_expires_at?: string | null
+          phone: string
+          sends_in_window?: number
+          sent_at: string
+          session_id: string
+          user_id: string
+          verified_at?: string | null
+          window_started_at: string
+        }
+        Update: {
+          attempts?: number
+          challenge_id?: string
+          claimed_until?: string | null
+          code_hash?: string
+          completion_attempts?: number
+          consumed_at?: string | null
+          expires_at?: string
+          grant_expires_at?: string | null
+          phone?: string
+          sends_in_window?: number
+          sent_at?: string
+          session_id?: string
+          user_id?: string
+          verified_at?: string | null
+          window_started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_password_challenges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1486,6 +1635,312 @@ export type Database = {
           },
         ]
       }
+      content_assessments: {
+        Row: {
+          academy_id: string
+          assessment_id: string
+          kind: string
+          unit_id: string
+        }
+        Insert: {
+          academy_id: string
+          assessment_id: string
+          kind: string
+          unit_id: string
+        }
+        Update: {
+          academy_id?: string
+          assessment_id?: string
+          kind?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_assessments_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
+      content_assets: {
+        Row: {
+          academy_id: string
+          created_at: string
+          created_by: string
+          deletion_token: string | null
+          id: string
+          kind: string
+          mime_type: string
+          name: string
+          playback_id: string | null
+          provider_asset_id: string | null
+          provider_upload_id: string | null
+          status: string
+          storage_path: string | null
+          unit_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          created_by: string
+          deletion_token?: string | null
+          id: string
+          kind: string
+          mime_type: string
+          name: string
+          playback_id?: string | null
+          provider_asset_id?: string | null
+          provider_upload_id?: string | null
+          status?: string
+          storage_path?: string | null
+          unit_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          created_by?: string
+          deletion_token?: string | null
+          id?: string
+          kind?: string
+          mime_type?: string
+          name?: string
+          playback_id?: string | null
+          provider_asset_id?: string | null
+          provider_upload_id?: string | null
+          status?: string
+          storage_path?: string | null
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_assets_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_assets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_feedback: {
+        Row: {
+          academy_id: string
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          unit_id: string
+        }
+        Insert: {
+          academy_id: string
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          unit_id: string
+        }
+        Update: {
+          academy_id?: string
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_feedback_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_feedback_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_programs: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          id: string
+          level_id: string
+          track_id: string | null
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          id?: string
+          level_id: string
+          track_id?: string | null
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          id?: string
+          level_id?: string
+          track_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_programs_academy_id_academic_year_id_fkey"
+            columns: ["academy_id", "academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_programs_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_programs_academy_id_level_id_fkey"
+            columns: ["academy_id", "level_id"]
+            isOneToOne: false
+            referencedRelation: "academy_levels"
+            referencedColumns: ["academy_id", "level_id"]
+          },
+          {
+            foreignKeyName: "content_programs_academy_id_level_id_track_id_fkey"
+            columns: ["academy_id", "level_id", "track_id"]
+            isOneToOne: false
+            referencedRelation: "academy_tracks"
+            referencedColumns: ["academy_id", "level_id", "id"]
+          },
+        ]
+      }
+      content_revisions: {
+        Row: {
+          academy_id: string
+          document: Json
+          published_at: string
+          published_by: string
+          revision: number
+          unit_id: string
+        }
+        Insert: {
+          academy_id: string
+          document: Json
+          published_at?: string
+          published_by: string
+          revision: number
+          unit_id: string
+        }
+        Update: {
+          academy_id?: string
+          document?: Json
+          published_at?: string
+          published_by?: string
+          revision?: number
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_revisions_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_revisions_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_revisions_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_units: {
+        Row: {
+          academy_id: string
+          created_at: string
+          created_by: string
+          draft: Json
+          id: string
+          program_id: string
+          published_revision: number
+          published_version: number
+          source_unit_id: string | null
+          state: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          created_by: string
+          draft: Json
+          id: string
+          program_id: string
+          published_revision?: number
+          published_version?: number
+          source_unit_id?: string | null
+          state?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          created_by?: string
+          draft?: Json
+          id?: string
+          program_id?: string
+          published_revision?: number
+          published_version?: number
+          source_unit_id?: string | null
+          state?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_units_academy_id_program_id_fkey"
+            columns: ["academy_id", "program_id"]
+            isOneToOne: false
+            referencedRelation: "content_programs"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_units_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_units_source_unit_id_fkey"
+            columns: ["source_unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_attempts: {
         Row: {
           academy_id: string
@@ -2702,21 +3157,27 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_path: string | null
           created_at: string
+          display_name: string | null
           full_name: string | null
           id: string
           phone: string | null
           updated_at: string
         }
         Insert: {
+          avatar_path?: string | null
           created_at?: string
+          display_name?: string | null
           full_name?: string | null
           id: string
           phone?: string | null
           updated_at?: string
         }
         Update: {
+          avatar_path?: string | null
           created_at?: string
+          display_name?: string | null
           full_name?: string | null
           id?: string
           phone?: string | null
@@ -4126,6 +4587,42 @@ export type Database = {
           },
         ]
       }
+      session_start_requests: {
+        Row: {
+          actor_id: string
+          created_at: string
+          session_id: string
+          start_key: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          session_id: string
+          start_key: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          session_id?: string
+          start_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_start_requests_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_start_requests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           academic_year_id: string
@@ -4682,6 +5179,48 @@ export type Database = {
           },
         ]
       }
+      student_enrollment_settings: {
+        Row: {
+          academy_id: string
+          enrollment_open: boolean
+          invite_token: string | null
+          new_student_participation_type: Database["public"]["Enums"]["student_participation_type"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          academy_id: string
+          enrollment_open?: boolean
+          invite_token?: string | null
+          new_student_participation_type?: Database["public"]["Enums"]["student_participation_type"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          academy_id?: string
+          enrollment_open?: boolean
+          invite_token?: string | null
+          new_student_participation_type?: Database["public"]["Enums"]["student_participation_type"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_enrollment_settings_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: true
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_enrollment_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_import_counters: {
         Row: {
           academy_id: string
@@ -5104,6 +5643,14 @@ export type Database = {
         Args: { p_topic: string }
         Returns: boolean
       }
+      cancel_account_password_challenge: {
+        Args: { p_challenge_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      cancel_contact_change: {
+        Args: { p_operation_id: string; p_user_id: string }
+        Returns: string
+      }
       cancel_student_import: {
         Args: { p_session_id: string }
         Returns: undefined
@@ -5116,6 +5663,16 @@ export type Database = {
           p_expected_version: number
         }
         Returns: Json
+      }
+      change_content_unit: {
+        Args: {
+          p_academy_id: string
+          p_action: string
+          p_feedback?: string
+          p_unit_id: string
+          p_version: number
+        }
+        Returns: number
       }
       change_staff_member_role: {
         Args: {
@@ -5165,6 +5722,34 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      claim_account_password_change: {
+        Args: {
+          p_challenge_id: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      claim_login_phone_change: {
+        Args: {
+          p_operation_id: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      complete_content_document: {
+        Args: { p_academy_id: string; p_asset_id: string }
+        Returns: undefined
+      }
+      complete_content_video_deletion: {
+        Args: { p_academy_id: string; p_asset_id: string; p_token: string }
+        Returns: undefined
+      }
+      complete_student_invite: {
+        Args: { p_group_id: string; p_token: string; p_track_id: string }
+        Returns: Json
+      }
       configure_exam_availability: {
         Args: {
           p_academy_id: string
@@ -5212,6 +5797,40 @@ export type Database = {
       consume_api_quota: {
         Args: { p_bucket: string; p_limit: number; p_window_seconds: number }
         Returns: Json
+      }
+      content_assessment_options: {
+        Args: {
+          p_academy_id: string
+          p_limit?: number
+          p_offset?: number
+          p_unit_id: string
+        }
+        Returns: {
+          id: string
+          kind: string
+          title: string
+        }[]
+      }
+      copy_content_material: {
+        Args: {
+          p_academy_id: string
+          p_item_id: string
+          p_source_id: string
+          p_target_id: string
+          p_version: number
+        }
+        Returns: number
+      }
+      copy_content_unit: {
+        Args: {
+          p_academy_id: string
+          p_level_id: string
+          p_source_id: string
+          p_track_id: string
+          p_unit_id: string
+          p_year_id: string
+        }
+        Returns: string
       }
       correct_exam_key: {
         Args: {
@@ -5264,6 +5883,27 @@ export type Database = {
           p_draft: Json
         }
         Returns: Json
+      }
+      create_content_assessment: {
+        Args: {
+          p_academy_id: string
+          p_kind: string
+          p_title: string
+          p_unit_id: string
+          p_version: number
+        }
+        Returns: string
+      }
+      create_content_unit: {
+        Args: {
+          p_academy_id: string
+          p_level_id: string
+          p_title: string
+          p_track_id: string
+          p_unit_id: string
+          p_year_id: string
+        }
+        Returns: string
       }
       create_exam: {
         Args: {
@@ -5364,6 +6004,10 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: number
       }
+      finish_account_password_change: {
+        Args: { p_challenge_id: string; p_changed: boolean; p_user_id: string }
+        Returns: undefined
+      }
       finish_student_profile: {
         Args: { p_level_id: string; p_user_id: string }
         Returns: boolean
@@ -5404,6 +6048,7 @@ export type Database = {
       }
       get_my_exam: { Args: { p_exam_id: string }; Returns: Json }
       get_my_quiz: { Args: { p_quiz_id: string }; Returns: Json }
+      get_my_student_academy: { Args: { p_slug: string }; Returns: Json }
       get_quiz: {
         Args: { p_academy_id: string; p_quiz_id: string }
         Returns: Json
@@ -5428,6 +6073,10 @@ export type Database = {
         Args: { p_academy_id: string; p_record_ids: string[] }
         Returns: Json
       }
+      get_student_enrollment_settings: {
+        Args: { p_academy_id: string }
+        Returns: Json
+      }
       is_academy_manager: {
         Args: { target_academy_id: string }
         Returns: boolean
@@ -5444,6 +6093,7 @@ export type Database = {
           p_filter?: string
           p_limit?: number
           p_offset?: number
+          p_search?: string
         }
         Returns: Json
       }
@@ -5477,6 +6127,7 @@ export type Database = {
         }
         Returns: Json
       }
+      list_my_student_academies: { Args: never; Returns: Json }
       list_past_sessions: {
         Args: {
           p_academy_id: string
@@ -5649,6 +6300,7 @@ export type Database = {
           slug: string
         }[]
       }
+      owns_avatar_object: { Args: { p_name: string }; Returns: boolean }
       peek_next_student_code: {
         Args: { p_academy_id: string; p_record_id: string }
         Returns: string
@@ -5698,6 +6350,7 @@ export type Database = {
         }
         Returns: Json
       }
+      preview_student_invite: { Args: { p_token: string }; Returns: Json }
       process_student_import_batch: {
         Args: { p_batch_index: number; p_session_id: string }
         Returns: Json
@@ -5744,6 +6397,17 @@ export type Database = {
         Args: { p_ordinal: number; p_session_id: string }
         Returns: string
       }
+      register_content_asset: {
+        Args: {
+          p_academy_id: string
+          p_id: string
+          p_kind: string
+          p_mime: string
+          p_name: string
+          p_unit_id: string
+        }
+        Returns: string
+      }
       remember_attendance_request: {
         Args: {
           p_fingerprint: string
@@ -5765,6 +6429,10 @@ export type Database = {
           p_session_id: string
         }
         Returns: number
+      }
+      request_content_video_deletion: {
+        Args: { p_academy_id: string; p_asset_id: string }
+        Returns: string
       }
       require_open_attendance_year: {
         Args: { p_session: Database["public"]["Tables"]["sessions"]["Row"] }
@@ -5789,6 +6457,16 @@ export type Database = {
           s: Database["public"]["Tables"]["student_import_sessions"]["Row"]
         }
         Returns: undefined
+      }
+      resend_contact_change_code: {
+        Args: {
+          p_code_hash: string
+          p_operation_id: string
+          p_session_id: string
+          p_stage: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       resolve_assignment_student: {
         Args: { p_academy_id: string; p_assignment_id: string; p_code: string }
@@ -5833,6 +6511,15 @@ export type Database = {
           p_record_id: string
         }
         Returns: Json
+      }
+      save_content_unit: {
+        Args: {
+          p_academy_id: string
+          p_document: Json
+          p_unit_id: string
+          p_version: number
+        }
+        Returns: number
       }
       save_exam_answers: {
         Args: {
@@ -5915,6 +6602,10 @@ export type Database = {
         Args: { p_now: string; p_schedule_id: string }
         Returns: string
       }
+      set_my_avatar: {
+        Args: { p_expected: string; p_path: string }
+        Returns: Json
+      }
       set_student_import_row_excluded: {
         Args: {
           p_excluded: boolean
@@ -5923,6 +6614,10 @@ export type Database = {
           p_session_id: string
         }
         Returns: number
+      }
+      set_student_invite: {
+        Args: { p_academy_id: string; p_active: boolean }
+        Returns: Json
       }
       set_student_records_archived: {
         Args: {
@@ -5941,6 +6636,10 @@ export type Database = {
           p_records: Json
         }
         Returns: Json
+      }
+      settle_login_phone_change: {
+        Args: { p_end: boolean; p_operation_id: string; p_user_id: string }
+        Returns: string
       }
       shares_academy_with: {
         Args: { target_user_id: string }
@@ -5988,6 +6687,27 @@ export type Database = {
       stage_student_import_rows: {
         Args: { p_rows: Json; p_session_id: string }
         Returns: number
+      }
+      start_account_password_challenge: {
+        Args: {
+          p_challenge_id: string
+          p_code_hash: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      start_contact_change: {
+        Args: {
+          p_code_hash: string
+          p_expected_old: string
+          p_new_phone: string
+          p_operation_id: string
+          p_purpose: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       start_exam_attempt: { Args: { p_exam_id: string }; Returns: Json }
       start_quiz_attempt: { Args: { p_quiz_id: string }; Returns: Json }
@@ -6186,6 +6906,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_student_enrollment_settings: {
+        Args: { p_academy_id: string; p_enrollment_open: boolean }
+        Returns: Json
+      }
       update_student_record: {
         Args: {
           p_academy_id: string
@@ -6205,6 +6929,25 @@ export type Database = {
         }[]
       }
       verified_account_phone: { Args: { p_user_id: string }; Returns: string }
+      verify_account_password_challenge: {
+        Args: {
+          p_challenge_id: string
+          p_code_hash: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      verify_contact_change_code: {
+        Args: {
+          p_code_hash: string
+          p_operation_id: string
+          p_session_id: string
+          p_stage: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       verify_student_parent_challenge: {
         Args: { p_challenge_id: string; p_code_hash: string; p_user_id: string }
         Returns: string
