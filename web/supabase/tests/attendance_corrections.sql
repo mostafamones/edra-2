@@ -227,7 +227,11 @@ begin
     raise exception 'Name search is wrong: %', hits;
   end if;
   hits := public.search_attendee_candidates('c5555555-5555-4555-8555-555555555555', current_setting('test.s1')::uuid, ' 0042 ', 10, 0);
-  if jsonb_array_length(hits->'items') <> 1 then raise exception 'Code search is wrong: %', hits; end if;
+  -- The exact current code finds its holder (a name containing the digits, like "Big 0042", may match too).
+  if not exists (select 1 from jsonb_array_elements(hits->'items') e
+      where e->>'annual_student_record_id' = current_setting('test.online') and e->>'student_code' = '0042') then
+    raise exception 'Code search is wrong: %', hits;
+  end if;
   -- Roster students, archived records and other academies never appear.
   hits := public.search_attendee_candidates('c5555555-5555-4555-8555-555555555555', current_setting('test.s1')::uuid, 'a', 50, 0);
   if exists (select 1 from jsonb_array_elements(hits->'items') e
