@@ -539,8 +539,8 @@ begin
   replay := edra_private.assignment_replay(p_key, 'correct', target.id, fingerprint);
   if replay is not null then return replay; end if;
   perform edra_private.require_open_assignment_year(target.academy_id, target.academic_year_id);
-  if target.state not in ('active', 'closed') then raise exception using errcode = 'P0001', message = 'dbg_state'; end if;
-  if not edra_private.assignment_has_activity(target.id) then raise exception using errcode = 'P0001', message = format('dbg %s recips=%s submitted=%s marks=%s', target.id, (select count(*) from public.assignment_recipients r where r.assignment_id = target.id), (select count(*) from public.assignment_recipients r where r.assignment_id = target.id and r.work_status <> 'expected'), (select count(*) from public.assignment_marks m where m.assignment_id = target.id)); end if;
+  if target.state not in ('active', 'closed') then raise exception using errcode = 'P0001', message = 'invalid_state'; end if;
+  if not edra_private.assignment_has_activity(target.id) then raise exception using errcode = 'P0001', message = 'invalid_state'; end if;
   if target.scoring_revision <> p_expected_scoring_revision then raise exception using errcode = 'P0001', message = 'stale_basis'; end if;
   select q.* into question from public.assignment_part_questions q where q.assignment_id = target.id and q.id = p_question_id for update;
   if not found then raise exception using errcode = 'P0001', message = 'unknown_part'; end if;

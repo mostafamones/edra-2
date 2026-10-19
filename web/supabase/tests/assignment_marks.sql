@@ -394,10 +394,10 @@ do $$ declare a jsonb; p uuid; q1 uuid; q2 uuid; a1 uuid; b1 uuid; a2 uuid; resu
   a2 := (a->'parts'->0->'questions'->1->'choices'->0->>'id')::uuid;
   perform set_config('test.correction_question', q1::text, true);
   perform set_config('test.correction_choice', a1::text, true);
-  result := public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, pg_temp.rec('s1'), null, 0,
+  result := public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, pg_temp.rec('s1'), null, 1,
     jsonb_build_object('answers', jsonb_build_array(jsonb_build_object('question_id', q1, 'choice_id', b1), jsonb_build_object('question_id', q2, 'choice_id', a2))), gen_random_uuid());
   if (result->'recipient'->>'total')::numeric <> 1.5 then raise exception 'Original answer-derived score wrong: %', result; end if;
-  perform public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, pg_temp.rec('s2'), null, 0,
+  perform public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, pg_temp.rec('s2'), null, 1,
     jsonb_build_object('marks', jsonb_build_array(jsonb_build_object('part_id', p, 'score', '3.5', 'excused_reason', 'Approved adjustment'))), gen_random_uuid());
   perform public.publish_assignment_results('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid,
     (select jsonb_agg(jsonb_build_object('annual_student_record_id', x.annual_student_record_id, 'expected_version', x.version)) from public.assignment_recipients x where x.assignment_id = (a->>'id')::uuid and x.annual_student_record_id in (pg_temp.rec('s1'), pg_temp.rec('s2'))), gen_random_uuid());
