@@ -39,9 +39,9 @@ For a signed-in student joining this academy for the first time, the form prefil
 
 Returning students are students from an earlier academic year who are joining the academy for the new year and do not yet have a current-year record.
 
-When a returning student is signed in, the public booking link serves as their academy invite. Edra skips the public form and opens the same online academy onboarding used by invited students. They choose their current program—level and track where applicable—and group from the academy's available choices. Completing onboarding creates their new-year record under their existing academy profile and grants online academy access.
+When a returning student is signed in, the public booking link serves as their academy invite. Edra skips the public form and opens the same online academy onboarding used by invited students. Their school level stays fixed to the level on their account; they choose an academy track within that level when tracks are offered and optionally a compatible group. If the academy does not offer that level, this onboarding cannot create the new-year record. Completing onboarding creates their new-year record under their existing academy profile and grants online academy access.
 
-This flow preserves the student's in-person or online-only participation type and earlier academic history. Online academy onboarding does not change an in-person student into an online-only student. Their account's school level and their academy program are separate choices. Access to individual learning material continues to follow the academy's learning-access rules.
+This flow preserves the student's in-person or online-only participation type and earlier academic history. Online academy onboarding does not change an in-person student into an online-only student. As confirmed by the owner on 2026-10-19, this academy onboarding does not offer an independent school-level choice. The account level determines the offered track/group choices; staff placement authority and existing records remain unchanged. Access to individual learning material continues to follow the academy's learning-access rules.
 
 ## Group availability
 

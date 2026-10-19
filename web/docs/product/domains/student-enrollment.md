@@ -1,6 +1,6 @@
 # Edra — student enrollment and account connection
 
-Approved by the owner, 2026-10-10. Detailed account-change, intake and access workflows remain for their separate reviews.
+Approved by the owner, 2026-10-10. Account-level enrollment selection confirmed 2026-10-19. Detailed account-change, intake and access workflows remain for their separate reviews.
 
 ## Joining an academy
 
@@ -8,7 +8,7 @@ A new student gains online academy access through its student invite link. The l
 
 The flow connects an existing academy record or enrolls a genuinely new student. It preserves the student’s academic identity and earlier work.
 
-Academy onboarding uses the same full-screen split design as existing onboarding and staff invitations. After any required account setup, the system automatically determines the student’s path; students do not choose whether they are new, returning or already registered. An existing eligible current-year record goes directly to confirmation. A new or returning student without a current-year record chooses a program from the academy’s offerings, then optionally chooses a group on a second screen. There is no separate academy-details form or review screen. Successful completion transitions with an animation into the student portal.
+Academy onboarding uses the same full-screen split design as existing onboarding and staff invitations. After any required account setup, the system automatically determines the student’s path; students do not choose whether they are new, returning or already registered. An existing eligible current-year record goes directly to confirmation. A new or returning student without a current-year record keeps the school level from their account, chooses an academy track within that level when tracks are offered, then optionally chooses a compatible group. They do not select another school level during academy onboarding. There is no separate academy-details form or review screen. Successful completion transitions with an animation into the student portal.
 
 Signing in outside the invite flow does not join an academy merely because a phone matches its records. Once connected, a student can return through their normal academy navigation without using the invite each time.
 
@@ -34,7 +34,7 @@ A parent phone alone does not choose a student record when the same parent conta
 
 When no existing record matches, the invite flow offers enrollment if the academy is accepting new students.
 
-The flow reuses the student’s name and contacts from account setup rather than asking for them again. The student first chooses a program from the academy’s available offerings, then optionally chooses a compatible group on a second screen.
+The flow reuses the student’s name and contacts from account setup rather than asking for them again. The academy uses the school level already set on the account. The student chooses a track within that level when the academy offers tracks, then optionally chooses a compatible group. A level with no tracks needs no track choice. If the academy does not offer the account’s level, onboarding cannot create annual participation at a different level.
 
 For a genuinely new student, the initial record name uses the optional account display name, falling back to the full account name. The resulting academy record name becomes primary within that academy and remains staff-editable independently of account names. Existing record names are preserved. See [personal account settings](account-settings.md) for verified contact changes and name ownership.
 
@@ -50,7 +50,7 @@ When no account connection or current-year record exists, onboarding compares th
 
 For a signed-in returning student, the public booking link serves as the academy invite. It skips the public form and opens the same online academy onboarding used by invited students.
 
-The student first chooses their current academy program—level and track where applicable—from the academy’s offerings, then optionally chooses a compatible group on a second screen. The school level selected during account setup does not replace this academy program choice.
+The student’s school level remains the level set on their account. They choose a current academy track within that level when tracks are offered, then optionally choose a compatible group. They cannot select another level during academy onboarding; if the academy does not offer their account’s level, this flow cannot create their new-year record. This does not change staff authority to maintain academy placement or rewrite existing records.
 
 Completing onboarding creates the new annual record under their existing academy profile, connects their account and grants online academy access without a separately sent invite. Their in-person or online-only participation type and earlier history are preserved.
 
