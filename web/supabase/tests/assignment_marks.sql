@@ -4,7 +4,13 @@
 -- Everything runs in one transaction that is rolled back.
 
 do $$ begin
-  if not has_function_privilege('authenticated', 'public.save_assignment_marks(uuid, uuid, uuid, text, integer, jsonb, uuid, uuid)', 'execute')
+  if not has_function_privilege('authenticated', 'public.correct_assignment_key(uuid, uuid, uuid, uuid, integer, uuid)', 'execute')
+    or not has_function_privilege('authenticated', 'public.exclude_assignment_question(uuid, uuid, uuid, integer, uuid)', 'execute')
+    or has_function_privilege('anon', 'public.correct_assignment_key(uuid, uuid, uuid, uuid, integer, uuid)', 'execute')
+    or has_function_privilege('authenticated', 'edra_private.correct_assignment_scoring(uuid, uuid, uuid, uuid, integer, text, uuid)', 'execute')
+    or has_table_privilege('authenticated', 'public.assignment_corrections', 'insert')
+    or has_table_privilege('authenticated', 'public.assignment_mark_basis_history', 'select')
+    or not has_function_privilege('authenticated', 'public.save_assignment_marks(uuid, uuid, uuid, text, integer, jsonb, uuid, uuid)', 'execute')
     or not has_function_privilege('authenticated', 'public.record_assignment_work(uuid, uuid, uuid, integer, public.assignment_work_status, timestamptz, text)', 'execute')
     or not has_function_privilege('authenticated', 'public.publish_assignment_results(uuid, uuid, jsonb, uuid)', 'execute')
     or has_function_privilege('anon', 'public.save_assignment_marks(uuid, uuid, uuid, text, integer, jsonb, uuid, uuid)', 'execute')
@@ -355,6 +361,99 @@ do $$ begin
   if (pg_temp.mark('s2', pg_temp.pa('6'))->>'outcome') <> 'saved' then raise exception 'Received work must stay markable'; end if;
 end $$;
 
+-- A pre-migration official snapshot keeps its original hash and is still recognized as unchanged.
+reset role;
+insert into public.assignment_marks(assignment_id, annual_student_record_id, part_id, academy_id, kind, score, updated_by)
+select 'a9999999-0000-4000-8000-000000000001', pg_temp.rec('s2'), current_setting('test.part_b')::uuid,
+  'a5555555-5555-4555-8555-555555555555', 'mark', 1, 'a1111111-1111-4111-8111-111111111111'
+on conflict (assignment_id, annual_student_record_id, part_id) do nothing;
+insert into public.assignment_result_publications(academy_id, academic_year_id, assignment_id, annual_student_record_id,
+  revision, total, max_score, work_status, marks, feedback, content_hash, published_by)
+select x.academy_id, a.academic_year_id, a.id, x.annual_student_record_id, 1,
+  (select sum(m.score) from public.assignment_marks m where m.assignment_id = a.id and m.annual_student_record_id = x.annual_student_record_id),
+  a.max_score, x.work_status, '[]'::jsonb, x.feedback,
+  md5(edra_private.assignment_result_content_legacy(a.id,x.annual_student_record_id)::text), 'a1111111-1111-4111-8111-111111111111'
+from public.assignment_recipients x join public.assignments a on a.id = x.assignment_id
+where a.id = 'a9999999-0000-4000-8000-000000000001' and x.annual_student_record_id = pg_temp.rec('s2');
+update public.assignment_recipients set published_revision = 1 where assignment_id = 'a9999999-0000-4000-8000-000000000001' and annual_student_record_id = pg_temp.rec('s2');
+set local role authenticated;
+do $$ declare r jsonb; begin
+  r := public.publish_assignment_results('a5555555-5555-4555-8555-555555555555','a9999999-0000-4000-8000-000000000001',
+    jsonb_build_array(jsonb_build_object('annual_student_record_id',pg_temp.rec('s2'),'expected_version',pg_temp.ver('s2'))),gen_random_uuid());
+  if r->'results'->0->>'outcome' <> 'unchanged' then raise exception 'Legacy snapshot produced a duplicate publication: %', r; end if;
+end $$;
+
+-- Task 3: controlled scoring basis, exact recalculation and preserved official/direct history.
+set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
+do $$ declare a jsonb; p uuid; q1 uuid; q2 uuid; a1 uuid; b1 uuid; a2 uuid; result jsonb; receipt jsonb; again jsonb; old_version integer; revision integer; begin
+  a := public.create_assignment('a5555555-5555-4555-8555-555555555555', 'a5555555-1111-4111-8111-555555555555', 'a9999999-0000-4000-8000-000000000003',
+    pg_temp.draft('{"audience":"level","level_id":"preparatory-3","track_id":null,"group_ids":[]}',
+      '[{"title":"Scoring sheet","kind":"answer_sheet","questions":[{"max_score":"2.5","choices":[{"label":"","is_correct":true},{"label":"","is_correct":false}]},{"max_score":"1.5","choices":[{"label":"","is_correct":true},{"label":"","is_correct":false}]}]}]'));
+  p := (a->'parts'->0->>'id')::uuid; q1 := (a->'parts'->0->'questions'->0->>'id')::uuid; q2 := (a->'parts'->0->'questions'->1->>'id')::uuid;
+  a1 := (a->'parts'->0->'questions'->0->'choices'->0->>'id')::uuid; b1 := (a->'parts'->0->'questions'->0->'choices'->1->>'id')::uuid;
+  a2 := (a->'parts'->0->'questions'->1->'choices'->0->>'id')::uuid;
+  perform set_config('test.correction_question', q1::text, true);
+  perform set_config('test.correction_choice', a1::text, true);
+  result := public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, pg_temp.rec('s1'), null, 0,
+    jsonb_build_object('answers', jsonb_build_array(jsonb_build_object('question_id', q1, 'choice_id', b1), jsonb_build_object('question_id', q2, 'choice_id', a2))), gen_random_uuid());
+  if (result->'recipient'->>'total')::numeric <> 1.5 then raise exception 'Original answer-derived score wrong: %', result; end if;
+  perform public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, pg_temp.rec('s2'), null, 0,
+    jsonb_build_object('marks', jsonb_build_array(jsonb_build_object('part_id', p, 'score', '3.5', 'excused_reason', 'Approved adjustment'))), gen_random_uuid());
+  perform public.publish_assignment_results('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid,
+    (select jsonb_agg(jsonb_build_object('annual_student_record_id', x.annual_student_record_id, 'expected_version', x.version)) from public.assignment_recipients x where x.assignment_id = (a->>'id')::uuid and x.annual_student_record_id in (pg_temp.rec('s1'), pg_temp.rec('s2'))), gen_random_uuid());
+  select version into old_version from public.assignment_recipients where assignment_id = (a->>'id')::uuid and annual_student_record_id = pg_temp.rec('s1');
+  -- Save the exact correction receipt/key for replay, including after a later correction.
+  perform set_config('test.correction_key', gen_random_uuid()::text, true);
+  receipt := public.correct_assignment_key('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, q1, b1, 1, current_setting('test.correction_key')::uuid);
+  again := public.correct_assignment_key('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, q1, b1, 1, current_setting('test.correction_key')::uuid);
+  if not (again->>'replayed')::boolean or (again - 'replayed') <> (receipt - 'replayed') then raise exception 'Correction retry changed its receipt'; end if;
+  result := public.list_assignment_marks('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid);
+  if not exists(select 1 from jsonb_array_elements(result->'items') r where (r->>'annual_student_record_id')::uuid = pg_temp.rec('s1') and (r->>'total')::numeric = 4 and (r->'publication'->>'total')::numeric = 1.5 and (r->'publication'->>'max_score')::numeric = 4 and r->>'publication_state' = 'pending_correction') then raise exception 'Key correction overwrote official history or did not recalculate: %', result; end if;
+  if exists(select 1 from jsonb_array_elements(result->'items') r, jsonb_array_elements(r->'marks') m where (r->>'annual_student_record_id')::uuid = pg_temp.rec('s2') and ((m->>'score')::numeric <> 3.5 or (m->>'requires_remark')::boolean)) then raise exception 'Key correction fabricated changes to a direct total'; end if;
+  result := public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, pg_temp.rec('s1'), null, old_version, '{"feedback":"stale"}', gen_random_uuid());
+  if result->>'outcome' <> 'conflict' then raise exception 'Old-basis marks applied'; end if;
+  perform pg_temp.expect_error(format('select public.correct_assignment_key(%L,%L,%L,%L,1,gen_random_uuid())', 'a5555555-5555-4555-8555-555555555555', a->>'id', q1, a1), 'stale_basis');
+  perform public.publish_assignment_results('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid,
+    (select jsonb_agg(jsonb_build_object('annual_student_record_id', x.annual_student_record_id, 'expected_version', x.version)) from public.assignment_recipients x where x.assignment_id = (a->>'id')::uuid and x.annual_student_record_id in (pg_temp.rec('s1'), pg_temp.rec('s2'))), gen_random_uuid());
+  perform public.exclude_assignment_question('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, q2, 2, gen_random_uuid());
+  result := public.list_assignment_marks('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid);
+  if not exists(select 1 from jsonb_array_elements(result->'items') r where (r->>'annual_student_record_id')::uuid = pg_temp.rec('s1') and (r->>'total')::numeric = 2.5 and r->>'marking' = 'complete' and (r->'publication'->>'total')::numeric = 4 and (r->'publication'->>'max_score')::numeric = 4) then raise exception 'Exclusion did not privately recalculate exact answer-derived scores: %', result; end if;
+  if not exists(select 1 from jsonb_array_elements(result->'items') r, jsonb_array_elements(r->'marks') m where (r->>'annual_student_record_id')::uuid = pg_temp.rec('s2') and (m->>'score')::numeric = 3.5 and m->>'kind' = 'excused' and m->>'reason' = 'Approved adjustment' and (m->>'requires_remark')::boolean and r->>'marking' <> 'complete') then raise exception 'Direct/excused value was clamped, lost provenance or marked complete: %', result; end if;
+  result := public.publish_assignment_results('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid,
+    (select jsonb_agg(jsonb_build_object('annual_student_record_id', x.annual_student_record_id, 'expected_version', x.version)) from public.assignment_recipients x where x.assignment_id = (a->>'id')::uuid and x.annual_student_record_id in (pg_temp.rec('s1'), pg_temp.rec('s2'))), gen_random_uuid());
+  if result->>'outcome' <> 'rejected' or result->'failures'->0->>'reason' <> 'incomplete' then raise exception 'Incomplete re-mark was announced: %', result; end if;
+  select version into revision from public.assignment_recipients where assignment_id = (a->>'id')::uuid and annual_student_record_id = pg_temp.rec('s2');
+  result := public.save_assignment_marks('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, pg_temp.rec('s2'), null, revision,
+    jsonb_build_object('marks', jsonb_build_array(jsonb_build_object('part_id', p, 'score', '2.00', 'excused_reason', 'Approved adjustment'))), gen_random_uuid());
+  if result->'recipient'->>'marking' <> 'complete' or (result->'recipient'->'marks'->0->>'requires_remark')::boolean then raise exception 'Deliberate re-mark did not complete: %', result; end if;
+  perform public.publish_assignment_results('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid,
+    (select jsonb_agg(jsonb_build_object('annual_student_record_id', x.annual_student_record_id, 'expected_version', x.version)) from public.assignment_recipients x where x.assignment_id = (a->>'id')::uuid and x.annual_student_record_id in (pg_temp.rec('s1'), pg_temp.rec('s2'))), gen_random_uuid());
+  again := public.correct_assignment_key('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, q1, b1, 1, current_setting('test.correction_key')::uuid);
+  if (again - 'replayed') <> (receipt - 'replayed') then raise exception 'Later revision changed old receipt'; end if;
+  perform pg_temp.expect_error(format('select public.exclude_assignment_question(%L,%L,%L,3,gen_random_uuid())', 'a5555555-5555-4555-8555-555555555555', a->>'id', q2), 'question_excluded');
+  -- Unlike quizzes/exams, assignments do not acquire a new last-scored-question restriction.
+  perform public.exclude_assignment_question('a5555555-5555-4555-8555-555555555555', (a->>'id')::uuid, q1, 3, gen_random_uuid());
+end $$;
+-- Manager authority is checked independently of UI visibility and even for receipt replays.
+set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
+select pg_temp.expect_error($s$ select public.correct_assignment_key('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000003', current_setting('test.correction_question')::uuid, current_setting('test.correction_choice')::uuid, 4, gen_random_uuid()) $s$, 'forbidden');
+set local request.jwt.claim.sub = 'b1111111-1111-4111-8111-111111111111';
+select pg_temp.expect_error($s$ select public.exclude_assignment_question('b6666666-6666-4666-8666-666666666666', 'a9999999-0000-4000-8000-000000000003', current_setting('test.correction_question')::uuid, 4, gen_random_uuid()) $s$, 'not_found');
+reset role;
+update public.academy_memberships set suspended_at = now() where academy_id = 'a5555555-5555-4555-8555-555555555555' and user_id = 'a2222222-2222-4222-8222-222222222222';
+set local role authenticated;
+set local request.jwt.claim.sub = 'a2222222-2222-4222-8222-222222222222';
+select pg_temp.expect_error($s$ select public.exclude_assignment_question('a5555555-5555-4555-8555-555555555555','a9999999-0000-4000-8000-000000000003',current_setting('test.correction_question')::uuid,4,gen_random_uuid()) $s$,'forbidden');
+reset role;
+do $$ begin
+  if not exists(select 1 from public.assignment_mark_basis_history h where h.assignment_id = 'a9999999-0000-4000-8000-000000000003' and h.revision = 3 and h.mark->>'kind' = 'excused' and (h.mark->>'score')::numeric = 3.5) then raise exception 'Prior private mark missing from immutable history'; end if;
+  if exists(select 1 from public.assignment_result_publications p where p.assignment_id = 'a9999999-0000-4000-8000-000000000003' and p.revision = 1 and (p.max_score <> 4 or p.scoring_revision <> 1)) then raise exception 'Old official basis was overwritten'; end if;
+end $$;
+select pg_temp.expect_error($s$ update public.assignment_corrections set operation = 'key' $s$, 'validation');
+select pg_temp.expect_error($s$ delete from public.assignment_mark_basis_history $s$, 'validation');
+set local role authenticated;
+set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
+
 -- Direct writes are denied.
 select pg_temp.expect_error($s$ insert into public.assignment_marks (assignment_id, annual_student_record_id, part_id, academy_id, kind, score, updated_by)
   values ('a9999999-0000-4000-8000-000000000001', pg_temp.rec('s1'), current_setting('test.part_a')::uuid, 'a5555555-5555-4555-8555-555555555555', 'mark', 1, 'a3333333-3333-4333-8333-333333333333') $s$, '%permission denied%');
@@ -368,5 +467,7 @@ set local request.jwt.claim.sub = 'a3333333-3333-4333-8333-333333333333';
 select pg_temp.expect_error($s$ select pg_temp.mark('s1', pg_temp.pa('1')) $s$, 'year_unavailable');
 select pg_temp.expect_error(format($s$ select public.publish_assignment_results('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', '[{"annual_student_record_id":"%s","expected_version":1}]', gen_random_uuid()) $s$, pg_temp.rec('s1')), 'year_unavailable');
 
+set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
+select pg_temp.expect_error($s$ select public.exclude_assignment_question('a5555555-5555-4555-8555-555555555555','a9999999-0000-4000-8000-000000000003',current_setting('test.correction_question')::uuid,4,gen_random_uuid()) $s$,'year_unavailable');
 rollback;
 select 'assignment marks checks passed';
