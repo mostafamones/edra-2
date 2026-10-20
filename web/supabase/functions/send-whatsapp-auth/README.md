@@ -23,3 +23,11 @@ WHATSAPP_DEVELOPMENT_MODE=true redirects to WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE
 When development routing is off, EDRA_AUTH_DEV_LOG_PHONE plus a short EDRA_AUTH_DEV_LOG_UNTIL can enable a one-number log-only path. Remove those overrides and disable development mode for real users. Never log production OTPs or expose hook/provider secrets to clients.
 
 Use [deployment](../../../docs/technical/deployment.md) for the release sequence and controlled-phone verification. No sender configuration, function deployment or delivery was verified by this documentation update.
+
+## Testing
+
+From `web/`, with Deno 2 on PATH, run `npm run test:edge` for static checks and `npm run test:edge:runtime` for all four isolated entrypoint suites, including this function's `index_test.ts`. Each uses its own dependency map and frozen lockfile; runtime tests are typechecked.
+
+The Deno suite checks the real signed-hook entrypoint: environment wiring, configured/default Graph version, sms.phone routing, signature rejection, missing settings, development recipient/template selection and captured OTP logging. The existing 13-case shared-handler Vitest suite still runs under `npm test`.
+
+Tests capture `Deno.serve` without opening a listener, clear/restore named configuration, use only dummy values and explicitly intercept fetch; unexpected calls fail. Runtime network is denied, with no Supabase instance, real credentials, messages or paid services. Dependency caching may download packages. Neither static checks, Node unit tests nor these Deno tests establish hosted gateway behavior or actual delivery. See [verification](../../../docs/engineering.md#edge-function-checks) for the CI command and evidence boundaries.

@@ -35,6 +35,24 @@ test("login renders and validates without an auth request", async ({ page }) => 
   await expect(page).toHaveURL("http://app.lvh.me:3100/auth/login");
 });
 
+test("hidden-document animation skips do not interrupt the page", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/auth/login");
+  await expectLoginForm(page);
+  await page.evaluate(() => {
+    for (const message of [
+      "Transition was aborted because of invalid state. Document hidden",
+      "Skipped ViewTransition due to document being hidden",
+    ]) {
+      window.reportError(new DOMException(message, "InvalidStateError"));
+    }
+  });
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByText("Phone number is required", { exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("signed-out staff and student paths preserve their return destination", async ({ page }) => {
   for (const { origin, path } of [
     { origin: "http://app.lvh.me:3100", path: "/" },

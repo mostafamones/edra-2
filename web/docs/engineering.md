@@ -22,7 +22,7 @@ Application source uses Tabler icons only; `lucide-react` and `react-icons` are 
 
 ## Verification
 
-Use the applicable web scripts: npm run lint, npm run typecheck, npm run test, npm run build and npm run test:edge. Run required checks appropriate to the changed behavior; do not mistake script presence for a pass.
+Use the applicable web scripts: npm run lint, npm run typecheck, npm run test, npm run build, npm run test:edge and npm run test:edge:runtime. Run required checks appropriate to the changed behavior; do not mistake script presence for a pass.
 
 `npm run typecheck` generates Next.js route types before running TypeScript, so a clean CI checkout can resolve `PageProps` and `LayoutProps`. `npm run test:edge` checks each Edge Function with its own `deno.json` dependency map and frozen `deno.lock`; it does not rely on the web application's installed npm dependencies. When changing a function's dependencies, update its lockfile with Deno before running the frozen check.
 
@@ -31,6 +31,24 @@ Verify affected database behavior against an authorized cloud development/isolat
 During implementation, changes affecting database behavior, authorization, tenant isolation or concurrency require relevant cloud database verification; use selected suites where sufficient. Documentation-only and presentation-only changes do not require manual database testing. The full database suite remains an automated CI check on every PR and push to `main`, run against a disposable database built from that checkout (see [CI database](#ci-database)). It does not replace the selected cloud verification above or hosted integration and release checks. Do not manually repeat a passing CI run unless subsequent changes or unresolved concerns justify it.
 
 Report source, test, cloud and deployed-flow evidence separately. Documentation edits do not establish runtime readiness.
+
+### Edge Function checks
+
+From `web/`, with Deno 2 on PATH:
+
+```sh
+npm run test:edge          # Static entrypoint checks
+npm run test:edge:runtime  # Deno entrypoint/boundary behavior
+npm test                  # Node unit tests, including _shared/whatsapp-auth.test.ts
+```
+
+The runtime command explicitly runs `send-whatsapp-auth`, `account-contact`, `account-password` and `student-onboarding` in separate Deno processes, each with its existing dependency map and frozen lockfile. The co-located `index_test.ts` suites capture `Deno.serve` before importing the real entrypoint once, then call its handler directly. No listening ports, Supabase instance, credentials, provider requests or paid services are needed. Dependency downloads/cache population may need network; runtime execution denies network, allows only each function's named configuration variables, and grants no file or subprocess access. Tests clear those variables before using dummy values, restore process state, intercept provider fetch and suppress captured development OTP logs. Unexpected fetches fail even when production catches delivery errors. Operation/resource sanitizers remain enabled.
+
+The signed WhatsApp suite verifies Deno environment wiring, signature rejection, provider routing/default version, development mode normalization/logging and existing HTTP/JSON error contracts. The other three suites cover only preflight/CORS, unsupported methods, missing bearer and missing required configuration before network access. These do not establish JWT authenticity, RPC/RLS behavior, password changes, challenge persistence, hosted gateway behavior or actual delivery. The existing 13-case WhatsApp Vitest suite remains in `npm test`; only Deno `*_test.ts` files are excluded from Node discovery. The web TypeScript program excludes those files and Deno-only helpers. Deno still typechecks its tests and entrypoints.
+
+The independent `CI / edge` job runs static checks followed by the same `scripts/edge-test.sh` runtime command on PRs and pushes to `main`, with Deno 2 and a ten-minute timeout. Assertion failures fail the job. Local implementation verification on 2026-10-20 used Deno 2.9.6; this is not evidence of a hosted CI run or Supabase's deployed runtime version. Hosted delivery remains a separate controlled release check. Test tooling has no paid-service requirement; GitHub Actions minutes remain quota-limited.
+
+References: [Supabase function testing](https://supabase.com/docs/guides/functions/unit-test), [Deno test command](https://docs.deno.com/runtime/reference/cli/test/).
 
 ### Browser smoke tests
 

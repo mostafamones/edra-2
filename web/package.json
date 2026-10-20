@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:db": "bash scripts/db-test.sh",
     "test:edge": "bash scripts/edge-check.sh",
+    "test:edge:runtime": "bash scripts/edge-test.sh",
     "audit:auth": "node --env-file=.env.local scripts/audit-auth-users.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"

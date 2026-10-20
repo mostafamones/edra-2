@@ -26,3 +26,11 @@ npx supabase functions deploy account-password --project-ref <project-ref> --use
 ## Limits
 
 The function guarantees the Edra settings boundary only. Auth's own `PUT /auth/v1/user` remains callable directly with a valid password session, because the hosted project has `security_update_password_require_reauthentication` off and the PostgREST hook does not intercept Auth. That is the same capability a signed-in session already had before this feature.
+
+## Testing
+
+From `web/`, with Deno 2 on PATH, run `npm run test:edge` for static checks and `npm run test:edge:runtime` for all four isolated entrypoint suites, including this function's `index_test.ts`. Each uses its own dependency map and frozen lockfile; runtime tests are typechecked.
+
+The Deno suite invokes this real entrypoint directly and covers OPTIONS/CORS, unsupported methods, missing bearer and missing required environment configuration before any network call. It does not verify JWT authenticity, database RPCs/RLS, password changes or challenge persistence.
+
+Tests capture `Deno.serve` without opening a listener, clear/restore named configuration, use only dummy values and explicitly intercept fetch; unexpected calls fail. Runtime network is denied, with no Supabase instance, real credentials, messages or paid services. Dependency caching may download packages. Neither static checks, Node unit tests nor these Deno tests establish hosted gateway behavior or actual delivery. See [verification](../../../docs/engineering.md#edge-function-checks) for the CI command and evidence boundaries.
