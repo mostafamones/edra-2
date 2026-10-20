@@ -29,6 +29,8 @@ EDRA-149/150 and replacement-attendance work must consume the stable session/uni
 
 ## Continuing on another computer
 
+Handoff verified on 2026-10-20 after merging main through `55579a6`: TypeScript passes; 613 automated tests pass with one opt-in skip; lint has zero errors and eight existing warnings. Both merged database shell scripts pass syntax checks. The production build and cloud rollback evidence above predate this main integration; the five parallel database races still need CI evidence. Work is committed and pushed on `zohdy/session-content`.
+
 Fetch and check out `zohdy/session-content`, then read root/web AGENTS.md, `web/docs/README.md`, this reference and the affected session/attendance module READMEs. Use `zohdy/` for new branch names. Refresh main and incorporate its latest commits before new implementation; preserve any local work first. The owner prefers autonomous implementation of this agreed scope and concise updates.
 
 Install the lockfile dependencies inside `web/` with `npm ci`. Restore the ignored `web/.env.local` through the team's secure secret-sharing method, using `.env.example` as the variable inventory; credentials are not carried by Git. Developers sharing the same cloud project need the same staff invitation encryption key to recopy existing links. Keep Mux/signing/service-role keys server-only. Local development uses the existing cloud project and `lvh.me` origins; do not start a local Supabase/Docker stack. Follow `web/README.md` and the current deployment guide rather than copying Windows-specific paths from this chat.
