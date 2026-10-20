@@ -197,9 +197,15 @@ x-edra-student-operations:
     - name: start_my_exam(academy_id, exam_id)
       returns: StudentExamState
       notes: Academy-scoped start/resume. not_found under the wrong academy. In one transaction it settles due work, locks the academic year (share) and the exam row (for update, serializing with content attachment), denies attached exams (content_unavailable) and calls the existing engine (start_exam_attempt_for). Repeats and concurrent calls return the same single attempt with its original start, deadline, answers and departure count. Errors not_open, not_eligible, source_conflict, student_link_unavailable, throttled.
+    - name: get_my_exam_review(academy_id, exam_id)
+      returns: StudentExamReview
+      notes: EDRA-235 read-only review for the exam detail page. Same authority and discoverability as get_my_exam_overview (academy id locates; wrong academy/year, guessed, attached or undiscoverable exams are not_found; closed years resolve no record). Settles due work after authorization and returns normally; never starts an attempt, claims/renews an editor, moves a deadline or grants a retake, and needs no editor token. Before live solution qualification (edra_private.exam_solutions_available) only a status reason is returned. Answers come only from the accepted submission's frozen snapshot; the losing source is never shown. No maxima, marks, items, feedback, revisions or totals (the official total stays in the overview).
+    - name: authorize_my_exam_review_images(academy_id, exam_id, image_ids)
+      returns: "{status: ok, academy_id, image_ids} | {status: unavailable}"
+      notes: Bounded 1..20 ids, same authority as get_my_exam_review, live solution qualification, no editor token. Only ids referenced by the review document (prompts and choices of every question including excluded ones, model answers and solution notes) are returned. The cookie signStudentExamReviewImages action signs those private paths server-side for 60 seconds; quota bucket op:exam_image. Active answering and staff image paths keep their own guards.
     - name: get_my_exam(exam_id)
       returns: StudentExamState
-      notes: Settles due work first. Legacy unfenced projection returns material only once solutions qualify, never during active answering.
+      notes: Settles due work first. Legacy unfenced projection returns material only once solutions qualify, never during active answering. Since EDRA-235 the qualified projection omits question max_score and departure details, and attempt.answers are the accepted online submission's frozen answers (empty when paper work was accepted).
     - name: start_exam_attempt(exam_id)
       returns: StudentExamState
       notes: Creates the single attempt (deadline_at = started_at + time limit) or resumes it with the same started_at, deadline_at, answers and departure_count; never a retake. Takes the same serialized standalone guard as start_my_exam. Errors not_open (outside opens_at..closes_at, not ready or archived), not_eligible, content_unavailable.
@@ -243,7 +249,7 @@ x-edra-student-operations:
     - save_exam_answers(exam_id, expected_version, answers, key)
     - submit_exam_attempt(exam_id, key)
     - record_exam_departure(exam_id, event_id, question_id)
-  compatibility: Authenticated execution of the unfenced mutation signatures is revoked. Private record-based staff and worker engines remain available. Legacy get_my_exam/start_exam_attempt/start_my_exam expose question material, saved answers and departures only after solution qualification; active clients must use fenced commands.
+  compatibility: Authenticated execution of the unfenced mutation signatures is revoked. Private record-based staff and worker engines remain available. Legacy get_my_exam/start_exam_attempt/start_my_exam expose question material and the accepted online answers only after solution qualification (no maxima or departures); active clients must use fenced commands and review clients get_my_exam_review.
 components:
   securitySchemes:
     staffToken:
@@ -435,6 +441,56 @@ components:
             submitted_at: { type: string }
             processed_at: { type: string }
         result: { $ref: "#/components/schemas/StudentExamResult" }
+    StudentExamReview:
+      description: |
+        Read-only review (EDRA-235). `unavailable.reason` is not_submitted (no accepted submission),
+        awaiting_closure (before actual closure) or awaiting_result (accepted paper work closed without
+        an announced result). `available` is returned only once solutions qualify: online accepted work at
+        actual closure; paper work at actual closure plus an announced result, in either order.
+      oneOf:
+        - type: object
+          required: [status, account_id, server_now, reason]
+          properties:
+            status: { const: unavailable }
+            account_id: { type: string, format: uuid }
+            server_now: { type: string, format: date-time }
+            reason: { type: string, enum: [not_submitted, awaiting_closure, awaiting_result] }
+        - type: object
+          required: [status, account_id, server_now, source, notes, parts]
+          properties:
+            status: { const: available }
+            account_id: { type: string, format: uuid }
+            server_now: { type: string, format: date-time }
+            source: { type: string, enum: [online, physical] }
+            notes: { type: string, description: Released solution notes (may contain image tokens). }
+            parts:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  title: { type: string }
+                  instructions: { type: string }
+                  kind: { type: string, enum: [question_sheet, written_work] }
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        number: { type: integer, description: Original exam-wide number; exclusions never renumber. }
+                        prompt: { type: string }
+                        excluded: { type: boolean }
+                        choices: { type: array, items: { type: object, properties: { id: { type: string, format: uuid }, label: { type: string } } } }
+                        answer:
+                          description: Frozen in the accepted submission. paper_work is untranscribed paper Written Work, not a blank response.
+                          oneOf:
+                            - { type: object, properties: { state: { const: choice }, choice_id: { type: string, format: uuid } } }
+                            - { type: object, properties: { state: { const: text }, text: { type: string } } }
+                            - { type: object, properties: { state: { const: blank } } }
+                            - { type: object, properties: { state: { const: paper_work } } }
+                        correct_choice_id: { type: [string, "null"], format: uuid, description: The current released key. }
+                        model_answer: { type: string }
     StudentExamState:
       type: object
       description: |

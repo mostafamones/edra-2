@@ -5,11 +5,11 @@ import {
   claimMyExamEditor, enterMyExam, getMyExamAnswering, recordMyExamDeparture, releaseMyExamEditor, renewMyExamEditor, saveMyExamAnswers,
   submitMyExam,
 } from "./data";
-import { signMyExamImages } from "./images";
+import { signMyExamImages, signMyExamReviewImages } from "./images";
 import type {
   StudentExamAnswerPatch, StudentExamClaimOutcome, StudentExamCommandResult, StudentExamDepartureOutcome, StudentExamEntry,
-  StudentExamHeartbeatOutcome, StudentExamImagesOutcome, StudentExamReadOutcome, StudentExamReleaseOutcome, StudentExamSaveOutcome,
-  StudentExamSubmitOutcome,
+  StudentExamHeartbeatOutcome, StudentExamImagesOutcome, StudentExamReadOutcome, StudentExamReleaseOutcome, StudentExamReviewImagesOutcome,
+  StudentExamSaveOutcome, StudentExamSubmitOutcome,
 } from "./types";
 
 /**
@@ -81,4 +81,10 @@ export async function recordStudentExamDeparture(
 export async function signStudentExamImages(value: Editor & { imageIds: string[] }): Promise<StudentExamCommandResult<StudentExamImagesOutcome>> {
   if (!isObject(value)) return studentFailure("validation");
   return signMyExamImages({ academyId: value.academyId, examId: value.examId, token: value.token, imageIds: value.imageIds });
+}
+
+/** Read-only review images (EDRA-235): no editor token; the database checks qualification. */
+export async function signStudentExamReviewImages(value: Exam & { imageIds: string[] }): Promise<StudentExamCommandResult<StudentExamReviewImagesOutcome>> {
+  if (!isObject(value)) return studentFailure("validation");
+  return signMyExamReviewImages({ academyId: value.academyId, examId: value.examId, imageIds: value.imageIds });
 }

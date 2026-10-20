@@ -5936,6 +5936,10 @@ export type Database = {
         Args: { p_fingerprint: string; p_key: string; p_operation: string }
         Returns: Json
       }
+      authorize_my_exam_review_images: {
+        Args: { p_academy_id: string; p_exam_id: string; p_image_ids: string[] }
+        Returns: Json
+      }
       authorize_my_exam_images: {
         Args: {
           p_academy_id: string
@@ -6401,6 +6405,10 @@ export type Database = {
         Returns: Json
       }
       get_my_exam_overview: {
+        Args: { p_academy_id: string; p_exam_id: string }
+        Returns: Json
+      }
+      get_my_exam_review: {
         Args: { p_academy_id: string; p_exam_id: string }
         Returns: Json
       }
