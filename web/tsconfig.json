@@ -32,5 +32,10 @@
     ".next-e2e/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "supabase/functions/*/index.ts"]
+  "exclude": [
+    "node_modules",
+    "supabase/functions/*/index.ts",
+    "supabase/functions/**/*_test.ts",
+    "supabase/functions/_shared/testing/**"
+  ]
 }

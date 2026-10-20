@@ -78,9 +78,13 @@ jobs:
 
   edge:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: bash scripts/edge-check.sh
+      - name: Edge static checks
+        run: bash scripts/edge-check.sh
+      - name: Edge Deno runtime tests
+        run: bash scripts/edge-test.sh
