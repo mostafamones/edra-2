@@ -3,7 +3,7 @@ import { useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconBuilding, IconSchool as GraduationCap } from "@tabler/icons-react";
+import { IconBuilding, IconFileCertificate, IconSchool as GraduationCap } from "@tabler/icons-react";
 
 import {
   Sidebar,
@@ -16,8 +16,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+
+import { studentAcademyPath } from "@/lib/routing";
 
 import { STUDENT_GROUPS } from "../manifest";
 import { AccountMenu } from "./account-menu";
@@ -45,16 +50,27 @@ export function StudentSidebar({ academies = [] }: { academies?: StudentSidebarA
             <SidebarGroupLabel>Academies</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {academies.map((academy) => (
-                  <SidebarMenuItem key={academy.slug}>
-                    <SidebarMenuButton asChild tooltip={academy.name} isActive={pathname === `/${academy.slug}`}>
-                      <Link href={`/${academy.slug}`}>
-                        <IconBuilding aria-hidden="true" />
-                        <span>{academy.name}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {academies.map((academy) => {
+                  const home = studentAcademyPath(academy.slug);
+                  const exams = studentAcademyPath(academy.slug, "exams");
+                  return (
+                    <SidebarMenuItem key={academy.slug}>
+                      <SidebarMenuButton asChild tooltip={academy.name} isActive={pathname === home || pathname.startsWith(`${home}/`)}>
+                        <Link href={home}>
+                          <IconBuilding aria-hidden="true" />
+                          <span>{academy.name}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild isActive={pathname === exams || pathname.startsWith(`${exams}/`)}>
+                            <Link href={exams}><IconFileCertificate aria-hidden="true" /><span>Exams</span></Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
