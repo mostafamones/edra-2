@@ -309,8 +309,9 @@ begin
   doc := public.get_my_exam(pg_temp.id('main'));
   perform pg_temp.check(jsonb_array_length(doc->'parts') = 2 and doc->'attempt'->'answers' = '[]'::jsonb
     and doc->'attempt'->'departures' = '[]'::jsonb, 'legacy qualified projection drops the losing draft');
-  perform pg_temp.check(not jsonb_path_exists(doc, '$.**.max_score') and doc::text not like '%LOSING-%'
-    and not (doc->'result' ? 'items'), 'legacy projection allowlist');
+  -- Question maxima are dropped; the official total-only result keeps its own max_score.
+  perform pg_temp.check(not jsonb_path_exists(doc, '$.parts[*].questions[*].max_score') and doc::text not like '%LOSING-%'
+    and doc->'result'->>'total' is not null and not (doc->'result' ? 'items'), 'legacy projection allowlist');
 
   -- Paper work closed but not yet announced: locked.
   doc := pg_temp.review('s4', 'main');
@@ -326,7 +327,7 @@ begin
   -- Legacy online projection: frozen accepted answers.
   perform pg_temp.act('s1');
   doc := public.get_my_exam(pg_temp.id('main'));
-  perform pg_temp.check(jsonb_array_length(doc->'attempt'->'answers') = 2 and not jsonb_path_exists(doc, '$.**.max_score'), 'legacy online answers');
+  perform pg_temp.check(jsonb_array_length(doc->'attempt'->'answers') = 2 and not jsonb_path_exists(doc, '$.parts[*].questions[*].max_score'), 'legacy online answers');
 end $$;
 reset role;
 
