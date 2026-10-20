@@ -4529,6 +4529,165 @@ export type Database = {
           },
         ]
       }
+      session_content_items: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          content_revision: number
+          position: number
+          revision: number
+          session_id: string
+          title: string
+          unit_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          content_revision: number
+          position: number
+          revision: number
+          session_id: string
+          title: string
+          unit_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          content_revision?: number
+          position?: number
+          revision?: number
+          session_id?: string
+          title?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_content_items_academy_id_academic_year_id_session__fkey"
+            columns: [
+              "academy_id",
+              "academic_year_id",
+              "session_id",
+              "revision",
+            ]
+            isOneToOne: false
+            referencedRelation: "session_content_sets"
+            referencedColumns: [
+              "academy_id",
+              "academic_year_id",
+              "session_id",
+              "revision",
+            ]
+          },
+          {
+            foreignKeyName: "session_content_items_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "session_content_items_unit_id_content_revision_fkey"
+            columns: ["unit_id", "content_revision"]
+            isOneToOne: false
+            referencedRelation: "content_revisions"
+            referencedColumns: ["unit_id", "revision"]
+          },
+        ]
+      }
+      session_content_requests: {
+        Row: {
+          academy_id: string
+          actor_id: string
+          fingerprint: string
+          request_key: string
+          response: Json
+          session_id: string
+        }
+        Insert: {
+          academy_id: string
+          actor_id: string
+          fingerprint: string
+          request_key: string
+          response: Json
+          session_id: string
+        }
+        Update: {
+          academy_id?: string
+          actor_id?: string
+          fingerprint?: string
+          request_key?: string
+          response?: Json
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_content_requests_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_content_requests_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_content_requests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_content_sets: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          revision: number
+          saved_at: string
+          saved_by: string
+          saved_by_name: string | null
+          session_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          revision: number
+          saved_at?: string
+          saved_by: string
+          saved_by_name?: string | null
+          session_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          revision?: number
+          saved_at?: string
+          saved_by?: string
+          saved_by_name?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_content_sets_academy_id_academic_year_id_session_i_fkey"
+            columns: ["academy_id", "academic_year_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "session_content_sets_saved_by_fkey"
+            columns: ["saved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_roster_entries: {
         Row: {
           academic_year_id: string
@@ -5555,6 +5714,71 @@ export type Database = {
           },
         ]
       }
+      session_taught_content: {
+        Row: {
+          academic_year_id: string | null
+          academy_id: string | null
+          content_revision: number | null
+          position: number | null
+          revision: number | null
+          session_id: string | null
+          title: string | null
+          unit_id: string | null
+        }
+        Insert: {
+          academic_year_id?: string | null
+          academy_id?: string | null
+          content_revision?: number | null
+          position?: number | null
+          revision?: number | null
+          session_id?: string | null
+          title?: string | null
+          unit_id?: string | null
+        }
+        Update: {
+          academic_year_id?: string | null
+          academy_id?: string | null
+          content_revision?: number | null
+          position?: number | null
+          revision?: number | null
+          session_id?: string | null
+          title?: string | null
+          unit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_content_items_academy_id_academic_year_id_session__fkey"
+            columns: [
+              "academy_id",
+              "academic_year_id",
+              "session_id",
+              "revision",
+            ]
+            isOneToOne: false
+            referencedRelation: "session_content_sets"
+            referencedColumns: [
+              "academy_id",
+              "academic_year_id",
+              "session_id",
+              "revision",
+            ]
+          },
+          {
+            foreignKeyName: "session_content_items_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "session_content_items_unit_id_content_revision_fkey"
+            columns: ["unit_id", "content_revision"]
+            isOneToOne: false
+            referencedRelation: "content_revisions"
+            referencedColumns: ["unit_id", "revision"]
+          },
+        ]
+      }
     }
     Functions: {
       academy_role_for: {
@@ -6058,6 +6282,10 @@ export type Database = {
         Returns: Json
       }
       get_session: {
+        Args: { p_academy_id: string; p_session_id: string }
+        Returns: Json
+      }
+      get_session_content: {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: Json
       }
@@ -6583,6 +6811,16 @@ export type Database = {
         }
         Returns: Json
       }
+      save_session_content: {
+        Args: {
+          p_academy_id: string
+          p_expected_revision: number
+          p_items: Json
+          p_key: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       save_student_code_settings: {
         Args: {
           p_academy_id: string
@@ -6601,6 +6839,19 @@ export type Database = {
       session_auto_end_at: {
         Args: { p_now: string; p_schedule_id: string }
         Returns: string
+      }
+      session_content_options: {
+        Args: {
+          p_academy_id: string
+          p_limit?: number
+          p_offset?: number
+          p_session_id: string
+        }
+        Returns: {
+          revision: number
+          title: string
+          unitId: string
+        }[]
       }
       set_my_avatar: {
         Args: { p_expected: string; p_path: string }

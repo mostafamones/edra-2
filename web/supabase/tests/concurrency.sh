@@ -681,6 +681,62 @@ grep -qi deadlock "$OUT/33a" "$OUT/33b" && fail "preparation and the first physi
 psqlx -tA -c "select structure_locked_at is not null and max_score = 3 from public.exams where id = '$EXAM2'" | grep -qx t \
   || fail "the confirmation did not lock the saved structure"
 
+# 34-38. Session-content changes serialize with attendance finalization, retries, archival and source
+# publication changes. Fixtures have no students and no provider assets; these are lock-contract tests.
+CONTENT_PROGRAM="$(uuid)"
+CONTENT_UNIT="$(uuid)"
+CONTENT_SCHEDULE="$(uuid)"
+CS1="$(uuid)"; CS2="$(uuid)"; CS3="$(uuid)"; CS4="$(uuid)"; CS5="$(uuid)"
+CONTENT_KEY="$(uuid)"
+psqlx >/dev/null <<SQL
+begin;
+insert into public.content_programs(id,academy_id,academic_year_id,level_id) values('$CONTENT_PROGRAM','$ACADEMY','$YEAR','secondary-1');
+insert into public.content_units(id,academy_id,program_id,created_by,state,published_revision,published_version,draft)
+  values('$CONTENT_UNIT','$ACADEMY','$CONTENT_PROGRAM','$ADMIN','published',1,1,'{"title":"Race taught unit","description":"","items":[]}');
+insert into public.content_revisions(unit_id,academy_id,revision,document,published_by)
+  values('$CONTENT_UNIT','$ACADEMY',1,'{"title":"Race taught unit","description":"","items":[]}','$ADMIN');
+insert into public.schedules(id,academy_id,academic_year_id,title,kind,audience,level_id,mandatory,created_by)
+  values('$CONTENT_SCHEDULE','$ACADEMY','$YEAR','Taught races','one_off','level','secondary-1',false,'$ADMIN');
+insert into public.schedule_sessions(schedule_id,academy_id,academic_year_id,occurs_on,starts_at,ends_at)
+  values('$CONTENT_SCHEDULE','$ACADEMY','$YEAR','2030-10-01','10:00','11:00');
+insert into public.sessions(id,academy_id,academic_year_id,schedule_id,started_by,start_key,auto_end_at,schedule_title,schedule_kind,audience,level_id,mandatory,state,ended_at,ended_by,end_reason)
+  select id,'$ACADEMY','$YEAR','$CONTENT_SCHEDULE','$ADMIN',gen_random_uuid(),now()+interval '4 hours','Taught races','one_off','level','secondary-1',false,'ended',now(),'$ADMIN','manual'
+  from unnest(array['$CS1'::uuid,'$CS2'::uuid,'$CS3'::uuid,'$CS4'::uuid,'$CS5'::uuid]) id;
+commit;
+SQL
+content_items="[{\"unitId\":\"$CONTENT_UNIT\",\"revision\":1}]"
+hold 34a 34b "$as_admin select public.save_session_content('$ACADEMY','$CS1',0,'$content_items',gen_random_uuid());"
+start 34b "$as_admin select public.publish_attendance('$ACADEMY','$CS1',0,gen_random_uuid());"
+wait
+expect_ok 34a "the taught-content save holding the session failed"
+expect_rejected 34b "finalization accepted an attendance review preceding the taught-content save" publication_stale
+
+hold 35a 35b "$as_admin select public.publish_attendance('$ACADEMY','$CS2',0,gen_random_uuid());"
+start 35b "$as_admin select public.save_session_content('$ACADEMY','$CS2',0,'$content_items',gen_random_uuid());"
+wait
+expect_ok 35a "the finalization holding the session failed"
+expect_rejected 35b "a content save crossed first attendance finalization" content_finalized
+
+hold 36a 36b "$as_admin select public.save_session_content('$ACADEMY','$CS3',0,'$content_items','$CONTENT_KEY');"
+start 36b "$as_admin select public.save_session_content('$ACADEMY','$CS3',0,'$content_items','$CONTENT_KEY');"
+wait
+expect_ok 36a "the original content request failed"
+expect_ok 36b "the concurrent retry failed"
+grep -q '"replayed": true' "$OUT/36b" || fail "concurrent content retry did not replay its acknowledgment"
+psqlx -tA -c "select count(*) from public.session_content_sets where session_id='$CS3'" | grep -qx 1 || fail "retry duplicated taught history"
+
+hold 37a 37b "$as_admin select public.archive_session('$ACADEMY','$CS4',1,gen_random_uuid(),null);"
+start 37b "$as_admin select public.save_session_content('$ACADEMY','$CS4',0,'$content_items',gen_random_uuid());"
+wait
+expect_ok 37a "the archive holding the session failed"
+expect_rejected 37b "a content save crossed session archival" session_archived
+
+hold 38a 38b "update public.content_units set state='archived' where id='$CONTENT_UNIT';"
+start 38b "$as_admin select public.save_session_content('$ACADEMY','$CS5',0,'$content_items',gen_random_uuid());"
+wait
+expect_ok 38a "the source archive holding the unit failed"
+expect_rejected 38b "an archived source was newly recorded as taught" content_unavailable
+
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
 #     neither deadlocks. After the commit the worker finds a closed year and the command is refused.
