@@ -10,6 +10,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAcademyScope } from "@/modules/auth";
+import { ContentTaughtReview, taughtRootKey } from "@/modules/content";
 import { publishReviewedAttendance } from "../actions";
 import { attendanceQueryKey } from "../queries";
 import type { AttendanceSheet } from "../types";
@@ -44,6 +45,7 @@ export function PublishDialog({ sheet, onClose }: Props) {
         academyId, sessionId: sheet.session.id, expectedRevision: reviewed, idempotencyKey: key,
       });
       await queryClient.invalidateQueries({ queryKey: attendanceQueryKey(academyId, sheet.session.id) });
+      await queryClient.invalidateQueries({ queryKey: taughtRootKey(academyId, sheet.session.id) });
       if (!isCurrentAcademy(academyId)) return;
       if (!result.ok) { setError(result.message); return; }
       toast.success(result.outcome === "published"
@@ -82,6 +84,7 @@ export function PublishDialog({ sheet, onClose }: Props) {
             </div>
           ))}
         </dl>
+        <ContentTaughtReview academyId={academyId} sessionId={sheet.session.id} correction={correction} />
         {changedSinceReview && (
           <p role="status" className="text-sm text-muted-foreground">
             Attendance changed while you were reviewing. The counts above are the latest values.
