@@ -60,6 +60,10 @@ Staff record which released material was taught in a session. A session may cove
 
 The association records the material actually covered. Finalized attendance and replacement attendance use that information to determine the corresponding explanation access and resolved missed material.
 
+Initial session-linking implementation scope, 2026-10-19, under the owner's delegated implementation direction: all active staff, including instructors, may record taught units in a live or ended session while its year is open, the session is not archived and attendance has never been finalized. Select published units in the same academy/year whose grade and optional track cover the session's captured audience. Links are optional; attendance can be finalized without any. The first finalization locks the links for this slice, including an empty list. Post-finalization content corrections remain separate work and do not establish the unresolved access-revocation policy.
+
+Each saved association preserves the selected published content revision and title. Subsequent unit edits, republication, archival and track removal do not rewrite what was recorded as taught. Changes before finalization retain their own versioned history and invalidate an older attendance review. Recording taught units alone does not grant student access; the access consumer remains a separate integration.
+
 ## Changes and history
 
 Staff may revise draft material. Once students have activity on a release, changes preserve their submissions, results, progress and the material needed to explain that history.

@@ -12,6 +12,7 @@ These are intended product permissions. Current source enforces the Owner, Head 
 | Recurring schedules | Yes | Yes | Yes | Read/use only |
 | One-off schedules | Yes | Yes | Yes | Create/edit; archive own only |
 | Start/end sessions; record/finalize/correct attendance | Yes | Yes | Yes | Yes |
+| Record taught units before first attendance finalization | Yes | Yes | Yes | Yes |
 | Archive/restore sessions in an open academic year | Yes | Yes | Yes | Read preserved history only |
 | Prepare assessments; mark/announce complete results | Yes | Yes | Yes | Yes |
 | Prepare draft content units | Yes | Yes | Yes | Own drafts only, including during review; submit for manager review |

@@ -36,4 +36,6 @@ HTTP (cookie session):
 
 Web paths: /<academySlug>/attendance, /new and /<id> on the staff host; internal routes are under /app/[academySlug]/attendance.
 
+The detail route also composes the content module's taught-unit section. It records optional, matching published units before first attendance finalization, with frozen publication references and a versioned change history. It does not modify the session/roster snapshot or grant learning access. See [taught-content integration](../content/teaching/README.md). Successful archive/restore refreshes this section too.
+
 HTTP (`/api/v1`, bearer): `POST /api/v1/academies/{academyId}/sessions` with `{ "schedule_id" }` and the `Idempotency-Key` as `startKey` → `{ outcome, replayed, session }` (201 when started, 200 for `existing`/`replayed`; the session is read after the start, so a replayed original reports its current ended/archived state). `GET /api/v1/academies/{academyId}/schedules` (schedules module, `listStartableSchedules`) lists what can be started. Ending, archiving and restoring sessions remain web-only server actions. The v1 session detail adds `session_archived_at`, `session_archived_by_name` and `archive_note`.
