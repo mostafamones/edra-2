@@ -58,6 +58,8 @@ export function staffAcademyPath(slug: string, path = "") {
 }
 export function staffAcademyHref(slug: string, path = "") { return platformOrigin("staff") + staffAcademyPath(slug, path); }
 export function studentHref(path = "/") { return platformOrigin("student") + (path.startsWith("/") ? path : `/${path}`); }
+/** Academy path on the student host, for same-host links. */
+export function studentAcademyPath(slug: string, path = "") { return staffAcademyPath(slug, path); }
 export function studentAcademyHref(slug: string, path = "") { return platformOrigin("student") + staffAcademyPath(slug, path); }
 export function staffEntryHref() { return platformOrigin("staff") + "/"; }
 export function authHref(path = "login", platform: "staff" | "student" = "staff", next?: string) { return `${platformOrigin(platform)}/auth/${path}${next ? `?next=${encodeURIComponent(next)}` : ""}`; }

@@ -20,6 +20,7 @@ Development defaults are lvh.me:3000, app.lvh.me:3000 and learn.lvh.me:3000. NEX
 | Team/codes | /<slug>/manage/team, /manage/student-codes | Concrete management routes |
 | Student global area | / and supported global paths on student host | src/app/learn/ |
 | Student academy area | /<slug>/<path> on student host | src/app/learn/academy/[academySlug]/[[...path]]/ |
+| Student exams | /<slug>/exams, /<slug>/exams/<examId> on student host | src/app/learn/academy/[academySlug]/exams/ (concrete routes; other academy paths still use the catch-all) |
 | Authentication/setup | /auth/* and /onboarding/* | Existing authentication/onboarding files |
 | HTTP API | /api/* | No page rewrite; existing handlers authorize independently |
 
@@ -27,6 +28,6 @@ A catch-all navigation destination is not proof its product workflow is implemen
 
 ## URL and authority rules
 
-Use the routing public API for canonical links and allowlisted return destinations. Host descriptors never establish membership. Resolve academy authority independently; switching academies must discard source record IDs and filters.
+Use the routing public API for canonical links and allowlisted return destinations. `studentAcademyPath(slug, path)` builds same-host student academy links; `studentAcademyHref` builds the absolute canonical URL. Host descriptors never establish membership. Resolve academy authority independently; switching academies must discard source record IDs and filters.
 
 Production domains, DNS and preview-cookie trust remain environment setup. Do not invent an owned domain from fixtures or trust forwarded hosts for public links. Outside production, the optional server-only EDRA_DEV_TUNNEL_HOST adds one exact host[:port] (for example mones.ddns.net:3000) as a staff-host alias for a phone-reachable development tunnel. It is unset by default, compared case-insensitively with no wildcard or suffix matching, ignored when malformed (scheme, path, userinfo, wildcard or control characters) and ignored entirely when NODE_ENV is production. It never belongs in NEXT_PUBLIC_* configuration and does not change cookies, return-destination allowlists or academy authority. A production host must be configured as a canonical HTTPS origin instead.

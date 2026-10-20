@@ -6331,6 +6331,10 @@ export type Database = {
         Returns: Json
       }
       get_my_exam: { Args: { p_exam_id: string }; Returns: Json }
+      get_my_exam_overview: {
+        Args: { p_academy_id: string; p_exam_id: string }
+        Returns: Json
+      }
       get_my_quiz: { Args: { p_quiz_id: string }; Returns: Json }
       get_my_student_academy: { Args: { p_slug: string }; Returns: Json }
       get_quiz: {
@@ -6409,6 +6413,10 @@ export type Database = {
           p_before_started_at: string
           p_limit: number
         }
+        Returns: Json
+      }
+      list_my_exams: {
+        Args: { p_academy_id: string; p_limit?: number; p_offset?: number }
         Returns: Json
       }
       list_my_student_academies: { Args: never; Returns: Json }
@@ -7013,6 +7021,10 @@ export type Database = {
         Returns: Json
       }
       start_exam_attempt: { Args: { p_exam_id: string }; Returns: Json }
+      start_my_exam: {
+        Args: { p_academy_id: string; p_exam_id: string }
+        Returns: Json
+      }
       start_quiz_attempt: { Args: { p_quiz_id: string }; Returns: Json }
       start_session: {
         Args: {
