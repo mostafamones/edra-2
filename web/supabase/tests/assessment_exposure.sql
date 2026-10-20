@@ -89,7 +89,9 @@ reset role;
 select pg_temp.hidden(edra_private.exam_student_state(pg_temp.id('exam'),pg_temp.id('record-3')));
 insert into exposure_ids(name,id) select 'exam-started',id from public.exam_attempts where exam_id=pg_temp.id('exam') and annual_student_record_id=pg_temp.id('record-1');
 select edra_private.submit_exam_attempt_for(pg_temp.id('exam'),pg_temp.id('record-1'),gen_random_uuid());
-select pg_temp.questions_only(edra_private.start_exam_attempt_for(pg_temp.id('exam'),pg_temp.id('record-1')));
+-- EDRA-83: after final submission and before solution qualification, no question/answer review.
+select pg_temp.hidden(edra_private.start_exam_attempt_for(pg_temp.id('exam'),pg_temp.id('record-1')));
+select pg_temp.hidden(public.get_my_exam(pg_temp.id('exam')));
 select pg_temp.check((select count(*)=1 and bool_and(id=pg_temp.id('exam-started')) from public.exam_attempts where exam_id=pg_temp.id('exam')),'finalized attempt never retakes');
 update public.exams set opens_at=now()-interval '3 hours',closes_at=now()-interval '1 hour',actual_closes_at=now()-interval '58 minutes' where id=pg_temp.id('exam');
 select edra_private.settle_exam_closure(pg_temp.id('exam'));
