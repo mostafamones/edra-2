@@ -29,7 +29,7 @@ export function StudentExamAnswering(props: ExamAnsweringProps) {
   return <AnsweringSession key={`${props.academyId}:${props.examId}:${props.attempt.id}`} {...props} />;
 }
 
-function AnsweringSession({ academyId, examId, editor, onFinished, onLifecycle }: ExamAnsweringProps) {
+function AnsweringSession({ academyId, examId, attempt, editor, onFinished, onLifecycle }: ExamAnsweringProps) {
   const [controller] = useState(() => new AnsweringController({
     api: answeringApi(academyId, examId), journal: indexedDbJournal, examId, token: editor.token,
     generation: editor.generation, heartbeatSeconds: editor.heartbeatSeconds,
@@ -73,15 +73,17 @@ function AnsweringSession({ academyId, examId, editor, onFinished, onLifecycle }
     };
   }, [controller, queryClient]);
 
-  const attemptId = state.attempt?.id;
-  const lifecycleReady = state.phase !== "loading" && state.phase !== "finished";
+  const attemptId = attempt.id;
+  const lifecycleReady = state.phase !== "finished";
   useEffect(() => {
     if (!attemptId || !lifecycleReady) return;
     // The account is verified by the answering read, never taken from browser storage.
     lifecycle({
       attemptId,
       currentQuestionId: () => controller.getSnapshot().currentId,
-      recordDeparture: (eventId) => controller.recordDeparture(eventId),
+      departureContext: () => controller.departureContext(),
+      currentToken: () => controller.currentToken(),
+      recordDeparture: (eventId, context) => controller.recordDeparture(eventId, context),
       setEditBlock: (reason) => controller.setEditBlock(reason),
       getState: () => {
         const snapshot = controller.getSnapshot();
@@ -123,26 +125,26 @@ function AnsweringSession({ academyId, examId, editor, onFinished, onLifecycle }
           {(state.notice || state.editBlock || state.journal === "unavailable") && <Alert role="status"><IconAlertCircle /><AlertTitle>
             {state.editBlock ?? state.notice ?? "Pending answers can’t be kept on this device. Keep this page open until they are saved."}
           </AlertTitle></Alert>}
-          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_13rem]">
+          <div inert={state.editBlock !== null} className="grid gap-6 md:grid-cols-[minmax(0,1fr)_13rem]">
             <div className="min-w-0 space-y-6">
-              {question ? <StudentExamQuestionView key={question.id} question={question} part={state.partInstructions[question.partId]}
+              {question ? <StudentExamQuestionView key={`${question.id}:${state.editBlock !== null}`} question={question} part={state.partInstructions[question.partId]}
                 value={current(state.drafts, question.id)} conflict={state.drafts.conflicts[question.id]} editable={controller.editable}
                 onChange={(value) => controller.setAnswer(question.id, value)} onResolve={(choice) => controller.resolveConflict(question.id, choice)} />
                 : <p role="status">Choose a question or submit your exam.</p>}
               <div className="flex flex-wrap justify-between gap-3">
-                <Button variant="outline" disabled={index <= 0 && state.currentId !== null} onClick={() => state.currentId === null ? controller.goTo(eligible[eligible.length - 1].id) : controller.step(-1)}><IconChevronLeft />Previous</Button>
-                <Button variant="outline" disabled={index < 0 || index === eligible.length - 1} onClick={() => controller.step(1)}>Next<IconChevronRight /></Button>
+                <Button variant="outline" disabled={!controller.editable || (index <= 0 && state.currentId !== null) || eligible.length === 0} onClick={() => state.currentId === null ? controller.goTo(eligible[eligible.length - 1].id) : controller.step(-1)}><IconChevronLeft />Previous</Button>
+                <Button variant="outline" disabled={!controller.editable || index < 0 || index === eligible.length - 1} onClick={() => controller.step(1)}>Next<IconChevronRight /></Button>
               </div>
             </div>
             <div className="space-y-4">
-              <StudentExamNavigator questions={eligible} currentId={state.currentId} answered={(id) => isAnswered(current(state.drafts, id))}
+              <StudentExamNavigator disabled={!controller.editable} questions={eligible} currentId={state.currentId} answered={(id) => isAnswered(current(state.drafts, id))}
                 conflicts={conflicts} onSelect={(id) => controller.goTo(id)} />
               <Button className="w-full" disabled={!controller.editable} onClick={() => setConfirming(true)}>
                 {state.phase === "submitting" && <IconLoader2 className="animate-spin" />}Submit exam
               </Button>
             </div>
           </div>
-          <StudentExamSubmitDialog open={confirming && state.phase === "ready"} onOpenChange={setConfirming} unanswered={unanswered} conflicts={conflicts.size}
+          <StudentExamSubmitDialog open={confirming && controller.editable} onOpenChange={setConfirming} unanswered={unanswered} conflicts={conflicts.size}
             onSubmit={() => { setConfirming(false); controller.confirmSubmit(); }} />
         </div>
       </ImageSourceProvider>

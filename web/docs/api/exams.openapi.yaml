@@ -17,7 +17,7 @@ info:
     connected academy/year record through the shared ordinary-session resolver. Standalone exams
     need no content release. Before an own online attempt starts or solutions qualify, state returns
     empty question parts; physical drafts/submissions alone do not reveal material. Reads never start
-    or extend an attempt. Student answering uses cookie web actions; production entry remains gated on EDRA-234. No student HTTP route is delivered. A client-supplied
+    or extend an attempt. Student answering uses cookie web actions with EDRA-234 fullscreen/departure integration. A bounded cookie-only teardown POST is described below; hosted readiness remains unverified. A client-supplied
     annual record id or phone is never ownership. Source behavior is not a deployment assertion.
 
     **Rules.** An exam has ordered Question Sheet (choices, one correct, scored automatically) and
@@ -185,8 +185,8 @@ paths:
         "429": { $ref: "#/components/responses/Error" }
         "500": { $ref: "#/components/responses/Error" }
 x-edra-student-operations:
-  status: cookie-web-answering-gated
-  reason: Connected ordinary-session accounts resolve through student_caller_record. Standalone cookie web commands are implemented; attached exams are denied with content_unavailable. EDRA-233 exports the answering surface but examEntryIntegration stays null until EDRA-234 supplies real fullscreen/departure integration. No student HTTP or bearer API exists. Active question material requires a current editor claim; legacy reads expose material only after solution qualification.
+  status: cookie-web-answering-integrated-source
+  reason: Connected ordinary-session accounts resolve through student_caller_record. Standalone cookie web commands are implemented; attached exams are denied with content_unavailable. EDRA-234 registers fullscreen-first entry and departure handling over the EDRA-233 surface. A cookie-only teardown POST is available; no student bearer API exists. Cloud/browser release gates remain in the module README. Active question material requires a current editor claim; legacy reads expose material only after solution qualification.
   operations:
     - name: list_my_exams(academy_id, limit = 25, offset = 0)
       returns: "{total, items: [{exam_id, title, time_limit_minutes, opens_at, closes_at, actual_closes_at, phase, action}], server_now}"
@@ -226,10 +226,19 @@ x-edra-student-operations:
       notes: Submits saved work only, requiring the acknowledged answers version and live original generation for a new command. Cookie UI freezes and durably flushes pending answers first. Exact retries replay; timer/closure/kick/physical confirmation retain their winning reason/source. Terminal responses contain no question material.
     - name: record_my_exam_departure(academy_id, exam_id, token, event_id, question_id, generation)
       returns: "{outcome: warned | kicked | duplicate | finalized | editor_lost, departure, state}"
-      notes: EDRA-234 correlates signals to one stable event id. Entry redelivers any journaled event with its original token/generation before claiming a replacement; delivery does not wait for save retries. The current or expired latest generation may deliver a delayed event; a replaced generation cannot create an event or claim. Ordinary session/academy authority remains required. Exact event replay uses the original question; a changed question is idempotency_conflict. First two warnings advance to next non-excluded question, null after the last. Third submits saved work as kicked. Deadline wins ties. Brief live state or terminal status only.
+      notes: EDRA-234 correlates signals to one stable event id. Entry redelivers any journaled event with its original token/generation before claiming a replacement; delivery does not wait for save retries. The current or expired latest generation may deliver a delayed event; a replaced generation cannot create an event or claim. Ordinary session/academy authority remains required. Exact event replay uses the original nullable question; a changed context including null-to-present is idempotency_conflict. Null context continues at the first non-excluded question. First two warnings advance to next non-excluded question, null after the last. Third submits saved work as kicked. Deadline wins ties. Brief live state or terminal status only.
     - name: authorize_my_exam_images(academy_id, exam_id, token, image_ids)
       returns: "{status: ok, academy_id, image_ids} | {status: lost | finalized}"
       notes: Bounded 1..20 ids, active attempt/live claim/current audience/ordinary-session authority. Only ids referenced in non-excluded prompt/choice tokens are returned. The cookie signStudentExamImages action signs those private paths server-side for 60 seconds. No direct student Storage grants, uploads or solution-media access. URLs are memory-only and retain bounded residual validity after finalization.
+  teardown_http:
+    method: POST
+    path: /api/student/exams/{examId}/departure
+    authentication: Ordinary cookie session only; bearer or mixed authority is rejected.
+    request: "Strict JSON {academyId: uuid, token: 64 lowercase hex, generation: positive int32, eventId: uuid, questionId: uuid | null}; at most 2048 bytes."
+    origin: Exact configured student Origin required; cross-site Fetch Metadata rejected. No CORS grants.
+    response: "Private/no-store {ok: true, kind, departure} receipt only; no live/terminal state, question material, answers or results."
+    errors: "400 invalid body/domain refusal; 403 origin or ordinary-session refusal; 413 body too large."
+    delivery: Keepalive enqueue is not acknowledgment. Exact event/context/generation is replayed through record_my_exam_departure before replacement claims.
   retired_student_mutations:
     - save_exam_answers(exam_id, expected_version, answers, key)
     - submit_exam_attempt(exam_id, key)
@@ -281,8 +290,8 @@ components:
       properties:
         event_id: { type: string, format: uuid }
         ordinal: { type: integer, minimum: 1, maximum: 3 }
-        question_id: { type: string, format: uuid }
-        question_number: { type: integer, description: Original exam-wide number of the question the student left. }
+        question_id: { type: [string, "null"], format: uuid }
+        question_number: { type: [integer, "null"], description: Original exam-wide number; both context fields are null only before any question was displayed. }
         outcome: { type: string, enum: [warned, kicked] }
         next_question_id: { type: [string, "null"], format: uuid, description: Where a warned student continues; null after the last non-excluded question and when kicked. }
         recorded_at: { type: string, format: date-time }

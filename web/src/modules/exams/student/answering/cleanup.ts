@@ -1,5 +1,6 @@
 "use client";
 
+import { purgeBreadcrumbs } from "../departures/breadcrumb";
 import { indexedDbJournal, purgeJournals } from "./journal";
 
 let account: string | null | undefined;
@@ -10,6 +11,7 @@ const listeners = new Set<() => void>();
 export function setExamJournalAccount(next: string | null) {
   if (next === account) return cleanup;
   account = next;
+  purgeBreadcrumbs(next);
   for (const stop of listeners) stop();
   try {
     for (const key of Object.keys(window.sessionStorage)) {
