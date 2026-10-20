@@ -1,3 +1,5 @@
+import { clearBreadcrumb, writeBreadcrumb } from "../departures/breadcrumb";
+import type { DepartureContext } from "../departures/state";
 import type {
   StudentExamAnswerPatch, StudentExamAnswering, StudentExamAttemptState, StudentExamBrief, StudentExamClaimOutcome,
   StudentExamCommandResult, StudentExamDepartureOutcome, StudentExamFailure, StudentExamHeartbeatOutcome, StudentExamQuestion,
@@ -29,7 +31,7 @@ export type AnsweringApi = {
   release(token: string): Promise<StudentExamCommandResult<StudentExamReleaseOutcome>>;
   save(token: string, expectedVersion: number, answers: StudentExamAnswerPatch[], key: string, generation: number): Promise<StudentExamCommandResult<StudentExamSaveOutcome>>;
   submit(token: string, expectedVersion: number, key: string, generation: number): Promise<StudentExamCommandResult<StudentExamSubmitOutcome>>;
-  departure(token: string, eventId: string, questionId: string, generation: number): Promise<StudentExamCommandResult<StudentExamDepartureOutcome>>;
+  departure(token: string, eventId: string, questionId: string | null, generation: number): Promise<StudentExamCommandResult<StudentExamDepartureOutcome>>;
 };
 
 type Handle = ReturnType<typeof setTimeout>;
@@ -121,6 +123,8 @@ export class AnsweringController {
   private writes: Promise<void> = Promise.resolve();
   private writeQueued = false;
   private disposed = false;
+  private lastQuestionId: string | null = null;
+  private appliedDepartures = new Set<string>();
 
   constructor(deps: AnsweringDeps) {
     this.deps = deps;
@@ -146,6 +150,7 @@ export class AnsweringController {
 
   private set(patch: Partial<AnsweringSnapshot>) {
     this.state = { ...this.state, ...patch };
+    if (this.state.currentId) this.lastQuestionId = this.state.currentId;
     for (const listener of this.listeners) listener();
   }
 
@@ -203,7 +208,7 @@ export class AnsweringController {
         if (entry) {
           drafts = { ...drafts, drafts: entry.drafts, seq: entry.seq, inflight: entry.inflight };
           this.submission = entry.submission;
-          this.departure = entry.departure;
+          this.departure ??= entry.departure;
         }
       } catch {
         journal = "unavailable";
@@ -215,6 +220,7 @@ export class AnsweringController {
     this.observe(doc.serverNow, doc.attempt);
     const partInstructions = Object.fromEntries(doc.parts.map((part) => [part.id, { title: part.title, instructions: part.instructions }]));
     const latestDeparture = [...doc.departures].sort((a, b) => b.ordinal - a.ordinal)[0];
+    this.lastQuestionId ??= latestDeparture?.questionId ?? null;
     const eligible = questions.filter((question) => !excluded.has(question.id));
     let first: string | null = eligible[0]?.id ?? null;
     if (latestDeparture?.outcome === "warned") {
@@ -300,7 +306,7 @@ export class AnsweringController {
   }
 
   resolveConflict(questionId: string, choice: "mine" | "saved") {
-    if (this.state.phase !== "ready") return;
+    if (!this.editable) return;
     this.set({ drafts: resolve(this.state.drafts, questionId, choice) });
     void this.persist();
     void this.pump();
@@ -311,7 +317,7 @@ export class AnsweringController {
   }
 
   goTo(questionId: string) {
-    if (!this.answerable(questionId)) return;
+    if (!this.editable || !this.answerable(questionId)) return;
     this.set({ currentId: questionId });
     // Navigation flushes pending text without waiting for the network.
     this.clearTimer("flush");
@@ -439,6 +445,8 @@ export class AnsweringController {
 
   /** Claims again with the current token: a fresh generation if no live editor exists, busy otherwise. */
   private reclaim(): Promise<boolean> {
+    // Never replace the generation needed by an undelivered departure.
+    if (this.departure) { void this.deliverPendingDeparture(); return Promise.resolve(false); }
     if (this.reclaiming) return this.reclaiming;
     this.reclaiming = (async () => {
       const result = await this.deps.api.claim(this.token);
@@ -562,7 +570,7 @@ export class AnsweringController {
 
   /** Confirmed in the dialog: freeze answers, flush them, then submit what the server acknowledged. */
   confirmSubmit() {
-    if (this.state.phase !== "ready" || Object.keys(this.state.drafts.conflicts).length > 0) return;
+    if (!this.editable || Object.keys(this.state.drafts.conflicts).length > 0) return;
     this.clearTimer("flush");
     this.submission = { key: null, expectedVersion: null, generation: this.generation };
     this.set({ phase: "submitting", submitStage: "saving", notice: null });
@@ -617,20 +625,25 @@ export class AnsweringController {
    * with the same id until acknowledged, and redelivered after a refresh. Resolves with the server
    * outcome (warned/duplicate move to the returned question; kicked/finalized end the session).
    */
-  recordDeparture(eventId: string = this.deps.uuid()): Promise<StudentExamDepartureOutcome | null> {
-    const questionId = this.departure?.questionId ?? this.state.currentId;
-    if (!questionId || this.state.phase === "finished" || this.state.phase === "loading") return Promise.resolve(null);
-    if (!this.departure) this.departure = { eventId, questionId, generation: this.generation };
+  departureContext(eventId: string = this.deps.uuid()): DepartureContext {
+    return this.departure ?? { eventId, questionId: this.state.currentId ?? this.lastQuestionId, generation: this.generation };
+  }
+
+  recordDeparture(eventId: string = this.deps.uuid(), context?: DepartureContext): Promise<StudentExamDepartureOutcome | null> {
+    if (this.ended()) return Promise.resolve(null);
+    if (!this.departure) this.departure = context ?? this.departureContext(eventId);
+    if (this.accountId && this.attemptId) writeBreadcrumb(this.accountId, this.attemptId, this.deps.examId, this.departure);
     const pending = this.departure.eventId;
     const promise = new Promise<StudentExamDepartureOutcome | null>((done) => {
       this.departureWaiters.set(pending, [...(this.departureWaiters.get(pending) ?? []), done]);
     });
     this.set({ pendingDeparture: true });
-    void this.persist().then(() => this.deliverPendingDeparture());
+    if (this.state.phase !== "loading") void this.persist().then(() => this.deliverPendingDeparture());
     return promise;
   }
 
   private settleDeparture(eventId: string, outcome: StudentExamDepartureOutcome | null) {
+    if (this.accountId && this.attemptId) clearBreadcrumb(this.accountId, this.attemptId, eventId);
     this.departure = null;
     this.set({ pendingDeparture: false });
     for (const done of this.departureWaiters.get(eventId) ?? []) done(outcome);
@@ -640,7 +653,12 @@ export class AnsweringController {
   private deliverPendingDeparture(): Promise<boolean> {
     if (!this.departure || this.ended()) return Promise.resolve(false);
     if (this.delivering) return this.delivering;
-    this.delivering = this.deliverDeparture().finally(() => { this.delivering = null; });
+    const eventId = this.departure.eventId;
+    this.delivering = this.deliverDeparture().finally(() => {
+      this.delivering = null;
+      // A caller may enqueue the next resumed episode as the prior waiter resolves.
+      if (this.departure && this.departure.eventId !== eventId) void this.deliverPendingDeparture();
+    });
     return this.delivering;
   }
 
@@ -667,9 +685,13 @@ export class AnsweringController {
     }
     this.applyBrief(result.state);
     const next = result.departure?.nextQuestionId;
-    if (result.departure) this.set({ currentId: next && this.answerable(next) ? next : null });
+    if (result.departure && !this.appliedDepartures.has(eventId)) {
+      this.appliedDepartures.add(eventId);
+      this.set({ currentId: next && this.answerable(next) ? next : null });
+    }
     this.settleDeparture(eventId, result);
     await this.persist();
+    if (this.state.phase === "loading") void this.start();
     return true;
   }
 

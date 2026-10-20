@@ -9,7 +9,7 @@ import type { Command, Draft } from "./drafts";
  * acknowledgment of everything, on finalization and when another account (or nobody) is signed in.
  */
 
-export const JOURNAL_SCHEMA = 2;
+export const JOURNAL_SCHEMA = 3;
 
 export type JournalEntry = {
   schema: typeof JOURNAL_SCHEMA;
@@ -22,7 +22,7 @@ export type JournalEntry = {
   /** Confirmed submission: frozen answers flush, then this key is sent (and retried unchanged). */
   submission: { key: string | null; expectedVersion: number | null; generation: number } | null;
   /** A recorded-but-unacknowledged departure, redelivered with the same event id. */
-  departure: { eventId: string; questionId: string; generation: number } | null;
+  departure: { eventId: string; questionId: string | null; generation: number } | null;
   updatedAt: number;
 };
 
@@ -50,7 +50,7 @@ const entrySchema = z.object({
     ])).min(1).max(300), seqs: z.record(id, z.number().int().nonnegative()),
   }).strict().nullable(),
   submission: z.object({ key: id.nullable(), expectedVersion: z.number().int().nonnegative().nullable(), generation }).strict().nullable(),
-  departure: z.object({ eventId: id, questionId: id, generation }).strict().nullable(),
+  departure: z.object({ eventId: id, questionId: id.nullable(), generation }).strict().nullable(),
   updatedAt: z.number().finite(),
 }).strict();
 
@@ -62,7 +62,10 @@ export async function readJournal(store: JournalStore, accountId: string, attemp
   const key = journalKey(accountId, attemptId);
   const value = await store.get(key);
   if (value === undefined) return { entry: null, discarded: false };
-  const parsed = entrySchema.safeParse(value);
+  // v2 has the same fields with non-null question context; preserve every pending answer/intent.
+  const compatible = typeof value === "object" && value !== null && "schema" in value && value.schema === 2
+    ? { ...value, schema: JOURNAL_SCHEMA } : value;
+  const parsed = entrySchema.safeParse(compatible);
   if (parsed.success && parsed.data.accountId === accountId && parsed.data.attemptId === attemptId) return { entry: parsed.data as JournalEntry, discarded: false };
   await store.delete(key);
   return { entry: null, discarded: true };

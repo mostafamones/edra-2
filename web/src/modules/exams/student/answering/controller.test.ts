@@ -148,6 +148,32 @@ describe("durable answering queue", () => {
     expect(h.api.submit).not.toHaveBeenCalled();
   });
 
+  it("retains the last displayed question after end navigation without wrapping", async () => {
+    const h = harness(); await h.controller.start(); h.controller.goTo("q3");
+    await h.controller.recordDeparture("first");
+    expect(h.controller.getSnapshot().currentId).toBeNull();
+    await h.controller.recordDeparture("second");
+    expect(h.api.departure.mock.calls[1]).toEqual(["token", "second", "q3", 1]);
+    expect(h.controller.getSnapshot().currentId).toBeNull();
+  });
+
+  it("captures context-free departure during initial loading and delivers after material loads", async () => {
+    const h = harness();
+    const pending = h.controller.recordDeparture("loading-event");
+    expect(h.api.departure).not.toHaveBeenCalled();
+    await h.controller.start(); await tick(); await pending;
+    expect(h.api.departure.mock.calls[0]).toEqual(["token", "loading-event", null, 1]);
+  });
+
+  it("blocks navigation, conflict resolution and confirmation as well as answers", async () => {
+    const h = harness(); await h.controller.start(); h.controller.setEditBlock("Return to fullscreen");
+    h.controller.goTo("q3"); h.controller.step(1); h.controller.confirmSubmit();
+    h.controller.resolveConflict("q1", "mine"); h.controller.setAnswer("q1", { choiceId: null, text: "blocked" });
+    expect(h.controller.getSnapshot().currentId).toBe("q1");
+    expect(h.controller.getSnapshot().phase).toBe("ready");
+    expect(h.api.submit).not.toHaveBeenCalled(); expect(h.controller.pendingCount()).toBe(0);
+  });
+
   it("keeps editing in memory when storage fails without promising recovery", async () => {
     const { store } = memory(); store.put = async () => { throw new Error("quota"); };
     const h = harness(store); await h.controller.start();
@@ -189,6 +215,16 @@ describe("durable answering queue", () => {
 });
 
 describe("account journal", () => {
+  it("upgrades v2 departure journals without discarding pending answers", async () => {
+    const { store, rows } = memory();
+    rows.set("account:attempt", { schema: 2, accountId: "account", attemptId: "attempt", examId: "exam", seq: 1,
+      drafts: { q1: { value: { choiceId: null, text: "pending" }, baseline: { choiceId: null, text: null }, seq: 1 } },
+      inflight: null, submission: { key: null, expectedVersion: null, generation: 1 },
+      departure: { eventId: "event", questionId: "q1", generation: 1 }, updatedAt: 0 });
+    const recovered = await readJournal(store, "account", "attempt");
+    expect(recovered.discarded).toBe(false); expect(recovered.entry?.schema).toBe(JOURNAL_SCHEMA);
+    expect(recovered.entry?.drafts.q1.value.text).toBe("pending"); expect(recovered.entry?.submission?.generation).toBe(1);
+  });
   it("purges other accounts and rejects malformed or older-schema entries", async () => {
     const { store, rows } = memory();
     rows.set(journalKey("other", "attempt"), {});
