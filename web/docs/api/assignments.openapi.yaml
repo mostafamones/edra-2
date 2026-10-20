@@ -400,7 +400,12 @@ components:
         state: { type: string, enum: [active, closed, archived] }
         max_score: { type: string, description: The sum of the part maximums, as an exact decimal. }
         part_count: { type: integer }
-        recipient_count: { type: integer, description: Size of the current stored recipient snapshot; an empty audience is allowed. }
+        current_required_count: { type: integer, description: Required cohort members whose requirement has not ended. }
+        eligible_count: { type: integer, description: Current active placement matches; commands still enforce delivery state and year gates. }
+        optional_eligible_count: { type: integer, description: Current placement matches without a current unfinished requirement. }
+        cohort_revision: { type: integer, description: Zero before a valid audience; increments only on deliberate permitted target resets. }
+        cohort: { type: [object, "null"], description: Required-cohort revision, capture time, source and canonical audience basis. }
+        recipient_count: { type: integer, description: Captured required cohort count, including ended requirements; optional late eligibility/work never increases it. An established empty cohort stays empty on routine saves. }
         version: { type: integer }
         updated_at: { type: string, format: date-time }
     Assignment:
@@ -509,6 +514,11 @@ components:
               part_id: { type: string, format: uuid }
               choice_id: { type: [string, "null"], format: uuid }
               score: { type: string, description: The question's mark (choice parts are scored from the key). }
+        required: { type: boolean, description: Membership in the current captured required cohort, including ended requirements. Legacy payloads default to true. }
+        requirement_ended_at: { type: [string, "null"], format: date-time }
+        requirement_source: { type: string, enum: [required_cohort, late_eligibility] }
+        cohort_revision: { type: [integer, "null"] }
+        eligible: { type: boolean, description: Matches current active placement; never authorizes online work or bypasses command gates. }
         marked_parts: { type: integer }
         total: { type: [string, "null"], description: Exact sum of the marked parts, or null while nothing is marked. }
         marking: { type: string, enum: [unmarked, partial, complete] }

@@ -18,6 +18,7 @@ import type { Assignment, StaffRole } from "./types";
 export const isManager = (role: StaffRole) => isAcademyManager(role);
 
 export type AssignmentPermissions = {
+  correct: boolean;
   edit: boolean;
   editStructure: boolean;
   close: boolean;
@@ -27,7 +28,7 @@ export type AssignmentPermissions = {
   mark: boolean;
 };
 
-const NONE: AssignmentPermissions = { edit: false, editStructure: false, close: false, reopen: false, archive: false, mark: false };
+const NONE: AssignmentPermissions = { correct: false, edit: false, editStructure: false, close: false, reopen: false, archive: false, mark: false };
 
 export function assignmentPermissions(
   role: StaffRole, assignment: Pick<Assignment, "state" | "yearOpen" | "hasActivity" | "ready">,
@@ -37,6 +38,7 @@ export function assignmentPermissions(
   const active = assignment.state === "active";
   const setup = active && !assignment.hasActivity;
   return {
+    correct: manager && assignment.hasActivity,
     edit: setup || manager,
     editStructure: setup,
     close: manager && active,

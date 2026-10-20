@@ -74,7 +74,7 @@ const updateInput = z.object({ academyId: z.uuid(), assignmentId: z.uuid(), expe
 
 /**
  * Saves an edit made against `expectedVersion`; a stale version writes nothing (assignment_conflict).
- * Until marking starts the whole setup is replaced and recipients are refreshed from the audience.
+ * Until marking starts the setup may be replaced; only a deliberate audience change resets the required cohort.
  * Afterwards (or once closed) only Owner/Head Admin/Admin may save, and only text details.
  */
 export async function updateAssignment(input: z.input<typeof updateInput>, authority?: Authority | null): Promise<AssignmentResult> {
@@ -388,4 +388,24 @@ export async function listAssignments(
   } catch {
     return { ok: false, status: 500 };
   }
+}
+
+const correctionInput = z.object({ academyId: z.uuid(), assignmentId: z.uuid(), questionId: z.uuid(), expectedScoringRevision: z.number().int().min(1), key: z.uuid(), choiceId: z.uuid().optional() });
+
+/** Manager-only scoring commands. The database binds reviewed revision, question and operation to the receipt. */
+export async function correctScoring(input: z.input<typeof correctionInput>, authority?: Authority | null): Promise<AssignmentResult> {
+  const parsed = correctionInput.safeParse(input);
+  if (!parsed.success) return failure("validation");
+  const value = parsed.data;
+  const caller = await academyMember(value.academyId, authority);
+  if (!caller) return failure("forbidden");
+  try {
+    const base = { p_academy_id: value.academyId, p_assignment_id: value.assignmentId, p_question_id: value.questionId, p_expected_scoring_revision: value.expectedScoringRevision, p_key: value.key };
+    const { data, error } = value.choiceId
+      ? await caller.db.rpc("correct_assignment_key", { ...base, p_choice_id: value.choiceId })
+      : await caller.db.rpc("exclude_assignment_question", base);
+    if (error) return failureFromDatabase(error);
+    const receipt = z.object({ assignment: z.unknown() }).parse(data);
+    return { ok: true, assignment: toAssignment(receipt.assignment) };
+  } catch { return failure("unavailable"); }
 }

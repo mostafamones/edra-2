@@ -1,2 +1,5 @@
-export { changeAttendance, checkIn, getAttendance, MAX_BULK_CHANGES, publishAttendance } from "./data";
-export { attendanceResponse, bulkResponse, checkInResponse, patchResponse, publishResponse } from "./v1";
+export { addAttendee, changeAttendance, checkIn, getAttendance, markUnrecordedAbsent, MAX_BULK_CHANGES, publishAttendance, searchAttendees } from "./data";
+export {
+  addAttendeeResponse, attendanceResponse, attendeeSearchResponse, bulkResponse, checkInResponse, patchResponse, publishResponse,
+  unrecordedAbsenceResponse,
+} from "./v1";

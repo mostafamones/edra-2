@@ -18,15 +18,21 @@ type SettingsResult = { ok: true; settings: EnrollmentSettings } | { ok: false; 
 const choiceSchema = z.object({
   trackId: z.uuid().nullable(),
   groupId: z.uuid().nullable(),
-}).nullable();
+}).strict().nullable();
 
 /** Re-reads the pending invite, e.g. after a failed or outdated completion. */
 export async function previewStudentInvite(): Promise<StudentJoinState> {
-  const token = (await cookies()).get(PENDING_STUDENT_INVITE_COOKIE)?.value;
+  const store = await cookies();
+  const token = store.get(PENDING_STUDENT_INVITE_COOKIE)?.value;
   if (!token) return { kind: "none" };
-  if (!isStudentInviteToken(token)) return { kind: "invalid" };
+  if (!isStudentInviteToken(token)) {
+    store.delete({ name: PENDING_STUDENT_INVITE_COOKIE, path: "/" });
+    return { kind: "invalid" };
+  }
   const { data, error } = await (await createClient()).rpc("preview_student_invite", { p_token: token });
-  return error ? { kind: "error" } : parseStudentJoinState(data);
+  const state = error ? { kind: "error" as const } : parseStudentJoinState(data);
+  if (isTerminalJoinState(state)) store.delete({ name: PENDING_STUDENT_INVITE_COOKIE, path: "/" });
+  return state;
 }
 
 /**
@@ -39,7 +45,10 @@ export async function completeStudentInvite(choice: unknown): Promise<StudentJoi
   const store = await cookies();
   const token = store.get(PENDING_STUDENT_INVITE_COOKIE)?.value;
   if (!token) return { kind: "none" };
-  if (!isStudentInviteToken(token)) return { kind: "invalid" };
+  if (!isStudentInviteToken(token)) {
+    store.delete({ name: PENDING_STUDENT_INVITE_COOKIE, path: "/" });
+    return { kind: "invalid" };
+  }
   const { data, error } = await (await createClient()).rpc("complete_student_invite", {
     p_token: token,
     // The generator types RPC arguments as non-null; the database accepts nulls here.

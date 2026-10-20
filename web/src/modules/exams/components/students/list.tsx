@@ -107,7 +107,7 @@ export function ExamStudents({ academy, exam, permissions }: Props) {
         emptyText={exam.audience === null ? "Choose who the exam is for in its setup." : "No active student matches the audience yet. Students who join it later appear here."}
       />
       <StudentMarkSheet student={students?.find((row) => row.recordId === marking) ?? null} onClose={() => setMarking(null)}
-        form={(student, { onSaved }) => <ExamMarks key={student.version} academy={academy} exam={exam} student={student} onSaved={onSaved} />} />
+        form={(student, { onSaved }) => <ExamMarks key={student.recordId} academy={academy} exam={exam} student={student} onSaved={onSaved} />} />
       <StudentDetails academy={academy} exam={exam} recordId={details} name={students?.find((row) => row.recordId === details)?.fullName ?? ""} onClose={() => setDetails(null)} />
     </>
   );

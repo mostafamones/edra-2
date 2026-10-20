@@ -32,7 +32,7 @@ vi.mock("@/lib/supabase/authority", () => ({
           state.calls.push({ name, args });
           if (name === "consume_api_quota") return { data: state.quotaError ? null : state.quota, error: state.quotaError };
           if (name === "session_academy") return { data: state.sessionAcademy, error: null };
-          if (name === "check_in_attendance") return state.checkIn;
+          if (name === "check_in_attendance_with_late") return state.checkIn;
           if (name === "check_in_attendance_by_code") return state.codeCheckIn;
           throw new Error(`unexpected rpc ${name}`);
         },
@@ -80,8 +80,8 @@ describe("POST /api/v1/sessions/{id}/check-ins", () => {
     expect(body).toMatchObject({ outcome: "recorded", revision: 3, correction_pending: false, replayed: false });
     expect(body.entry).toMatchObject({ annual_student_record_id: STUDENT, status: "present", checked_in_at: entry.checked_in_at });
     // The academy comes from the session, never from the request body.
-    expect(state.calls.find((c) => c.name === "check_in_attendance")?.args).toEqual({
-      p_academy_id: ACADEMY, p_session_id: SESSION, p_annual_record_id: STUDENT, p_key: KEY,
+    expect(state.calls.find((c) => c.name === "check_in_attendance_with_late")?.args).toEqual({
+      p_academy_id: ACADEMY, p_session_id: SESSION, p_annual_record_id: STUDENT, p_key: KEY, p_late_after_minutes: 0,
     });
   });
 
@@ -195,7 +195,7 @@ describe("POST /api/v1/sessions/{id}/check-ins", () => {
     const response = await call();
     expect(response.status).toBe(401);
     expect((await response.json()).error.code).toBe("UNAUTHENTICATED");
-    expect(state.calls.some((c) => c.name === "check_in_attendance")).toBe(false);
+    expect(state.calls.some((c) => c.name.startsWith("check_in_attendance"))).toBe(false);
   });
 
   it("answers preflight without granting access, with CORS only for configured origins", async () => {

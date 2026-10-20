@@ -13,17 +13,12 @@ info:
     corrections and exclusions) are cookie web actions over the same database operations; they are not
     part of this HTTP contract.
 
-    **Not operational: the student contract (EDRA-83 handoff).** The trusted student operations exist
-    in the database (`edra_private.start_exam_attempt_for`, `save_exam_answers_for`,
-    `record_exam_departure_for`, `submit_exam_attempt_for`, `exam_student_state`) and their public
-    wrappers (`get_my_exam`, `start_exam_attempt`, `save_exam_answers`, `record_exam_departure`,
-    `submit_exam_attempt`) are deployed, but every wrapper is denied with `student_link_unavailable`
-    because there is no authoritative student-account-to-annual-record link. Exams have no content
-    attachment yet, so they are standalone and need no released content once identity resolves; an
-    attached exam (future) must pass authoritative release authorization (`content_unavailable`). No
-    HTTP route exposes these operations. They are documented under `components.schemas.StudentExamState`
-    and `x-edra-student-operations`; an annual record id or phone number supplied by a student is never
-    ownership.
+    **Student database contract (EDRA-83 handoff).** Trusted public wrappers derive the caller's
+    connected academy/year record through the shared ordinary-session resolver. Standalone exams
+    need no content release. Before an own online attempt starts or solutions qualify, state returns
+    empty question parts; physical drafts/submissions alone do not reveal material. Reads never start
+    or extend an attempt. No student HTTP route or answering UI is delivered here. A client-supplied
+    annual record id or phone is never ownership. Source behavior is not a deployment assertion.
 
     **Rules.** An exam has ordered Question Sheet (choices, one correct, scored automatically) and
     Written Work (staff-marked) parts; Answer Sheet parts do not exist. Every exam needs an individual
@@ -190,15 +185,24 @@ paths:
         "429": { $ref: "#/components/responses/Error" }
         "500": { $ref: "#/components/responses/Error" }
 x-edra-student-operations:
-  status: not-operational
-  reason: No authoritative student-account link (student_link_unavailable). Exams are standalone (no content attachment exists), so no release is required once identity resolves.
+  status: database-contract-only
+  reason: Connected ordinary-session accounts resolve through student_caller_record. Standalone wrappers are reachable; attached exams (content_assessments) are denied with content_unavailable pending the content integration. The web app calls list_my_exams, get_my_exam_overview and start_my_exam through cookie server functions (EDRA-232); there is no student HTTP route, bearer API or answering UI. Question material requires an active own attempt or qualified solutions.
   operations:
+    - name: list_my_exams(academy_id, limit = 25, offset = 0)
+      returns: "{total, items: [{exam_id, title, time_limit_minutes, opens_at, closes_at, actual_closes_at, phase, action}], server_now}"
+      notes: The caller's discoverable exams in the academy's open year (academy_id is a locator, not authority). Discoverable means own participation (attempt, accepted submission or entered physical answers; an empty work row does not count) or an unarchived ready exam that is scheduled or open and matches the current audience. Attached, draft, unscheduled, headroom/closed-unparticipated and other-audience exams are excluded. Ordered resume/start, upcoming, then history, with id tie-breaks; limit 1..100 and offset >= 0 (validation). Read-only snapshot. Errors forbidden, validation, student_link_unavailable (unconnected, suspended, recovery/revoked session or no open-year record).
+    - name: get_my_exam_overview(academy_id, exam_id)
+      returns: StudentExamOverview
+      notes: Same discoverability as the list, plus academy/year ownership; anything else is not_found (non-enumerating). Settles due work after authorization and returns normally so the settlement commits. Never starts an attempt or moves a deadline.
+    - name: start_my_exam(academy_id, exam_id)
+      returns: StudentExamState
+      notes: Academy-scoped start/resume. not_found under the wrong academy. In one transaction it settles due work, locks the academic year (share) and the exam row (for update, serializing with content attachment), denies attached exams (content_unavailable) and calls the existing engine (start_exam_attempt_for). Repeats and concurrent calls return the same single attempt with its original start, deadline, answers and departure count. Errors not_open, not_eligible, source_conflict, student_link_unavailable, throttled.
     - name: get_my_exam(exam_id)
       returns: StudentExamState
       notes: Settles due work first.
     - name: start_exam_attempt(exam_id)
       returns: StudentExamState
-      notes: Creates the single attempt (deadline_at = started_at + time limit) or resumes it with the same started_at, deadline_at, answers and departure_count; never a retake. Errors not_open (outside opens_at..closes_at, not ready or archived), not_eligible.
+      notes: Creates the single attempt (deadline_at = started_at + time limit) or resumes it with the same started_at, deadline_at, answers and departure_count; never a retake. Takes the same serialized standalone guard as start_my_exam. Errors not_open (outside opens_at..closes_at, not ready or archived), not_eligible, content_unavailable.
     - name: save_exam_answers(exam_id, expected_version, answers[{question_id, choice_id?|text_answer?}], key)
       returns: "{outcome: saved | conflict | finalized, state: StudentExamState, replayed}"
       notes: Stale expected_version writes nothing (conflict). Past the cutoff the attempt is settled and reported (finalized); late answers are never saved. Changed answers to excluded questions are rejected (question_excluded). A key reused for different input fails with idempotency_conflict.
@@ -358,12 +362,55 @@ components:
         publication: { type: [object, "null"], description: Latest official revision. }
         publication_state: { type: string, enum: [unpublished, published, pending_correction] }
         solutions_qualified: { type: boolean }
+    StudentExamResult:
+      type: [object, "null"]
+      description: Current official result, total only; no per-part/per-question items, feedback or private marks. A revision above 1 is an officially announced correction.
+      properties:
+        total: { type: string, description: Exact decimal. }
+        max_score: { type: string }
+        published_at: { type: string, format: date-time, description: First official announcement. }
+        corrected: { type: boolean }
+        corrected_at: { type: [string, "null"], format: date-time, description: Announcement of the current corrected total. }
+    StudentExamOverview:
+      type: object
+      description: Allowlisted overview (EDRA-232); no questions, answers, departure questions, result items or feedback.
+      properties:
+        exam_id: { type: string, format: uuid }
+        title: { type: string }
+        instructions: { type: string }
+        time_limit_minutes: { type: [integer, "null"] }
+        opens_at: { type: [string, "null"] }
+        closes_at: { type: [string, "null"], description: Scheduled close; no new starts from here. }
+        actual_closes_at: { type: [string, "null"], description: Scheduled close plus the two-minute completion period. }
+        server_now: { type: string, format: date-time }
+        phase: { $ref: "#/components/schemas/Phase" }
+        action: { type: string, enum: [start, resume, submitted, not_yet_open, no_new_starts, ineligible, unavailable], description: Server-derived entry state; browser capability and integration readiness are further client restrictions, never authorization. }
+        attempt:
+          type: [object, "null"]
+          properties:
+            started_at: { type: string }
+            deadline_at: { type: string }
+            cutoff_at: { type: string }
+            departure_count: { type: integer }
+            finalized_at: { type: [string, "null"] }
+            finalization_reason: { oneOf: [{ $ref: "#/components/schemas/Reason" }, { type: "null" }] }
+            superseded: { type: boolean }
+        submission:
+          type: [object, "null"]
+          properties:
+            source: { type: string, enum: [online, physical] }
+            reason: { $ref: "#/components/schemas/Reason" }
+            submitted_at: { type: string }
+            processed_at: { type: string }
+        result: { $ref: "#/components/schemas/StudentExamResult" }
     StudentExamState:
       type: object
       description: |
         Student-safe projection (EDRA-83 handoff; not exposed over HTTP yet), built field by field.
         Never contains the key, model answers, solution notes or private marks before `solutions` is
-        present, and no score before `result` (an announced revision) exists.
+        present, and no score before `result` (an announced revision) exists. After final submission
+        and before solutions qualify, parts, excluded_question_ids, attempt.answers and
+        attempt.departures are empty (no question/answer review).
       properties:
         exam_id: { type: string, format: uuid }
         server_now: { type: string, format: date-time }
@@ -373,8 +420,8 @@ components:
         time_limit_minutes: { type: integer }
         phase: { $ref: "#/components/schemas/Phase" }
         eligible: { type: boolean }
-        excluded_question_ids: { type: array, items: { type: string }, description: Skip these when navigating; they cannot be answered. }
-        parts: { type: array, items: { type: object }, description: Stable order; questions carry their original `number`; choices without correctness. }
+        excluded_question_ids: { type: array, items: { type: string }, description: Empty until question material is permitted; then skip these when navigating; they cannot be answered. }
+        parts: { type: array, items: { type: object }, description: Present only during the student's active (unfinalized, unsuperseded) online attempt or once solutions qualify; then stable order with original question numbers and choices without correctness. Physical drafts/submissions alone do not reveal material. }
         attempt:
           type: [object, "null"]
           properties:
@@ -383,11 +430,11 @@ components:
             cutoff_at: { type: string, description: Earlier of deadline_at and actual_closes_at. }
             answers_version: { type: integer }
             departure_count: { type: integer }
-            departures: { type: array, items: { $ref: "#/components/schemas/Departure" } }
+            departures: { type: array, items: { $ref: "#/components/schemas/Departure" }, description: Empty unless question material is permitted. }
             finalized_at: { type: [string, "null"] }
             finalization_reason: { oneOf: [{ $ref: "#/components/schemas/Reason" }, { type: "null" }] }
             superseded: { type: boolean, description: Physical work was accepted first. }
-            answers: { type: array, items: { type: object } }
+            answers: { type: array, items: { type: object }, description: Empty unless question material is permitted. }
         submission:
           type: [object, "null"]
           description: Finalization acknowledgment.
@@ -397,7 +444,7 @@ components:
             submitted_at: { type: string, description: Effective submission time (the cutoff for deadline submissions). }
             processed_at: { type: string, description: When the database settled it; may be later than submitted_at. }
             original_deadline_at: { type: [string, "null"] }
-        result: { type: [object, "null"], description: Latest announced revision only. }
+        result: { $ref: "#/components/schemas/StudentExamResult" }
         solutions: { type: [object, "null"], description: Present once qualified (online at actual closure, including timer/kicked/window_closed; physical at closure plus announcement). Key, model answers and notes only; no video access. }
       examples:
         - summary: Second departure on the last question (warned, no later question)

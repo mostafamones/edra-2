@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { IconChecklist } from "@tabler/icons-react";
 
+import { MarkingGuard } from "./guard";
 import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -43,7 +44,7 @@ export function MarkingSheet<R extends Row>({ disabled, roster, summary, form }:
   }
 
   return (
-    <Sheet open={open} onOpenChange={(value) => { setOpen(value); if (!value) next(); }}>
+    <MarkingGuard>{(request) => <Sheet open={open} onOpenChange={(value) => { if (value) setOpen(true); else request(() => { setOpen(false); next(); }); }}>
       {disabled ? (
         <Tooltip>
           {/* A disabled button gets no hover or focus, so the tooltip hangs on a wrapper. */}
@@ -66,7 +67,7 @@ export function MarkingSheet<R extends Row>({ disabled, roster, summary, form }:
               value={student}
               inputValue={typed}
               onInputValueChange={setTyped}
-              onValueChange={(row: R | null) => setStudentId(row?.recordId ?? null)}
+              onValueChange={(row: R | null) => { if (row?.recordId !== studentId) request(() => setStudentId(row?.recordId ?? null)); }}
               itemToStringLabel={(row: R) => row.fullName}
               filter={(row: R, search: string) => {
                 const needle = search.trim().toLowerCase();
@@ -103,6 +104,6 @@ export function MarkingSheet<R extends Row>({ disabled, roster, summary, form }:
           </div>
         )}
       </SheetContent>
-    </Sheet>
+    </Sheet>}</MarkingGuard>
   );
 }

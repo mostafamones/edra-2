@@ -14,7 +14,7 @@ describe("assignmentPermissions", () => {
 
   it("freezes the structure once marking starts and leaves text edits to Owner/Admin", () => {
     expect(assignmentPermissions("instructor", at("active", { hasActivity: true }))).toEqual({
-      edit: false, editStructure: false, close: false, reopen: false, archive: false, mark: true,
+      correct: false, edit: false, editStructure: false, close: false, reopen: false, archive: false, mark: true,
     });
     expect(assignmentPermissions("owner", at("active", { hasActivity: true }))).toMatchObject({ edit: true, editStructure: false, close: true, archive: false });
     expect(assignmentPermissions("admin", at("closed"))).toMatchObject({ edit: true, editStructure: false, reopen: true, archive: true });
@@ -33,6 +33,12 @@ describe("assignmentPermissions", () => {
       expect(assignmentPermissions(role, at("closed")).mark).toBe(true);
       expect(assignmentPermissions(role, at("active", { ready: false })).mark).toBe(false);
     }
+  });
+
+  it("limits scoring corrections to active managers after work begins", () => {
+    for (const role of ["owner", "head_admin", "admin"] as const) expect(assignmentPermissions(role, at("closed", { hasActivity: true })).correct).toBe(true);
+    expect(assignmentPermissions("instructor", at("active", { hasActivity: true })).correct).toBe(false);
+    expect(assignmentPermissions("owner", at("active")).correct).toBe(false);
   });
 
   it("makes archived assignments and closed years read-only", () => {

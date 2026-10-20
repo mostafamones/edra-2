@@ -22,7 +22,7 @@ export function ExamMarking({ academy, exam }: { academy: AcademyEntry; exam: Ex
       disabled={query.isSuccess && rows.length === 0 ? "Marking opens once the exam is ready for work or a student’s work is accepted." : undefined}
       roster={{ isPending: query.isPending, isError: query.isError, rows }}
       summary={(row) => (row.result?.complete ? `${formatScore(row.result.total)} / ${formatScore(row.result.maxScore)}` : STATUS_LABELS[studentStatus(row)])}
-      form={(student, { onSaved }) => <ExamMarks key={`${student.recordId}-${student.version}`} academy={academy} exam={exam} student={student} onSaved={onSaved} />}
+      form={(student, { onSaved }) => <ExamMarks key={student.recordId} academy={academy} exam={exam} student={student} onSaved={onSaved} />}
     />
   );
 }

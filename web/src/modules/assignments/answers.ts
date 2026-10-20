@@ -12,6 +12,7 @@ export function markParts(assignment: Assignment): MarkPart[] {
     id: part.id, position: part.position, title: part.title, maxScore: part.maxScore,
     entry: part.kind === null ? "total" : isChoicePart(part) ? "choice" : "manual",
     questions: part.questions.map((question) => ({
+      excluded: question.excluded, locked: question.excluded,
       id: question.id, position: question.position, prompt: plainText(question.prompt), maxScore: question.maxScore,
       choices: question.choices.map((choice) => ({ id: choice.id, position: choice.position, isCorrect: choice.isCorrect })),
     })),

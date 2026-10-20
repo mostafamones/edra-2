@@ -90,9 +90,12 @@ private struct SignedInRoot: View {
 
     var body: some View {
         ShellView(model: academies, sessions: sessions, schedules: schedules, start: start, assignments: assignments, makeSessionModel: { [academies, scope] session in
-            SessionDetailModel(
+            // The screen belongs to the account scope and academy selection it was opened in.
+            let context = academies.context
+            return SessionDetailModel(
                 session: session,
                 api: api,
+                isCurrent: { context.map { academies.isCurrent($0) } ?? false },
                 onUnauthenticated: { await auth.signOut(from: scope) },
                 onForbidden: { await academies.load() }
             )

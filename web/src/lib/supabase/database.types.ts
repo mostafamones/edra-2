@@ -562,6 +562,221 @@ export type Database = {
           },
         ]
       }
+      assignment_cohort_members: {
+        Row: {
+          annual_student_record_id: string
+          assignment_id: string
+          cohort_revision: number
+          requirement_ended_at: string | null
+        }
+        Insert: {
+          annual_student_record_id: string
+          assignment_id: string
+          cohort_revision: number
+          requirement_ended_at?: string | null
+        }
+        Update: {
+          annual_student_record_id?: string
+          assignment_id?: string
+          cohort_revision?: number
+          requirement_ended_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_cohort_members_annual_student_record_id_fkey"
+            columns: ["annual_student_record_id"]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_cohort_members_assignment_id_cohort_revision_fkey"
+            columns: ["assignment_id", "cohort_revision"]
+            isOneToOne: false
+            referencedRelation: "assignment_cohorts"
+            referencedColumns: ["assignment_id", "revision"]
+          },
+        ]
+      }
+      assignment_cohorts: {
+        Row: {
+          assignment_id: string
+          audience_basis: Json
+          captured_at: string
+          captured_by: string | null
+          revision: number
+          source: string
+        }
+        Insert: {
+          assignment_id: string
+          audience_basis: Json
+          captured_at?: string
+          captured_by?: string | null
+          revision: number
+          source: string
+        }
+        Update: {
+          assignment_id?: string
+          audience_basis?: Json
+          captured_at?: string
+          captured_by?: string | null
+          revision?: number
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_cohorts_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_cohorts_captured_by_fkey"
+            columns: ["captured_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_corrections: {
+        Row: {
+          academy_id: string
+          assignment_id: string
+          choice_id: string | null
+          created_at: string
+          created_by: string
+          max_score: number
+          operation: string
+          part_id: string
+          previous_choice_id: string | null
+          previous_max_score: number
+          question_id: string
+          revision: number
+        }
+        Insert: {
+          academy_id: string
+          assignment_id: string
+          choice_id?: string | null
+          created_at?: string
+          created_by: string
+          max_score: number
+          operation: string
+          part_id: string
+          previous_choice_id?: string | null
+          previous_max_score: number
+          question_id: string
+          revision: number
+        }
+        Update: {
+          academy_id?: string
+          assignment_id?: string
+          choice_id?: string | null
+          created_at?: string
+          created_by?: string
+          max_score?: number
+          operation?: string
+          part_id?: string
+          previous_choice_id?: string | null
+          previous_max_score?: number
+          question_id?: string
+          revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_corrections_academy_id_assignment_id_fkey"
+            columns: ["academy_id", "assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "assignment_corrections_assignment_id_part_id_fkey"
+            columns: ["assignment_id", "part_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_parts"
+            referencedColumns: ["assignment_id", "id"]
+          },
+          {
+            foreignKeyName: "assignment_corrections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_corrections_part_id_question_id_fkey"
+            columns: ["part_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_part_questions"
+            referencedColumns: ["part_id", "id"]
+          },
+          {
+            foreignKeyName: "assignment_corrections_question_id_choice_id_fkey"
+            columns: ["question_id", "choice_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_question_choices"
+            referencedColumns: ["question_id", "id"]
+          },
+          {
+            foreignKeyName: "assignment_corrections_question_id_previous_choice_id_fkey"
+            columns: ["question_id", "previous_choice_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_question_choices"
+            referencedColumns: ["question_id", "id"]
+          },
+        ]
+      }
+      assignment_mark_basis_history: {
+        Row: {
+          annual_student_record_id: string
+          answers: Json
+          assignment_id: string
+          mark: Json
+          part_id: string
+          revision: number
+        }
+        Insert: {
+          annual_student_record_id: string
+          answers: Json
+          assignment_id: string
+          mark: Json
+          part_id: string
+          revision: number
+        }
+        Update: {
+          annual_student_record_id?: string
+          answers?: Json
+          assignment_id?: string
+          mark?: Json
+          part_id?: string
+          revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_mark_basis_history_assignment_id_annual_student_fkey"
+            columns: ["assignment_id", "annual_student_record_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_recipients"
+            referencedColumns: ["assignment_id", "annual_student_record_id"]
+          },
+          {
+            foreignKeyName: "assignment_mark_basis_history_assignment_id_part_id_fkey"
+            columns: ["assignment_id", "part_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_parts"
+            referencedColumns: ["assignment_id", "id"]
+          },
+          {
+            foreignKeyName: "assignment_mark_basis_history_assignment_id_revision_fkey"
+            columns: ["assignment_id", "revision"]
+            isOneToOne: false
+            referencedRelation: "assignment_corrections"
+            referencedColumns: ["assignment_id", "revision"]
+          },
+        ]
+      }
       assignment_marks: {
         Row: {
           academy_id: string
@@ -571,6 +786,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["assignment_mark_kind"]
           part_id: string
           reason: string | null
+          requires_remark: boolean
           score: number
           updated_at: string
           updated_by: string
@@ -583,6 +799,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["assignment_mark_kind"]
           part_id: string
           reason?: string | null
+          requires_remark?: boolean
           score: number
           updated_at?: string
           updated_by: string
@@ -595,6 +812,7 @@ export type Database = {
           kind?: Database["public"]["Enums"]["assignment_mark_kind"]
           part_id?: string
           reason?: string | null
+          requires_remark?: boolean
           score?: number
           updated_at?: string
           updated_by?: string
@@ -634,6 +852,7 @@ export type Database = {
         Row: {
           academy_id: string
           assignment_id: string
+          excluded: boolean
           id: string
           max_score: number
           part_id: string
@@ -643,6 +862,7 @@ export type Database = {
         Insert: {
           academy_id: string
           assignment_id: string
+          excluded?: boolean
           id?: string
           max_score: number
           part_id: string
@@ -652,6 +872,7 @@ export type Database = {
         Update: {
           academy_id?: string
           assignment_id?: string
+          excluded?: boolean
           id?: string
           max_score?: number
           part_id?: string
@@ -1024,6 +1245,7 @@ export type Database = {
           published_at: string
           published_by: string
           revision: number
+          scoring_revision: number | null
           total: number
           work_status: Database["public"]["Enums"]["assignment_work_status"]
         }
@@ -1045,6 +1267,7 @@ export type Database = {
           published_at?: string
           published_by: string
           revision: number
+          scoring_revision?: number | null
           total: number
           work_status: Database["public"]["Enums"]["assignment_work_status"]
         }
@@ -1066,6 +1289,7 @@ export type Database = {
           published_at?: string
           published_by?: string
           revision?: number
+          scoring_revision?: number | null
           total?: number
           work_status?: Database["public"]["Enums"]["assignment_work_status"]
         }
@@ -1102,6 +1326,7 @@ export type Database = {
           audience: Database["public"]["Enums"]["assignment_audience"]
           closed_at: string | null
           closed_by: string | null
+          cohort_revision: number
           created_at: string
           created_by: string
           due_at: string | null
@@ -1113,6 +1338,7 @@ export type Database = {
           published_at: string | null
           published_by: string | null
           recipient_count: number
+          scoring_revision: number
           state: Database["public"]["Enums"]["assignment_state"]
           title: string
           track_id: string | null
@@ -1128,6 +1354,7 @@ export type Database = {
           audience: Database["public"]["Enums"]["assignment_audience"]
           closed_at?: string | null
           closed_by?: string | null
+          cohort_revision?: number
           created_at?: string
           created_by: string
           due_at?: string | null
@@ -1139,6 +1366,7 @@ export type Database = {
           published_at?: string | null
           published_by?: string | null
           recipient_count?: number
+          scoring_revision?: number
           state?: Database["public"]["Enums"]["assignment_state"]
           title: string
           track_id?: string | null
@@ -1154,6 +1382,7 @@ export type Database = {
           audience?: Database["public"]["Enums"]["assignment_audience"]
           closed_at?: string | null
           closed_by?: string | null
+          cohort_revision?: number
           created_at?: string
           created_by?: string
           due_at?: string | null
@@ -1165,6 +1394,7 @@ export type Database = {
           published_at?: string | null
           published_by?: string | null
           recipient_count?: number
+          scoring_revision?: number
           state?: Database["public"]["Enums"]["assignment_state"]
           title?: string
           track_id?: string | null
@@ -4692,6 +4922,8 @@ export type Database = {
         Row: {
           academic_year_id: string
           academy_id: string
+          added_by: string | null
+          added_by_name: string | null
           annual_student_record_id: string
           created_at: string
           level_id: string
@@ -4704,6 +4936,8 @@ export type Database = {
         Insert: {
           academic_year_id: string
           academy_id: string
+          added_by?: string | null
+          added_by_name?: string | null
           annual_student_record_id: string
           created_at?: string
           level_id: string
@@ -4716,6 +4950,8 @@ export type Database = {
         Update: {
           academic_year_id?: string
           academy_id?: string
+          added_by?: string | null
+          added_by_name?: string | null
           annual_student_record_id?: string
           created_at?: string
           level_id?: string
@@ -4743,6 +4979,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sessions"
             referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "session_roster_entries_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5790,6 +6033,16 @@ export type Database = {
         Returns: boolean
       }
       accept_staff_invitation: { Args: { p_token: string }; Returns: Json }
+      add_session_attendee: {
+        Args: {
+          p_academy_id: string
+          p_expected_revision: number
+          p_key: string
+          p_record_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       allocate_student_code: {
         Args: { p_academy_id: string; p_level_id: string }
         Returns: string
@@ -5936,6 +6189,16 @@ export type Database = {
         }
         Returns: Json
       }
+      check_in_attendance_with_late: {
+        Args: {
+          p_academy_id: string
+          p_annual_record_id: string
+          p_key: string
+          p_late_after_minutes: number
+          p_session_id: string
+        }
+        Returns: Json
+      }
       check_student_record_input: {
         Args: {
           p_full_name: string
@@ -6055,6 +6318,17 @@ export type Database = {
           p_year_id: string
         }
         Returns: string
+      }
+      correct_assignment_key: {
+        Args: {
+          p_academy_id: string
+          p_assignment_id: string
+          p_choice_id: string
+          p_expected_scoring_revision: number
+          p_key: string
+          p_question_id: string
+        }
+        Returns: Json
       }
       correct_exam_key: {
         Args: {
@@ -6203,6 +6477,16 @@ export type Database = {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: string
       }
+      exclude_assignment_question: {
+        Args: {
+          p_academy_id: string
+          p_assignment_id: string
+          p_expected_scoring_revision: number
+          p_key: string
+          p_question_id: string
+        }
+        Returns: Json
+      }
       exclude_exam_question: {
         Args: {
           p_academy_id: string
@@ -6271,6 +6555,10 @@ export type Database = {
         Returns: Json
       }
       get_my_exam: { Args: { p_exam_id: string }; Returns: Json }
+      get_my_exam_overview: {
+        Args: { p_academy_id: string; p_exam_id: string }
+        Returns: Json
+      }
       get_my_quiz: { Args: { p_quiz_id: string }; Returns: Json }
       get_my_student_academy: { Args: { p_slug: string }; Returns: Json }
       get_quiz: {
@@ -6353,6 +6641,10 @@ export type Database = {
           p_before_started_at: string
           p_limit: number
         }
+        Returns: Json
+      }
+      list_my_exams: {
+        Args: { p_academy_id: string; p_limit?: number; p_offset?: number }
         Returns: Json
       }
       list_my_student_academies: { Args: never; Returns: Json }
@@ -6503,6 +6795,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      mark_unrecorded_absent: {
+        Args: {
+          p_academy_id: string
+          p_expected_revision: number
+          p_key: string
+          p_session_id: string
+        }
+        Returns: Json
       }
       normalize_egyptian_phone: { Args: { value: string }; Returns: string }
       normalize_import_label: { Args: { value: string }; Returns: string }
@@ -6831,6 +7132,16 @@ export type Database = {
         }
         Returns: Json
       }
+      search_attendee_candidates: {
+        Args: {
+          p_academy_id: string
+          p_limit: number
+          p_offset: number
+          p_query: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       session_academy: { Args: { p_session_id: string }; Returns: string }
       session_archive_impact: {
         Args: { p_academy_id: string; p_session_id: string }
@@ -6961,6 +7272,10 @@ export type Database = {
         Returns: Json
       }
       start_exam_attempt: { Args: { p_exam_id: string }; Returns: Json }
+      start_my_exam: {
+        Args: { p_academy_id: string; p_exam_id: string }
+        Returns: Json
+      }
       start_quiz_attempt: { Args: { p_quiz_id: string }; Returns: Json }
       start_session: {
         Args: {
@@ -7266,7 +7581,7 @@ export type Database = {
       schedule_audience: "group" | "level" | "program"
       schedule_kind: "recurring" | "one_off"
       session_end_reason: "manual" | "auto"
-      session_roster_origin: "expected" | "eligible"
+      session_roster_origin: "expected" | "eligible" | "unexpected"
       session_state: "live" | "ended"
       staff_invitation_status: "pending" | "accepted" | "revoked" | "expired"
       student_code_retirement_reason:
@@ -7466,7 +7781,7 @@ export const Constants = {
       schedule_audience: ["group", "level", "program"],
       schedule_kind: ["recurring", "one_off"],
       session_end_reason: ["manual", "auto"],
-      session_roster_origin: ["expected", "eligible"],
+      session_roster_origin: ["expected", "eligible", "unexpected"],
       session_state: ["live", "ended"],
       staff_invitation_status: ["pending", "accepted", "revoked", "expired"],
       student_code_retirement_reason: [
@@ -7488,3 +7803,4 @@ export const Constants = {
     },
   },
 } as const
+

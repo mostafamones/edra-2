@@ -5,7 +5,10 @@ import { z } from "zod";
 import type { StaffApiContext } from "@/lib/api/handler";
 import { apiError, apiJson, readJson, snakeKeys, type ApiErrorCode } from "@/lib/api/http";
 import { normalizeStudentCode } from "@/modules/students/contract";
-import { changeAttendance, checkIn, getAttendance, MAX_BULK_CHANGES, MAX_CODE_INPUT_LENGTH, MAX_LATE_AFTER_MINUTES, publishAttendance } from "./data";
+import {
+  addAttendee, changeAttendance, checkIn, getAttendance, markUnrecordedAbsent, MAX_ATTENDEE_PAGE, MAX_ATTENDEE_QUERY_LENGTH, MAX_BULK_CHANGES,
+  MAX_CODE_INPUT_LENGTH, MAX_LATE_AFTER_MINUTES, publishAttendance, searchAttendees,
+} from "./data";
 import { ATTENDANCE_STATUSES, type AttendanceErrorCode, type AttendanceFailure } from "./types";
 
 /**
@@ -19,6 +22,7 @@ const API_CODES: Record<AttendanceErrorCode, ApiErrorCode> = {
   not_found: "NOT_FOUND",
   student_not_found: "STUDENT_NOT_FOUND",
   not_on_roster: "NOT_ON_ROSTER",
+  student_archived: "STUDENT_ARCHIVED",
   student_codes_disabled: "STUDENT_CODES_DISABLED",
   student_code_retired: "STUDENT_CODE_RETIRED",
   student_code_not_found: "STUDENT_CODE_NOT_FOUND",
@@ -132,4 +136,57 @@ export async function publishResponse(context: StaffApiContext, request: Request
   return apiJson(context, snakeKeys({
     outcome: result.outcome, publicationId: result.publicationId, revision: result.revision, itemCount: result.itemCount, replayed: result.replayed,
   }));
+}
+
+const reviewedBody = z.object({ expected_revision: z.number().int().min(0) }).strict();
+
+const staleReview = (context: StaffApiContext, revision: number) =>
+  apiError(context, "ATTENDANCE_REVIEW_STALE", { details: { revision } });
+
+/** All remaining expected Unknown students of a mandatory session → Absent, against the reviewed revision. */
+export async function unrecordedAbsenceResponse(context: StaffApiContext, request: Request, academyId: string, sessionId: string) {
+  const key = idempotencyKey(request);
+  if (!key) return missingKey(context);
+  const body = reviewedBody.safeParse(await readJson(request));
+  if (!body.success) return apiError(context, "INVALID_REQUEST");
+  const result = await markUnrecordedAbsent({ academyId, sessionId, expectedRevision: body.data.expected_revision, idempotencyKey: key }, context.authority);
+  if (!result.ok) return fail(context, result);
+  if (result.outcome === "stale") return staleReview(context, result.revision);
+  return apiJson(context, { outcome: result.outcome, changed: result.changed, revision: result.revision, replayed: result.replayed });
+}
+
+const searchParams = z.object({
+  q: z.string().max(MAX_ATTENDEE_QUERY_LENGTH).default(""),
+  limit: z.coerce.number().int().min(1).max(MAX_ATTENDEE_PAGE).default(20),
+  offset: z.coerce.number().int().min(0).max(10_000).default(0),
+});
+
+/** Candidates for an unexpected attendee: active same-academy, same-year records not on the roster. */
+export async function attendeeSearchResponse(context: StaffApiContext, request: Request, academyId: string, sessionId: string) {
+  const url = new URL(request.url);
+  const params = searchParams.safeParse({
+    q: url.searchParams.get("q") ?? undefined,
+    limit: url.searchParams.get("limit") ?? undefined,
+    offset: url.searchParams.get("offset") ?? undefined,
+  });
+  if (!params.success) return apiError(context, "INVALID_REQUEST");
+  const result = await searchAttendees({ academyId, sessionId, query: params.data.q, limit: params.data.limit, offset: params.data.offset }, context.authority);
+  if (!result.ok) return fail(context, result);
+  return apiJson(context, snakeKeys({ items: result.items, hasMore: result.hasMore }));
+}
+
+const addBody = z.object({ annual_student_record_id: z.uuid(), expected_revision: z.number().int().min(0) }).strict();
+
+/** Explicitly appends an unexpected attendee (Unknown) to the roster; adding never checks the student in. */
+export async function addAttendeeResponse(context: StaffApiContext, request: Request, academyId: string, sessionId: string) {
+  const key = idempotencyKey(request);
+  if (!key) return missingKey(context);
+  const body = addBody.safeParse(await readJson(request));
+  if (!body.success) return apiError(context, "INVALID_REQUEST");
+  const result = await addAttendee({
+    academyId, sessionId, annualStudentRecordId: body.data.annual_student_record_id, expectedRevision: body.data.expected_revision, idempotencyKey: key,
+  }, context.authority);
+  if (!result.ok) return fail(context, result);
+  if (result.outcome === "stale") return staleReview(context, result.revision);
+  return apiJson(context, snakeKeys({ outcome: result.outcome, entry: result.entry, revision: result.revision, replayed: result.replayed }));
 }

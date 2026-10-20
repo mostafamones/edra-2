@@ -79,7 +79,7 @@ const rosterRowSchema = z.object({
   academy_student_profile_id: z.string(),
   full_name: z.string(),
   archived: z.boolean(),
-  origin: enumOf<Enums["session_roster_origin"]>(["expected", "eligible"]),
+  origin: enumOf<Enums["session_roster_origin"]>(["expected", "eligible", "unexpected"]),
   student_phone: z.string(),
   parent_phone: z.string(),
   level_id: z.string(),

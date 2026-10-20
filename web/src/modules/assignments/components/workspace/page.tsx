@@ -15,6 +15,7 @@ import { assignmentQueryKey, loadAssignment } from "../../queries";
 import type { Assignment } from "../../types";
 import { AssignmentMarking } from "../marking/sheet";
 import { AUDIENCE_LABELS, STATE_BADGE, STATE_LABELS } from "../shared/labels";
+import { AssignmentScoring } from "./scoring";
 import { LifecycleActions } from "./lifecycle";
 import { AssignmentOverview } from "./overview/content";
 import { AssignmentStudents } from "./students/list";
@@ -67,10 +68,10 @@ function Workspace({ academy, assignment }: { academy: AcademyEntry; assignment:
       more={<LifecycleActions assignment={assignment} permissions={permissions} />}
       yearOpen={assignment.yearOpen} archived={assignment.state === "archived"} ready={assignment.ready}
       setup="Finish every part’s questions and marks before recording work or marking. Nothing needs to be published."
-      studentCount={assignment.recipientCount}
+      studentCount={`${assignment.currentRequiredCount ?? assignment.recipientCount} required · ${assignment.optionalEligibleCount ?? 0} optional`}
       overview={({ showStudents }) => (
-        <AssignmentOverview assignment={assignment} onViewStudents={showStudents}
-          onSelectBar={(target) => { setFocus({ ...target, outcome: "lost" }); showStudents(); }} />
+        <div className="flex flex-col gap-4"><AssignmentOverview assignment={assignment} onViewStudents={showStudents}
+          onSelectBar={(target) => { setFocus({ ...target, outcome: "lost" }); showStudents(); }} /><AssignmentScoring assignment={assignment} role={academy.role} /></div>
       )}
       students={<AssignmentStudents academy={academy} assignment={assignment} focus={focus} onFocusChange={setFocus} />}
     />

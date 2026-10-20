@@ -28,9 +28,7 @@ export function AudienceCount({ academyId, academicYearId }: { academyId: string
   const { recipientCount, uncodedCount } = preview.data;
   return (
     <FieldDescription>
-      {recipientCount === 0
-        ? "No active students match this audience right now. Students who join later are added each time you save, until marking starts."
-        : <>{number.format(recipientCount)} active student{recipientCount === 1 ? "" : "s"} match now{uncodedCount > 0 ? `, ${number.format(uncodedCount)} without a student code` : ""}. Saving makes them this assignment’s students; once marking starts the list no longer changes.</>}
+      {number.format(recipientCount)} matching students{uncodedCount > 0 ? ` · ${number.format(uncodedCount)} without a student code` : ""}
     </FieldDescription>
   );
 }

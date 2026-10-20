@@ -23,12 +23,13 @@ function Stats({ assignment }: { assignment: Assignment }) {
   const totals = students.filter((row) => row.marking === "complete" && row.total !== null).map((row) => Number(row.total));
   const max = Number(assignment.maxScore);
   const average = totals.length > 0 && max > 0 ? (totals.reduce((sum, total) => sum + total, 0) / totals.length / max) * 100 : null;
-  const recipients = assignment.recipientCount;
+  const required = assignment.currentRequiredCount ?? assignment.recipientCount;
   return (
     <StatStrip stats={[
       { label: "Total marks", value: formatScore(assignment.maxScore) },
-      { label: "Students", value: number.format(recipients) },
-      { label: "Marked", loading, value: <>{number.format(marked)}<span className="text-base font-medium text-muted-foreground"> / {number.format(recipients)}</span></> },
+      { label: "Required", value: number.format(required) },
+      { label: "Optional", value: number.format(assignment.optionalEligibleCount ?? 0) },
+      { label: "Marked", loading, value: number.format(marked) },
       { label: "Average", loading, value: average === null ? "—" : `${percent.format(average)}%` },
     ]} />
   );

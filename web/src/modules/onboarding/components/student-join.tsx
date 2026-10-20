@@ -44,7 +44,7 @@ export function StudentJoin({ state: initialState }: { state: StudentJoinState }
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (initialState.kind === "invalid") void clearStudentInvite().catch(() => {});
+    if (initialState.kind === "invalid" || initialState.kind === "connected") void clearStudentInvite().catch(() => {});
   }, [initialState.kind]);
 
   const programs = state.kind === "enroll" ? state.programs : [];
