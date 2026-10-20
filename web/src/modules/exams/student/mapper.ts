@@ -4,8 +4,8 @@ import { EXAM_PART_KINDS, EXAM_PHASES, EXAM_SOURCES, FINALIZATION_REASONS } from
 import {
   STUDENT_EXAM_ACTIONS, type StudentExamAnswering, type StudentExamAttemptState, type StudentExamBrief, type StudentExamClaimOutcome,
   type StudentExamDeparture, type StudentExamDepartureOutcome, type StudentExamEntry, type StudentExamHeartbeatOutcome,
-  type StudentExamOverview, type StudentExamPage, type StudentExamReadOutcome, type StudentExamReleaseOutcome, type StudentExamSaveOutcome,
-  type StudentExamSubmitOutcome, type StudentExamTerminal,
+  type StudentExamOverview, type StudentExamPage, type StudentExamReadOutcome, type StudentExamReleaseOutcome, type StudentExamReview,
+  type StudentExamReviewAnswer, type StudentExamSaveOutcome, type StudentExamSubmitOutcome, type StudentExamTerminal,
 } from "./types";
 
 /**
@@ -333,4 +333,77 @@ export function toStudentExamImageAuthorization(value: unknown): StudentExamImag
   const result = imagesSchema.parse(value);
   if (result.status === "ok") return { kind: "ok", academyId: result.academy_id, imageIds: result.image_ids };
   return result.status === "lost" ? { kind: "editor_lost" } : { kind: "finalized" };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Review (EDRA-235).
+
+const reviewAnswerSchema = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("choice"), choice_id: uuid }),
+  z.object({ state: z.literal("text"), text: z.string() }),
+  z.object({ state: z.literal("blank") }),
+  z.object({ state: z.literal("paper_work") }),
+]);
+
+const reviewBase = { account_id: uuid, server_now: timestamp };
+
+const reviewSchema = z.discriminatedUnion("status", [
+  z.object({ ...reviewBase, status: z.literal("unavailable"), reason: z.enum(["not_submitted", "awaiting_closure", "awaiting_result"]) }),
+  z.object({
+    ...reviewBase,
+    status: z.literal("available"),
+    source: z.enum(EXAM_SOURCES),
+    notes: z.string(),
+    parts: z.array(z.object({
+      id: uuid, title: z.string(), instructions: z.string().nullable(), kind: z.enum(EXAM_PART_KINDS),
+      questions: z.array(z.object({
+        id: uuid, number: z.number().int().positive(), prompt: z.string(), excluded: z.boolean(),
+        choices: z.array(z.object({ id: uuid, label: z.string() })),
+        answer: reviewAnswerSchema,
+        correct_choice_id: uuid.nullable(),
+        model_answer: z.string(),
+      })),
+    })),
+  }),
+]);
+
+function toReviewAnswer(value: z.infer<typeof reviewAnswerSchema>): StudentExamReviewAnswer {
+  if (value.state === "choice") return { state: "choice", choiceId: value.choice_id };
+  if (value.state === "text") return { state: "text", text: value.text };
+  return { state: value.state };
+}
+
+/** Each variant is mapped explicitly: an unavailable review never carries material. */
+export function toStudentExamReview(value: unknown): StudentExamReview {
+  const review = reviewSchema.parse(value);
+  const base = { accountId: review.account_id, serverNow: review.server_now };
+  if (review.status === "unavailable") return { status: "unavailable", ...base, reason: review.reason };
+  return {
+    status: "available",
+    ...base,
+    source: review.source,
+    notes: review.notes,
+    parts: review.parts.map((part) => ({
+      id: part.id, title: part.title, instructions: part.instructions ?? "", kind: part.kind,
+      questions: part.questions.map((question) => ({
+        id: question.id, number: question.number, prompt: question.prompt, excluded: question.excluded, kind: part.kind,
+        choices: question.choices.map((choice) => ({ id: choice.id, label: choice.label })),
+        answer: toReviewAnswer(question.answer),
+        correctChoiceId: part.kind === "question_sheet" ? question.correct_choice_id : null,
+        modelAnswer: question.model_answer,
+      })),
+    })),
+  };
+}
+
+const reviewImagesSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("ok"), academy_id: uuid, image_ids: z.array(uuid) }),
+  z.object({ status: z.literal("unavailable") }),
+]);
+
+export type StudentExamReviewImageAuthorization = { kind: "ok"; academyId: string; imageIds: string[] } | { kind: "unavailable" };
+
+export function toStudentExamReviewImageAuthorization(value: unknown): StudentExamReviewImageAuthorization {
+  const result = reviewImagesSchema.parse(value);
+  return result.status === "ok" ? { kind: "ok", academyId: result.academy_id, imageIds: result.image_ids } : { kind: "unavailable" };
 }

@@ -180,6 +180,39 @@ export type StudentExamDepartureOutcome =
 
 export type StudentExamImagesOutcome = { kind: "urls"; urls: Record<string, string>; expiresInSeconds: number } | { kind: "editor_lost" } | { kind: "finalized" };
 
+// ---------------------------------------------------------------------------------------------
+// Review (EDRA-235): read-only accepted work and released solutions after qualification. No marks,
+// maxima or revisions; the official total stays in the overview.
+
+/** The answer frozen in the accepted submission. Paper Written Work has no transcription. */
+export type StudentExamReviewAnswer =
+  | { state: "choice"; choiceId: string }
+  | { state: "text"; text: string }
+  | { state: "blank" }
+  | { state: "paper_work" };
+
+export type StudentExamReviewQuestion = {
+  id: string;
+  number: number;
+  prompt: string;
+  excluded: boolean;
+  kind: ExamPartKind;
+  choices: StudentExamChoice[];
+  answer: StudentExamReviewAnswer;
+  correctChoiceId: string | null;
+  modelAnswer: string;
+};
+
+export type StudentExamReviewPart = { id: string; title: string; instructions: string; kind: ExamPartKind; questions: StudentExamReviewQuestion[] };
+
+export type StudentExamReviewUnavailableReason = "not_submitted" | "awaiting_closure" | "awaiting_result";
+
+export type StudentExamReview =
+  | { status: "unavailable"; accountId: string; serverNow: string; reason: StudentExamReviewUnavailableReason }
+  | { status: "available"; accountId: string; serverNow: string; source: ExamSource; notes: string; parts: StudentExamReviewPart[] };
+
+export type StudentExamReviewImagesOutcome = { kind: "urls"; urls: Record<string, string>; expiresInSeconds: number } | { kind: "unavailable" };
+
 export type StudentExamErrorCode =
   | "validation"
   | "forbidden"

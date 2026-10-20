@@ -6,13 +6,13 @@ import { cookieAuthority, type Db } from "@/lib/supabase/authority";
 import { studentFailure, studentFailureFromDatabase } from "./errors";
 import {
   toStudentExamClaim, toStudentExamDeparture, toStudentExamEntry, toStudentExamHeartbeat, toStudentExamOverview, toStudentExamPage,
-  toStudentExamRead, toStudentExamRelease, toStudentExamSave, toStudentExamSubmit,
+  toStudentExamRead, toStudentExamRelease, toStudentExamReview, toStudentExamSave, toStudentExamSubmit,
 } from "./mapper";
 import {
   STUDENT_EXAM_PAGE_SIZE, type StudentExamAnswerPatch, type StudentExamClaimOutcome, type StudentExamCommandResult,
   type StudentExamDepartureOutcome, type StudentExamEntry, type StudentExamHeartbeatOutcome, type StudentExamOverview,
-  type StudentExamPage, type StudentExamRead, type StudentExamReadOutcome, type StudentExamReleaseOutcome, type StudentExamSaveOutcome,
-  type StudentExamSubmitOutcome,
+  type StudentExamPage, type StudentExamRead, type StudentExamReadOutcome, type StudentExamReleaseOutcome, type StudentExamReview,
+  type StudentExamSaveOutcome, type StudentExamSubmitOutcome,
 } from "./types";
 
 /**
@@ -62,6 +62,18 @@ export async function getMyExamOverview(input: { academyId: string; examId: stri
   if (!parsed.success) return studentFailure("not_found");
   const { academyId, examId } = parsed.data;
   return call((db) => db.rpc("get_my_exam_overview", { p_academy_id: academyId, p_exam_id: examId }), toStudentExamOverview);
+}
+
+/**
+ * The caller's read-only review of their accepted work and the released solutions (EDRA-235). It
+ * settles due work like the overview and never starts, claims or resets anything. Before solutions
+ * qualify the database returns a status reason only; no editor token is involved.
+ */
+export async function getMyExamReview(input: { academyId: string; examId: string }): Promise<StudentExamRead<StudentExamReview>> {
+  const parsed = examInput.safeParse(input);
+  if (!parsed.success) return studentFailure("not_found");
+  const { academyId, examId } = parsed.data;
+  return call((db) => db.rpc("get_my_exam_review", { p_academy_id: academyId, p_exam_id: examId }), toStudentExamReview);
 }
 
 async function command<T extends object>(
