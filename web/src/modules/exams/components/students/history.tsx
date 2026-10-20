@@ -19,7 +19,7 @@ export function WorkHistory({ exam, detail }: { exam: Exam; detail: StudentDetai
           {detail.departures.map((departure) => (
             <li key={departure.eventId} className="flex flex-wrap gap-x-2">
               <span className="font-medium">Departure {departure.ordinal}</span>
-              <span>left at Q{departure.questionNumber}</span>
+              <span>{departure.questionNumber === null ? "left before a question was displayed" : `left at Q${departure.questionNumber}`}</span>
               <span className="text-muted-foreground"><ExamTime value={departure.recordedAt} /></span>
               <span className="text-muted-foreground">
                 {departure.outcome === "kicked" ? "· Kicked: saved answers submitted"

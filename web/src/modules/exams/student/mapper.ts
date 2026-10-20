@@ -168,7 +168,7 @@ const lostReason = z.enum(["expired", "replaced"]);
 const finalizedSchema = z.object({ status: z.literal("finalized"), state: terminalSchema });
 
 const departureSchema = z.object({
-  event_id: uuid, ordinal: z.number().int().min(1).max(3), question_id: uuid,
+  event_id: uuid, ordinal: z.number().int().min(1).max(3), question_id: uuid.nullable(),
   outcome: z.enum(["warned", "kicked"]), next_question_id: uuid.nullable(),
 });
 

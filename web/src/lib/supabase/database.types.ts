@@ -2417,8 +2417,8 @@ export type Database = {
           next_question_id: string | null
           ordinal: number
           outcome: string
-          question_id: string
-          question_number: number
+          question_id: string | null
+          question_number: number | null
           recorded_at: string
         }
         Insert: {
@@ -2429,8 +2429,8 @@ export type Database = {
           next_question_id?: string | null
           ordinal: number
           outcome: string
-          question_id: string
-          question_number: number
+          question_id?: string | null
+          question_number?: number | null
           recorded_at: string
         }
         Update: {
@@ -2441,8 +2441,8 @@ export type Database = {
           next_question_id?: string | null
           ordinal?: number
           outcome?: string
-          question_id?: string
-          question_number?: number
+          question_id?: string | null
+          question_number?: number | null
           recorded_at?: string
         }
         Relationships: [
@@ -6761,10 +6761,10 @@ export type Database = {
       }
       record_my_exam_departure: {
         Args: {
-          p_generation: number
           p_academy_id: string
           p_event_id: string
           p_exam_id: string
+          p_generation: number
           p_question_id: string
           p_token: string
         }

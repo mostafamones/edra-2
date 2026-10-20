@@ -211,8 +211,8 @@ export type ResultRevision = {
 export type Departure = {
   eventId: string;
   ordinal: number;
-  questionId: string;
-  questionNumber: number;
+  questionId: string | null;
+  questionNumber: number | null;
   outcome: DepartureOutcome;
   nextQuestionId: string | null;
   recordedAt: string;

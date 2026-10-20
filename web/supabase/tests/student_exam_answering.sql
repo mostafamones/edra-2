@@ -443,8 +443,12 @@ alter table public.exam_attempts enable trigger exam_attempts_guard;
 select pg_temp.act('s2');
 set local role authenticated;
 do $$
-declare result jsonb := pg_temp.save('main', pg_temp.got('s2t'), 1, pg_temp.choice('q1', 'q1-wrong'), gen_random_uuid());
+declare result jsonb;
 begin
+  result := public.record_my_exam_departure(pg_temp.id('academy'), pg_temp.id('main'), pg_temp.got('s2t'), gen_random_uuid(), null, 1);
+  perform pg_temp.check(result->>'outcome' = 'finalized' and result->'state'->'submission'->>'reason' = 'timer',
+    'due timer wins over context-free departure');
+  result := pg_temp.save('main', pg_temp.got('s2t'), 1, pg_temp.choice('q1', 'q1-wrong'), gen_random_uuid());
   perform pg_temp.check(result->>'outcome' = 'finalized' and result->'state'->'submission'->>'reason' = 'timer' and pg_temp.no_material(result),
     'timer settles before a late save');
   result := public.renew_my_exam_editor(pg_temp.id('academy'), pg_temp.id('main'), pg_temp.got('s2t'));
@@ -477,9 +481,19 @@ set local role authenticated;
 do $$
 declare token text := public.enter_my_exam(pg_temp.id('academy'), pg_temp.id('main'), null)->'editor'->>'token';
   result jsonb;
+  loading_event uuid := gen_random_uuid();
 begin
   perform pg_temp.check(pg_temp.save('main', token, 0, pg_temp.choice('q1', 'q1-right'), gen_random_uuid())->>'outcome' = 'saved', 's4 saves');
-  perform public.record_my_exam_departure(pg_temp.id('academy'), pg_temp.id('main'), token, gen_random_uuid(), pg_temp.id('q1'), 1);
+  result := public.record_my_exam_departure(pg_temp.id('academy'), pg_temp.id('main'), token, loading_event, null, 1);
+  perform pg_temp.check(result->>'outcome' = 'warned' and result->'departure'->'question_id' = 'null'::jsonb
+    and result->'departure'->'question_number' = 'null'::jsonb
+    and result->'departure'->>'next_question_id' = pg_temp.id('q1')::text, 'loading departure has null context and first continuation');
+  result := public.record_my_exam_departure(pg_temp.id('academy'), pg_temp.id('main'), token, loading_event, null, 1);
+  perform pg_temp.check(result->>'outcome' = 'duplicate', 'null-context replay is idempotent');
+  perform pg_temp.expect_error(format('select public.record_my_exam_departure(%L, %L, %L, %L, %L, 1)',
+    pg_temp.id('academy'), pg_temp.id('main'), token, loading_event, pg_temp.id('q1')), 'idempotency_conflict');
+  perform pg_temp.expect_error(format('select public.record_my_exam_departure(%L, %L, %L, gen_random_uuid(), %L, 1)',
+    pg_temp.id('academy'), pg_temp.id('main'), token, gen_random_uuid()), 'unknown_question');
   perform public.record_my_exam_departure(pg_temp.id('academy'), pg_temp.id('main'), token, gen_random_uuid(), pg_temp.id('q3'), 1);
   result := public.record_my_exam_departure(pg_temp.id('academy'), pg_temp.id('main'), token, gen_random_uuid(), pg_temp.id('q3'), 1);
   perform pg_temp.check(result->>'outcome' = 'kicked' and result->'state'->'submission'->>'reason' = 'kicked' and pg_temp.no_material(result), 'third departure kicks');

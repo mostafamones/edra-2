@@ -18,7 +18,7 @@ vi.mock("@/lib/supabase/authority", () => ({
   } : null,
 }));
 
-const { getMyExamOverview, listMyExams, enterMyExam } = await import("./data");
+const { getMyExamOverview, listMyExams, enterMyExam, recordMyExamDeparture } = await import("./data");
 
 const attempt = {
   id: "33333333-3333-4333-8333-333333333333", answers_version: 0,
@@ -94,6 +94,15 @@ describe("student exam boundary", () => {
   it("reports a finalized attempt as inactive", async () => {
     state.response = { data: { active: false, editor: null, attempt: { ...attempt, finalized_at: "2026-10-20T08:20:00Z", finalization_reason: "kicked" } }, error: null };
     expect(await enterMyExam({ academyId: ACADEMY, examId: EXAM, token: null })).toMatchObject({ ok: true, active: false });
+  });
+
+  it("preserves explicit null question context through the fenced RPC boundary", async () => {
+    const eventId = "44444444-4444-4444-8444-444444444444";
+    state.response = { data: { outcome: "warned", departure: { event_id: eventId, ordinal: 1, question_id: null,
+      outcome: "warned", next_question_id: null }, state: { server_now: overview.server_now, attempt, excluded_question_ids: [] } }, error: null };
+    const result = await recordMyExamDeparture({ academyId: ACADEMY, examId: EXAM, token: "a".repeat(64), generation: 1, eventId, questionId: null });
+    expect(result).toMatchObject({ ok: true, kind: "warned", departure: { questionId: null } });
+    expect(state.calls[0]).toMatchObject({ name: "record_my_exam_departure", args: { p_question_id: null, p_generation: 1, p_event_id: eventId } });
   });
 
   it("maps database codes to student messages and hides unknown errors", async () => {

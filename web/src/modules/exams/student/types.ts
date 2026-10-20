@@ -110,7 +110,7 @@ export type StudentExamPart = { id: string; title: string; instructions: string;
 export type StudentExamDeparture = {
   eventId: string;
   ordinal: number;
-  questionId: string;
+  questionId: string | null;
   outcome: "warned" | "kicked";
   nextQuestionId: string | null;
 };

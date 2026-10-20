@@ -88,7 +88,7 @@ const saveInput = editorInput.extend({
     .refine((answers) => new Set(answers.map((answer) => answer.questionId)).size === answers.length),
 });
 const submitInput = editorInput.extend({ generation, expectedVersion: version, key: z.uuid() });
-const departureInput = editorInput.extend({ generation, eventId: z.uuid(), questionId: z.uuid() });
+const departureInput = editorInput.extend({ generation, eventId: z.uuid(), questionId: z.uuid().nullable() });
 
 /**
  * Starts the caller's single attempt or resumes it, and claims the answering editor in the same
@@ -167,12 +167,14 @@ export async function submitMyExam(input: {
 
 /** Records one logical departure (EDRA-234 detects them); a repeated event id is counted once. */
 export async function recordMyExamDeparture(input: {
-  academyId: string; examId: string; token: string; generation: number; eventId: string; questionId: string;
+  academyId: string; examId: string; token: string; generation: number; eventId: string; questionId: string | null;
 }): Promise<StudentExamCommandResult<StudentExamDepartureOutcome>> {
   const parsed = departureInput.safeParse(input);
   if (!parsed.success) return studentFailure("validation");
   const { academyId, examId, token: current, eventId, questionId, generation } = parsed.data;
   return command((db) => db.rpc("record_my_exam_departure", {
-    p_academy_id: academyId, p_exam_id: examId, p_token: current, p_generation: generation, p_event_id: eventId, p_question_id: questionId,
+    p_academy_id: academyId, p_exam_id: examId, p_token: current, p_generation: generation, p_event_id: eventId,
+    // PostgreSQL UUID parameters accept null; generated RPC argument types cannot express this.
+    p_question_id: questionId as string,
   }), toStudentExamDeparture);
 }

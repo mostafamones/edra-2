@@ -70,7 +70,7 @@ export async function submitStudentExam(value: Editor & { generation: number; ex
 }
 
 export async function recordStudentExamDeparture(
-  value: Editor & { generation: number; eventId: string; questionId: string },
+  value: Editor & { generation: number; eventId: string; questionId: string | null },
 ): Promise<StudentExamCommandResult<StudentExamDepartureOutcome>> {
   if (!isObject(value)) return studentFailure("validation");
   return recordMyExamDeparture({
