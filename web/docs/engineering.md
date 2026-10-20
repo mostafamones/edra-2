@@ -32,6 +32,18 @@ During implementation, changes affecting database behavior, authorization, tenan
 
 Report source, test, cloud and deployed-flow evidence separately. Documentation edits do not establish runtime readiness.
 
+### Browser smoke tests
+
+From `web/`, install with `npm ci` and `npx playwright install --with-deps chromium`, then run `npm run test:e2e`. Use `npm run test:e2e:ui` for interactive runs and `npx playwright show-report` to inspect the HTML report. Reports never open automatically; failure screenshots and traces are retained in `test-results/`. Open a trace with `npx playwright show-trace <path-to-trace.zip>`. Generated `playwright-report/`, `test-results/` and `blob-report/` are ignored.
+
+Keep port 3100 free; stop any server on that port before running the suite. Playwright always starts its own Next.js development server on `127.0.0.1:3100` and refuses to reuse an existing server. The harness sets `EDRA_E2E=1` to select the ignored `.next-e2e` output directory; normal development still uses port 3000 and `.next`. Do not run two smoke suites in the same checkout simultaneously. Chromium maps `lvh.me` and `*.lvh.me` to loopback without public DNS; canonical hosts remain marketing `lvh.me`, staff `app.lvh.me` and student `learn.lvh.me`. All three test origins use port 3100. The server runner warms `/auth/login` using Node HTTP transport to `127.0.0.1:3100` with `Host: app.lvh.me:3100`, then signals readiness to Playwright. This avoids DNS while retaining canonical host validation; a bare loopback Host on port 3100 remains rejected. Readiness has a 120-second timeout, separate from each 30-second browser test.
+
+The harness explicitly supplies matching public/server development origins and `lvh.me` cookie domain, clears the development tunnel alias, and overrides inherited or `.env.local` public Supabase values with `http://127.0.0.1:54321` and a nonsecret placeholder key. No database or auth service should listen there. Every test starts with empty cookies/storage and fails on attempted browser requests to that endpoint; authentication is never mocked. No real credentials, accounts or database infrastructure are needed.
+
+The three Chromium scenarios cover login rendering/client validation, signed-out staff/student redirects (including the exact return path/query), and a public marketing 404. They establish development-runtime behavior only. The separate production build check remains required; production HTTPS/cookie behavior, authenticated journeys, API/database integrations, visual/accessibility checks, other browsers and native apps are outside this suite. Google font downloads during compilation still require network; a download/startup failure is separate from a browser assertion failure.
+
+The independent `CI / e2e` job runs on PRs and pushes to `main`, with one worker, no retries, a five-minute suite timeout and a ten-minute job timeout. Only superseded browser jobs are cancelled by PR/ref concurrency. Failures fail CI and upload the HTML report and `test-results` as `playwright-failure` for seven days. Existing web, database and Edge Function checks remain independent. Tooling has no license cost; private-repository Actions minutes/storage remain quota-limited. Branch protection and billing settings are separate owner actions.
+
 ### Database assertions
 
 `npm run test:db` (scripts/db-test.sh) runs the SQL suites in supabase/tests/ and then concurrency.sh against one explicitly configured isolated target: a prepared cloud target for manual runs, or the CI database below. It never starts Docker or a local stack, defaults to a connection, resets a database or applies migrations. It needs `psql` 10 or newer and:

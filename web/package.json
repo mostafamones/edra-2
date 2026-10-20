@@ -11,7 +11,9 @@
     "test": "vitest run",
     "test:db": "bash scripts/db-test.sh",
     "test:edge": "bash scripts/edge-check.sh",
-    "audit:auth": "node --env-file=.env.local scripts/audit-auth-users.mjs"
+    "audit:auth": "node --env-file=.env.local scripts/audit-auth-users.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -50,6 +52,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "16.3.3",
     "@types/node": "^22.20.4",
