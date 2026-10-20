@@ -1,4 +1,4 @@
-import type { ExamPhase, ExamSource, FinalizationReason } from "../types";
+import type { ExamPartKind, ExamPhase, ExamSource, FinalizationReason } from "../types";
 
 /**
  * Server-derived entry state. Browser fullscreen capability and the answering/departure
@@ -68,8 +68,117 @@ export type StudentExamOverview = {
   result: StudentExamResult | null;
 };
 
-/** Acknowledged start/resume: the single attempt and whether it is still active. */
-export type StudentExamStart = { attempt: StudentExamAttempt; active: boolean };
+// ---------------------------------------------------------------------------------------------
+// Answering (EDRA-233). The editor token proves which tab/device owns the attempt; the database
+// still resolves the signed-in account's record on every call, so a token alone is never authority.
+
+/** The attempt as the answering surface sees it: metadata only, never answers or questions. */
+export type StudentExamAttemptState = StudentExamAttempt & { id: string; answersVersion: number };
+
+/** The live editor claim this document holds. */
+export type StudentExamEditor = {
+  token: string;
+  generation: number;
+  expiresAt: string;
+  heartbeatSeconds: number;
+  leaseSeconds: number;
+};
+
+export type StudentExamEntryEditor = ({ status: "claimed" } & StudentExamEditor) | { status: "busy"; retryAfter: number };
+
+/** Start/resume plus the editor claim, from one trusted transaction. A busy claim carries no material. */
+export type StudentExamEntry = { attempt: StudentExamAttemptState; active: boolean; editor: StudentExamEntryEditor | null };
+
+/** A stored answer: a choice for Question Sheet questions, text for Written Work. */
+export type StudentExamAnswer = { choiceId: string | null; text: string | null };
+
+export type StudentExamChoice = { id: string; label: string };
+
+export type StudentExamQuestion = {
+  id: string;
+  /** Original exam-wide number; exclusions never renumber. */
+  number: number;
+  prompt: string;
+  excluded: boolean;
+  kind: ExamPartKind;
+  partId: string;
+  choices: StudentExamChoice[];
+};
+
+export type StudentExamPart = { id: string; title: string; instructions: string; kind: ExamPartKind; questions: StudentExamQuestion[] };
+
+export type StudentExamDeparture = {
+  eventId: string;
+  ordinal: number;
+  questionId: string;
+  outcome: "warned" | "kicked";
+  nextQuestionId: string | null;
+};
+
+/** The full answering document for the current editor of an active attempt. */
+export type StudentExamAnswering = {
+  /** The verified signed-in account (pending answers are stored per account and attempt). */
+  accountId: string;
+  serverNow: string;
+  title: string;
+  instructions: string;
+  attempt: StudentExamAttemptState;
+  editor: Omit<StudentExamEditor, "token">;
+  parts: StudentExamPart[];
+  excludedQuestionIds: string[];
+  answers: Record<string, StudentExamAnswer>;
+  departures: StudentExamDeparture[];
+};
+
+/** Live state between full reads. */
+export type StudentExamBrief = { serverNow: string; attempt: StudentExamAttemptState; excludedQuestionIds: string[] };
+
+/** Finalized or superseded work: status only. The overview shows the official total. */
+export type StudentExamTerminal = {
+  accountId: string;
+  serverNow: string;
+  attempt: StudentExamAttemptState;
+  submission: { source: ExamSource; reason: FinalizationReason; submittedAt: string } | null;
+};
+
+export type StudentExamEditorLostReason = "expired" | "replaced";
+
+type Lost = { kind: "editor_lost"; reason: StudentExamEditorLostReason };
+type Finalized = { kind: "finalized"; state: StudentExamTerminal };
+
+export type StudentExamClaimOutcome = ({ kind: "claimed" } & StudentExamEditor) | { kind: "busy"; retryAfter: number } | Finalized;
+export type StudentExamReadOutcome = { kind: "state"; state: StudentExamAnswering } | Lost | Finalized;
+export type StudentExamHeartbeatOutcome = { kind: "renewed"; expiresAt: string; state: StudentExamBrief } | Lost | Finalized;
+export type StudentExamReleaseOutcome = { kind: "released" } | Lost | Finalized;
+
+/** One answer in a save patch: exactly the field the question kind accepts. */
+export type StudentExamAnswerPatch = { questionId: string; choiceId: string | null } | { questionId: string; text: string | null };
+
+export type StudentExamSaveOutcome =
+  | { kind: "saved"; answersVersion: number; replayed: boolean; state: StudentExamBrief }
+  | { kind: "conflict"; answersVersion: number; state: StudentExamBrief }
+  /** An earlier acknowledgment may have been replayed (acknowledgedVersion) before the editor was lost. */
+  | (Lost & { acknowledgedVersion: number | null })
+  | (Finalized & { acknowledged: boolean });
+
+export type StudentExamSubmitOutcome =
+  | { kind: "submitted"; replayed: boolean; state: StudentExamTerminal }
+  | { kind: "finalized"; replayed: boolean; state: StudentExamTerminal }
+  | { kind: "source_conflict"; replayed: boolean; state: StudentExamTerminal }
+  | { kind: "conflict"; answersVersion: number; state: StudentExamBrief }
+  | Lost;
+
+type Continued = { departure: StudentExamDeparture | null; state: StudentExamBrief };
+type Ended = { departure: StudentExamDeparture | null; state: StudentExamTerminal };
+
+export type StudentExamDepartureOutcome =
+  | ({ kind: "warned" } & Continued)
+  | ({ kind: "duplicate" } & Continued)
+  | ({ kind: "kicked" } & Ended)
+  | ({ kind: "finalized" } & Ended)
+  | Lost;
+
+export type StudentExamImagesOutcome = { kind: "urls"; urls: Record<string, string>; expiresInSeconds: number } | { kind: "editor_lost" } | { kind: "finalized" };
 
 export type StudentExamErrorCode =
   | "validation"
@@ -81,12 +190,15 @@ export type StudentExamErrorCode =
   | "not_open"
   | "not_eligible"
   | "source_conflict"
+  | "unknown_question"
+  | "question_excluded"
+  | "idempotency_conflict"
   | "throttled"
   | "unavailable";
 
 export type StudentExamFailure = { ok: false; code: StudentExamErrorCode; message: string; retryAfter?: number };
 export type StudentExamRead<T> = { ok: true; data: T } | StudentExamFailure;
-export type StudentExamStartResult = ({ ok: true } & StudentExamStart) | StudentExamFailure;
+export type StudentExamCommandResult<T> = ({ ok: true } & T) | StudentExamFailure;
 
 /** The verified connected academy the student route resolved (students module), passed in by the route. */
 export type StudentExamAccess = "active" | "suspended" | "no_current_year";

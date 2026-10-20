@@ -1,19 +1,21 @@
 "use client";
 
-import { IconPhotoOff } from "@tabler/icons-react";
+import { IconPhotoOff, IconRefresh } from "@tabler/icons-react";
 
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useImageUrl } from "./context";
 
 /** One question image fitted inside a box, with loading and unavailable states. */
 export function ImageFrame({ id, className }: { id: string; className?: string }) {
-  const { url, loading, failed } = useImageUrl(id);
+  const { url, loading, failed, retry } = useImageUrl(id);
   if (loading) return <Skeleton className={cn("w-full rounded-md", className)} />;
   if (failed || !url) {
     return (
       <div className={cn("flex w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-sm text-muted-foreground", className)}>
         <IconPhotoOff className="size-5" />This image is unavailable.
+        <Button type="button" variant="outline" size="sm" onClick={retry}><IconRefresh />Try again</Button>
       </div>
     );
   }

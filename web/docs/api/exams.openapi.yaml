@@ -17,7 +17,7 @@ info:
     connected academy/year record through the shared ordinary-session resolver. Standalone exams
     need no content release. Before an own online attempt starts or solutions qualify, state returns
     empty question parts; physical drafts/submissions alone do not reveal material. Reads never start
-    or extend an attempt. No student HTTP route or answering UI is delivered here. A client-supplied
+    or extend an attempt. Student answering uses cookie web actions; production entry remains gated on EDRA-234. No student HTTP route is delivered. A client-supplied
     annual record id or phone is never ownership. Source behavior is not a deployment assertion.
 
     **Rules.** An exam has ordered Question Sheet (choices, one correct, scored automatically) and
@@ -185,8 +185,8 @@ paths:
         "429": { $ref: "#/components/responses/Error" }
         "500": { $ref: "#/components/responses/Error" }
 x-edra-student-operations:
-  status: database-contract-only
-  reason: Connected ordinary-session accounts resolve through student_caller_record. Standalone wrappers are reachable; attached exams (content_assessments) are denied with content_unavailable pending the content integration. The web app calls list_my_exams, get_my_exam_overview and start_my_exam through cookie server functions (EDRA-232); there is no student HTTP route, bearer API or answering UI. Question material requires an active own attempt or qualified solutions.
+  status: cookie-web-answering-gated
+  reason: Connected ordinary-session accounts resolve through student_caller_record. Standalone cookie web commands are implemented; attached exams are denied with content_unavailable. EDRA-233 exports the answering surface but examEntryIntegration stays null until EDRA-234 supplies real fullscreen/departure integration. No student HTTP or bearer API exists. Active question material requires a current editor claim; legacy reads expose material only after solution qualification.
   operations:
     - name: list_my_exams(academy_id, limit = 25, offset = 0)
       returns: "{total, items: [{exam_id, title, time_limit_minutes, opens_at, closes_at, actual_closes_at, phase, action}], server_now}"
@@ -199,19 +199,42 @@ x-edra-student-operations:
       notes: Academy-scoped start/resume. not_found under the wrong academy. In one transaction it settles due work, locks the academic year (share) and the exam row (for update, serializing with content attachment), denies attached exams (content_unavailable) and calls the existing engine (start_exam_attempt_for). Repeats and concurrent calls return the same single attempt with its original start, deadline, answers and departure count. Errors not_open, not_eligible, source_conflict, student_link_unavailable, throttled.
     - name: get_my_exam(exam_id)
       returns: StudentExamState
-      notes: Settles due work first.
+      notes: Settles due work first. Legacy unfenced projection returns material only once solutions qualify, never during active answering.
     - name: start_exam_attempt(exam_id)
       returns: StudentExamState
       notes: Creates the single attempt (deadline_at = started_at + time limit) or resumes it with the same started_at, deadline_at, answers and departure_count; never a retake. Takes the same serialized standalone guard as start_my_exam. Errors not_open (outside opens_at..closes_at, not ready or archived), not_eligible, content_unavailable.
-    - name: save_exam_answers(exam_id, expected_version, answers[{question_id, choice_id?|text_answer?}], key)
-      returns: "{outcome: saved | conflict | finalized, state: StudentExamState, replayed}"
-      notes: Stale expected_version writes nothing (conflict). Past the cutoff the attempt is settled and reported (finalized); late answers are never saved. Changed answers to excluded questions are rejected (question_excluded). A key reused for different input fails with idempotency_conflict.
-    - name: record_exam_departure(exam_id, event_id, question_id)
-      returns: "{outcome: warned | kicked | duplicate | finalized, departure: Departure | null, state: StudentExamState}"
-      notes: question_id is the question the student was on (unknown_question for another exam's question). warned returns departure.next_question_id, the next non-excluded question (null after the last). The third distinct event is kicked. A repeated event_id returns duplicate with its original departure; reusing it for another question fails with idempotency_conflict. A due timer or closure is settled first (finalized). Detecting departures, deduplicating overlapping browser signals and fullscreen handling belong to EDRA-83; signals are client evidence, not proof of proctoring.
-    - name: submit_exam_attempt(exam_id, key)
-      returns: "{outcome: submitted | finalized | source_conflict, state: StudentExamState, replayed}"
-      notes: A retry with the same key replays. source_conflict when physical work was confirmed first.
+    - name: enter_my_exam(academy_id, exam_id, token)
+      returns: "{attempt, active, editor: {status: claimed, token, generation, expires_at, heartbeat_seconds, lease_seconds} | {status: busy, retry_after} | null}"
+      notes: Atomic start/resume and claim. No material in the response. Reuses the original attempt/deadline/departure count. Same-token recovery requires the browser's exclusive Web Lock; unsupported browsers do not reuse tokens. A busy second editor cannot take over. A lost initial acknowledgment without a token waits for lease expiry.
+    - name: claim_my_exam_editor(academy_id, exam_id, token)
+      returns: "{status: claimed | busy | finalized, ...claim_or_terminal}"
+      notes: No new attempt. Lease 45 seconds, heartbeat 10 seconds, server time. Expired claims acquire a fresh random token/increased generation only if no other live editor exists.
+    - name: renew_my_exam_editor(academy_id, exam_id, token)
+      returns: "{status: renewed, expires_at, state: brief} | {status: lost, reason: expired | replaced} | {status: finalized, state: terminal}"
+      notes: Exact live token required; an expired/superseded generation cannot be renewed. Brief contains server_now, attempt metadata and excluded_question_ids, never material.
+    - name: release_my_exam_editor(academy_id, exam_id, token)
+      returns: "{status: released | lost | finalized, ...}"
+      notes: Conditional release only. No history deletion or deadline change.
+    - name: get_my_exam_answering(academy_id, exam_id, token)
+      returns: "{status: state, state: answering} | {status: lost, reason} | {status: finalized, state: terminal}"
+      notes: Current editor only. Answering contains verified account_id, server_now, attempt identity/version/cutoff/departures, ordered parts/questions/choices, exclusions and own saved answers. No keys, solutions, private marks or staff flags. Terminal contains verified account_id for account-scoped journal cleanup, attempt metadata and accepted submission status only.
+    - name: save_my_exam_answers(academy_id, exam_id, token, expected_version, answers, key, generation)
+      returns: "{outcome: saved | conflict | finalized | editor_lost, ...}"
+      notes: Patch of 1..300 distinct questions, text at most 10000 characters. Key/body/version/original generation are immutable on retries. Fresh writes require a live token and matching original generation. Accepted receipts replay metadata without writing; fresh authorized state is returned separately. Old receipts must never replace newer acknowledged answers. Lost-editor replay exposes no questions/answers. Unknown outcomes retry the same command; definitive rejection is reconciled against current acknowledged baselines before a new command is created.
+    - name: submit_my_exam(academy_id, exam_id, token, expected_version, key, generation)
+      returns: "{outcome: submitted | finalized | source_conflict | conflict | editor_lost, ...}"
+      notes: Submits saved work only, requiring the acknowledged answers version and live original generation for a new command. Cookie UI freezes and durably flushes pending answers first. Exact retries replay; timer/closure/kick/physical confirmation retain their winning reason/source. Terminal responses contain no question material.
+    - name: record_my_exam_departure(academy_id, exam_id, token, event_id, question_id, generation)
+      returns: "{outcome: warned | kicked | duplicate | finalized | editor_lost, departure, state}"
+      notes: EDRA-234 correlates signals to one stable event id. Entry redelivers any journaled event with its original token/generation before claiming a replacement; delivery does not wait for save retries. The current or expired latest generation may deliver a delayed event; a replaced generation cannot create an event or claim. Ordinary session/academy authority remains required. Exact event replay uses the original question; a changed question is idempotency_conflict. First two warnings advance to next non-excluded question, null after the last. Third submits saved work as kicked. Deadline wins ties. Brief live state or terminal status only.
+    - name: authorize_my_exam_images(academy_id, exam_id, token, image_ids)
+      returns: "{status: ok, academy_id, image_ids} | {status: lost | finalized}"
+      notes: Bounded 1..20 ids, active attempt/live claim/current audience/ordinary-session authority. Only ids referenced in non-excluded prompt/choice tokens are returned. The cookie signStudentExamImages action signs those private paths server-side for 60 seconds. No direct student Storage grants, uploads or solution-media access. URLs are memory-only and retain bounded residual validity after finalization.
+  retired_student_mutations:
+    - save_exam_answers(exam_id, expected_version, answers, key)
+    - submit_exam_attempt(exam_id, key)
+    - record_exam_departure(exam_id, event_id, question_id)
+  compatibility: Authenticated execution of the unfenced mutation signatures is revoked. Private record-based staff and worker engines remain available. Legacy get_my_exam/start_exam_attempt/start_my_exam expose question material, saved answers and departures only after solution qualification; active clients must use fenced commands.
 components:
   securitySchemes:
     staffToken:
@@ -421,7 +444,7 @@ components:
         phase: { $ref: "#/components/schemas/Phase" }
         eligible: { type: boolean }
         excluded_question_ids: { type: array, items: { type: string }, description: Empty until question material is permitted; then skip these when navigating; they cannot be answered. }
-        parts: { type: array, items: { type: object }, description: Present only during the student's active (unfinalized, unsuperseded) online attempt or once solutions qualify; then stable order with original question numbers and choices without correctness. Physical drafts/submissions alone do not reveal material. }
+        parts: { type: array, items: { type: object }, description: Present only once solutions qualify on legacy public reads; the fenced answering read separately exposes the active editor's questions; then stable order with original question numbers and choices without correctness. Physical drafts/submissions alone do not reveal material. }
         attempt:
           type: [object, "null"]
           properties:

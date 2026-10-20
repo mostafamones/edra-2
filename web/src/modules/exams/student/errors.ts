@@ -11,6 +11,9 @@ const MESSAGES: Record<StudentExamErrorCode, string> = {
   not_open: "This exam isn’t open for new attempts.",
   not_eligible: "This exam isn’t assigned to you.",
   source_conflict: "Your work for this exam was already received.",
+  unknown_question: "This question is no longer part of the exam.",
+  question_excluded: "This question was removed from the exam.",
+  idempotency_conflict: "Your answers couldn’t be saved. Reload the exam to continue.",
   throttled: "Too many requests in a short time. Wait a moment and try again.",
   unavailable: "Could not reach the server. Check your connection and try again.",
 };
