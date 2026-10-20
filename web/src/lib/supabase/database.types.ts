@@ -2476,6 +2476,54 @@ export type Database = {
           },
         ]
       }
+      exam_editor_claims: {
+        Row: {
+          academy_id: string
+          attempt_id: string
+          claimed_at: string
+          exam_id: string
+          expires_at: string
+          generation: number
+          renewed_at: string
+          token_hash: string
+        }
+        Insert: {
+          academy_id: string
+          attempt_id: string
+          claimed_at: string
+          exam_id: string
+          expires_at: string
+          generation: number
+          renewed_at: string
+          token_hash: string
+        }
+        Update: {
+          academy_id?: string
+          attempt_id?: string
+          claimed_at?: string
+          exam_id?: string
+          expires_at?: string
+          generation?: number
+          renewed_at?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_editor_claims_academy_id_exam_id_fkey"
+            columns: ["academy_id", "exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "exam_editor_claims_exam_id_attempt_id_fkey"
+            columns: ["exam_id", "attempt_id"]
+            isOneToOne: false
+            referencedRelation: "exam_attempts"
+            referencedColumns: ["exam_id", "id"]
+          },
+        ]
+      }
       exam_marks: {
         Row: {
           academy_id: string
@@ -5888,6 +5936,15 @@ export type Database = {
         Args: { p_fingerprint: string; p_key: string; p_operation: string }
         Returns: Json
       }
+      authorize_my_exam_images: {
+        Args: {
+          p_academy_id: string
+          p_exam_id: string
+          p_image_ids: string[]
+          p_token: string
+        }
+        Returns: Json
+      }
       bump_attendance_revision: {
         Args: { p_session: Database["public"]["Tables"]["sessions"]["Row"] }
         Returns: number
@@ -5999,6 +6056,10 @@ export type Database = {
           p_session_id: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      claim_my_exam_editor: {
+        Args: { p_academy_id: string; p_exam_id: string; p_token: string }
         Returns: Json
       }
       complete_content_document: {
@@ -6253,6 +6314,10 @@ export type Database = {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: string
       }
+      enter_my_exam: {
+        Args: { p_academy_id: string; p_exam_id: string; p_token: string }
+        Returns: Json
+      }
       exclude_assignment_question: {
         Args: {
           p_academy_id: string
@@ -6331,6 +6396,10 @@ export type Database = {
         Returns: Json
       }
       get_my_exam: { Args: { p_exam_id: string }; Returns: Json }
+      get_my_exam_answering: {
+        Args: { p_academy_id: string; p_exam_id: string; p_token: string }
+        Returns: Json
+      }
       get_my_exam_overview: {
         Args: { p_academy_id: string; p_exam_id: string }
         Returns: Json
@@ -6690,6 +6759,17 @@ export type Database = {
         Args: { p_event_id: string; p_exam_id: string; p_question_id: string }
         Returns: Json
       }
+      record_my_exam_departure: {
+        Args: {
+          p_generation: number
+          p_academy_id: string
+          p_event_id: string
+          p_exam_id: string
+          p_question_id: string
+          p_token: string
+        }
+        Returns: Json
+      }
       record_quiz_departure: {
         Args: { p_event_id: string; p_quiz_id: string }
         Returns: Json
@@ -6708,6 +6788,10 @@ export type Database = {
           p_unit_id: string
         }
         Returns: string
+      }
+      release_my_exam_editor: {
+        Args: { p_academy_id: string; p_exam_id: string; p_token: string }
+        Returns: Json
       }
       remember_attendance_request: {
         Args: {
@@ -6730,6 +6814,10 @@ export type Database = {
           p_session_id: string
         }
         Returns: number
+      }
+      renew_my_exam_editor: {
+        Args: { p_academy_id: string; p_exam_id: string; p_token: string }
+        Returns: Json
       }
       request_content_video_deletion: {
         Args: { p_academy_id: string; p_asset_id: string }
@@ -6850,6 +6938,18 @@ export type Database = {
           p_expected_version: number
           p_key: string
           p_record_id: string
+        }
+        Returns: Json
+      }
+      save_my_exam_answers: {
+        Args: {
+          p_generation: number
+          p_academy_id: string
+          p_answers: Json
+          p_exam_id: string
+          p_expected_version: number
+          p_key: string
+          p_token: string
         }
         Returns: Json
       }
@@ -7164,6 +7264,17 @@ export type Database = {
       student_import_summary: { Args: { p_session_id: string }; Returns: Json }
       submit_exam_attempt: {
         Args: { p_exam_id: string; p_key: string }
+        Returns: Json
+      }
+      submit_my_exam: {
+        Args: {
+          p_generation: number
+          p_academy_id: string
+          p_exam_id: string
+          p_expected_version: number
+          p_key: string
+          p_token: string
+        }
         Returns: Json
       }
       submit_quiz_attempt: {

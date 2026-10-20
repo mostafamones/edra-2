@@ -12,7 +12,8 @@ do $$ begin
   if not has_function_privilege('authenticated', 'public.create_exam(uuid, uuid, uuid, jsonb)', 'execute')
     or not has_function_privilege('authenticated', 'public.save_exam_marks(uuid, uuid, uuid, integer, jsonb, uuid)', 'execute')
     or not has_function_privilege('authenticated', 'public.announce_exam_results(uuid, uuid, integer, jsonb, uuid)', 'execute')
-    or not has_function_privilege('authenticated', 'public.record_exam_departure(uuid, uuid, uuid)', 'execute')
+    -- EDRA-233 retired the unfenced student mutations; the fenced commands are in student_exam_answering.sql.
+    or has_function_privilege('authenticated', 'public.record_exam_departure(uuid, uuid, uuid)', 'execute')
     or has_function_privilege('anon', 'public.create_exam(uuid, uuid, uuid, jsonb)', 'execute')
     or has_function_privilege('anon', 'public.get_exam(uuid, uuid)', 'execute')
     or has_function_privilege('anon', 'public.start_exam_attempt(uuid)', 'execute')
@@ -253,7 +254,7 @@ end $$;
 select pg_temp.as_user('fa666666-6666-4666-8666-666666666666');
 select pg_temp.expect_error($s$ select public.start_exam_attempt(pg_temp.xa()) $s$, 'student_link_unavailable');
 select pg_temp.expect_error($s$ select public.get_my_exam(pg_temp.xa()) $s$, 'student_link_unavailable');
-select pg_temp.expect_error($s$ select public.record_exam_departure(pg_temp.xa(), gen_random_uuid(), gen_random_uuid()) $s$, 'student_link_unavailable');
+select pg_temp.expect_error($s$ select public.record_exam_departure(pg_temp.xa(), gen_random_uuid(), gen_random_uuid()) $s$, '%permission denied%');
 reset role;
 -- Standalone exams need no content release once identity resolves; identity itself never resolves yet.
 select pg_temp.check(edra_private.exam_content_access(pg_temp.xa(), pg_temp.rec('s1')) and edra_private.exam_caller_record(pg_temp.xa()) is null,

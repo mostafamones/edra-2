@@ -42,7 +42,7 @@ end $$;
 create function pg_temp.questions_only(state jsonb) returns void language plpgsql as $$
 begin
   perform pg_temp.check(jsonb_array_length(state->'parts')=2 and state::text like '%SECRET-PROMPT%' and state::text like '%{{image:%','started attempt receives material');
-  perform pg_temp.check(state->'solutions'='null'::jsonb and not jsonb_path_exists(state,'$.**.model_answer')
+  perform pg_temp.check(coalesce(state->'solutions','null'::jsonb)='null'::jsonb and not jsonb_path_exists(state,'$.**.model_answer')
     and not jsonb_path_exists(state,'$.**.correct_choice_id') and not jsonb_path_exists(state,'$.**.is_correct')
     and state::text not like '%SECRET-MODEL%' and state::text not like '%SECRET-SOLUTION%','questions reveal no keys or private marks');
 end $$;
@@ -83,8 +83,11 @@ select public.configure_exam_availability(pg_temp.id('academy'),pg_temp.id('exam
 select pg_temp.act('student');
 set local role authenticated;
 select pg_temp.hidden(public.get_my_exam(pg_temp.id('exam')));
-select pg_temp.questions_only(public.start_exam_attempt(pg_temp.id('exam')));
-select pg_temp.questions_only(public.get_my_exam(pg_temp.id('exam')));
+-- EDRA-233: direct wrappers stay hidden during the attempt; the current editor reads the material.
+select pg_temp.hidden(public.start_exam_attempt(pg_temp.id('exam')));
+select pg_temp.hidden(public.get_my_exam(pg_temp.id('exam')));
+select pg_temp.questions_only(public.get_my_exam_answering(pg_temp.id('academy'),pg_temp.id('exam'),
+  public.claim_my_exam_editor(pg_temp.id('academy'),pg_temp.id('exam'),null)->>'token')->'state');
 reset role;
 select pg_temp.hidden(edra_private.exam_student_state(pg_temp.id('exam'),pg_temp.id('record-3')));
 insert into exposure_ids(name,id) select 'exam-started',id from public.exam_attempts where exam_id=pg_temp.id('exam') and annual_student_record_id=pg_temp.id('record-1');
