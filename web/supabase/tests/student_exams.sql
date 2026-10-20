@@ -188,7 +188,9 @@ declare first jsonb := public.start_my_exam(pg_temp.id('academy'), pg_temp.id('o
   again jsonb;
   overview jsonb;
 begin
-  perform pg_temp.check(jsonb_array_length(first->'parts') = 1 and first->'solutions' = 'null'::jsonb, 'active attempt receives questions only');
+  -- EDRA-233: during the attempt, material is available only through the fenced answering read.
+  perform pg_temp.check(first->'parts' = '[]'::jsonb and first->'attempt'->'answers' = '[]'::jsonb
+    and first->'solutions' = 'null'::jsonb, 'direct start reveals no material');
   perform pg_temp.check(not jsonb_path_exists(first, '$.**.correct_choice_id') and not jsonb_path_exists(first, '$.**.is_correct')
     and first::text not like '%SECRET-NOTES%', 'no keys during the attempt');
   again := public.start_my_exam(pg_temp.id('academy'), pg_temp.id('open'));

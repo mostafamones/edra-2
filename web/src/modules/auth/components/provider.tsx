@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Session, User } from "@supabase/supabase-js";
 
 import { academyQueryKeys, listUserAcademies, type AcademyEntry } from "@/modules/academies";
+import { installExamSignOutCleanup, setExamJournalAccount } from "@/modules/exams/browser";
 import { clearBrowserQueryCache } from "@/lib/query-client";
 import { createClient } from "@/lib/supabase/client";
 import type { Platform } from "@/lib/routing";
@@ -75,6 +76,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
 
     const applySession = (nextSession: Session | null) => {
       const nextUserId = nextSession?.user.id ?? null;
+      void setExamJournalAccount(nextUserId);
       const accountChanged = initialized && previousUserId !== nextUserId;
       initialized = true;
       previousUserId = nextUserId;
@@ -143,6 +145,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
         inFlight = false;
       }
     };
+    const removeSignOutCleanup = installExamSignOutCleanup();
     const visible = () => { if (document.visibilityState === "visible") void revalidate(); };
     window.addEventListener("focus", revalidate);
     window.addEventListener("edra-session-revalidate", revalidate);
@@ -150,6 +153,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      removeSignOutCleanup();
       if (scheduled) clearTimeout(scheduled);
       if (refreshTimer) clearTimeout(refreshTimer);
       window.removeEventListener("focus", revalidate);

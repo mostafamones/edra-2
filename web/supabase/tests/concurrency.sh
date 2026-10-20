@@ -726,6 +726,51 @@ grep -qi deadlock "$OUT/33a" "$OUT/33b" && fail "preparation and the first physi
 psqlx -tA -c "select structure_locked_at is not null and max_score = 3 from public.exams where id = '$EXAM2'" | grep -qx t \
   || fail "the confirmation did not lock the saved structure"
 
+# 46-47. Exam editor claims (EDRA-233). Claims lock the attempt row before the claim row, after the
+#     usual year/exam/record/work order, so concurrent editors serialize on the attempt.
+EXAM3="$(uuid)"
+ER5="$(new_student 'Exam race 5' 01088880015 null)"
+[ -n "$ER5" ] || fail "could not create the editor race student"
+psqlx >/dev/null <<SQL
+begin; $as_admin
+select public.create_exam('$ACADEMY','$YEAR','$EXAM3','{"title":"Race exam 3","audience":"level","level_id":"secondary-1","time_limit_minutes":60,"parts":[{"title":"P","kind":"question_sheet","questions":[{"prompt":"Q","max_score":"1","choices":[{"label":"A","is_correct":true},{"label":"B"}]}]}]}');
+select public.configure_exam_availability('$ACADEMY','$EXAM3',1,now() - interval '1 minute',now() + interval '1 hour');
+commit;
+SQL
+EQ3="$(psqlx -tA -c "select id from public.exam_questions where exam_id = '$EXAM3'")"
+ECA3="$(psqlx -tA -c "select id from public.exam_choices where question_id = '$EQ3' and position = 1")"
+[ -n "$EQ3" ] && [ -n "$ECA3" ] || fail "could not create the editor race exam"
+psqlx >/dev/null -c "select edra_private.start_exam_attempt_for('$EXAM3','$ER5');"
+claims3="select string_agg(c.generation::text, ',') from public.exam_editor_claims c join public.exam_attempts a on a.id = c.attempt_id where a.exam_id = '$EXAM3'"
+
+# 46. Two tabs claim the same attempt at once: the first holds the attempt row; the second waits, then
+#     finds the live claim and is busy. Exactly one claim of generation 1 exists.
+hold 46a 46b "select edra_private.claim_exam_editor_for('$EXAM3','$ER5',null);"
+start 46b "select edra_private.claim_exam_editor_for('$EXAM3','$ER5',null);"
+wait
+expect_ok 46a "the first concurrent editor claim failed"
+expect_ok 46b "the second concurrent editor claim failed"
+grep -q '"claimed"' "$OUT/46a" || fail "the first editor did not claim: $(out 46a)"
+grep -q '"busy"' "$OUT/46b" || fail "the second editor was not refused as busy: $(out 46b)"
+psqlx -tA -c "$claims3" | grep -qx 1 || fail "concurrent claims did not leave exactly one generation-1 claim"
+T46="$(grep -o '"token": "[0-9a-f]\{64\}"' "$OUT/46a" | grep -o '[0-9a-f]\{64\}')"
+[ -n "$T46" ] || fail "the first editor's token was not returned"
+
+# 47. After the lease expires, a recovering device claims generation 2 while the stale editor's save
+#     waits on the attempt; the save then finds a replaced generation and writes nothing.
+psqlx >/dev/null -c "update public.exam_editor_claims set expires_at = claimed_at where attempt_id = (select id from public.exam_attempts where exam_id = '$EXAM3' and annual_student_record_id = '$ER5');"
+hold 47a 47b "select edra_private.claim_exam_editor_for('$EXAM3','$ER5',null);"
+start 47b "select edra_private.save_my_exam_answers_for('$EXAM3','$ER5','$T46',0,'[{\"question_id\":\"$EQ3\",\"choice_id\":\"$ECA3\"}]',gen_random_uuid(),1);"
+wait
+expect_ok 47a "the recovering claim failed"
+expect_ok 47b "the stale editor's save failed"
+grep -q editor_lost "$OUT/47b" || fail "the stale editor's save was not fenced: $(out 47b)"
+psqlx -tA -c "$claims3" | grep -qx 2 || fail "recovery did not create generation 2"
+psqlx -tA -c "select answers_version from public.exam_attempts where exam_id = '$EXAM3' and annual_student_record_id = '$ER5'" | grep -qx 0 \
+  || fail "a stale editor's save was accepted"
+# Scenario 26 closes the year last, which is refused while an attempt is still running.
+psqlx >/dev/null -c "select edra_private.submit_exam_attempt_for('$EXAM3','$ER5',gen_random_uuid());"
+
 # 37-45. Assignment required cohorts/late eligibility. Keep assignment -> year -> recipient,
 # with the annual-record lock before receiving first work and no reverse assignment lock on moves.
 COHORT_A="$(uuid)"
