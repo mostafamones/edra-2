@@ -1,10 +1,13 @@
 import { clearBrowserQueryCache } from "@/lib/query-client";
+import { newUuid } from "@/lib/uuid";
 import { setExamJournalAccount } from "@/modules/exams/browser";
 
 import type { PreviewErrorCode, PreviewResult, PreviewStatus } from "./types";
 
 export const PREVIEW_STATUS_KEY = ["development", "preview-status"] as const;
 const CHANNEL = "edra-dev-preview";
+let documentId: string | undefined;
+const identitySource = () => documentId ??= newUuid();
 
 export async function fetchPreviewStatus(signal?: AbortSignal): Promise<PreviewStatus> {
   const response = await fetch("/api/development/status", { cache: "no-store", credentials: "same-origin", signal });
@@ -33,7 +36,7 @@ export async function postPreview(action: PreviewAction, body: Record<string, un
 export function announceIdentityChange() {
   try {
     const channel = new BroadcastChannel(CHANNEL);
-    channel.postMessage("identity-changed");
+    channel.postMessage({ type: "identity-changed", source: identitySource() });
     channel.close();
   } catch {
     // BroadcastChannel is unavailable; other tabs keep their view until reloaded.
@@ -42,9 +45,12 @@ export function announceIdentityChange() {
 
 export function onIdentityChange(listener: () => void): () => void {
   try {
+    const source = identitySource();
     const channel = new BroadcastChannel(CHANNEL);
     channel.onmessage = (event) => {
-      if (event.data === "identity-changed") listener();
+      // BroadcastChannel also reaches other channel objects in this document. Reloading our own
+      // page here would race the cross-origin navigation to the student/staff portal.
+      if (event.data?.type === "identity-changed" && event.data.source !== source) listener();
     };
     return () => channel.close();
   } catch {
