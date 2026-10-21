@@ -19,7 +19,7 @@ Product references preserve the full reviewed wording and subsequent confirmed d
 
 - [Web engineering](engineering.md).
 - [Shared app boundaries](../../docs/engineering/application-boundaries.md) and [brand](../../docs/engineering/brand.md).
-- [Current API](api/README.md), [routing](technical/routing.md), [deployment](technical/deployment.md) and the [standalone student exam release record](technical/student-exam-release.md).
+- [Current API](api/README.md), [routing](technical/routing.md), [deployment](technical/deployment.md), the [standalone student exam release record](technical/student-exam-release.md) and the [development academy verification record](technical/development-academy-verification.md).
 - Existing module READMEs describe public APIs and implementation limits beside their source.
 - [Native documentation](../../mobile/docs/README.md).
 
