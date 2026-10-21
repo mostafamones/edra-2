@@ -28,3 +28,8 @@ export function isAcademyRole(value: unknown): value is AcademyRole {
 export function isAcademyManager(role: AcademyRole) {
   return role === "owner" || role === "head_admin" || role === "admin";
 }
+
+/** Academy profile edits (name, icon, subject, contacts). Mirrors the academies UPDATE policy. */
+export function isAcademyProfileEditor(role: AcademyRole) {
+  return role === "owner" || role === "head_admin";
+}
