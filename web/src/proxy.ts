@@ -45,9 +45,6 @@ export async function proxy(request: NextRequest) {
   // back through this proxy and canonicalize the internal path again.
   const destination = request.nextUrl.clone();
   destination.search = request.nextUrl.search;
-  // In dev, nextUrl can carry the bind hostname (e.g. localhost) instead of the public Host; a differing
-  // origin makes Next proxy the rewrite as an external fetch, which the host check then rejects.
-  destination.host = request.headers.get("host") ?? destination.host;
   if (platform === "staff" && descriptor.legacy) {
     if (!READ_METHODS.has(request.method)) return preserveSession(session, new NextResponse("Use the canonical academy URL", { status: 409 }));
     destination.pathname = "/app";
