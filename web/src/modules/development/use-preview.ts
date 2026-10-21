@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useAuth } from "@/modules/auth";
+import { newUuid } from "@/lib/uuid";
 
 import {
   fetchPreviewStatus, leaveForIdentity, postPreview, PREVIEW_STATUS_KEY, previewErrorMessage, viewAsStudentRequest,
@@ -30,7 +31,10 @@ export function usePreviewAction() {
     if (busy.current) return;
     busy.current = true;
     setPending(true);
-    const result = await postPreview(action, body);
+    const command = action === "switch" || action === "return"
+      ? { ...body, commandId: body.commandId ?? newUuid() }
+      : body;
+    const result = await postPreview(action, command);
     if (result.ok) {
       await leaveForIdentity(result.destination);
       return;

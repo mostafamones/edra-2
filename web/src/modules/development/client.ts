@@ -89,6 +89,6 @@ export function viewAsStudentRequest(
   if (status.current.kind === "student") return null;
   return {
     action: "switch",
-    body: { runId: status.run.id, logicalId: student.logicalId, expectedRevision: status.revision, commandId: crypto.randomUUID(), returnTo },
+    body: { runId: status.run.id, logicalId: student.logicalId, expectedRevision: status.revision, returnTo },
   };
 }

@@ -34,7 +34,7 @@ describe("DeveloperPreviewFrame", () => {
     mount({ ...base, current: studentIdentity, priorStaff: original, staffTargets: [] });
     expect(screen.getByText("Ana Student")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Return to staff" }));
-    expect(api.run).toHaveBeenCalledWith("return", { runId, expectedRevision: 7, commandId: expect.any(String) });
+    expect(api.run).toHaveBeenCalledWith("return", { runId, expectedRevision: 7 });
     fireEvent.click(screen.getByRole("button", { name: "Exit preview" }));
     expect(api.run).toHaveBeenCalledWith("exit", { runId });
   });
