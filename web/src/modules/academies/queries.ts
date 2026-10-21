@@ -6,7 +6,7 @@ import { academyRoleSchema, type AcademyRole } from "./roles";
 
 const membershipRowsSchema = z.array(
   z.object({
-    academy_id: z.uuid(),
+    academy_id: z.guid(),
     role: academyRoleSchema,
     academies: z.object({ name: z.string(), slug: z.string(), icon: z.string() }),
   }),

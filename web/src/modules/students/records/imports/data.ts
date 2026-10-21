@@ -96,7 +96,7 @@ const summarySchema = sessionSchema.extend({
 
 /** A session and its review/execution counts. */
 export async function getImportSummary(academyId: string, sessionId: string): Promise<ReadResult<ImportSummary>> {
-  if (!z.uuid().safeParse(sessionId).success) return { ok: false, status: 404 };
+  if (!z.guid().safeParse(sessionId).success) return { ok: false, status: 404 };
   const actor = await managerContext(academyId);
   if (!actor) return { ok: false, status: 403 };
   try {
@@ -199,7 +199,7 @@ const toRow = (row: z.infer<typeof rowSchema>): ImportRow => ({
 
 /** One page of a session's rows, filtered by status or outcome and searched by name, phone, or row. */
 export async function listImportRows(academyId: string, sessionId: string, params: ImportRowParams): Promise<ReadResult<ImportRowsPage>> {
-  if (!z.uuid().safeParse(sessionId).success) return { ok: false, status: 404 };
+  if (!z.guid().safeParse(sessionId).success) return { ok: false, status: 404 };
   const actor = await managerContext(academyId);
   if (!actor) return { ok: false, status: 403 };
   try {

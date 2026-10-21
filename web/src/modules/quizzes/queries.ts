@@ -55,7 +55,7 @@ export async function loadQuizzes(academyId: string, filters: QuizListFilters, p
 
 /** One quiz's staff document, or null when it is not in this academy. Settles due deadlines first. */
 export async function loadQuiz(academyId: string, quizId: string): Promise<Quiz | null> {
-  if (!z.uuid().safeParse(quizId).success) return null;
+  if (!z.guid().safeParse(quizId).success) return null;
   const { data, error } = await createClient().rpc("get_quiz", { p_academy_id: academyId, p_quiz_id: quizId });
   if (error) throw new Error(error.message);
   return data === null ? null : toQuiz(data);

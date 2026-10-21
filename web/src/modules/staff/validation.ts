@@ -9,7 +9,7 @@ export const staffInvitationSchema = z.object({
   role: invitationRoleSchema,
 });
 
-export const createStaffInvitationSchema = staffInvitationSchema.extend({ academyId: z.uuid() });
+export const createStaffInvitationSchema = staffInvitationSchema.extend({ academyId: z.guid() });
 
 export const invitationStatusFilterSchema = z.enum(["pending", "accepted", "revoked", "expired", "all"]);
 

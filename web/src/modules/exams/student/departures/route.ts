@@ -3,14 +3,14 @@ import { z } from "zod";
 import { platformOrigin } from "@/lib/routing";
 import { recordMyExamDeparture } from "../data";
 
-const input = z.object({ academyId: z.uuid(), token: z.string().regex(/^[0-9a-f]{64}$/), generation: z.number().int().positive().max(2147483647),
-  eventId: z.uuid(), questionId: z.uuid().nullable() }).strict();
+const input = z.object({ academyId: z.guid(), token: z.string().regex(/^[0-9a-f]{64}$/), generation: z.number().int().positive().max(2147483647),
+  eventId: z.guid(), questionId: z.guid().nullable() }).strict();
 const headers = { "Cache-Control": "private, no-store" };
 export async function departurePost(request: Request, examId: string) {
   const reply = (body: unknown, status: number) => Response.json(body, { status, headers });
   if (request.headers.get("origin") !== platformOrigin("student") || request.headers.get("sec-fetch-site") === "cross-site"
     || request.headers.has("authorization")) return reply({ ok: false }, 403);
-  if (!z.uuid().safeParse(examId).success || request.headers.get("content-type")?.split(";")[0] !== "application/json") return reply({ ok: false }, 400);
+  if (!z.guid().safeParse(examId).success || request.headers.get("content-type")?.split(";")[0] !== "application/json") return reply({ ok: false }, 400);
   // Bound the actual stream, including chunked bodies; Content-Length alone is untrusted.
   const reader = request.body?.getReader();
   if (!reader) return reply({ ok: false }, 400);

@@ -7,7 +7,7 @@ import { sessionActor } from "./data";
 import { failure, failureFromDatabase } from "./errors";
 import type { StartOutcome, StartResult } from "./types";
 
-const startSchema = z.object({ academyId: z.uuid(), scheduleId: z.uuid(), startKey: z.uuid() });
+const startSchema = z.object({ academyId: z.guid(), scheduleId: z.guid(), startKey: z.guid() });
 
 /**
  * Starts a live session from a schedule at any time, or opens the schedule's existing live

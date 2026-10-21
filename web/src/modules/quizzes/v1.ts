@@ -30,8 +30,8 @@ export async function quizzesResponse(context: StaffApiContext, academyId: strin
   const search = params.get("search") ?? "";
   const limit = intParam(params.get("limit"), 25, 1, 100);
   const offset = intParam(params.get("offset"), 0, 0, 100000);
-  if (!z.uuid().safeParse(academyId).success || limit === null || offset === null || search.length > 200
-    || (year !== null && !z.uuid().safeParse(year).success)
+  if (!z.guid().safeParse(academyId).success || limit === null || offset === null || search.length > 200
+    || (year !== null && !z.guid().safeParse(year).success)
     || (phase !== null && !(QUIZ_PHASES as readonly string[]).includes(phase))
     || (audience !== null && !(QUIZ_AUDIENCES as readonly string[]).includes(audience))) {
     return apiError(context, "INVALID_REQUEST");

@@ -7,7 +7,7 @@ export const invitationRoleSchema = z.enum(["head_admin", "admin", "instructor"]
 const roleSchema = invitationRoleSchema;
 
 export const teamMemberRowsSchema = z.array(z.object({
-  user_id: z.uuid(),
+  user_id: z.guid(),
   role: academyRoleSchema,
   created_at: z.string(),
   /** Set while the member's access to this academy is suspended; the role is retained. */
@@ -18,7 +18,7 @@ export const teamMemberRowsSchema = z.array(z.object({
 export type TeamMember = z.infer<typeof teamMemberRowsSchema>[number];
 
 export const invitationRowSchema = z.object({
-  id: z.uuid(),
+  id: z.guid(),
   phone: z.string(),
   role: roleSchema,
   status: z.enum(["pending", "accepted", "revoked", "expired"]),
@@ -47,7 +47,7 @@ export type CreatedInvitation = {
   link: string;
 };
 
-const joinAcademySchema = z.object({ id: z.uuid(), name: z.string(), slug: z.string(), icon: z.string() });
+const joinAcademySchema = z.object({ id: z.guid(), name: z.string(), slug: z.string(), icon: z.string() });
 
 const detailedJoinSchema = z.object({
   result: z.enum(["valid", "joined", "accepted", "already_member", "revoked", "expired", "inviter_unavailable"]),

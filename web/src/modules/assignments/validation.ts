@@ -27,13 +27,13 @@ function checkAudience(
 }
 
 const choiceSchema = z.object({
-  id: z.uuid().optional(),
+  id: z.guid().optional(),
   label: z.string().trim().max(500),
   isCorrect: z.boolean(),
 }).strict();
 
 const questionSchema = z.object({
-  id: z.uuid().optional(),
+  id: z.guid().optional(),
   prompt: z.string().trim().max(2000),
   maxScore: z.string().refine(isValidMaxScore, MAX_SCORE_MESSAGE),
   choices: z.array(choiceSchema).max(MAX_CHOICES),
@@ -69,7 +69,7 @@ function checkPart(part: { kind: DraftPart["kind"]; maxScore: string; questions:
 }
 
 const partSchema = z.object({
-  id: z.uuid().optional(),
+  id: z.guid().optional(),
   title: z.string().trim().min(1).max(200),
   instructions: z.string().max(5000),
   kind: z.enum(PART_KINDS).nullable(),
@@ -84,8 +84,8 @@ export const assignmentDraftSchema = z.object({
   instructions: z.string().max(10000),
   audience: z.enum(ASSIGNMENT_AUDIENCES),
   levelId: z.string().min(1).max(40).nullable(),
-  trackId: z.uuid().nullable(),
-  groupIds: z.array(z.uuid()).max(MAX_AUDIENCE_GROUPS).refine((ids) => new Set(ids).size === ids.length),
+  trackId: z.guid().nullable(),
+  groupIds: z.array(z.guid()).max(MAX_AUDIENCE_GROUPS).refine((ids) => new Set(ids).size === ids.length),
   dueAt: z.iso.datetime({ offset: true }).nullable(),
   parts: z.array(partSchema).min(1).max(MAX_PARTS)
     .refine((parts) => { const ids = parts.flatMap((part) => part.id ? [part.id] : []); return new Set(ids).size === ids.length; }),

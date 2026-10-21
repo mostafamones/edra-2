@@ -18,7 +18,7 @@ export function onlineAccountState(userId: string | null | undefined, archivedAt
 export const isParticipationType = (value: unknown): value is ParticipationType =>
   PARTICIPATION_TYPES.includes(value as ParticipationType);
 
-const nullableId = z.union([z.uuid(), z.literal(""), z.null()]).transform((value) => value || null);
+const nullableId = z.union([z.guid(), z.literal(""), z.null()]).transform((value) => value || null);
 
 const fullName = z.string().trim()
   .min(1, "Enter the student’s name.")
@@ -26,8 +26,8 @@ const fullName = z.string().trim()
 
 /** The trusted shape the server actions accept. Placement compatibility is checked by the database. */
 export const studentRecordInputSchema = z.object({
-  academyId: z.uuid(),
-  academicYearId: z.uuid(),
+  academyId: z.guid(),
+  academicYearId: z.guid(),
   fullName,
   studentPhone: phoneSchema,
   parentPhone: phoneSchema,

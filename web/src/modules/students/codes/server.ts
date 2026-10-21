@@ -13,7 +13,7 @@ import { studentCodeSettingsSchema, studentCodeStateSchema, type StudentCodeSett
 
 /** Enabled flag, draft default formula, overrides, and configuration version (0 when never saved). */
 export async function getStudentCodeSettings(academyId: string): Promise<StudentCodeSettings | null> {
-  if (!z.uuid().safeParse(academyId).success) return null;
+  if (!z.guid().safeParse(academyId).success) return null;
   const db = await createClient();
   const { data, error } = await db.rpc("get_student_code_settings", { p_academy_id: academyId });
   if (error) return null;
@@ -22,7 +22,7 @@ export async function getStudentCodeSettings(academyId: string): Promise<Student
 
 /** A record's current code and code-state version (0 when it never held a code). */
 export async function getStudentCodeState(academyId: string, recordId: string): Promise<StudentCodeState | null> {
-  if (!z.uuid().safeParse(academyId).success || !z.uuid().safeParse(recordId).success) return null;
+  if (!z.guid().safeParse(academyId).success || !z.guid().safeParse(recordId).success) return null;
   const db = await createClient();
   const { data, error } = await db.rpc("get_student_code_state", { p_academy_id: academyId, p_record_id: recordId });
   if (error) return null;
@@ -31,7 +31,7 @@ export async function getStudentCodeState(academyId: string, recordId: string): 
 
 /** The level's override, otherwise the academy default; null when neither exists. Ignores enablement. */
 export async function getEffectiveStudentCodePattern(academyId: string, levelId: string): Promise<string | null> {
-  if (!z.uuid().safeParse(academyId).success || !levelId) return null;
+  if (!z.guid().safeParse(academyId).success || !levelId) return null;
   const db = await createClient();
   const { data, error } = await db.rpc("student_code_effective_pattern", { p_academy_id: academyId, p_level_id: levelId });
   if (error) throw new Error(error.message);

@@ -5,7 +5,7 @@ import { invokeAccountFunction, type FunctionResult, type PasswordFailure } from
 export type ContactPurpose = "login_phone" | "parent_phone";
 
 const operationSchema = z.object({
-  id: z.uuid(),
+  id: z.guid(),
   purpose: z.enum(["login_phone", "parent_phone"]),
   stage: z.enum(["old", "new", "verified"]),
   newPhone: z.string(),
