@@ -39,10 +39,6 @@ function snapshot(session: string) {
   return JSON.parse(execFileSync(process.execPath, ["e2e/attendance/setup.mjs", "snapshot", session], { encoding: "utf8", timeout: 40_000 }));
 }
 async function signIn(page: Page) {
-  // Temporary diagnostics: first request/redirect trail, no bodies or credentials.
-  let seen = 0;
-  page.on("response", (r) => { if (!r.url().includes("/_next/") && seen++ < 60) console.log(`[trail] ${r.status()} ${r.request().method()} ${r.request().resourceType()} rsc=${r.request().headers()["rsc"] ?? "-"} ${r.url().replace(/^http:\/\/[^/]+/, "").slice(0, 90)} loc=${r.headers()["location"] ?? "-"}`); });
-  page.on("framenavigated", (f) => { if (seen++ < 40) console.log(`[trail] framenavigated ${f.url()}`); });
   await page.goto("/auth/login");
   await page.getByLabel("Mobile number", { exact: true }).fill(fixture.phone);
   await page.getByLabel("Password", { exact: true }).fill(fixture.password);

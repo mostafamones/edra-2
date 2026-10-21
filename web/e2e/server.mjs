@@ -19,7 +19,7 @@ for (const key of Object.keys(serverEnv)) {
   if (/^(ATTENDANCE_|PG|SUPABASE_|EDRA_DB_TEST_)/.test(key)) delete serverEnv[key];
 }
 const server = spawn(process.execPath, [
-  require.resolve("next/dist/bin/next"), "dev", "--hostname", "127.0.0.1", "--port", "3100",
+  require.resolve("next/dist/bin/next"), "dev", "--hostname", "localhost", "--port", "3100",
 ], { stdio: "inherit", env: serverEnv });
 
 server.on("error", (error) => {
@@ -29,6 +29,7 @@ server.on("error", (error) => {
 server.on("exit", (code) => process.exit(code ?? 1));
 
 // Playwright kills the whole process group at teardown, including this child.
+// Next normalizes its request origin to localhost; binding the same name keeps proxy rewrites internal.
 // Use loopback transport with the canonical Host to avoid DNS and preserve
 // host validation. Warm the login route before the 30-second tests begin.
 function loginReady() {

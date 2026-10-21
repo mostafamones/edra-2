@@ -25,8 +25,6 @@ export default defineConfig({
     stderr: "pipe",
     env: {
       ...(smoke.webServer as { env: Record<string, string> }).env,
-      // Next proxies staff rewrites to its own bind origin; classify that internal hop as staff.
-      EDRA_DEV_TUNNEL_HOST: "localhost:3100",
       NEXT_PUBLIC_SUPABASE_URL: target.apiUrl,
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: target.publicKey,
     },
