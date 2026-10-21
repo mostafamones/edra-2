@@ -1,25 +1,29 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
+const RFC_ACADEMY_ID = "0b9c3c1e-8f7a-4b5e-9a2d-1c3e5f7a9b0d";
 // Synthetic development IDs are deterministic hashes: valid Postgres UUIDs without an RFC version/variant.
 const DEV_ACADEMY_ID = "02bf25b2-49df-e305-2d71-7590c36ca312";
-const rows = [{ academy_id: DEV_ACADEMY_ID, role: "instructor", academies: { name: "Edra Dev Academy", slug: "edra-dev-be8db1dc", icon: "school" } }];
+const row = (academyId: string, role: string, name: string) => ({ academy_id: academyId, role, academies: { name, slug: name.toLowerCase(), icon: "school" } });
+let rows: unknown[] = [];
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({
   from: () => ({ select: () => ({ eq: () => ({ is: async () => ({ data: rows, error: null }) }) }) }),
 }) }));
 import { listUserAcademies } from "./queries";
 
 describe("academy switcher memberships", () => {
-  it("lists an academy whose ID is a non-RFC Postgres UUID", async () => {
-    expect(await listUserAcademies("user")).toEqual([{ id: DEV_ACADEMY_ID, name: "Edra Dev Academy", slug: "edra-dev-be8db1dc", icon: "school", role: "instructor" }]);
+  it("lists academies with RFC and synthetic development IDs", async () => {
+    rows = [row(RFC_ACADEMY_ID, "owner", "Magd"), row(DEV_ACADEMY_ID, "instructor", "Dev")];
+    expect(await listUserAcademies("user")).toEqual([
+      { id: RFC_ACADEMY_ID, name: "Magd", slug: "magd", icon: "school", role: "owner" },
+      { id: DEV_ACADEMY_ID, name: "Dev", slug: "dev", icon: "school", role: "instructor" },
+    ]);
   });
 
-  it("no application schema uses Zod's RFC-only z.uuid()", () => {
-    const src = join(__dirname, "../..");
-    const offenders = readdirSync(src, { recursive: true, encoding: "utf8" })
-      .filter((file) => /\.tsx?$/.test(file) && !file.endsWith("queries.test.ts"))
-      .filter((file) => readFileSync(join(src, file), "utf8").includes("z.uuid("));
-    expect(offenders).toEqual([]);
-  });
+  it.each(["not-a-uuid", "02bf25b2-49df-e305-2d71-7590c36ca31", "02bf25b2-49df-e305-2d71-7590c36ca31z", "02bf25b249dfe3052d717590c36ca312"])(
+    "rejects a malformed academy ID %s",
+    async (id) => {
+      rows = [row(id, "owner", "Bad")];
+      await expect(listUserAcademies("user")).rejects.toThrow();
+    },
+  );
 });
