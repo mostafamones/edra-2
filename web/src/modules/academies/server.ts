@@ -1,5 +1,6 @@
 import "server-only";
 
+import { redirect } from "next/navigation";
 import type { Authority } from "../../lib/supabase/authority";
 import { createClient } from "../../lib/supabase/server";
 import { validAcademySlug } from "../../lib/routing";
@@ -26,6 +27,8 @@ export async function listStaffAcademies(authority?: Authority | null): Promise<
   const { data, error } = await client.from("academy_memberships")
     .select("academy_id, role, academies!inner(name, slug, icon)")
     .eq("user_id", userId).is("suspended_at", null).order("academy_id");
+  // The database refuses ended sessions; the browser cookie must be cleared through sign-out.
+  if (!authority && error?.code === "EDRA_SESSION_INACTIVE") redirect("/auth/session-ended");
   if (error) throw error;
   return (data ?? []).flatMap(row => {
     if (!isAcademyRole(row.role)) return [];
