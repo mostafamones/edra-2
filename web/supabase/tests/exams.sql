@@ -241,6 +241,7 @@ select pg_temp.check(public.get_exam(pg_temp.academy(), pg_temp.xa()) is null an
 -- Availability is manager-only.
 select pg_temp.as_user('fa333333-3333-4333-8333-333333333333');
 select pg_temp.expect_error($s$ select public.configure_exam_availability(pg_temp.academy(), pg_temp.xa(), 4, now(), now() + interval '1 hour') $s$, 'forbidden');
+select pg_temp.expect_error($s$ select public.configure_exam_availability(pg_temp.academy(), gen_random_uuid(), 4, now(), now() + interval '1 hour') $s$, 'forbidden');
 select pg_temp.as_user('fa222222-2222-4222-8222-222222222222');
 select pg_temp.expect_error($s$ select public.configure_exam_availability(pg_temp.academy(), pg_temp.xa(), 4, now(), now() - interval '1 minute') $s$, 'validation');
 do $$ declare q jsonb; begin
