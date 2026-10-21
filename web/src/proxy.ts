@@ -19,7 +19,7 @@ function preserveSession(source: NextResponse, target: NextResponse) {
 export async function proxy(request: NextRequest) {
   // The URL is normalized by Next; classification deliberately uses the actual Host.
   const platform = classifyHost(request.headers.get("host") ?? "");
-  if (!platform) return new NextResponse("Unknown platform host", { status: 421 });
+  if (!platform) { console.error("[421-debug]", JSON.stringify(request.headers.get("host")), request.method, request.nextUrl.pathname); return new NextResponse("Unknown platform host", { status: 421 }); }
   const publicPath = request.nextUrl.pathname + request.nextUrl.search;
   const descriptor = describeRoute(platform, publicPath);
   request.headers.set(ROUTE_HEADER, platform);
