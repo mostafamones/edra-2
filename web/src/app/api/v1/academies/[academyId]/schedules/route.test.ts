@@ -16,30 +16,32 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({
   bearerAuthority: async (token: string) => {
     if (token !== "aaa.bbb.ccc") return null;
+    const from = (table: string) => {
+      const query = { table, filters: [] as Filter[] };
+      state.queries.push(query);
+      let range: [number, number] | null = null;
+      const rows = () => {
+        const all = state.tables[table] ?? [];
+        return range ? all.slice(range[0], range[1] + 1) : all;
+      };
+      const chain: Record<string, unknown> = {};
+      for (const name of ["select", "eq", "is", "in", "gt", "ilike", "order"]) {
+        chain[name] = (...args: unknown[]) => { query.filters.push([name, ...args]); return chain; };
+      }
+      chain.range = (from: number, to: number) => { range = [from, to]; return chain; };
+      chain.maybeSingle = async () => ({
+        data: table === "academy_memberships" ? (state.role ? { role: state.role } : null) : table === "academic_years" ? state.year : null,
+        error: null,
+      });
+      chain.then = (resolve: (value: unknown) => unknown) => resolve({ data: rows(), error: null });
+      return chain;
+    };
     return {
       userId: "user-1",
       db: {
-        rpc: async () => ({ data: { allowed: true }, error: null }),
-        from: (table: string) => {
-          const query = { table, filters: [] as Filter[] };
-          state.queries.push(query);
-          let range: [number, number] | null = null;
-          const rows = () => {
-            const all = state.tables[table] ?? [];
-            return range ? all.slice(range[0], range[1] + 1) : all;
-          };
-          const chain: Record<string, unknown> = {};
-          for (const name of ["select", "eq", "is", "in", "gt", "ilike", "order"]) {
-            chain[name] = (...args: unknown[]) => { query.filters.push([name, ...args]); return chain; };
-          }
-          chain.range = (from: number, to: number) => { range = [from, to]; return chain; };
-          chain.maybeSingle = async () => ({
-            data: table === "academy_memberships" ? (state.role ? { role: state.role } : null) : table === "academic_years" ? state.year : null,
-            error: null,
-          });
-          chain.then = (resolve: (value: unknown) => unknown) => resolve({ data: rows(), error: null });
-          return chain;
-        },
+        // Startable schedules are read through the offering-aware set-returning RPC.
+        rpc: (name: string) => name === "offering_startable_schedules" ? from("schedules") : Promise.resolve({ data: { allowed: true }, error: null }),
+        from,
       },
     };
   },
