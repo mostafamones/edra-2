@@ -47,3 +47,6 @@ next-env.d.ts
 
 # Isolated CI verification outputs
 /artifacts/
+
+# Dev academy optional local scenario exports (npm run dev:academy --out)
+scripts/dev-academy/out/
