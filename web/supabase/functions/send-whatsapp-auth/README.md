@@ -8,6 +8,8 @@ Verify the hook signature against SEND_SMS_HOOK_SECRET before parsing/using the 
 
 Required server-side values: SEND_SMS_HOOK_SECRET, META_WHATSAPP_ACCESS_TOKEN, META_WHATSAPP_PHONE_NUMBER_ID and META_WHATSAPP_TEMPLATE_LANGUAGE. META_WHATSAPP_GRAPH_API_VERSION optionally overrides the source default. Production template name is verify; the language and button/body payload must match the approved Authentication template. See the shared builder for the exact provider payload.
 
+Synthetic development accounts and contacts registered in the development registry never receive codes, and registry lookup failures fail closed. Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for the lookup; a blocked recipient returns a 403 hook error and a failed lookup returns a 503 hook error, both with HTTP 200 as the hook contract requires.
+
 Deploy this signed-hook function without gateway JWT verification; its request authority is the verified hook signature. Using the configured project, the existing deployment form is:
 
 ```sh

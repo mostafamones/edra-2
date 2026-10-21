@@ -14,6 +14,8 @@ SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are backend-only. Current source hash
 
 Development mode logs EDRA_DEV_PARENT_CODE (last four phone digits and the code only) and may send to the configured test recipient. Production requires the actual entered parent number, the approved Authentication template and successful delivery, without code logging. Read index.ts and the shared provider helper for exact payload/errors rather than applying the signed-hook flags to this JWT-authenticated endpoint.
 
+Synthetic development contacts registered in the development registry never receive codes, and registry lookup failures fail closed. A blocked parent number returns `unsupported_recipient` (403) and a lookup failure returns `delivery_unavailable` (503); the challenge is consumed in both cases.
+
 Using the configured project, deploy with JWT verification enabled:
 
 ```sh

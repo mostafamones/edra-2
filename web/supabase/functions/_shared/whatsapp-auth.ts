@@ -16,10 +16,11 @@ export type WhatsAppHookConfig = {
   devLogUntil?: string;
   whatsappDevelopmentMode?: boolean;
   whatsappDevelopmentRecipientPhone?: string;
+  deliveryBlocked?: (target: { userId: string | null; phone: string }) => Promise<boolean>;
 };
 
 type SendSmsHookPayload = {
-  user?: { phone?: unknown; user_metadata?: { full_name?: unknown } };
+  user?: { id?: unknown; phone?: unknown; user_metadata?: { full_name?: unknown } };
   sms?: { otp?: unknown; phone?: unknown };
 };
 
@@ -110,7 +111,8 @@ function parseHookPayload(value: unknown) {
   if (typeof otp !== "string" || !/^\d{6}$/.test(otp)) return null;
   const fullName = payload?.user?.user_metadata?.full_name;
   const name = typeof fullName === "string" ? fullName.trim().replace(/\s+/g, " ").slice(0, 60) : "";
-  return { phone, otp, name: name || "there" };
+  const userId = typeof payload?.user?.id === "string" ? payload.user.id : null;
+  return { phone, otp, name: name || "there", userId };
 }
 
 async function requestMeta(
@@ -197,6 +199,17 @@ export async function handleWhatsAppAuthHook(
     console.error("WhatsApp authentication hook payload validation failed");
     return hookError(400, "Invalid Send SMS Hook payload.", 200);
   }
+
+  // Synthetic development contacts never receive or log a code, including through development routing.
+  if (!config.deliveryBlocked) return hookError(500, "WhatsApp authentication delivery is not configured.", 200);
+  let blocked: boolean;
+  try {
+    blocked = await config.deliveryBlocked({ userId: payload.userId, phone: payload.phone });
+  } catch {
+    console.error("WhatsApp authentication delivery registry check failed");
+    return hookError(503, "Authentication codes are temporarily unavailable.", 200);
+  }
+  if (blocked) return hookError(403, "This test account cannot receive authentication codes.", 200);
 
   const developmentMode = config.whatsappDevelopmentMode === true;
   const developmentRecipient = config.whatsappDevelopmentRecipientPhone?.trim();
