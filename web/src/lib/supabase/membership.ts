@@ -17,7 +17,7 @@ export type AcademyMember = Authority & { role: AcademyRole };
  * This is membership only: each domain keeps its own role checks, and the database re-checks.
  */
 export async function academyMember(academyId: string, authority?: Authority | null): Promise<AcademyMember | null> {
-  if (!z.uuid().safeParse(academyId).success) return null;
+  if (!z.guid().safeParse(academyId).success) return null;
   const caller = authority === undefined ? await cookieAuthority() : authority;
   if (!caller) return null;
   const { data, error } = await caller.db.from("academy_memberships").select("role")

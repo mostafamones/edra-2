@@ -6,6 +6,7 @@ import { IconLoader2 } from "@tabler/icons-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { newUuid } from "@/lib/uuid";
 import { useAcademyScope, useAuth } from "@/modules/auth";
 import { changeStructure, previewStructureChange } from "../actions";
 import { academyStructureKey, offeringAffectedKeys } from "../query-keys";
@@ -47,7 +48,7 @@ export function OfferingTransition({ slug, academyId, accountId, change, onClose
 
   function confirm() {
     if (!preview || blocked || requiresReview) return;
-    const sending = request ?? { change, revision: preview.revision, fingerprint: preview.fingerprint, requestKey: crypto.randomUUID() };
+    const sending = request ?? { change, revision: preview.revision, fingerprint: preview.fingerprint, requestKey: newUuid() };
     setRequest(sending);
     setMessage(null);
     startTransition(async () => {

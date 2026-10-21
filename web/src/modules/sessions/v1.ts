@@ -22,7 +22,7 @@ export async function liveSessionsResponse(context: StaffApiContext, academyId: 
   const cursor = params.get("cursor");
   const limitText = params.get("limit");
   const limit = limitText === null ? null : Number(limitText);
-  if (!z.uuid().safeParse(academyId).success || (state !== null && state !== "live")
+  if (!z.guid().safeParse(academyId).success || (state !== null && state !== "live")
     || (cursor !== null && !decodeCursor(cursor))
     || (limit !== null && (!Number.isInteger(limit) || limit < 1 || limit > MAX_PAGE_SIZE))) {
     return apiError(context, "INVALID_REQUEST");
@@ -63,7 +63,7 @@ const START_CODES: Record<SessionErrorCode, ApiErrorCode> = {
   unavailable: "INTERNAL",
 };
 
-const startBody = z.object({ schedule_id: z.uuid() }).strict();
+const startBody = z.object({ schedule_id: z.guid() }).strict();
 
 /**
  * POST /api/v1/academies/{academyId}/sessions — starts the schedule's session, or opens its live
@@ -72,11 +72,11 @@ const startBody = z.object({ schedule_id: z.uuid() }).strict();
  */
 export async function startSessionResponse(context: StaffApiContext, request: Request, academyId: string) {
   const key = request.headers.get("idempotency-key")?.trim() ?? "";
-  if (!z.uuid().safeParse(key).success) {
+  if (!z.guid().safeParse(key).success) {
     return apiError(context, "INVALID_REQUEST", { message: "Send an Idempotency-Key header containing a UUID; reuse it when retrying." });
   }
   const body = startBody.safeParse(await readJson(request));
-  if (!body.success || !z.uuid().safeParse(academyId).success) {
+  if (!body.success || !z.guid().safeParse(academyId).success) {
     return apiError(context, "INVALID_REQUEST", { message: "Send { \"schedule_id\": \"<uuid>\" }." });
   }
   const result = await runStartSession({ academyId, scheduleId: body.data.schedule_id, startKey: key }, context.authority);

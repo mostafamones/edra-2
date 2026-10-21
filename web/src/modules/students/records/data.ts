@@ -120,7 +120,7 @@ const RECORD_COLUMNS = "id,academy_id,academic_year_id,academy_student_profile_i
 
 /** One record fetched fresh by tenant and id, for the edit sheet. */
 export async function getStudentRecord(academyId: string, recordId: string): Promise<ReadResult<StudentRecord>> {
-  if (!z.uuid().safeParse(recordId).success) return { ok: false, status: 400 };
+  if (!z.guid().safeParse(recordId).success) return { ok: false, status: 400 };
   const actor = await staffContext(academyId);
   if (!actor) return { ok: false, status: 403 };
   const { data, error } = await actor.db.from("annual_student_records").select(RECORD_COLUMNS)

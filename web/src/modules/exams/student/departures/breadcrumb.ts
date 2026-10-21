@@ -1,8 +1,8 @@
 import { z } from "zod";
 import type { DepartureContext } from "./state";
 const prefix = "edra:exam-departure:";
-const schema = z.object({ accountId: z.uuid(), attemptId: z.uuid(), examId: z.uuid(),
-  eventId: z.uuid(), questionId: z.uuid().nullable(), generation: z.number().int().positive() }).strict();
+const schema = z.object({ accountId: z.guid(), attemptId: z.guid(), examId: z.guid(),
+  eventId: z.guid(), questionId: z.guid().nullable(), generation: z.number().int().positive() }).strict();
 export type Breadcrumb = z.infer<typeof schema>;
 const key = (account: string, attempt: string) => `${prefix}${account}:${attempt}`;
 export function writeBreadcrumb(accountId: string, attemptId: string, examId: string, event: DepartureContext) {

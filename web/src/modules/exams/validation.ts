@@ -21,16 +21,16 @@ export function isValidQuestionMax(value: string): boolean {
 
 const ids = (values: (string | undefined)[]) => { const set = values.filter(Boolean); return new Set(set).size === set.length; };
 
-const choiceSchema = z.object({ id: z.uuid().optional(), label: z.string().max(1000), isCorrect: z.boolean() }).strict();
+const choiceSchema = z.object({ id: z.guid().optional(), label: z.string().max(1000), isCorrect: z.boolean() }).strict();
 const questionSchema = z.object({
-  id: z.uuid().optional(),
+  id: z.guid().optional(),
   prompt: z.string().max(5000),
   modelAnswer: z.string().max(10000),
   maxScore: z.string().refine(isValidQuestionMax, MAX_SCORE_MESSAGE),
   choices: z.array(choiceSchema).max(MAX_CHOICES),
 }).strict();
 const partSchema = z.object({
-  id: z.uuid().optional(),
+  id: z.guid().optional(),
   title: z.string().trim().min(1).max(200),
   instructions: z.string().max(5000),
   kind: z.enum(EXAM_PART_KINDS),
@@ -56,8 +56,8 @@ export const examDraftSchema = z.object({
   solutionNotes: z.string().max(10000),
   audience: z.enum(EXAM_AUDIENCES).nullable(),
   levelId: z.string().min(1).max(40).nullable(),
-  trackId: z.uuid().nullable(),
-  groupIds: z.array(z.uuid()).max(MAX_AUDIENCE_GROUPS),
+  trackId: z.guid().nullable(),
+  groupIds: z.array(z.guid()).max(MAX_AUDIENCE_GROUPS),
   timeLimitMinutes: z.number().int().min(1).max(MAX_TIME_LIMIT).nullable(),
   parts: z.array(partSchema).max(MAX_PARTS),
 }).strict().superRefine((draft, context) => {

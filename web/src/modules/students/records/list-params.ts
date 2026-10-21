@@ -51,7 +51,7 @@ const KEYS = { search: "q", status: "status", level: "level", track: "track", gr
 
 const isSortField = (value: string): value is SortField => (SORT_FIELDS as readonly string[]).includes(value);
 const isPageSize = (value: number): value is PageSize => (PAGE_SIZES as readonly number[]).includes(value);
-const idOrNone = z.union([z.uuid(), z.literal(NONE)]);
+const idOrNone = z.union([z.guid(), z.literal(NONE)]);
 const levelId = z.string().regex(/^[a-z0-9-]{1,40}$/);
 
 /** "name.asc,level.desc" ↔ sort descriptors. */

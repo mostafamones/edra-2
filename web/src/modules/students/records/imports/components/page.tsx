@@ -50,7 +50,7 @@ function ImportContent({ academy }: { academy: AcademyEntry }) {
   const [pending] = useState(() => peekPendingImportFile(academy.id));
   const [info, setInfo] = useState<DraftInfo | null>(null);
   const rawSession = searchParams.get("session");
-  const sessionId = rawSession && z.uuid().safeParse(rawSession).success ? rawSession : null;
+  const sessionId = rawSession && z.guid().safeParse(rawSession).success ? rawSession : null;
   const overview = useQuery({ queryKey: importSummaryQueryKey(academy.id, sessionId ?? ""), queryFn: ({ signal }) => fetchImportSummary(academy.id, sessionId!, signal), enabled: Boolean(sessionId && canImportStudents(academy.role)) });
 
   const navigate = (next: { format: ImportFormat; session?: string | null }) => {

@@ -13,6 +13,8 @@ const environmentNames = [
   "EDRA_AUTH_DEV_LOG_UNTIL",
   "WHATSAPP_DEVELOPMENT_MODE",
   "WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE",
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
 ];
 const secret = `whsec_${btoa("synthetic-runtime-hook-secret-32!")}`;
 const otp = "654321";
@@ -25,6 +27,8 @@ const settings = {
   META_WHATSAPP_PHONE_NUMBER_ID: "dummy-sender/id",
   META_WHATSAPP_TEMPLATE_LANGUAGE: "ar",
   META_WHATSAPP_GRAPH_API_VERSION: "v99.0",
+  SUPABASE_URL: "https://registry.test",
+  SUPABASE_SERVICE_ROLE_KEY: "dummy-registry-service-key",
 };
 
 function signedRequest(tamper = false) {
@@ -54,6 +58,14 @@ Deno.test("send-whatsapp-auth environment wiring under Deno", async (t) => {
     () => import("./index.ts"),
     environmentNames,
     async ({ handle, setEnv, expectFetch, logs, errors }) => {
+      const expectRegistry = (blocked: boolean) => {
+        expectFetch((input, init) => {
+          assert.equal(input, `${settings.SUPABASE_URL}/rest/v1/rpc/dev_delivery_blocked`);
+          assert.equal(init?.method, "POST");
+          assert.deepEqual(JSON.parse(String(init?.body)), { p_user_id: null, p_phone: phone });
+          return Response.json(blocked);
+        });
+      };
       const expectDelivery = (version: string, development = false) => {
         expectFetch((input, init) => {
           assert.equal(
@@ -123,6 +135,7 @@ Deno.test("send-whatsapp-auth environment wiring under Deno", async (t) => {
         "production configuration reaches provider stub using sms.phone",
         async () => {
           setEnv(settings);
+          expectRegistry(false);
           expectDelivery("v99.0");
           await assertSuccess(await handle(signedRequest()));
           assert.deepEqual(logs, []);
@@ -134,6 +147,7 @@ Deno.test("send-whatsapp-auth environment wiring under Deno", async (t) => {
           const defaults: Record<string, string> = { ...settings };
           delete defaults.META_WHATSAPP_GRAPH_API_VERSION;
           setEnv(defaults);
+          expectRegistry(false);
           expectDelivery("v23.0");
           await assertSuccess(await handle(signedRequest()));
           assert.deepEqual(logs, []);
@@ -190,6 +204,7 @@ Deno.test("send-whatsapp-auth environment wiring under Deno", async (t) => {
             const missing: Record<string, string> = { ...settings };
             delete missing[name];
             setEnv(missing);
+            expectRegistry(false);
             await assertError(
               await handle(signedRequest()),
               200,
@@ -207,6 +222,7 @@ Deno.test("send-whatsapp-auth environment wiring under Deno", async (t) => {
             WHATSAPP_DEVELOPMENT_MODE: " \tTrUe\n",
             WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE: ` ${developmentPhone} `,
           });
+          expectRegistry(false);
           expectDelivery("v99.0", true);
           await assertSuccess(await handle(signedRequest()));
           assert.deepEqual(logs, [["EDRA_DEV_AUTH_CODE", {
@@ -224,6 +240,7 @@ Deno.test("send-whatsapp-auth environment wiring under Deno", async (t) => {
             WHATSAPP_DEVELOPMENT_MODE: " false ",
             WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE: developmentPhone,
           });
+          expectRegistry(false);
           expectDelivery("v99.0");
           await assertSuccess(await handle(signedRequest()));
           assert.deepEqual(logs, []);
@@ -242,6 +259,7 @@ Deno.test("send-whatsapp-auth environment wiring under Deno", async (t) => {
                 ? {}
                 : { WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE: recipient }),
             });
+            expectRegistry(false);
             await assertError(
               await handle(signedRequest()),
               200,
@@ -252,6 +270,58 @@ Deno.test("send-whatsapp-auth environment wiring under Deno", async (t) => {
           },
         );
       }
+      await t.step(
+        "registry-blocked synthetic recipient fails before development OTP log or provider fetch",
+        async () => {
+          setEnv({
+            ...settings,
+            WHATSAPP_DEVELOPMENT_MODE: "true",
+            WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE: developmentPhone,
+          });
+          expectRegistry(true);
+          await assertError(
+            await handle(signedRequest()),
+            200,
+            403,
+            "This test account cannot receive authentication codes.",
+          );
+          assert.deepEqual(logs, []);
+        },
+      );
+      await t.step(
+        "registry lookup failure fails closed before development OTP log or provider fetch",
+        async () => {
+          setEnv({
+            ...settings,
+            WHATSAPP_DEVELOPMENT_MODE: "true",
+            WHATSAPP_DEVELOPMENT_RECIPIENT_PHONE: developmentPhone,
+          });
+          expectFetch(() => new Response("unavailable", { status: 503 }));
+          await assertError(
+            await handle(signedRequest()),
+            200,
+            503,
+            "Authentication codes are temporarily unavailable.",
+          );
+          assert.deepEqual(logs, []);
+        },
+      );
+      await t.step(
+        "missing registry credentials fail closed without registry or provider fetch",
+        async () => {
+          const missing: Record<string, string> = { ...settings };
+          delete missing.SUPABASE_URL;
+          delete missing.SUPABASE_SERVICE_ROLE_KEY;
+          setEnv(missing);
+          await assertError(
+            await handle(signedRequest()),
+            200,
+            500,
+            "WhatsApp authentication delivery is not configured.",
+          );
+          assert.deepEqual(logs, []);
+        },
+      );
       assert.equal(JSON.stringify(errors).includes(otp), false);
     },
   );

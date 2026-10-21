@@ -7,9 +7,9 @@ import { failure, failureFromDatabase } from "./errors";
 import { runStartSession } from "./start";
 import type { ArchiveResult, EndResult, StartResult } from "./types";
 
-const endSchema = z.object({ academyId: z.uuid(), sessionId: z.uuid() });
+const endSchema = z.object({ academyId: z.guid(), sessionId: z.guid() });
 const archiveSchema = z.object({
-  academyId: z.uuid(), sessionId: z.uuid(), expectedVersion: z.number().int().min(1), idempotencyKey: z.uuid(),
+  academyId: z.guid(), sessionId: z.guid(), expectedVersion: z.number().int().min(1), idempotencyKey: z.guid(),
   note: z.string().trim().max(500).optional(),
 });
 const restoreSchema = archiveSchema.omit({ note: true });

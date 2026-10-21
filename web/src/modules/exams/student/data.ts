@@ -38,7 +38,7 @@ async function call<T>(
   }
 }
 
-const listInput = z.object({ academyId: z.uuid(), page: z.number().int().min(1).max(10_000) });
+const listInput = z.object({ academyId: z.guid(), page: z.number().int().min(1).max(10_000) });
 
 /** One page of the caller's discoverable exams in the academy: resumable and open first, then upcoming, then history. */
 export async function listMyExams(input: { academyId: string; page: number }): Promise<StudentExamRead<StudentExamPage>> {
@@ -50,7 +50,7 @@ export async function listMyExams(input: { academyId: string; page: number }): P
   }), toStudentExamPage);
 }
 
-const examInput = z.object({ academyId: z.uuid(), examId: z.uuid() });
+const examInput = z.object({ academyId: z.guid(), examId: z.guid() });
 
 /**
  * The caller's overview of one exam of the academy. It may settle due work through the existing
@@ -88,19 +88,19 @@ const entryInput = examInput.extend({ token: token.nullable() });
 const editorInput = examInput.extend({ token });
 const version = z.number().int().min(0).max(2_147_483_647);
 const patch = z.union([
-  z.object({ questionId: z.uuid(), choiceId: z.uuid().nullable() }).strict(),
-  z.object({ questionId: z.uuid(), text: z.string().max(10_000).nullable() }).strict(),
+  z.object({ questionId: z.guid(), choiceId: z.guid().nullable() }).strict(),
+  z.object({ questionId: z.guid(), text: z.string().max(10_000).nullable() }).strict(),
 ]);
 const generation = z.number().int().positive();
 const saveInput = editorInput.extend({
   generation,
   expectedVersion: version,
-  key: z.uuid(),
+  key: z.guid(),
   answers: z.array(patch).min(1).max(300)
     .refine((answers) => new Set(answers.map((answer) => answer.questionId)).size === answers.length),
 });
-const submitInput = editorInput.extend({ generation, expectedVersion: version, key: z.uuid() });
-const departureInput = editorInput.extend({ generation, eventId: z.uuid(), questionId: z.uuid().nullable() });
+const submitInput = editorInput.extend({ generation, expectedVersion: version, key: z.guid() });
+const departureInput = editorInput.extend({ generation, eventId: z.guid(), questionId: z.guid().nullable() });
 
 /**
  * Starts the caller's single attempt or resumes it, and claims the answering editor in the same

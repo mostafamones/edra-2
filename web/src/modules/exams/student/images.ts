@@ -23,10 +23,10 @@ import type { StudentExamCommandResult, StudentExamImagesOutcome, StudentExamRev
 export const STUDENT_IMAGE_URL_SECONDS = 60;
 
 const input = z.object({
-  academyId: z.uuid(),
-  examId: z.uuid(),
+  academyId: z.guid(),
+  examId: z.guid(),
   token: z.string().regex(/^[0-9a-f]{64}$/),
-  imageIds: z.array(z.uuid()).min(1).max(20),
+  imageIds: z.array(z.guid()).min(1).max(20),
 });
 
 function storage() {

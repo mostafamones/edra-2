@@ -17,6 +17,8 @@ Actions, with `challengeId` after `request`:
 
 Uses SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY (backend-only; the service-role key is also the code HMAC secret, as in student-onboarding) plus the shared WhatsApp variables. Development mode logs EDRA_DEV_PASSWORD_CODE (last four digits and code) and sends to the development recipient; production sends the approved Authentication template to the account phone and fails the request when delivery fails.
 
+Synthetic development accounts and contacts registered in the development registry never receive codes, and registry lookup failures fail closed. Blocked accounts get `unsupported_account` (403), blocked recipients get `unsupported_recipient` (403), and lookup failures return `unavailable` or `delivery_unavailable` (503).
+
 Deploy with JWT verification enabled:
 
 ```sh

@@ -13,7 +13,7 @@ export async function contentResult<T>(run: () => Promise<T>): Promise<ContentRe
 }
 
 export async function contentCaller(academyId: string) {
-  if (!z.uuid().safeParse(academyId).success) throw new Error("Invalid academy.");
+  if (!z.guid().safeParse(academyId).success) throw new Error("Invalid academy.");
   const caller = await cookieAuthority();
   if (!caller) throw new Error("Sign in to continue.");
   const { data, error } = await caller.db.from("academy_memberships").select("role").eq("academy_id", academyId).eq("user_id", caller.userId).is("suspended_at", null).maybeSingle();
@@ -45,7 +45,7 @@ export async function readContentWorkspace(academyId: string) {
 }
 export type ContentWorkspace = Awaited<ReturnType<typeof readContentWorkspace>>;
 export async function readContentUnit(academyId: string, unitId: string) {
-  z.uuid().parse(unitId);
+  z.guid().parse(unitId);
   const { db, userId, manager } = await contentCaller(academyId);
   const { data: unit, error } = await db.from("content_units").select("*").eq("academy_id", academyId).eq("id", unitId).single();
   contentError(error);

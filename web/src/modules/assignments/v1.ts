@@ -61,7 +61,7 @@ export async function assignmentsResponse(context: StaffApiContext, academyId: s
   const state = params.get("state");
   const limit = intParam(params.get("limit"), 50, 1, 100);
   const offset = intParam(params.get("offset"), 0, 0, 100000);
-  if (!z.uuid().safeParse(academyId).success || limit === null || offset === null
+  if (!z.guid().safeParse(academyId).success || limit === null || offset === null
     || (state !== null && !(ASSIGNMENT_STATES as readonly string[]).includes(state))) {
     return apiError(context, "INVALID_REQUEST");
   }
@@ -109,7 +109,7 @@ export async function marksResponse(context: StaffApiContext, academyId: string,
 /** The required `Idempotency-Key` header (a UUID created per action and reused on retry), or null. */
 function idempotencyKey(request: Request) {
   const value = request.headers.get("idempotency-key")?.trim() ?? "";
-  return z.uuid().safeParse(value).success ? value : null;
+  return z.guid().safeParse(value).success ? value : null;
 }
 
 /**
@@ -118,18 +118,18 @@ function idempotencyKey(request: Request) {
  */
 const patchBody = z.object({
   student_id: z.string().max(40).optional(),
-  annual_student_record_id: z.uuid().optional(),
+  annual_student_record_id: z.guid().optional(),
   /** With student_id: the student the code was resolved to; the save fails if the code now names someone else. */
-  expected_annual_student_record_id: z.uuid().optional(),
+  expected_annual_student_record_id: z.guid().optional(),
   expected_version: z.number().int().min(1),
   marks: z.array(z.object({
-    part_id: z.uuid(), score: z.string().max(10).nullable(), excused_reason: z.string().trim().min(1).max(500).optional(),
+    part_id: z.guid(), score: z.string().max(10).nullable(), excused_reason: z.string().trim().min(1).max(500).optional(),
   }).strict()).max(50).default([]),
   /** Per-question entry: a choice (null = explicitly unanswered), a decimal mark, or clear (not entered). */
   answers: z.array(z.union([
-    z.object({ question_id: z.uuid(), choice_id: z.uuid().nullable() }).strict(),
-    z.object({ question_id: z.uuid(), score: z.string().max(10) }).strict(),
-    z.object({ question_id: z.uuid(), clear: z.literal(true) }).strict(),
+    z.object({ question_id: z.guid(), choice_id: z.guid().nullable() }).strict(),
+    z.object({ question_id: z.guid(), score: z.string().max(10) }).strict(),
+    z.object({ question_id: z.guid(), clear: z.literal(true) }).strict(),
   ])).max(1000).default([]),
   feedback: z.string().max(5000).optional(),
 }).strict()
@@ -170,7 +170,7 @@ export async function resolutionResponse(context: StaffApiContext, request: Requ
 }
 
 const publicationBody = z.object({
-  items: z.array(z.object({ annual_student_record_id: z.uuid(), expected_version: z.number().int().min(1) }).strict()).min(1).max(500)
+  items: z.array(z.object({ annual_student_record_id: z.guid(), expected_version: z.number().int().min(1) }).strict()).min(1).max(500)
     .refine((items) => new Set(items.map((item) => item.annual_student_record_id)).size === items.length),
 }).strict();
 

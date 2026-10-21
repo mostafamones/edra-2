@@ -59,7 +59,7 @@ export async function createSchedule(value: unknown): Promise<Result> {
 }
 
 export async function updateSchedule(scheduleId: string, value: unknown): Promise<Result> {
-  if (!z.uuid().safeParse(scheduleId).success) return { ok: false, message: "Invalid schedule." };
+  if (!z.guid().safeParse(scheduleId).success) return { ok: false, message: "Invalid schedule." };
   const parsed = scheduleInputSchema.safeParse(value);
   if (!parsed.success) return invalid(parsed.error);
   const input = parsed.data;
@@ -83,7 +83,7 @@ export async function updateSchedule(scheduleId: string, value: unknown): Promis
 }
 
 export async function archiveSchedule(academyId: string, scheduleId: string): Promise<Result> {
-  if (!z.uuid().safeParse(academyId).success || !z.uuid().safeParse(scheduleId).success)
+  if (!z.guid().safeParse(academyId).success || !z.guid().safeParse(scheduleId).success)
     return { ok: false, message: "Invalid schedule." };
   const actor = await academyMember(academyId);
   if (!actor) return { ok: false, message: "You do not have permission to archive this schedule." };

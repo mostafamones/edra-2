@@ -7,16 +7,16 @@ export function isStudentInviteToken(value: unknown): value is string {
   return typeof value === "string" && TOKEN_PATTERN.test(value);
 }
 
-const academySchema = z.object({ id: z.uuid(), name: z.string(), slug: z.string(), icon: z.string() });
+const academySchema = z.object({ id: z.guid(), name: z.string(), slug: z.string(), icon: z.string() });
 
 const slotSchema = z.object({ weekday: z.number().int(), startsAt: z.string(), location: z.string().nullable() });
 
-const groupSchema = z.object({ id: z.uuid(), name: z.string(), full: z.boolean(), seatsLeft: z.number().int().nullable(), slots: z.array(slotSchema) });
+const groupSchema = z.object({ id: z.guid(), name: z.string(), full: z.boolean(), seatsLeft: z.number().int().nullable(), slots: z.array(slotSchema) });
 
 const programSchema = z.object({
   levelId: z.string(),
   levelName: z.string(),
-  trackId: z.uuid().nullable(),
+  trackId: z.guid().nullable(),
   trackName: z.string().nullable(),
   groups: z.array(groupSchema),
 });
