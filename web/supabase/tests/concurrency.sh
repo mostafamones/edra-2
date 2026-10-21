@@ -945,6 +945,69 @@ wait
 expect_ok c38a "the source archive holding the unit failed"
 expect_rejected c38b "an archived source was newly recorded as taught" content_unavailable
 
+# Learning access races. Use dedicated connected records and published units; no provider files.
+LU1="$(uuid)"; LU2="$(uuid)"; LB="$(uuid)"; LK="$(uuid)"
+LS1="$(uuid)"; LS2="$(uuid)"
+LR1="$(new_student 'Learning race one' 01088880101 null)"
+LR2="$(new_student 'Learning race two' 01088880102 null)"
+psqlx >/dev/null <<SQL
+begin;
+insert into auth.users(id) values('$LS1'),('$LS2');
+update public.academy_student_profiles p set user_id=v.user_id,linked_at=now()
+ from public.annual_student_records r join (values('$LR1'::uuid,'$LS1'::uuid),('$LR2'::uuid,'$LS2'::uuid)) v(record_id,user_id) on r.id=v.record_id
+ where p.id=r.academy_student_profile_id;
+insert into public.content_units(id,academy_id,program_id,created_by,state,published_revision,published_version,draft)
+ select id,'$ACADEMY','$CONTENT_PROGRAM','$ADMIN','published',1,1,'{"title":"Learning race","description":"","accessDays":7,"items":[]}'
+ from unnest(array['$LU1'::uuid,'$LU2'::uuid]) id;
+insert into public.content_revisions(unit_id,academy_id,revision,document,published_by)
+ select id,'$ACADEMY',1,draft,'$ADMIN' from public.content_units where id in ('$LU1','$LU2');
+$as_admin
+select public.generate_content_codes('$ACADEMY','$LU1','$LB',1);
+commit;
+SQL
+LC="$(psqlx -tA -c "select code from public.content_access_codes where batch_id='$LB'")"
+hold l1a l1b "$(as_user "$LS1") select public.redeem_content_code('$ACADEMY','$LU1','$LC',gen_random_uuid());"
+start l1b "$(as_user "$LS2") select public.redeem_content_code('$ACADEMY','$LU1','$LC',gen_random_uuid());"
+wait
+expect_ok l1a "first unit-code redemption failed"
+expect_rejected l1b "one unit code was redeemed concurrently twice" code_used
+psqlx -tA -c "select count(*)=1 from public.content_code_redemptions where code_id=(select id from public.content_access_codes where code='$LC')" | grep -qx t || fail "single-use code duplicated"
+
+# A lost-response retry must return the original full grant, even after waiting for its commit.
+hold l2a l2b "$as_admin select public.issue_content_access('$ACADEMY','$LU2','$LR1','$LK');"
+start l2b "$as_admin select public.issue_content_access('$ACADEMY','$LU2','$LR1','$LK');"
+wait
+expect_ok l2a "first learning grant failed"
+expect_ok l2b "concurrent learning retry failed"
+psqlx -tA -c "select count(*)=1 from public.content_access_grants where annual_record_id='$LR1' and unit_id='$LU2'" | grep -qx t || fail "retry duplicated grant history"
+
+# Both explicit extensions survive contention on the same current-grant head.
+hold l3a l3b "$as_admin select public.issue_content_access('$ACADEMY','$LU2','$LR1',gen_random_uuid(),24);"
+start l3b "$as_admin select public.issue_content_access('$ACADEMY','$LU2','$LR1',gen_random_uuid(),48);"
+wait
+expect_ok l3a "first concurrent extension failed"
+expect_ok l3b "second concurrent extension failed"
+psqlx -tA -c "select g.expires_at=original.expires_at+interval '72 hours' from public.content_access_accounts a join public.content_access_grants g on g.id=a.current_grant_id join public.content_access_grants original on original.id='$LK' where a.annual_record_id='$LR1' and a.unit_id='$LU2'" | grep -qx t || fail "concurrent extension lost remaining time"
+
+# One annual allowance is shared across different expired units, including simultaneous requests.
+psqlx >/dev/null <<SQL
+begin;
+insert into public.content_access_accounts(academy_id,academic_year_id,annual_record_id,unit_id)
+ select '$ACADEMY','$YEAR','$LR2',id from unnest(array['$LU1'::uuid,'$LU2'::uuid]) id;
+insert into public.content_access_grants(id,academy_id,academic_year_id,annual_record_id,unit_id,kind,actor_id,issued_at,starts_at,expires_at,duration_seconds)
+ select gen_random_uuid(),'$ACADEMY','$YEAR','$LR2',id,'staff','$ADMIN',now()-interval '8 days',now()-interval '8 days',now()-interval '1 day',604800
+ from unnest(array['$LU1'::uuid,'$LU2'::uuid]) id;
+update public.content_access_accounts a set current_grant_id=g.id from public.content_access_grants g
+ where a.annual_record_id='$LR2' and g.annual_record_id=a.annual_record_id and g.unit_id=a.unit_id;
+commit;
+SQL
+hold l4a l4b "$(as_user "$LS2") select public.extend_my_content_access('$ACADEMY','$LU1',gen_random_uuid());"
+start l4b "$(as_user "$LS2") select public.extend_my_content_access('$ACADEMY','$LU2',gen_random_uuid());"
+wait
+expect_ok l4a "first annual learning extension failed"
+expect_rejected l4b "annual extension was consumed twice across units" extension_used
+psqlx -tA -c "select count(*)=1 from public.content_access_grants where annual_record_id='$LR2' and kind='student_extension'" | grep -qx t || fail "annual allowance produced duplicate grants"
+
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
 #     neither deadlocks. After the commit the worker finds a closed year and the command is refused.
