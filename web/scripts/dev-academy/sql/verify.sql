@@ -53,10 +53,17 @@ with run as (
     'attendance_effects', (select count(*) from public.attendance_effects x, run where x.academy_id = run.academy_id),
     'assignments', (select count(*) from public.assignments x, run where x.academy_id = run.academy_id),
     'assignments_closed', (select count(*) from public.assignments x, run where x.academy_id = run.academy_id and x.state = 'closed'),
+    'assignment_parts', (select count(*) from public.assignment_parts x, run where x.academy_id = run.academy_id),
+    'assignment_questions', (select count(*) from public.assignment_part_questions x, run where x.academy_id = run.academy_id),
+    'assignment_max_total', (select coalesce(sum(x.max_score), 0) from public.assignments x, run where x.academy_id = run.academy_id),
     'assignment_recipients', (select count(*) from public.assignment_recipients x, run where x.academy_id = run.academy_id),
     'assignment_marks', (select count(*) from public.assignment_marks x, run where x.academy_id = run.academy_id),
     'assignment_publications', (select count(*) from public.assignment_result_publications x, run where x.academy_id = run.academy_id),
     'exams', (select count(*) from public.exams x, run where x.academy_id = run.academy_id),
+    'exam_parts', (select count(*) from public.exam_parts x, run where x.academy_id = run.academy_id),
+    'exam_questions', (select count(*) from public.exam_questions x, run where x.academy_id = run.academy_id),
+    'exam_choices', (select count(*) from public.exam_choices x, run where x.academy_id = run.academy_id),
+    'exam_max_total', (select coalesce(sum(x.max_score), 0) from public.exams x, run where x.academy_id = run.academy_id),
     'exam_closures', (select count(*) from public.exam_closures x, run where x.academy_id = run.academy_id),
     'exam_work', (select count(*) from public.exam_work x, run where x.academy_id = run.academy_id),
     'exam_submissions', (select count(*) from public.exam_submissions x, run where x.academy_id = run.academy_id),
@@ -149,7 +156,10 @@ with run as (
       then 'an exam result hash differs from its canonical content' end,
     case when exists (select 1 from public.exam_work w join public.exams z on z.id = w.exam_id, run
       where w.academy_id = run.academy_id and not exists (select 1 from public.exam_closures c where c.exam_id = z.id))
-      then 'current exams already have work' end
+      then 'current exams already have work' end,
+    case when exists (select 1 from public.exams z, run where z.academy_id = run.academy_id
+        and not exists (select 1 from public.exam_closures c where c.exam_id = z.id) and edra_private.exam_issues(z.id) <> '[]'::jsonb)
+      then 'a current exam is not ready to start' end
   ], null) as value
 )
 select jsonb_build_object(

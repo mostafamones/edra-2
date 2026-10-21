@@ -5,6 +5,8 @@
 -- Existing constraints and triggers stay active. Historical actor context is transaction-local on
 -- this privileged connection only; the exam helpers are called the way the domain RPCs call them.
 -- Scenario IDs are mapped to run-scoped UUIDs, so two runs never collide.
+-- Authored content fields (edra-dev-v3: academy subject, titles, instructions, parts and questions) are optional;
+-- without them the generic rows of edra-dev-v1/v2 are loaded unchanged.
 
 create or replace function pg_temp.rid(p_id text) returns uuid language sql stable as $$
   select md5(current_setting('edra.dev_run') || ':' || p_id)::uuid;
@@ -77,7 +79,8 @@ begin
 
   -- Academy, its automatically initialized year, staff and the real developer as Instructor.
   insert into public.academies (id, name, created_by, slug, icon, subject, created_at, updated_at)
-  values (academy, s->'academy'->>'name', owner_id, (select doc->>'academySlug' from pg_temp.fx), 'school', 'Mathematics',
+  values (academy, s->'academy'->>'name', owner_id, (select doc->>'academySlug' from pg_temp.fx), 'school',
+    coalesce(s->'academy'->>'subject', 'Mathematics'),
     year_start, year_start);
   select y.id into year_id from public.academic_years y where y.academy_id = academy and y.closed_at is null;
   if year_id is null or (select y.start_year from public.academic_years y where y.id = year_id)
@@ -199,25 +202,35 @@ begin
   -- Assignments: physical Written Work, structure first, then cohort/recipients, work, marks and results.
   create temp table fx_assignments on commit drop as
   select a->>'id' as sid, pg_temp.rid(a->>'id') as id, a->>'kind' as kind, (a->>'week')::integer as week,
+    coalesce(a->>'title', format('Week %s homework', a->>'week')) as title, coalesce(a->>'instructions', '') as instructions,
     pg_temp.rid(a->>'groupId') as group_id, (a->>'assignedAt')::timestamptz as assigned_at,
     (a->>'dueAt')::timestamptz as due_at, a->'parts' as parts,
     (select p.user_id from fx_people p where p.role = 'instructor' order by p.key
      offset ((i - 1) % 3) limit 1) as author
   from jsonb_array_elements(s->'assignments') with ordinality t(a, i);
 
-  insert into public.assignments (id, academy_id, academic_year_id, title, audience, due_at, state, created_by, created_at,
-    updated_by, updated_at)
-  select id, academy, year_id, format('Week %s homework', week), 'groups', due_at, 'active', author, assigned_at, author,
-    assigned_at
+  insert into public.assignments (id, academy_id, academic_year_id, title, instructions, audience, due_at, state, created_by,
+    created_at, updated_by, updated_at)
+  select id, academy, year_id, title, instructions, 'groups', due_at, 'active', author, assigned_at, author, assigned_at
   from fx_assignments;
   insert into public.assignment_audience_groups (assignment_id, academy_id, academic_year_id, group_id)
   select id, academy, year_id, group_id from fx_assignments;
-  insert into public.assignment_parts (id, academy_id, assignment_id, position, title, max_score, created_at, kind)
-  select pg_temp.rid(p->>'id'), academy, a.id, n::smallint, p->>'title', (p->>'maxScore')::numeric, a.assigned_at, 'file_upload'
+  insert into public.assignment_parts (id, academy_id, assignment_id, position, title, instructions, max_score, created_at, kind)
+  select pg_temp.rid(p->>'id'), academy, a.id, n::smallint, p->>'title', coalesce(p->>'instructions', ''),
+    (p->>'maxScore')::numeric, a.assigned_at, coalesce(p->>'kind', 'file_upload')::public.assignment_part_kind
   from fx_assignments a, jsonb_array_elements(a.parts) with ordinality t(p, n);
-  insert into public.assignment_part_questions (id, academy_id, assignment_id, part_id, position, max_score)
-  select pg_temp.rid((p->>'id') || ':question:1'), academy, a.id, pg_temp.rid(p->>'id'), 1, (p->>'maxScore')::numeric
-  from fx_assignments a, jsonb_array_elements(a.parts) p;
+  -- A part without authored questions keeps the single unnamed entry worth the whole part.
+  insert into public.assignment_part_questions (id, academy_id, assignment_id, part_id, position, prompt, max_score)
+  select pg_temp.rid((p->>'id') || ':question:1'), academy, a.id, pg_temp.rid(p->>'id'), 1, '', (p->>'maxScore')::numeric
+  from fx_assignments a, jsonb_array_elements(a.parts) p where not p ? 'questions'
+  union all
+  select pg_temp.rid(q->>'id'), academy, a.id, pg_temp.rid(p->>'id'), (q->>'position')::smallint, q->>'prompt',
+    (q->>'maxScore')::numeric
+  from fx_assignments a, jsonb_array_elements(a.parts) p, jsonb_array_elements(p->'questions') q where p ? 'questions';
+  if exists (select 1 from fx_assignments a join public.assignment_parts p on p.assignment_id = a.id, jsonb_array_elements(a.parts) x
+      where p.id = pg_temp.rid(x->>'id') and p.max_score <> (x->>'maxScore')::numeric) then
+    raise exception 'dev-academy: an assignment part maximum differs from the scenario';
+  end if;
 
   insert into public.assignment_cohorts (assignment_id, revision, audience_basis, source, captured_at, captured_by)
   select a.id, 1, edra_private.assignment_audience_basis(x), 'first_audience', a.assigned_at, a.author
@@ -304,34 +317,45 @@ begin
   select x->>'id' as sid, pg_temp.rid(x->>'id') as id, x->>'kind' as kind, x->>'format' as format, (x->>'week')::integer as week,
     (x->>'opensAt')::timestamptz as opens_at, (x->>'scheduledClosesAt')::timestamptz as scheduled_closes_at,
     (x->>'closesAt')::timestamptz as closes_at, (x->>'timerMinutes')::integer as timer, x->'groupIds' as group_ids,
-    x->'questions' as questions,
+    x->'questions' as questions, x->'parts' as parts,
+    coalesce(x->>'title', case x->>'kind' when 'historical' then format('Week %s paper exam', x->>'week')
+      when 'open' then 'Preparatory practice exam' else 'Secondary practice exam' end) as title,
+    coalesce(x->>'instructions', '') as instructions, coalesce(x->>'solutionNotes', '') as solution_notes,
     (select p.user_id from fx_people p where p.role = 'instructor' order by p.key offset ((i - 1) % 3) limit 1) as author,
     greatest(year_start, least((x->>'opensAt')::timestamptz - interval '3 days', reference_at - interval '1 day')) as created_at
   from jsonb_array_elements(s->'exams') with ordinality t(x, i);
 
-  insert into public.exams (id, academy_id, academic_year_id, title, audience, time_limit_minutes, opens_at, closes_at,
-    actual_closes_at, availability_updated_by, availability_updated_at, created_by, created_at, updated_by, updated_at)
-  select id, academy, year_id,
-    case kind when 'historical' then format('Week %s paper exam', week)
-      when 'open' then 'Preparatory practice exam' else 'Secondary practice exam' end,
-    'groups', timer, opens_at, scheduled_closes_at, closes_at, author, created_at, author, created_at, author, created_at
+  insert into public.exams (id, academy_id, academic_year_id, title, instructions, solution_notes, audience, time_limit_minutes,
+    opens_at, closes_at, actual_closes_at, availability_updated_by, availability_updated_at, created_by, created_at, updated_by,
+    updated_at)
+  select id, academy, year_id, title, instructions, solution_notes, 'groups', timer, opens_at, scheduled_closes_at, closes_at,
+    author, created_at, author, created_at, author, created_at
   from fx_exams;
   insert into public.exam_audience_groups (exam_id, academy_id, academic_year_id, group_id)
   select x.id, academy, year_id, pg_temp.rid(g) from fx_exams x, jsonb_array_elements_text(x.group_ids) g;
-  insert into public.exam_parts (id, academy_id, exam_id, position, title, kind)
+  -- Without authored parts an exam has one part: Written work on paper, Questions online.
+  insert into public.exam_parts (id, academy_id, exam_id, position, title, instructions, kind)
   select pg_temp.rid(sid || ':part:1'), academy, id, 1,
-    case when format = 'paper' then 'Written work' else 'Questions' end,
+    case when format = 'paper' then 'Written work' else 'Questions' end, '',
     case when format = 'paper' then 'written_work' else 'question_sheet' end::public.exam_part_kind
-  from fx_exams;
-  insert into public.exam_questions (id, academy_id, exam_id, part_id, position, prompt, max_score)
-  select pg_temp.rid(q->>'id'), academy, x.id, pg_temp.rid(x.sid || ':part:1'), (q->>'position')::smallint,
-    coalesce(q->>'prompt', 'Question ' || (q->>'position')), (q->>'maxScore')::numeric
+  from fx_exams where parts is null
+  union all
+  select pg_temp.rid(p->>'id'), academy, x.id, (p->>'position')::smallint, p->>'title', p->>'instructions',
+    (p->>'kind')::public.exam_part_kind
+  from fx_exams x, jsonb_array_elements(x.parts) p where x.parts is not null;
+  insert into public.exam_questions (id, academy_id, exam_id, part_id, position, prompt, model_answer, max_score)
+  select pg_temp.rid(q->>'id'), academy, x.id, pg_temp.rid(coalesce(q->>'partId', x.sid || ':part:1')), (q->>'position')::smallint,
+    coalesce(q->>'prompt', 'Question ' || (q->>'position')), coalesce(q->>'modelAnswer', ''), (q->>'maxScore')::numeric
   from fx_exams x, jsonb_array_elements(x.questions) q;
+  -- Exactly the questions with choices are choice questions (all questions of a v1/v2 'mcq' exam).
   insert into public.exam_choices (id, academy_id, exam_id, question_id, position, label, is_correct)
   select pg_temp.rid((q->>'id') || ':choice:' || n), academy, x.id, pg_temp.rid(q->>'id'), n::smallint, c,
     chr(64 + n::integer) = q->>'correctChoice'
   from fx_exams x, jsonb_array_elements(x.questions) q, jsonb_array_elements_text(q->'choices') with ordinality t(c, n)
-  where x.format = 'mcq';
+  where q ? 'choices';
+  if exists (select 1 from fx_exams x where x.kind <> 'historical' and edra_private.exam_issues(x.id) <> '[]'::jsonb) then
+    raise exception 'dev-academy: a current exam is not ready';
+  end if;
 
   create temp table fx_exam_results on commit drop as
   select r->>'id' as sid, x.id as exam_id, x.closes_at, st.record_id, r->>'state' as state,

@@ -15,6 +15,9 @@ export function expectedCounts(scenario) {
   const received = (r) => r.receivedAt !== null;
   const announced = (r) => r.state === "announced" || r.state === "late_announced";
   const items = scenario.attendancePublications.flatMap((p) => p.items);
+  const parts = scenario.assignments.flatMap((a) => a.parts);
+  const questions = scenario.exams.flatMap((e) => e.questions);
+  const total = (list) => list.reduce((n, x) => n + x.maxScore, 0);
   return {
     accounts: 26, accounts_loaded: 26, auth_users: 26, years: 1, open_years: 1,
     memberships: scenario.staff.length, groups: scenario.groups.length, schedules: scenario.schedules.length,
@@ -25,10 +28,18 @@ export function expectedCounts(scenario) {
     attendance_publication_items: items.length, attendance_records: items.length,
     attendance_effects: items.filter((i) => ["present", "late", "absent"].includes(i.status)).length,
     assignments: scenario.assignments.length, assignments_closed: scenario.assignments.filter((a) => a.kind === "historical").length,
+    assignment_parts: parts.length,
+    assignment_questions: parts.reduce((n, p) => n + (p.questions?.length ?? 1), 0),
+    assignment_max_total: total(parts),
     assignment_recipients: scenario.assignmentResults.length,
     assignment_marks: scenario.assignmentResults.reduce((n, r) => n + (r.components?.length ?? 0), 0),
     assignment_publications: scenario.assignmentResults.filter(announced).length,
-    exams: scenario.exams.length, exam_closures: scenario.exams.filter((e) => e.kind === "historical").length,
+    exams: scenario.exams.length,
+    exam_parts: scenario.exams.reduce((n, e) => n + (e.parts?.length ?? 1), 0),
+    exam_questions: questions.length,
+    exam_choices: questions.reduce((n, q) => n + (q.choices?.length ?? 0), 0),
+    exam_max_total: total(questions),
+    exam_closures: scenario.exams.filter((e) => e.kind === "historical").length,
     exam_work: scenario.examResults.filter(received).length, exam_submissions: scenario.examResults.filter(received).length,
     exam_marks: scenario.examResults.reduce((n, r) => n + (r.components?.length ?? 0), 0),
     exam_publications: scenario.examResults.filter((r) => r.state === "announced").length,
