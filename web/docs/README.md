@@ -5,6 +5,7 @@
 - [Web MVP](product/goals.md): full approved goal and scope.
 - [Academy and academic structure](product/domains/academy.md).
 - [Personal account settings](product/domains/account-settings.md): names, profile pictures, password and verified contact changes.
+- [Development academy and Developer mode](product/domains/development-tools.md): synthetic test data and developer identity preview; [implementation briefs](../planning/development-tools/README.md).
 - [Students and enrollment](product/domains/students.md).
 - [Teaching and attendance](product/domains/teaching.md).
 - [Content and learning access](product/domains/learning.md).
