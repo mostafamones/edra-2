@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { scenarioHash } from "./registry.mjs";
 import { buildScenario } from "./scenario.mjs";
 import { cairoToUtcMs } from "./time.mjs";
 
@@ -57,12 +58,30 @@ describe("S2 determinism", () => {
   });
 });
 
-describe("S5 performance patterns and current assignment cases", () => {
-  it("has five students per pattern, all four patterns present", () => {
+describe("edra-dev-v1 compatibility", () => {
+  // Captured before edra-dev-v2 existed; the registered development run was created from the first hash.
+  it("rebuilds the registered v1 scenarios byte for byte", () => {
+    assert.equal(scenarioHash(buildScenario({ recipeVersion: "edra-dev-v1" })), "b25cf643746ed25297cdace5a893bbfcccbe2c104fc65b8f15a4890627360ba8");
+    assert.equal(
+      scenarioHash(buildScenario({ recipeVersion: "edra-dev-v1", seed: "edra-20-v2", referenceDate: "2026-12-09" })),
+      "84298de595c829a16900dccf17fb859a1605e81e4abf8d5923066d0bc65e3cb9",
+    );
+  });
+
+  it("has five students per v1 pattern, all four patterns present", () => {
+    const v1 = buildScenario({ recipeVersion: "edra-dev-v1" });
     for (const pattern of ["consistent", "improving", "temporary-dip", "irregular"]) {
-      assert.equal(count(scenario.students, (s) => s.pattern === pattern), 5, pattern);
+      assert.equal(count(v1.students, (s) => s.pattern === pattern), 5, pattern);
     }
   });
+
+  it("refuses unknown recipe identifiers", () => {
+    assert.throws(() => buildScenario({ recipeVersion: "edra-dev-v3" }), /Unknown recipe "edra-dev-v3"/);
+    assert.throws(() => buildScenario({ recipeVersion: "toString" }), /Unknown recipe/);
+  });
+});
+
+describe("S5 current assignment cases", () => {
 
   it("gives each current assignment all five states, rotated across groups", () => {
     const states = ["missing", "received_unmarked", "marked_private", "announced", "late_announced"];

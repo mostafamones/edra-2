@@ -6,20 +6,37 @@ Pure, deterministic generator for the synthetic 20-student academy. `dry-run` ma
 
 ```bash
 npm run dev:academy -- dry-run --reference-date 2026-10-21 --seed edra-20-v1 --students 20
+npm run dev:academy -- dry-run --recipe edra-dev-v1   # the recipe of the existing development run
 npm run dev:academy -- dry-run --out scripts/dev-academy/out/scenario.json   # optional local export (gitignored)
 npm run test:dev-academy
 ```
 
-Defaults: `--reference-date 2026-10-21`, `--seed edra-20-v1`, `--students 20`. Unknown actions or options, `--students` other than 20, and `--out` outside `scripts/dev-academy/out/` exit with code 2. An invalid or insufficient reference date exits with code 1.
+Defaults: `--recipe edra-dev-v2`, `--reference-date 2026-10-21`, `--seed edra-20-v1`, `--students 20`. Unknown actions, options or recipes, `--students` other than 20, and `--out` outside `scripts/dev-academy/out/` exit with code 2. An invalid or insufficient reference date exits with code 1.
+
+## Recipes
+
+A recipe, seed and reference date fix the scenario byte for byte. Recipes never change once a run uses them; new behaviour gets a new recipe ID. Any other ID is refused.
+
+- `edra-dev-v1`: four fixed patterns of five students (consistent, improving, temporary dip, irregular), each tying attendance, hand-ins and marks together. Run `be8db1dc-6eb2-48af-9c0b-c02d531f43ac` uses it.
+- `edra-dev-v2` (default for new runs): each student has an independent ability tier (top, strong, middle, struggling), attendance habit (reliable, usual, patchy), submission habit (diligent, usual, careless) and trajectory (`pattern`: steady, improving, temporary-dip). Each seed covers the same 20 combinations, including top students with patchy attendance and struggling students who attend reliably. Marks follow the student's ability, trajectory and a slowly changing week-to-week form, in half points. A dip also lowers attendance and hand-ins for about two weeks. Historical paper exams are sat exactly by students present or late at that session. Current assignments keep the five deliberate states.
+
+`create` and `verify` without `--recipe` use the recipe the run was registered with, so the documented commands for an existing run are unchanged; a new run uses the default. An explicit `--recipe` that differs from the registered run fails the scenario-hash check. Check the existing run with:
+
+```bash
+npm run dev:academy -- dry-run --recipe edra-dev-v1   # pure, shows the v1 scenario
+npm run dev:academy -- verify --project fgbcjlibwgxylfwmocgx --run be8db1dc-6eb2-48af-9c0b-c02d531f43ac --mode integrity
+```
+
+The dry-run lists each student by logical key with their profile, attendance, hand-ins, exams sat and marks (average, early and late halves of the history, lowest) to judge realism. It prints no names or contacts.
 
 ## Cloud commands
 
 `create`, `inspect` and `verify` act on one allow-listed project: development `fgbcjlibwgxylfwmocgx` or isolated-test `msnjxvnblgkdeigctbhk`. Any other ref is rejected.
 
 ```bash
-npm run dev:academy -- create --project fgbcjlibwgxylfwmocgx --run <uuid> --developer <uuid> [--env FILE] [--skip-delivery-probe]
+npm run dev:academy -- create --project fgbcjlibwgxylfwmocgx --run <uuid> --developer <uuid> [--recipe ID] [--env FILE] [--skip-delivery-probe]
 npm run dev:academy -- inspect --project fgbcjlibwgxylfwmocgx --run <uuid> [--env FILE]
-npm run dev:academy -- verify --project fgbcjlibwgxylfwmocgx --run <uuid> --mode baseline|integrity [--env FILE]
+npm run dev:academy -- verify --project fgbcjlibwgxylfwmocgx --run <uuid> --mode baseline|integrity [--recipe ID] [--env FILE]
 ```
 
 - Run IDs and developer IDs are lowercase UUIDs. `--skip-delivery-probe` is accepted only on the isolated-test project.
@@ -36,7 +53,7 @@ npm run dev:academy -- verify --project fgbcjlibwgxylfwmocgx --run <uuid> --mode
 - `config`: `recipeVersion`, `seed`, `referenceDate`, `timezone`, `academicYear` (`startsOn`, `endsOn`, `startsAt`, `endsBefore` as UTC ISO), `teachingWeeks`, exam timer values.
 - `academy`: `{id, key, name}`.
 - `staff[]`: `{id, key, role, displayName, phone, synthetic, accountKey, placeholder}`. The real owner is `staff:real-owner` with `placeholder: true` and null contact and account fields. Every other person has `synthetic: true`.
-- `students[]`: `{id, key, displayName, phone, parentPhone, synthetic, accountKey, pattern}`. `accountKey` is a logical link only.
+- `students[]`: `{id, key, displayName, phone, synthetic, accountKey, pattern, profile?, parentPhone}`. `accountKey` is a logical link only. `profile` (`edra-dev-v2` only) is `{tier, ability, attendance, submission}`; `ability` is the mid-year level in percent.
 - `placements[]`: `{id, key, studentId, groupId, levelKey, track, mode: "in-person", enrolledAt}`.
 - `groups[]`: `{id, key, name, levelKey, track}`. `schedules[]`: `{id, key, groupId, slots: [{weekday, startTime, durationMinutes}]}`.
 - `sessions[]`: `{id, key, groupId, week, startsAt, endsAt, status: "ended", startedById}`.

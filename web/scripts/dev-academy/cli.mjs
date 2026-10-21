@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Dev academy CLI. dry-run is pure. create, inspect and verify act on one allow-listed cloud project and read
 // credentials from the environment or an env file; credential values are never printed.
-//   dry-run  [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--out FILE.json]
-//   create   --project REF --run UUID --developer UUID [--reference-date ...] [--seed ...] [--students 20] [--env FILE] [--skip-delivery-probe]
+//   dry-run  [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--out FILE.json]
+//   create   --project REF --run UUID --developer UUID [--recipe ID] [--reference-date ...] [--seed ...] [--students 20] [--env FILE] [--skip-delivery-probe]
 //   inspect  --project REF --run UUID [--env FILE]
-//   verify   --project REF --run UUID --mode baseline|integrity [--reference-date ...] [--seed ...] [--students 20] [--env FILE]
+//   verify   --project REF --run UUID --mode baseline|integrity [--recipe ID] [--reference-date ...] [--seed ...] [--students 20] [--env FILE]
+// Without --recipe, create and verify use the recipe a registered run was created with, else the latest recipe.
 //   reset    --project REF --run UUID --dry-run [--env FILE]   (read-only impact report; destructive reset is refused)
 // --out writes only inside the gitignored out/ folder.
 import { randomUUID } from "node:crypto";
@@ -19,7 +20,7 @@ import { createRun, probeDeliveryGuard } from "./create.mjs";
 import { inspectRun } from "./inspect.mjs";
 import { resetDryRun } from "./reset.mjs";
 import { runRowSql, scenarioHash } from "./registry.mjs";
-import { DEFAULTS, buildScenario, validateScenario } from "./scenario.mjs";
+import { DEFAULTS, RECIPE_VERSIONS, buildScenario, validateScenario } from "./scenario.mjs";
 import { isCalendarDate } from "./time.mjs";
 import { MODES, verifyRun } from "./verify.mjs";
 
@@ -27,9 +28,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = resolve(HERE, "out");
 const MIGRATIONS = join(HERE, "../../supabase/migrations");
 const ACTIONS = new Set(["dry-run", "create", "inspect", "verify", "reset"]);
-const SCENARIO_OPTIONS = ["--reference-date", "--seed", "--students"];
+const SCENARIO_OPTIONS = ["--recipe", "--reference-date", "--seed", "--students"];
 const ALLOWED = {
-  "dry-run": ["--reference-date", "--seed", "--students", "--out"],
+  "dry-run": [...SCENARIO_OPTIONS, "--out"],
   create: ["--project", "--run", "--developer", ...SCENARIO_OPTIONS, "--env", "--skip-delivery-probe"],
   inspect: ["--project", "--run", "--env"],
   verify: ["--project", "--run", "--mode", ...SCENARIO_OPTIONS, "--env"],
@@ -41,13 +42,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const PROJECT = /^[a-z]{20}$/;
 const HEX64 = /^[0-9a-f]{64}$/;
 const RESET_REFUSAL = "Destructive reset is not enabled in this version. It requires a separately approved reset brief with the reviewed child-first table list, trigger exceptions, cyclic pointer handling and encrypted backup location.";
-const PATTERN_ORDER = ["consistent", "improving", "temporary-dip", "irregular"];
 const USAGE = [
   "Usage: npm run dev:academy -- <action> [options]",
-  "  dry-run  [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--out scripts/dev-academy/out/NAME.json]",
-  "  create   --project REF --run UUID --developer UUID [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--env FILE] [--skip-delivery-probe]",
+  "  dry-run  [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--out scripts/dev-academy/out/NAME.json]",
+  "  create   --project REF --run UUID --developer UUID [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--env FILE] [--skip-delivery-probe]",
   "  inspect  --project REF --run UUID [--env FILE]",
-  "  verify   --project REF --run UUID --mode baseline|integrity [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--env FILE]",
+  "  verify   --project REF --run UUID --mode baseline|integrity [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--env FILE]",
+  `  recipes: ${RECIPE_VERSIONS.join(", ")} (default ${DEFAULTS.recipeVersion}; create/verify default to a registered run's recipe)`,
   "  reset    --project REF --run UUID --dry-run [--env FILE]",
 ].join("\n");
 
@@ -58,7 +59,7 @@ export function parseArgs(argv) {
   if (!ACTIONS.has(action)) throw new UsageError(`Unknown action "${action ?? ""}"`);
 
   const options = {
-    referenceDate: DEFAULTS.referenceDate, seed: DEFAULTS.seed, students: DEFAULTS.students, out: null,
+    recipe: null, referenceDate: DEFAULTS.referenceDate, seed: DEFAULTS.seed, students: DEFAULTS.students, out: null,
     project: null, run: null, developer: null, mode: null, envFile: null, skipDeliveryProbe: false,
     dryRun: false, confirmRun: null, impactHash: null,
   };
@@ -82,6 +83,10 @@ export function parseArgs(argv) {
     if (value === undefined || value.startsWith("--")) throw new UsageError(`${flag} needs a value`);
 
     switch (flag) {
+      case "--recipe":
+        if (!RECIPE_VERSIONS.includes(value)) throw new UsageError(`Unknown recipe "${value}"; supported recipes: ${RECIPE_VERSIONS.join(", ")}`);
+        options.recipe = value;
+        break;
       case "--reference-date":
         if (!isCalendarDate(value)) throw new UsageError(`--reference-date must be a real YYYY-MM-DD date, got "${value}"`);
         options.referenceDate = value;
@@ -144,8 +149,33 @@ export function parseArgs(argv) {
   return { action, options };
 }
 
-const maskName = (name) => name.split(" ").map((part) => `${part[0]}${"*".repeat(part.length - 1)}`).join(" ");
-const maskPhone = (phone) => `${phone.slice(0, 4)}******${phone.slice(-2)}`;
+const pct = (part, whole) => (whole ? `${Math.round((100 * part) / whole)}%` : "-");
+const avg = (list) => (list.length ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : "-");
+
+// One line per student, keyed by logical key only: profile, realised attendance, hand-ins and marks over time.
+function studentLines(scenario) {
+  const groupName = new Map(scenario.groups.map((g) => [g.id, g.name]));
+  const groupOf = new Map(scenario.placements.map((p) => [p.studentId, p.groupId]));
+  const weeks = scenario.config.teachingWeeks.count;
+  const weekOf = new Map([...scenario.assignments, ...scenario.exams].map((x) => [x.id, x.week]));
+  const historical = new Set(scenario.assignments.filter((a) => a.kind === "historical").map((a) => a.id));
+  const items = scenario.attendancePublications.flatMap((p) => p.items);
+  return scenario.students.map((s) => {
+    const mine = (list) => list.filter((r) => r.studentId === s.id);
+    const attended = mine(items).filter((i) => i.status === "present" || i.status === "late").length;
+    const work = mine(scenario.assignmentResults).filter((r) => historical.has(r.assignmentId));
+    const exams = mine(scenario.examResults);
+    const marked = [...mine(scenario.assignmentResults), ...exams]
+      .filter((r) => r.total !== null)
+      .map((r) => ({ week: weekOf.get(r.assignmentId ?? r.examId), total: r.total }));
+    const half = (early) => avg(marked.filter((m) => (m.week <= weeks / 2) === early).map((m) => m.total));
+    const totals = marked.map((m) => m.total);
+    const profile = s.profile ? `${s.profile.tier} ${s.profile.ability} | attend ${s.profile.attendance} | submit ${s.profile.submission} | ` : "";
+    return `  ${s.key} | ${groupName.get(groupOf.get(s.id))} | ${profile}${s.pattern} | attended ${pct(attended, mine(items).length)}`
+      + ` | handed in ${work.filter((r) => r.receivedAt).length}/${work.length} | exams sat ${exams.filter((r) => r.receivedAt).length}/${exams.length}`
+      + ` | marks avg ${avg(totals)} (early ${half(true)}, late ${half(false)}, low ${totals.length ? Math.min(...totals) : "-"})`;
+  });
+}
 
 // Reports a stored exam window against the current clock; the scenario itself is never changed.
 function examWindowStatus(exam, now) {
@@ -155,9 +185,8 @@ function examWindowStatus(exam, now) {
 }
 
 function summarize(scenario, validation, now) {
-  const groupName = new Map(scenario.groups.map((g) => [g.id, g.name]));
   const count = (list, predicate) => list.filter(predicate).length;
-  const patterns = PATTERN_ORDER.map((p) => `${p} ${count(scenario.students, (s) => s.pattern === p)}`).join(", ");
+  const tally = (pick) => Object.entries(Object.groupBy(scenario.students, pick)).map(([k, list]) => `${k} ${list.length}`).join(", ");
   const { config } = scenario;
   return [
     "Dev academy dry-run (pure build, no database or network access)",
@@ -168,19 +197,17 @@ function summarize(scenario, validation, now) {
     `Assignments ${count(scenario.assignments, (a) => a.kind === "historical")} historical + ${count(scenario.assignments, (a) => a.kind === "current")} current | assignment results ${scenario.assignmentResults.length}`,
     `Exams ${count(scenario.exams, (e) => e.kind === "historical")} historical + ${count(scenario.exams, (e) => e.kind === "open")} open + ${count(scenario.exams, (e) => e.kind === "upcoming")} upcoming | exam results ${scenario.examResults.length}`,
     ...scenario.exams.filter((e) => e.kind !== "historical").map((e) => `${e.kind} exam: ${examWindowStatus(e, now)}`),
-    `Patterns: ${patterns}`,
-    "Students (masked):",
-    ...scenario.students.map((s) => {
-      const placement = scenario.placements.find((p) => p.studentId === s.id);
-      return `  ${maskName(s.displayName)} | ${maskPhone(s.phone)} | ${s.pattern} | ${groupName.get(placement.groupId)}`;
-    }),
+    `Patterns: ${tally((s) => s.pattern)}`,
+    ...(scenario.students[0].profile ? [`Tiers: ${tally((s) => s.profile.tier)}`] : []),
+    "Students (marks are out of 100):",
+    ...studentLines(scenario),
     `Validation: ${validation.valid ? "passed" : "failed"} (${validation.errors.length} errors)`,
   ].join("\n");
 }
 
 function dryRun(options) {
   try {
-    const scenario = buildScenario({ referenceDate: options.referenceDate, seed: options.seed, students: options.students });
+    const scenario = buildScenario(scenarioInputs(options, options.recipe ?? DEFAULTS.recipeVersion));
     const validation = validateScenario(scenario);
     console.log(summarize(scenario, validation, Date.now()));
     if (options.out) {
@@ -205,8 +232,12 @@ function loadEnv(envFile) {
   return { ...process.env, ...parseEnv(readFileSync(path, "utf8")) };
 }
 
-function buildChecked(options) {
-  const scenario = buildScenario({ referenceDate: options.referenceDate, seed: options.seed, students: options.students });
+const scenarioInputs = (options, recipeVersion) => ({ recipeVersion, referenceDate: options.referenceDate, seed: options.seed, students: options.students });
+const registeredRun = async (runSql, runId) => (await runSql(runRowSql(runId)))[0]?.result ?? null;
+
+// An existing run is rebuilt with the recipe it was registered with unless --recipe says otherwise.
+export function buildChecked(options, run) {
+  const scenario = buildScenario(scenarioInputs(options, options.recipe ?? run?.recipe_version ?? DEFAULTS.recipeVersion));
   const validation = validateScenario(scenario);
   if (!validation.valid) throw new Error(`scenario is invalid (${validation.errors.length} errors)`);
   return scenario;
@@ -225,7 +256,8 @@ function printRun(runId, report, env, slug) {
 }
 
 async function create(options, env, target, runSql) {
-  const scenario = buildChecked(options);
+  const scenario = buildChecked(options, await registeredRun(runSql, options.run));
+  console.log(`Recipe ${scenario.config.recipeVersion}`);
   const key = loadKey(env);
   const slug = `edra-dev-${options.run.slice(0, 8)}`;
   const result = await createRun({
@@ -253,10 +285,11 @@ async function inspect(options, runSql) {
 }
 
 async function verify(options, runSql) {
-  const scenario = buildChecked(options);
+  const row = await registeredRun(runSql, options.run);
+  const scenario = buildChecked(options, row);
+  console.log(`Recipe ${scenario.config.recipeVersion}`);
   const result = await verifyRun({ runSql, runId: options.run, scenario }, options.mode);
   // A registered run must have been created from exactly these scenario inputs.
-  const row = (await runSql(runRowSql(options.run)))[0]?.result;
   const mismatch = row && row.scenario_hash !== scenarioHash(scenario);
   const problems = mismatch ? [...result.problems, "scenario inputs differ from the registered run"] : result.problems;
   const ok = result.ok && !mismatch;

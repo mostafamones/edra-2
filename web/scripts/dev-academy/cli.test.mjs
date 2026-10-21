@@ -3,7 +3,8 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { main, parseArgs } from "./cli.mjs";
+import { buildChecked, main, parseArgs } from "./cli.mjs";
+import { scenarioHash } from "./registry.mjs";
 
 const cli = fileURLToPath(new URL("./cli.mjs", import.meta.url));
 // Empty environment: the dry-run must need no credentials, network or database.
@@ -41,6 +42,25 @@ describe("S6 dry-run CLI", () => {
   it("rejects unknown actions and options", () => {
     assert.equal(run(["reset"]).status, 2);
     assert.equal(run(["dry-run", "--force", "yes"]).status, 2);
+  });
+
+  it("prints a per-student realism summary without names or phones", () => {
+    const result = run(["dry-run"]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /^Recipe edra-dev-v2 /m);
+    assert.match(result.stdout, /^Tiers: /m);
+    assert.match(result.stdout, /^  student:01 \| .+ \| attended \d+% \| handed in \d\/\d \| exams sat \d\/\d \| marks avg /m);
+    assert.doesNotMatch(result.stdout, /\+20\d|\*\*/, "no phones or masked names");
+  });
+
+  it("selects the v1 recipe explicitly and refuses unknown recipes", () => {
+    const v1 = run(["dry-run", "--recipe", "edra-dev-v1"]);
+    assert.equal(v1.status, 0, v1.stderr);
+    assert.match(v1.stdout, /^Recipe edra-dev-v1 /m);
+    assert.match(v1.stdout, /^Patterns: .*consistent 5/m);
+    const unknown = run(["dry-run", "--recipe", "edra-dev-v9"]);
+    assert.equal(unknown.status, 2);
+    assert.match(unknown.stderr, /Unknown recipe "edra-dev-v9"; supported recipes: edra-dev-v1, edra-dev-v2/);
   });
 
   it("rejects --out outside the gitignored out folder", () => {
@@ -131,5 +151,24 @@ describe("reset refusal", () => {
     } finally {
       console.error = original;
     }
+  });
+});
+
+describe("recipe of an existing run", () => {
+  const defaults = parseArgs(["verify", "--project", PROJECT, "--run", RUN, "--mode", "baseline"]).options;
+  const V1_HASH = "b25cf643746ed25297cdace5a893bbfcccbe2c104fc65b8f15a4890627360ba8";
+
+  it("rebuilds a registered v1 run with v1 when --recipe is omitted", () => {
+    assert.equal(scenarioHash(buildChecked(defaults, { recipe_version: "edra-dev-v1" })), V1_HASH);
+  });
+
+  it("uses the latest recipe for a new run and an explicit --recipe over the registered one", () => {
+    assert.equal(buildChecked(defaults, null).config.recipeVersion, "edra-dev-v2");
+    const explicit = parseArgs(["verify", "--project", PROJECT, "--run", RUN, "--mode", "baseline", "--recipe", "edra-dev-v2"]).options;
+    assert.notEqual(scenarioHash(buildChecked(explicit, { recipe_version: "edra-dev-v1" })), V1_HASH);
+  });
+
+  it("refuses a registered recipe this version does not know", () => {
+    assert.throws(() => buildChecked(defaults, { recipe_version: "edra-dev-v7" }), /Unknown recipe "edra-dev-v7"/);
   });
 });

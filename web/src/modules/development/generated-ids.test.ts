@@ -5,9 +5,8 @@ import { examDraftSchema } from "@/modules/exams/validation";
 import { decodeCursor, encodeCursor } from "@/modules/sessions/cursor";
 import { studentRecordInputSchema } from "@/modules/students/records/validation";
 
-import { buildScenario } from "../../../scripts/dev-academy/scenario.mjs";
+import { RECIPE_VERSIONS, buildScenario } from "../../../scripts/dev-academy/scenario.mjs";
 
-const scenario = buildScenario();
 const MALFORMED = ["not-a-uuid", "12103d45-8372-f5cc-2ec5-94a8b0dcf5e", "12103d45-8372-f5cc-2ec5-94a8b0dcf5eg", "12103d4583725cc2ec594a8b0dcf5e4"];
 const isRfc = (id: string) => z.uuid().safeParse(id).success;
 
@@ -19,7 +18,9 @@ const exam = (groupIds: string[]) => ({
   title: "Exam", instructions: "", solutionNotes: "", audience: "groups", levelId: null, trackId: null, groupIds, timeLimitMinutes: 60, parts: [],
 });
 
-describe("generated development academy IDs", () => {
+describe.each(RECIPE_VERSIONS)("generated development academy IDs (%s)", (recipeVersion) => {
+  const scenario = buildScenario({ recipeVersion });
+
   it("include IDs without an RFC version or variant", () => {
     expect(isRfc(scenario.academy.id)).toBe(false);
     expect(scenario.sessions.some((session) => !isRfc(session.id))).toBe(true);

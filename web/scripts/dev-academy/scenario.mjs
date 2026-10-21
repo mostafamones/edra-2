@@ -1,7 +1,8 @@
 // Pure, deterministic dev-academy scenario builder: no I/O, network, environment or credentials.
-// Recipe: web/planning/development-tools/01-scenario.md and README "Fixed recipe and counts".
+// Recipes: edra-dev-v1 follows web/planning/development-tools/01-scenario.md; edra-dev-v2 adds profiles.mjs (see README "Recipes").
 import { createHash } from "node:crypto";
 
+import { profileModel } from "./profiles.mjs";
 import { FAMILY_NAMES, FATHER_NAMES, FIRST_NAMES } from "./names.mjs";
 import { normalizeEgyptianPhone, validateScenario } from "./validate.mjs";
 import { TIMEZONE, addDays, cairoToUtcMs, iso, isCalendarDate, weekdayOf } from "./time.mjs";
@@ -9,7 +10,7 @@ import { TIMEZONE, addDays, cairoToUtcMs, iso, isCalendarDate, weekdayOf } from 
 export { validateScenario };
 
 export const DEFAULTS = Object.freeze({
-  recipeVersion: "edra-dev-v1",
+  recipeVersion: "edra-dev-v2",
   seed: "edra-20-v1",
   referenceDate: "2026-10-21",
   students: 20,
@@ -102,10 +103,31 @@ function scoreParts(rand, key, parts, pattern, w, weeks) {
 
 const receiveChance = (pattern) => (pattern === "irregular" ? 0.7 : 0.95);
 
+// edra-dev-v1 must keep reproducing registered runs byte for byte: do not change this model.
+function patternModel(rand, weeks) {
+  return {
+    traits(studentKeys) {
+      const order = [...studentKeys].sort((a, b) => rand.unit(`pattern:${a}`) - rand.unit(`pattern:${b}`));
+      return new Map(order.map((key, i) => [key, { pattern: PATTERNS[Math.floor(i / GROUP_SIZE)] }]));
+    },
+    attendanceWeights: (student, w) => attendanceWeights(student.pattern, w, weeks),
+    submitChance: (student) => receiveChance(student.pattern),
+    satExam: (_status, student, key) => rand.unit(`${key}:${student.key}:receive`) < receiveChance(student.pattern),
+    scoreParts: (key, parts, student, w) => scoreParts(rand, key, parts, student.pattern, w, weeks),
+  };
+}
+
+// A registered run is rebuilt with its own recipe; unknown versions are refused, never approximated.
+const RECIPES = { "edra-dev-v1": patternModel, "edra-dev-v2": profileModel };
+export const RECIPE_VERSIONS = Object.freeze(Object.keys(RECIPES));
+
 export function buildScenario(options = {}) {
   const { recipeVersion, seed, referenceDate, students: studentCount } = { ...DEFAULTS, ...options };
   if (typeof recipeVersion !== "string" || !recipeVersion || typeof seed !== "string" || !seed) {
     throw new TypeError("recipeVersion and seed must be non-empty strings");
+  }
+  if (!Object.hasOwn(RECIPES, recipeVersion)) {
+    throw new RangeError(`Unknown recipe "${recipeVersion}"; supported recipes: ${RECIPE_VERSIONS.join(", ")}`);
   }
   if (studentCount !== STUDENT_COUNT) throw new RangeError(`Only ${STUDENT_COUNT} students are supported, got ${studentCount}`);
   if (!isCalendarDate(referenceDate)) throw new RangeError(`Reference date must be a real YYYY-MM-DD date, got ${referenceDate}`);
@@ -174,10 +196,10 @@ export function buildScenario(options = {}) {
     slots: def.weekdays.map((weekday) => ({ weekday, startTime: def.startTime, durationMinutes: 90 })),
   }));
 
+  const model = RECIPES[recipeVersion](rand, weeks.length);
   const studentKeys = Array.from({ length: STUDENT_COUNT }, (_, i) => `student:${pad2(i + 1)}`);
-  const patternOrder = [...studentKeys].sort((a, b) => rand.unit(`pattern:${a}`) - rand.unit(`pattern:${b}`));
-  const patternOf = new Map(patternOrder.map((key, i) => [key, PATTERNS[Math.floor(i / GROUP_SIZE)]]));
-  const students = studentKeys.map((key) => ({ id: rand.uuid(key), key, ...contact(key), synthetic: true, accountKey: `account:${key}`, pattern: patternOf.get(key) }));
+  const traitsOf = model.traits(studentKeys);
+  const students = studentKeys.map((key) => ({ id: rand.uuid(key), key, ...contact(key), synthetic: true, accountKey: `account:${key}`, ...traitsOf.get(key) }));
   // Parent contacts are drawn after every person's own phone, so adding them left earlier output unchanged.
   for (const student of students) student.parentPhone = contact(`${student.key}:parent`).phone;
   const placements = studentKeys.map((key, i) => {
@@ -222,6 +244,7 @@ export function buildScenario(options = {}) {
 
   const firstSessionMs = (groupId, w) => Date.parse(sessions.find((s) => s.groupId === groupId && s.week === w + 1).startsAt);
 
+  const statusOf = new Map(); // `${sessionId}:${studentId}` -> attendance status
   const roster = [];
   const attendancePublications = [];
   for (const session of sessions) {
@@ -234,7 +257,8 @@ export function buildScenario(options = {}) {
         studentId: student.id,
       };
       roster.push(entry);
-      const status = weighted(attendanceWeights(student.pattern, w, weeks.length), rand.unit(`attendance:${student.key}:${session.key}`));
+      const status = weighted(model.attendanceWeights(student, w), rand.unit(`attendance:${student.key}:${session.key}`));
+      statusOf.set(`${session.id}:${student.id}`, status);
       return { id: rand.uuid(`attendance-item:${session.key}:${student.key}`), key: `attendance-item:${session.key}:${student.key}`, rosterId: entry.id, studentId: student.id, status };
     });
     attendancePublications.push({
@@ -301,7 +325,7 @@ export function buildScenario(options = {}) {
       const state =
         a.kind === "current"
           ? CURRENT_STATES[(j + gi) % CURRENT_STATES.length]
-          : rand.unit(`${a.key}:${student.key}:receive`) < receiveChance(student.pattern) ? "announced" : "missing";
+          : rand.unit(`${a.key}:${student.key}:receive`) < model.submitChance(student, a.week - 1) ? "announced" : "missing";
       const key = `assignment-result:${a.key}:${student.key}`;
       const assignedMs = Date.parse(a.assignedAt);
       const dueMs = Date.parse(a.dueAt);
@@ -309,7 +333,7 @@ export function buildScenario(options = {}) {
       const gradedMs = MARKED.has(state) ? receivedMs + DAY_MS : null;
       const announcedMs = ANNOUNCED.has(state) ? gradedMs + DAY_MS : null;
       const marks = MARKED.has(state)
-        ? { ...scoreParts(rand, key, a.parts, student.pattern, a.week - 1, weeks.length), gradedById: gradedBy() }
+        ? { ...model.scoreParts(key, a.parts, student, a.week - 1), gradedById: gradedBy() }
         : { components: null, total: null, gradedById: null };
       assignmentResults.push({
         id: rand.uuid(key),
@@ -335,11 +359,12 @@ export function buildScenario(options = {}) {
       const exam = examRecord({ key: `exam:${GROUPS[gi].key}:w${pad2(w + 1)}`, kind: "historical", format: "paper", groupIds: [group.id], week: w + 1, opensMs: firstSessionMs(group.id, w) });
       exams.push(exam);
       const closesMs = Date.parse(exam.closesAt);
+      const examSession = sessions.find((s) => s.groupId === group.id && s.startsAt === exam.opensAt);
       for (const student of membersOf(group.id)) {
         const key = `exam-result:${exam.key}:${student.key}`;
-        const received = rand.unit(`${exam.key}:${student.key}:receive`) < receiveChance(student.pattern);
+        const received = model.satExam(statusOf.get(`${examSession.id}:${student.id}`), student, exam.key);
         const marks = received
-          ? { receivedAt: iso(Date.parse(exam.opensAt) + 50 * MIN_MS), gradedAt: iso(closesMs + DAY_MS), announcedAt: iso(closesMs + 2 * DAY_MS), gradedById: gradedBy(), ...scoreParts(rand, key, exam.questions, student.pattern, w, weeks.length) }
+          ? { receivedAt: iso(Date.parse(exam.opensAt) + 50 * MIN_MS), gradedAt: iso(closesMs + DAY_MS), announcedAt: iso(closesMs + 2 * DAY_MS), gradedById: gradedBy(), ...model.scoreParts(key, exam.questions, student, w) }
           : { receivedAt: null, gradedAt: null, announcedAt: null, gradedById: null, components: null, total: null };
         examResults.push({ id: rand.uuid(key), key, examId: exam.id, studentId: student.id, state: received ? "announced" : "missing", ...marks });
       }
