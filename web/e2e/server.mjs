@@ -13,9 +13,14 @@ await new Promise((resolve, reject) => {
 });
 await new Promise((resolve, reject) => portCheck.close((error) => error ? reject(error) : resolve()));
 
+// Privileged fixture settings are used only by Node setup/assertion helpers.
+const serverEnv = { ...process.env };
+for (const key of Object.keys(serverEnv)) {
+  if (/^(ATTENDANCE_|PG|SUPABASE_|EDRA_DB_TEST_)/.test(key)) delete serverEnv[key];
+}
 const server = spawn(process.execPath, [
   require.resolve("next/dist/bin/next"), "dev", "--hostname", "127.0.0.1", "--port", "3100",
-], { stdio: "inherit" });
+], { stdio: "inherit", env: serverEnv });
 
 server.on("error", (error) => {
   console.error(error);

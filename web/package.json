@@ -14,7 +14,8 @@
     "test:edge:runtime": "bash scripts/edge-test.sh",
     "audit:auth": "node --env-file=.env.local scripts/audit-auth-users.mjs",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:attendance": "playwright test --config playwright.attendance.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

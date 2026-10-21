@@ -88,3 +88,36 @@ jobs:
         run: bash scripts/edge-check.sh
       - name: Edge Deno runtime tests
         run: bash scripts/edge-test.sh
+
+  attendance-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Each job owns its stack. No cancel-in-progress: teardown gets a chance to finish.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: npx playwright install --with-deps chromium
+      - run: bash scripts/attendance-e2e-ci.sh
+      - name: Cleanup this run's attendance infrastructure
+        if: always()
+        run: bash scripts/attendance-e2e-ci.sh --cleanup
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: attendance-e2e
+          path: |
+            web/playwright-report/attendance
+            web/test-results/attendance
+            web/artifacts/attendance/phases.log
+          retention-days: 7
+          if-no-files-found: ignore

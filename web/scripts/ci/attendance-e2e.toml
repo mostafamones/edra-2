@@ -1,0 +1,36 @@
+# CI-only full Auth/API stack; never copied from developer/linked configuration.
+project_id = "edra-attendance-ci-placeholder"
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+health_timeout = "2m"
+[db.pooler]
+enabled = false
+[db.migrations]
+enabled = true
+[db.seed]
+enabled = false
+[auth]
+enabled = true
+site_url = "http://app.lvh.me:3100"
+[auth.sms]
+enable_signup = true
+enable_confirmations = false
+[realtime]
+enabled = true
+[storage]
+enabled = true
+[studio]
+enabled = false
+[local_smtp]
+enabled = false
+[edge_runtime]
+enabled = false
+[analytics]
+enabled = false
