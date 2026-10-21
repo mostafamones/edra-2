@@ -22,7 +22,7 @@ export async function grantUnitAccess(value: unknown) {
 }
 export async function revokeUnitAccess(value: unknown) {
   return contentResult(async () => {
-    const input = requestInput.extend({ recordId: z.uuid(), grantId: z.uuid(), reason: z.string().trim().min(1).max(1000) }).parse(value);
+    const input = requestInput.extend({ recordId: z.guid(), grantId: z.guid(), reason: z.string().trim().min(1).max(1000) }).parse(value);
     const { db } = await contentCaller(input.academyId);
     const { error } = await db.rpc("revoke_content_access", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_record_id: input.recordId, p_request_id: input.requestId, p_grant_id: input.grantId, p_reason: input.reason });
     learningError(error);
@@ -38,7 +38,7 @@ export async function generateUnitCodes(value: unknown) {
 }
 export async function revokeUnitCode(value: unknown) {
   return contentResult(async () => {
-    const input = requestInput.extend({ codeId: z.uuid() }).parse(value);
+    const input = requestInput.extend({ codeId: z.guid() }).parse(value);
     const { db } = await contentCaller(input.academyId);
     const { error } = await db.rpc("revoke_content_code", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_code_id: input.codeId, p_request_id: input.requestId });
     learningError(error);
@@ -62,7 +62,7 @@ export async function extendMyUnitAccess(value: unknown) {
 }
 export async function openLearningMaterial(value: unknown) {
   return contentResult(async () => {
-    const input = unitInput.extend({ itemId: z.uuid() }).parse(value);
+    const input = unitInput.extend({ itemId: z.guid() }).parse(value);
     const { db } = await learningCaller();
     const { data, error } = await db.rpc("authorize_content_material", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_item_id: input.itemId });
     learningError(error);

@@ -1,28 +1,28 @@
 import { z } from "zod";
 
-export const accessSchema = z.object({ status: z.enum(["locked", "active", "expired", "revoked"]), expiresAt: z.string().nullable(), grantId: z.uuid().nullable() });
+export const accessSchema = z.object({ status: z.enum(["locked", "active", "expired", "revoked"]), expiresAt: z.string().nullable(), grantId: z.guid().nullable() });
 export type LearningAccess = z.infer<typeof accessSchema>;
 export const accessLabels = { locked: "Locked", active: "Available", expired: "Expired", revoked: "Revoked" };
-export const unitInput = z.object({ academyId: z.uuid(), unitId: z.uuid() });
-export const requestInput = unitInput.extend({ requestId: z.uuid() });
-export const staffGrantInput = requestInput.extend({ recordId: z.uuid(), expectedGrantId: z.uuid().nullable(), expectedRevision: z.number().int().positive(), extensionHours: z.number().int().min(1).max(2147483647).optional() });
-export const grantReceiptSchema = z.object({ grantId: z.uuid(), issuedAt: z.string(), expiresAt: z.string(), previousExpiry: z.string().nullable() });
-export const generatedCodesSchema = z.object({ batchId: z.uuid(), codes: z.array(z.object({ id: z.uuid(), code: z.string().regex(/^[0-9a-f]{32}$/) })) });
+export const unitInput = z.object({ academyId: z.guid(), unitId: z.guid() });
+export const requestInput = unitInput.extend({ requestId: z.guid() });
+export const staffGrantInput = requestInput.extend({ recordId: z.guid(), expectedGrantId: z.guid().nullable(), expectedRevision: z.number().int().positive(), extensionHours: z.number().int().min(1).max(2147483647).optional() });
+export const grantReceiptSchema = z.object({ grantId: z.guid(), issuedAt: z.string(), expiresAt: z.string(), previousExpiry: z.string().nullable() });
+export const generatedCodesSchema = z.object({ batchId: z.guid(), codes: z.array(z.object({ id: z.guid(), code: z.string().regex(/^[0-9a-f]{32}$/) })) });
 export const workspaceSchema = z.object({
-  records: z.array(z.object({ id: z.uuid(), name: z.string(), phone: z.string(), connected: z.boolean(), suspended: z.boolean(), access: accessSchema })),
+  records: z.array(z.object({ id: z.guid(), name: z.string(), phone: z.string(), connected: z.boolean(), suspended: z.boolean(), access: accessSchema })),
   recordsHasMore: z.boolean(), codesHasMore: z.boolean(),
-  codes: z.array(z.object({ id: z.uuid(), code: z.string(), createdAt: z.string(), redeemed: z.boolean(), revoked: z.boolean() })),
+  codes: z.array(z.object({ id: z.guid(), code: z.string(), createdAt: z.string(), redeemed: z.boolean(), revoked: z.boolean() })),
   defaultDays: z.number().int().positive(), publishedRevision: z.number().int().nonnegative(), canIssue: z.boolean(), manager: z.boolean(),
 });
 export type AccessWorkspace = z.infer<typeof workspaceSchema>;
 export type AccessRecord = AccessWorkspace["records"][number];
-export const historySchema = z.array(z.object({ id: z.uuid(), kind: z.string(), issuedAt: z.string(), startsAt: z.string(), expiresAt: z.string(), previousExpiry: z.string().nullable(), actorId: z.uuid(), revokedAt: z.string().nullable(), reason: z.string().nullable() }));
+export const historySchema = z.array(z.object({ id: z.guid(), kind: z.string(), issuedAt: z.string(), startsAt: z.string(), expiresAt: z.string(), previousExpiry: z.string().nullable(), actorId: z.guid(), revokedAt: z.string().nullable(), reason: z.string().nullable() }));
 export type AccessHistory = z.infer<typeof historySchema>;
-export const learningListSchema = z.object({ units: z.array(z.object({ id: z.uuid(), title: z.string(), materialCount: z.number().int(), publishedAt: z.string(), access: accessSchema })), hasMore: z.boolean() });
+export const learningListSchema = z.object({ units: z.array(z.object({ id: z.guid(), title: z.string(), materialCount: z.number().int(), publishedAt: z.string(), access: accessSchema })), hasMore: z.boolean() });
 export type LearningList = z.infer<typeof learningListSchema>;
 export const learningUnitSchema = z.object({
-  id: z.uuid(), title: z.string(), description: z.string(), accessDays: z.number().int().positive(), access: accessSchema, extensionAvailable: z.boolean(),
-  items: z.array(z.object({ id: z.uuid(), kind: z.enum(["explanation", "document", "assessment", "answer"]), title: z.string(), available: z.boolean(), assessmentKind: z.enum(["assignment", "quiz", "exam"]).nullable() })),
+  id: z.guid(), title: z.string(), description: z.string(), accessDays: z.number().int().positive(), access: accessSchema, extensionAvailable: z.boolean(),
+  items: z.array(z.object({ id: z.guid(), kind: z.enum(["explanation", "document", "assessment", "answer"]), title: z.string(), available: z.boolean(), assessmentKind: z.enum(["assignment", "quiz", "exam"]).nullable() })),
 });
 export type LearningUnit = z.infer<typeof learningUnitSchema>;
 export const materialSchema = z.object({ kind: z.enum(["video", "document"]), playbackId: z.string().nullable(), storagePath: z.string().nullable(), expiresAt: z.string() });

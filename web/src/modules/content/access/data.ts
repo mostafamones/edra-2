@@ -10,7 +10,7 @@ export async function learningCaller() {
   return caller;
 }
 export async function readLearningList(value: unknown) {
-  const input = z.object({ academyId: z.uuid(), page: z.number().int().min(0).max(4166).default(0), search: z.string().max(100).default("") }).parse(value);
+  const input = z.object({ academyId: z.guid(), page: z.number().int().min(0).max(4166).default(0), search: z.string().max(100).default("") }).parse(value);
   const caller = await learningCaller();
   const { data, error } = await caller.db.rpc("list_my_content_units", { p_academy_id: input.academyId, p_offset: input.page * 24, p_limit: 24, p_search: input.search });
   learningError(error);
@@ -30,7 +30,7 @@ export async function readAccessWorkspace(value: unknown) {
   learningError(error); return workspaceSchema.parse(data);
 }
 export async function readAccessHistory(value: unknown) {
-  const input = unitInput.extend({ recordId: z.uuid() }).parse(value);
+  const input = unitInput.extend({ recordId: z.guid() }).parse(value);
   const { db } = await contentCaller(input.academyId);
   const { data, error } = await db.rpc("get_content_access_history", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_record_id: input.recordId });
   learningError(error); return historySchema.parse(data);

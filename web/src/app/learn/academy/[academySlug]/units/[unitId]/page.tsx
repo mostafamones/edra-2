@@ -6,7 +6,7 @@ import { getMyStudentAcademy } from "@/modules/students/server";
 
 export default async function StudentUnitPage({ params }: PageProps<"/learn/academy/[academySlug]/units/[unitId]">) {
   const { academySlug, unitId } = await params;
-  if (!z.uuid().safeParse(unitId).success) notFound();
+  if (!z.guid().safeParse(unitId).success) notFound();
   const academy = await getMyStudentAcademy(academySlug);
   if (!academy || academy.access !== "active") notFound();
   const learning = await readLearningUnit({ academyId: academy.academy.id, unitId });
