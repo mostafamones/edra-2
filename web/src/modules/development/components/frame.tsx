@@ -38,9 +38,10 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
     <>
       {preview && (
         <>
-          <div ref={bar} role="region" aria-label="Developer preview" className="sticky top-0 z-50 flex flex-wrap items-center gap-2 border-b bg-background px-3 py-1.5 text-sm">
-            <span className="text-muted-foreground">Viewing academy as</span>
-            {preview.current.kind !== "student" ? (
+          <div ref={bar} role="region" aria-label="Developer preview" className="sticky top-1 z-50 mx-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-t-xl border-b bg-background px-3 py-1.5 text-sm sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+            <span className="hidden text-muted-foreground sm:block">Viewing academy as</span>
+            <div className="flex min-w-0 items-center justify-center gap-2">
+              {preview.current.kind !== "student" ? (
               <Select
                 value={preview.current.logicalId ?? "original"}
                 disabled={pending}
@@ -51,7 +52,7 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
                   });
                 }}
               >
-                <SelectTrigger size="sm" aria-label="Preview identity" className="w-56 max-w-full">
+                <SelectTrigger size="sm" aria-label="Preview identity" className="w-auto max-w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -67,22 +68,27 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
               <>
                 <span className="font-medium">{preview.current.displayName}</span>
                 <Badge variant="secondary">Student</Badge>
+              </>
+            )}
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-1">
+              {pending && <IconLoader2 className="size-4 animate-spin" aria-label="Switching" />}
+              {preview.current.kind === "student" && (
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   disabled={pending}
                   onClick={() => void run("return", { runId: preview.run.id, expectedRevision: preview.revision })}
                 >
                   <IconArrowBackUp />Return to staff
                 </Button>
-              </>
-            )}
-            {pending && <IconLoader2 className="size-4 animate-spin" aria-label="Switching" />}
-            <Button size="sm" variant="ghost" className="ml-auto" disabled={pending} onClick={() => void run("exit", { runId: preview.run.id })}>
-              <IconDoorExit />Exit preview
-            </Button>
+              )}
+              <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:hover:bg-destructive/20" disabled={pending} onClick={() => void run("exit", { runId: preview.run.id })}>
+                <IconDoorExit />Exit preview
+              </Button>
+            </div>
           </div>
-          <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-50 border-2 border-primary" />
+          <div aria-hidden="true" className="pointer-events-none fixed inset-1 z-50 rounded-xl border-2 border-primary" />
           <style>{`[data-slot=sidebar-container]{top:var(--edra-preview-bar,0px);height:calc(100svh - var(--edra-preview-bar,0px))}[data-slot=sidebar-wrapper]{min-height:calc(100svh - var(--edra-preview-bar,0px))}`}</style>
         </>
       )}
