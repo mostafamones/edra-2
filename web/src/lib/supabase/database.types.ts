@@ -59,9 +59,11 @@ export type Database = {
           icon: string
           id: string
           name: string
+          phone: string | null
           slug: string
           subject: string
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
           created_at?: string
@@ -69,9 +71,11 @@ export type Database = {
           icon: string
           id?: string
           name: string
+          phone?: string | null
           slug: string
           subject: string
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
           created_at?: string
@@ -79,9 +83,11 @@ export type Database = {
           icon?: string
           id?: string
           name?: string
+          phone?: string | null
           slug?: string
           subject?: string
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: [
           {
@@ -2722,8 +2728,8 @@ export type Database = {
           next_question_id: string | null
           ordinal: number
           outcome: string
-          question_id: string
-          question_number: number
+          question_id: string | null
+          question_number: number | null
           recorded_at: string
         }
         Insert: {
@@ -2734,8 +2740,8 @@ export type Database = {
           next_question_id?: string | null
           ordinal: number
           outcome: string
-          question_id: string
-          question_number: number
+          question_id?: string | null
+          question_number?: number | null
           recorded_at: string
         }
         Update: {
@@ -2746,8 +2752,8 @@ export type Database = {
           next_question_id?: string | null
           ordinal?: number
           outcome?: string
-          question_id?: string
-          question_number?: number
+          question_id?: string | null
+          question_number?: number | null
           recorded_at?: string
         }
         Relationships: [
@@ -2777,6 +2783,54 @@ export type Database = {
             columns: ["exam_id", "question_id"]
             isOneToOne: false
             referencedRelation: "exam_questions"
+            referencedColumns: ["exam_id", "id"]
+          },
+        ]
+      }
+      exam_editor_claims: {
+        Row: {
+          academy_id: string
+          attempt_id: string
+          claimed_at: string
+          exam_id: string
+          expires_at: string
+          generation: number
+          renewed_at: string
+          token_hash: string
+        }
+        Insert: {
+          academy_id: string
+          attempt_id: string
+          claimed_at: string
+          exam_id: string
+          expires_at: string
+          generation: number
+          renewed_at: string
+          token_hash: string
+        }
+        Update: {
+          academy_id?: string
+          attempt_id?: string
+          claimed_at?: string
+          exam_id?: string
+          expires_at?: string
+          generation?: number
+          renewed_at?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_editor_claims_academy_id_exam_id_fkey"
+            columns: ["academy_id", "exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "exam_editor_claims_exam_id_attempt_id_fkey"
+            columns: ["exam_id", "attempt_id"]
+            isOneToOne: false
+            referencedRelation: "exam_attempts"
             referencedColumns: ["exam_id", "id"]
           },
         ]
@@ -6421,6 +6475,19 @@ export type Database = {
         Args: { p_academy_id: string; p_item_id: string; p_unit_id: string }
         Returns: Json
       }
+      authorize_my_exam_images: {
+        Args: {
+          p_academy_id: string
+          p_exam_id: string
+          p_image_ids: string[]
+          p_token: string
+        }
+        Returns: Json
+      }
+      authorize_my_exam_review_images: {
+        Args: { p_academy_id: string; p_exam_id: string; p_image_ids: string[] }
+        Returns: Json
+      }
       bump_attendance_revision: {
         Args: { p_session: Database["public"]["Tables"]["sessions"]["Row"] }
         Returns: number
@@ -6532,6 +6599,10 @@ export type Database = {
           p_session_id: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      claim_my_exam_editor: {
+        Args: { p_academy_id: string; p_exam_id: string; p_token: string }
         Returns: Json
       }
       complete_content_document: {
@@ -6794,9 +6865,74 @@ export type Database = {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: undefined
       }
+      dev_account: {
+        Args: { p_logical_id: string; p_run_id: string }
+        Returns: Json
+      }
+      dev_command_begin: {
+        Args: {
+          p_command_id: string
+          p_control_id: string
+          p_expected_revision: number
+          p_kind: string
+          p_previous_session_id: string
+          p_target_logical_id: string
+        }
+        Returns: Json
+      }
+      dev_command_complete: {
+        Args: {
+          p_command_id: string
+          p_control_id: string
+          p_original_tokens: string
+          p_prior_logical_id: string
+          p_prior_return_path: string
+          p_receipt: string
+          p_session_id: string
+          p_set_prior: boolean
+          p_user_id: string
+        }
+        Returns: string
+      }
+      dev_control_end: {
+        Args: { p_control_id: string; p_reason: string }
+        Returns: string
+      }
+      dev_control_open: {
+        Args: {
+          p_control_id: string
+          p_developer_id: string
+          p_original_session_id: string
+          p_original_tokens: string
+          p_return_path: string
+          p_run_id: string
+          p_token_hash: string
+        }
+        Returns: string
+      }
+      dev_control_original: { Args: { p_control_id: string }; Returns: string }
+      dev_control_sessions: {
+        Args: { p_control_id: string; p_keep: string[] }
+        Returns: Json
+      }
+      dev_control_state: { Args: { p_token_hash: string }; Returns: Json }
+      dev_delivery_blocked: {
+        Args: { p_phone: string; p_user_id: string }
+        Returns: boolean
+      }
+      dev_preview_context: { Args: { p_developer_id: string }; Returns: Json }
+      dev_run_targets: { Args: { p_run_id: string }; Returns: Json }
+      dev_session_revoked: {
+        Args: { p_control_id: string; p_session_id: string }
+        Returns: undefined
+      }
       end_session: {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: string
+      }
+      enter_my_exam: {
+        Args: { p_academy_id: string; p_exam_id: string; p_token: string }
+        Returns: Json
       }
       exclude_assignment_question: {
         Args: {
@@ -6907,7 +7043,15 @@ export type Database = {
         Returns: Json
       }
       get_my_exam: { Args: { p_exam_id: string }; Returns: Json }
+      get_my_exam_answering: {
+        Args: { p_academy_id: string; p_exam_id: string; p_token: string }
+        Returns: Json
+      }
       get_my_exam_overview: {
+        Args: { p_academy_id: string; p_exam_id: string }
+        Returns: Json
+      }
+      get_my_exam_review: {
         Args: { p_academy_id: string; p_exam_id: string }
         Returns: Json
       }
@@ -7289,6 +7433,17 @@ export type Database = {
         Args: { p_event_id: string; p_exam_id: string; p_question_id: string }
         Returns: Json
       }
+      record_my_exam_departure: {
+        Args: {
+          p_academy_id: string
+          p_event_id: string
+          p_exam_id: string
+          p_generation: number
+          p_question_id: string
+          p_token: string
+        }
+        Returns: Json
+      }
       record_quiz_departure: {
         Args: { p_event_id: string; p_quiz_id: string }
         Returns: Json
@@ -7317,6 +7472,10 @@ export type Database = {
         }
         Returns: string
       }
+      release_my_exam_editor: {
+        Args: { p_academy_id: string; p_exam_id: string; p_token: string }
+        Returns: Json
+      }
       remember_attendance_request: {
         Args: {
           p_fingerprint: string
@@ -7338,6 +7497,10 @@ export type Database = {
           p_session_id: string
         }
         Returns: number
+      }
+      renew_my_exam_editor: {
+        Args: { p_academy_id: string; p_exam_id: string; p_token: string }
+        Returns: Json
       }
       request_content_video_deletion: {
         Args: { p_academy_id: string; p_asset_id: string }
@@ -7478,6 +7641,18 @@ export type Database = {
           p_expected_version: number
           p_key: string
           p_record_id: string
+        }
+        Returns: Json
+      }
+      save_my_exam_answers: {
+        Args: {
+          p_academy_id: string
+          p_answers: Json
+          p_exam_id: string
+          p_expected_version: number
+          p_generation: number
+          p_key: string
+          p_token: string
         }
         Returns: Json
       }
@@ -7815,6 +7990,17 @@ export type Database = {
       student_import_summary: { Args: { p_session_id: string }; Returns: Json }
       submit_exam_attempt: {
         Args: { p_exam_id: string; p_key: string }
+        Returns: Json
+      }
+      submit_my_exam: {
+        Args: {
+          p_academy_id: string
+          p_exam_id: string
+          p_expected_version: number
+          p_generation: number
+          p_key: string
+          p_token: string
+        }
         Returns: Json
       }
       submit_quiz_attempt: {

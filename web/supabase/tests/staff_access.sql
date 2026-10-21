@@ -108,6 +108,13 @@ begin
     values (x, year_id, 'Head admin recurring', 'recurring', 'level', 'secondary-1', '9b222222-2222-4222-8222-222222222222');
   perform pg_temp.check(exists (select 1 from public.schedules where academy_id = x and title = 'Head admin recurring'), 'head admin creates recurring schedules');
 
+  -- Academy profile edits are Owner/Head Admin only (EDRA-128); Admin keeps other manager authority.
+  perform pg_temp.act('9b444444-4444-4444-8444-444444444444');
+  perform pg_temp.check(public.is_academy_manager(x), 'admin is still a manager');
+  update public.academies set name = 'Admin rename' where id = x;
+  perform pg_temp.check((select name from public.academies where id = x) = 'Access Academy X+', 'admin cannot edit academy settings');
+  perform pg_temp.act('9b222222-2222-4222-8222-222222222222');
+
   perform pg_temp.act('9b666666-6666-4666-8666-666666666666');
   perform pg_temp.check(public.academy_role_for(x) = 'instructor' and not public.is_academy_manager(x), 'instructor is not a manager');
   begin

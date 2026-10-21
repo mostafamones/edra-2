@@ -14,6 +14,8 @@ SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are backend-only. Current source hash
 
 Development mode logs EDRA_DEV_PARENT_CODE (last four phone digits and the code only) and may send to the configured test recipient. Production requires the actual entered parent number, the approved Authentication template and successful delivery, without code logging. Read index.ts and the shared provider helper for exact payload/errors rather than applying the signed-hook flags to this JWT-authenticated endpoint.
 
+Synthetic development contacts registered in the development registry never receive codes, and registry lookup failures fail closed. A blocked parent number returns `unsupported_recipient` (403) and a lookup failure returns `delivery_unavailable` (503); the challenge is consumed in both cases.
+
 Using the configured project, deploy with JWT verification enabled:
 
 ```sh
@@ -21,3 +23,11 @@ npx supabase functions deploy student-onboarding --project-ref <project-ref> --u
 ```
 
 Then follow [deployment](../../../docs/technical/deployment.md) for controlled-phone verification. Source checks do not establish deployment or provider readiness.
+
+## Testing
+
+From `web/`, with Deno 2 on PATH, run `npm run test:edge` for static checks and `npm run test:edge:runtime` for all four isolated entrypoint suites, including this function's `index_test.ts`. Each uses its own dependency map and frozen lockfile; runtime tests are typechecked.
+
+The Deno suite invokes this real entrypoint directly and covers OPTIONS/CORS, unsupported methods, missing bearer and missing required environment configuration before any network call. It does not verify JWT authenticity, database RPCs/RLS, password changes or challenge persistence.
+
+Tests capture `Deno.serve` without opening a listener, clear/restore named configuration, use only dummy values and explicitly intercept fetch; unexpected calls fail. Runtime network is denied, with no Supabase instance, real credentials, messages or paid services. Dependency caching may download packages. Neither static checks, Node unit tests nor these Deno tests establish hosted gateway behavior or actual delivery. See [verification](../../../docs/engineering.md#edge-function-checks) for the CI command and evidence boundaries.

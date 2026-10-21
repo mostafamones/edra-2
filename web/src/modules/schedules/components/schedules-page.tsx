@@ -73,7 +73,7 @@ function SchedulesContent({ academy }: { academy: AcademyEntry }) {
       ...structureQuery.data,
       lookup: buildAudienceLookup({
         groups: [...activeGroupsQuery.data.groups, ...archivedGroupsQuery.data.groups],
-        tracks: structureQuery.data.tracks,
+        tracks: structureQuery.data.historicalTracks,
         levelNames: structureQuery.data.levelNames,
       }),
     }

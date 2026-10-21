@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { fetchAllPages } from "@/lib/supabase/paginate";
+import { readOfferingTrackLabels } from "@/modules/academies/structure";
 
 export type AcademicYear = { id: string; academy_id: string; start_year: number; starts_on: string; ends_on: string };
 export type Level = { level_id: string; sort_order: number };
@@ -44,15 +45,22 @@ export async function loadActiveYear(academyId: string): Promise<AcademicYear | 
 /** Levels, tracks, and display names for an academy; independent of the academic year. */
 export async function loadStructure(academyId: string) {
   const db = createClient();
-  const [levels, tracks, names] = await Promise.all([
+  const [levels, tracks, names, activeLevels, activeTracks, trackYearLabels] = await Promise.all([
     db.from("academy_levels").select("level_id,sort_order").eq("academy_id", academyId).order("sort_order"),
     db.from("academy_tracks").select("id,level_id,name,sort_order").eq("academy_id", academyId).order("sort_order"),
     db.from("global_levels").select("id,name"),
+    db.from("academy_levels").select("level_id,sort_order").eq("academy_id", academyId).is("stopped_at", null).order("sort_order"),
+    db.from("academy_tracks").select("id,level_id,name,sort_order").eq("academy_id", academyId).is("retired_at", null).order("sort_order"),
+    readOfferingTrackLabels(academyId, db),
   ]);
-  for (const result of [levels, tracks, names]) if (result.error) throw new Error(result.error.message);
+  for (const result of [levels, tracks, names, activeLevels, activeTracks]) if (result.error) throw new Error(result.error.message);
+  const availableLevels = new Set((activeLevels.data ?? []).map(level => level.level_id));
   return {
-    levels: (levels.data ?? []) as Level[],
-    tracks: (tracks.data ?? []) as Track[],
+    levels: (activeLevels.data ?? []) as Level[],
+    tracks: (activeTracks.data ?? []).filter(track => availableLevels.has(track.level_id)) as Track[],
+    historicalLevels: (levels.data ?? []) as Level[],
+    historicalTracks: (tracks.data ?? []) as Track[],
+    trackYearLabels,
     levelNames: Object.fromEntries((names.data ?? []).map((row) => [row.id, row.name])) as Record<string, string>,
   };
 }

@@ -121,7 +121,7 @@ begin
       values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', a_year, 'Bad group', 'one_off', 'group', '99999999-9999-4999-8999-999999999999', 'Room');
     raise exception 'group FK failed';
   exception when raise_exception then
-    if sqlerrm = 'group FK failed' then raise; end if;
+    if sqlerrm <> 'Schedule group must be active' then raise; end if;
   end;
 end;
 $$;

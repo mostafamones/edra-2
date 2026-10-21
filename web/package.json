@@ -11,9 +11,13 @@
     "test": "vitest run",
     "test:db": "bash scripts/db-test.sh",
     "test:edge": "bash scripts/edge-check.sh",
+    "test:edge:runtime": "bash scripts/edge-test.sh",
     "audit:auth": "node --env-file=.env.local scripts/audit-auth-users.mjs",
+    "dev:academy": "node scripts/dev-academy/cli.mjs",
+    "test:dev-academy": "node --test scripts/dev-academy/*.test.mjs",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:attendance": "playwright test --config playwright.attendance.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

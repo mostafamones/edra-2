@@ -16,8 +16,8 @@ type SettingsResult = { ok: true; settings: EnrollmentSettings } | { ok: false; 
 
 // The student's level is bound to the account, so only a track and optional group are chosen.
 const choiceSchema = z.object({
-  trackId: z.uuid().nullable(),
-  groupId: z.uuid().nullable(),
+  trackId: z.guid().nullable(),
+  groupId: z.guid().nullable(),
 }).strict().nullable();
 
 /** Re-reads the pending invite, e.g. after a failed or outdated completion. */
@@ -85,13 +85,13 @@ async function settingsResult(call: PromiseLike<{ data: unknown; error: { messag
 }
 
 export async function getStudentEnrollmentSettings(academyId: string): Promise<SettingsResult> {
-  if (!z.uuid().safeParse(academyId).success) return { ok: false, error: "forbidden" };
+  if (!z.guid().safeParse(academyId).success) return { ok: false, error: "forbidden" };
   return settingsResult((await createClient()).rpc("get_student_enrollment_settings", { p_academy_id: academyId }));
 }
 
 export async function updateStudentEnrollmentSettings(academyId: string, value: unknown): Promise<SettingsResult> {
   const parsed = z.object({ enrollmentOpen: z.boolean() }).safeParse(value);
-  if (!z.uuid().safeParse(academyId).success || !parsed.success) return { ok: false, error: "forbidden" };
+  if (!z.guid().safeParse(academyId).success || !parsed.success) return { ok: false, error: "forbidden" };
   return settingsResult((await createClient()).rpc("update_student_enrollment_settings", {
     p_academy_id: academyId, p_enrollment_open: parsed.data.enrollmentOpen,
   }));
@@ -99,6 +99,6 @@ export async function updateStudentEnrollmentSettings(academyId: string, value: 
 
 /** active = true issues a new link (replacing the current one); false turns the link off. */
 export async function setStudentInvite(academyId: string, active: boolean): Promise<SettingsResult> {
-  if (!z.uuid().safeParse(academyId).success || typeof active !== "boolean") return { ok: false, error: "forbidden" };
+  if (!z.guid().safeParse(academyId).success || typeof active !== "boolean") return { ok: false, error: "forbidden" };
   return settingsResult((await createClient()).rpc("set_student_invite", { p_academy_id: academyId, p_active: active }));
 }

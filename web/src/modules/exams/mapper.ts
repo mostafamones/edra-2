@@ -220,7 +220,7 @@ const detailSchema = z.object({
     score: decimal.nullable(),
   })),
   departures: z.array(z.object({
-    event_id: z.string(), ordinal: z.number().int(), question_id: z.string(), question_number: z.number().int(),
+    event_id: z.string(), ordinal: z.number().int(), question_id: z.string().nullable(), question_number: z.number().int().nullable(),
     outcome: z.enum(DEPARTURE_OUTCOMES), next_question_id: z.string().nullable(), recorded_at: timestamp,
   })),
   publications: z.array(z.object({

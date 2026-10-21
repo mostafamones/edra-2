@@ -3,6 +3,7 @@ import { z } from "zod";
 import { cookieAuthority } from "@/lib/supabase/authority";
 import { fetchAllPages } from "@/lib/supabase/paginate";
 import { isAcademyManager } from "@/modules/academies/roles";
+import { readOfferingTrackLabels } from "@/modules/academies/structure";
 import { documentSchema, type ContentUnit, type ContentResult } from "./types";
 
 /** Return safe action errors explicitly; Next.js hides thrown server errors in production. */
@@ -12,7 +13,7 @@ export async function contentResult<T>(run: () => Promise<T>): Promise<ContentRe
 }
 
 export async function contentCaller(academyId: string) {
-  if (!z.uuid().safeParse(academyId).success) throw new Error("Invalid academy.");
+  if (!z.guid().safeParse(academyId).success) throw new Error("Invalid academy.");
   const caller = await cookieAuthority();
   if (!caller) throw new Error("Sign in to continue.");
   const { data, error } = await caller.db.from("academy_memberships").select("role").eq("academy_id", academyId).eq("user_id", caller.userId).is("suspended_at", null).maybeSingle();
@@ -29,17 +30,22 @@ export function contentError(error: { message?: string } | null) {
 }
 export async function readContentWorkspace(academyId: string) {
   const { db, userId, manager } = await contentCaller(academyId);
-  const [units, programs, years, levels, tracks, names] = await Promise.all([
+  const [units, programs, years, levels, tracks, names, availableTracks, trackYearLabels] = await Promise.all([
     fetchAllPages((from, to) => db.from("content_units").select("*").eq("academy_id", academyId).order("updated_at", { ascending: false }).order("id").range(from, to)),
     db.from("content_programs").select("*").eq("academy_id", academyId), db.from("academic_years").select("id,start_year,closed_at").eq("academy_id", academyId).order("start_year", { ascending: false }),
-    db.from("academy_levels").select("level_id,sort_order").eq("academy_id", academyId).order("sort_order"), db.from("academy_tracks").select("id,level_id,name").eq("academy_id", academyId), db.from("global_levels").select("id,name"),
+    db.from("academy_levels").select("level_id,sort_order").eq("academy_id", academyId).is("stopped_at", null).order("sort_order"), db.from("academy_tracks").select("id,level_id,name").eq("academy_id", academyId), db.from("global_levels").select("id,name"),
+    db.from("academy_tracks").select("id,level_id,name").eq("academy_id", academyId).is("retired_at", null),
+    readOfferingTrackLabels(academyId, db),
   ]);
-  for (const response of [programs, years, levels, tracks, names]) contentError(response.error);
-  return { units: units.map(u => ({ ...u, draft: documentSchema.parse(u.draft) })) as ContentUnit[], programs: programs.data ?? [], years: years.data ?? [], levels: levels.data ?? [], tracks: tracks.data ?? [], levelNames: Object.fromEntries((names.data ?? []).map(l => [l.id, l.name])) as Record<string, string>, userId, manager };
+  for (const response of [programs, years, levels, tracks, names, availableTracks]) contentError(response.error);
+  const offered = new Set((levels.data ?? []).map(level => level.level_id));
+  return { units: units.map(u => ({ ...u, draft: documentSchema.parse(u.draft) })) as ContentUnit[], programs: programs.data ?? [], years: years.data ?? [], levels: levels.data ?? [],
+    tracks: (availableTracks.data ?? []).filter(track => offered.has(track.level_id)), historicalTracks: tracks.data ?? [], trackYearLabels,
+    levelNames: Object.fromEntries((names.data ?? []).map(l => [l.id, l.name])) as Record<string, string>, userId, manager };
 }
 export type ContentWorkspace = Awaited<ReturnType<typeof readContentWorkspace>>;
 export async function readContentUnit(academyId: string, unitId: string) {
-  z.uuid().parse(unitId);
+  z.guid().parse(unitId);
   const { db, userId, manager } = await contentCaller(academyId);
   const { data: unit, error } = await db.from("content_units").select("*").eq("academy_id", academyId).eq("id", unitId).single();
   contentError(error);
@@ -53,12 +59,14 @@ export async function readContentUnit(academyId: string, unitId: string) {
     db.from("content_feedback").select("*").eq("academy_id", academyId).eq("unit_id", unitId).order("created_at"), db.from("content_revisions").select("revision,document,published_at").eq("academy_id", academyId).eq("unit_id", unitId).order("revision", { ascending: false }),
   ]);
   for (const response of [program, feedback, revisions]) contentError(response.error);
-  const [level, track] = await Promise.all([
+  const [level, track, historicalLabels] = await Promise.all([
     db.from("global_levels").select("name").eq("id", program.data!.level_id).single(),
     program.data!.track_id ? db.from("academy_tracks").select("name").eq("id", program.data!.track_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    readOfferingTrackLabels(academyId, db),
   ]);
   contentError(level.error); contentError(track.error);
-  const programLabel = `${level.data?.name ?? program.data!.level_id}${track.data ? ` · ${track.data.name}` : " · All tracks"}`;
+  const trackName = historicalLabels.find(label => label.track_id === program.data!.track_id && label.academic_year_id === program.data!.academic_year_id)?.name ?? track.data?.name;
+  const programLabel = `${level.data?.name ?? program.data!.level_id}${trackName ? ` · ${trackName}` : " · All tracks"}`;
   return { unit: { ...unit, draft: document } as ContentUnit, program: program.data!, programLabel, assets, feedback: feedback.data ?? [], revisions: revisions.data ?? [], userId, manager };
 }
 export type ContentDetail = Awaited<ReturnType<typeof readContentUnit>>;

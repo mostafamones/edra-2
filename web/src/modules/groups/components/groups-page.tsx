@@ -55,7 +55,7 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
     : undefined;
   const visibleGroups = data ? filterAndSort(data, search, levelFilter) : [];
   const filtering = search.trim() !== "" || levelFilter !== ALL_LEVELS;
-  const usedLevels = data?.levels.filter((level) => data.groups.some((group) => group.level_id === level.level_id)) ?? [];
+  const usedLevels = data?.historicalLevels.filter((level) => data.groups.some((group) => group.level_id === level.level_id)) ?? [];
 
   /** Moves a group between the cached lists immediately; the server result confirms or rolls it back. */
   async function move(group: Group, toArchived: boolean, run: () => ReturnType<typeof archiveGroup>, failure: string, success?: string) {
@@ -175,7 +175,7 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
               key={group.id}
               group={group}
               levelName={data.levelNames[group.level_id] ?? group.level_id}
-              trackName={data.tracks.find((track) => track.id === group.track_id)?.name}
+              trackName={data.historicalTracks.find((track) => track.id === group.track_id)?.name}
               scheduled={data.dependencies.scheduledGroupIds.has(group.id)}
               hasStudents={data.dependencies.studentGroupIds.has(group.id)}
               activeStudents={data.dependencies.activeStudentCounts.get(group.id) ?? 0}
@@ -234,10 +234,10 @@ function GroupsContent({ academy }: { academy: AcademyEntry }) {
 }
 
 /** Applies the search and level filter, ordered by the academy's level order, then track order and name. */
-function filterAndSort(data: { groups: Group[]; levels: Level[]; tracks: Track[] }, search: string, levelFilter: string) {
+function filterAndSort(data: { groups: Group[]; levels: Level[]; tracks: Track[]; historicalLevels: Level[]; historicalTracks: Track[] }, search: string, levelFilter: string) {
   const term = search.trim().toLowerCase();
-  const tracks = new Map(data.tracks.map((track) => [track.id, track]));
-  const levelOrder = new Map(data.levels.map((level) => [level.level_id, level.sort_order]));
+  const tracks = new Map(data.historicalTracks.map((track) => [track.id, track]));
+  const levelOrder = new Map(data.historicalLevels.map((level) => [level.level_id, level.sort_order]));
   const order = (group: Group) => [levelOrder.get(group.level_id) ?? Infinity, tracks.get(group.track_id ?? "")?.sort_order ?? -1];
   return data.groups
     .filter((group) =>

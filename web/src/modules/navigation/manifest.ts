@@ -346,15 +346,6 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             label: "Academy profile",
             href: "/app/manage/academy",
             icon: "academy",
-            preview: {
-              title: "Academy profile",
-              purpose: "Maintain the public identity and contact details of this academy.",
-              sections: [
-                "Academy name, subject, icon, and public contact information.",
-                "The academy link identity and where it is used.",
-                "Role-aware edit controls for normal academy profile settings.",
-              ],
-            },
           },
           {
             label: "Academic structure",

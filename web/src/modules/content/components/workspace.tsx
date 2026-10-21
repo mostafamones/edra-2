@@ -53,7 +53,9 @@ function WorkspaceContent({ academy, data, published }: { academy: AcademyEntry;
   const units = data.units.filter(u => programIds.has(u.program_id) && (state === "all" || (state === "active" ? u.state !== "archived" : state === "review" ? isUnitInReview(u) : u.state === state)) && `${u.draft.title} ${u.draft.description}`.toLowerCase().includes(search.toLowerCase()));
   function describe(unit: ContentUnit) {
     const p = data.programs.find(p => p.id === unit.program_id);
-    return p ? `${data.levelNames[p.level_id] ?? p.level_id}${p.track_id ? ` · ${data.tracks.find(t => t.id === p.track_id)?.name ?? "Track"}` : ""}` : "Program";
+    const trackName = p && (data.trackYearLabels.find(label => label.track_id === p.track_id && label.academic_year_id === p.academic_year_id)?.name
+      ?? data.historicalTracks.find(t => t.id === p.track_id)?.name);
+    return p ? `${data.levelNames[p.level_id] ?? p.level_id}${p.track_id ? ` · ${trackName ?? "Track"}` : ""}` : "Program";
   }
   function open(kind: "new" | "copy") { setTitle(""); setSource(""); setError(""); setRequestId(newUuid()); setModal(kind); }
   async function submit() {

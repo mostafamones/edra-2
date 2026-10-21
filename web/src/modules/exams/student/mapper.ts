@@ -1,7 +1,12 @@
 import { z } from "zod";
 
-import { EXAM_PHASES, EXAM_SOURCES, FINALIZATION_REASONS } from "../types";
-import { STUDENT_EXAM_ACTIONS, type StudentExamOverview, type StudentExamPage, type StudentExamStart } from "./types";
+import { EXAM_PART_KINDS, EXAM_PHASES, EXAM_SOURCES, FINALIZATION_REASONS } from "../types";
+import {
+  STUDENT_EXAM_ACTIONS, type StudentExamAnswering, type StudentExamAttemptState, type StudentExamBrief, type StudentExamClaimOutcome,
+  type StudentExamDeparture, type StudentExamDepartureOutcome, type StudentExamEntry, type StudentExamHeartbeatOutcome,
+  type StudentExamOverview, type StudentExamPage, type StudentExamReadOutcome, type StudentExamReleaseOutcome, type StudentExamReview,
+  type StudentExamReviewAnswer, type StudentExamSaveOutcome, type StudentExamSubmitOutcome, type StudentExamTerminal,
+} from "./types";
 
 /**
  * Allowlist parsers for the student exam RPCs. Unknown fields are dropped and an unexpected shape
@@ -50,9 +55,6 @@ const overviewSchema = z.object({
   }).nullable(),
 });
 
-/** Only the attempt is read from the engine's student state; question material is never forwarded. */
-const startSchema = z.object({ attempt: attemptSchema });
-
 type Window = { time_limit_minutes: number | null; opens_at: string | null; closes_at: string | null; actual_closes_at: string | null };
 
 function toWindow(value: Window) {
@@ -97,7 +99,311 @@ export function toStudentExamOverview(value: unknown): StudentExamOverview {
   };
 }
 
-export function toStudentExamStart(value: unknown): StudentExamStart {
-  const attempt = toAttempt(startSchema.parse(value).attempt);
-  return { attempt, active: attempt.finalizedAt === null && !attempt.superseded };
+
+// ---------------------------------------------------------------------------------------------
+// Answering (EDRA-233).
+
+const uuid = z.guid();
+
+const attemptStateSchema = attemptSchema.extend({ id: uuid, answers_version: z.number().int().nonnegative() });
+
+function toAttemptState(value: z.infer<typeof attemptStateSchema>): StudentExamAttemptState {
+  return { ...toAttempt(value), id: value.id, answersVersion: value.answers_version };
+}
+
+const editorSchema = z.object({
+  token: z.string().regex(/^[0-9a-f]{64}$/),
+  generation: z.number().int().positive(),
+  expires_at: timestamp,
+  heartbeat_seconds: z.number().int().positive(),
+  lease_seconds: z.number().int().positive(),
+});
+
+function toEditor(value: z.infer<typeof editorSchema>) {
+  return {
+    token: value.token, generation: value.generation, expiresAt: value.expires_at,
+    heartbeatSeconds: value.heartbeat_seconds, leaseSeconds: value.lease_seconds,
+  };
+}
+
+const busySchema = z.object({ status: z.literal("busy"), retry_after: z.number().int().positive() });
+
+const entrySchema = z.object({
+  attempt: attemptStateSchema,
+  active: z.boolean(),
+  editor: z.union([editorSchema.extend({ status: z.literal("claimed") }), busySchema]).nullable(),
+});
+
+export function toStudentExamEntry(value: unknown): StudentExamEntry {
+  const entry = entrySchema.parse(value);
+  const editor = entry.editor === null ? null
+    : entry.editor.status === "busy" ? { status: "busy" as const, retryAfter: entry.editor.retry_after }
+    : { status: "claimed" as const, ...toEditor(entry.editor) };
+  return { attempt: toAttemptState(entry.attempt), active: entry.active && editor !== null, editor };
+}
+
+const briefSchema = z.object({ server_now: timestamp, attempt: attemptStateSchema, excluded_question_ids: z.array(uuid) });
+
+function toBrief(value: z.infer<typeof briefSchema>): StudentExamBrief {
+  return { serverNow: value.server_now, attempt: toAttemptState(value.attempt), excludedQuestionIds: value.excluded_question_ids };
+}
+
+const terminalSchema = z.object({
+  account_id: uuid,
+  server_now: timestamp,
+  attempt: attemptStateSchema,
+  submission: z.object({ source: z.enum(EXAM_SOURCES), reason: z.enum(FINALIZATION_REASONS), submitted_at: timestamp }).nullable(),
+});
+
+function toTerminal(value: z.infer<typeof terminalSchema>): StudentExamTerminal {
+  return {
+    accountId: value.account_id,
+    serverNow: value.server_now,
+    attempt: toAttemptState(value.attempt),
+    submission: value.submission && { source: value.submission.source, reason: value.submission.reason, submittedAt: value.submission.submitted_at },
+  };
+}
+
+const lostReason = z.enum(["expired", "replaced"]);
+const finalizedSchema = z.object({ status: z.literal("finalized"), state: terminalSchema });
+
+const departureSchema = z.object({
+  event_id: uuid, ordinal: z.number().int().min(1).max(3), question_id: uuid.nullable(),
+  outcome: z.enum(["warned", "kicked"]), next_question_id: uuid.nullable(),
+});
+
+function toDeparture(value: z.infer<typeof departureSchema>): StudentExamDeparture {
+  return { eventId: value.event_id, ordinal: value.ordinal, questionId: value.question_id, outcome: value.outcome, nextQuestionId: value.next_question_id };
+}
+
+const claimSchema = z.discriminatedUnion("status", [editorSchema.extend({ status: z.literal("claimed") }), busySchema, finalizedSchema]);
+
+export function toStudentExamClaim(value: unknown): StudentExamClaimOutcome {
+  const claim = claimSchema.parse(value);
+  if (claim.status === "busy") return { kind: "busy", retryAfter: claim.retry_after };
+  if (claim.status === "finalized") return { kind: "finalized", state: toTerminal(claim.state) };
+  return { kind: "claimed", ...toEditor(claim) };
+}
+
+const lostSchema = z.object({ status: z.literal("lost"), reason: lostReason });
+
+const answeringSchema = z.object({
+  account_id: uuid,
+  server_now: timestamp,
+  title: z.string(),
+  instructions: z.string(),
+  attempt: attemptStateSchema,
+  editor: editorSchema.omit({ token: true }),
+  parts: z.array(z.object({
+    id: uuid, title: z.string(), instructions: z.string().nullable(), kind: z.enum(EXAM_PART_KINDS),
+    questions: z.array(z.object({
+      id: uuid, number: z.number().int().positive(), prompt: z.string(), excluded: z.boolean(),
+      choices: z.array(z.object({ id: uuid, label: z.string() })),
+    })),
+  })),
+  excluded_question_ids: z.array(uuid),
+  answers: z.array(z.object({ question_id: uuid, choice_id: uuid.nullable(), text_answer: z.string().nullable() })),
+  departures: z.array(departureSchema),
+});
+
+function toAnswering(value: z.infer<typeof answeringSchema>): StudentExamAnswering {
+  const excluded = new Set(value.excluded_question_ids);
+  return {
+    accountId: value.account_id,
+    serverNow: value.server_now,
+    title: value.title,
+    instructions: value.instructions,
+    attempt: toAttemptState(value.attempt),
+    editor: {
+      generation: value.editor.generation, expiresAt: value.editor.expires_at,
+      heartbeatSeconds: value.editor.heartbeat_seconds, leaseSeconds: value.editor.lease_seconds,
+    },
+    parts: value.parts.map((part) => ({
+      id: part.id, title: part.title, instructions: part.instructions ?? "", kind: part.kind,
+      questions: part.questions.map((question) => ({
+        id: question.id, number: question.number, prompt: question.prompt, excluded: question.excluded || excluded.has(question.id),
+        kind: part.kind, partId: part.id, choices: question.choices,
+      })),
+    })),
+    excludedQuestionIds: value.excluded_question_ids,
+    answers: Object.fromEntries(value.answers.map((answer) => [answer.question_id, { choiceId: answer.choice_id, text: answer.text_answer }])),
+    departures: value.departures.map(toDeparture),
+  };
+}
+
+const readSchema = z.discriminatedUnion("status", [z.object({ status: z.literal("state"), state: answeringSchema }), lostSchema, finalizedSchema]);
+
+export function toStudentExamRead(value: unknown): StudentExamReadOutcome {
+  const read = readSchema.parse(value);
+  if (read.status === "lost") return { kind: "editor_lost", reason: read.reason };
+  if (read.status === "finalized") return { kind: "finalized", state: toTerminal(read.state) };
+  return { kind: "state", state: toAnswering(read.state) };
+}
+
+const heartbeatSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("renewed"), expires_at: timestamp, state: briefSchema }), lostSchema, finalizedSchema,
+]);
+
+export function toStudentExamHeartbeat(value: unknown): StudentExamHeartbeatOutcome {
+  const beat = heartbeatSchema.parse(value);
+  if (beat.status === "lost") return { kind: "editor_lost", reason: beat.reason };
+  if (beat.status === "finalized") return { kind: "finalized", state: toTerminal(beat.state) };
+  return { kind: "renewed", expiresAt: beat.expires_at, state: toBrief(beat.state) };
+}
+
+const releaseSchema = z.discriminatedUnion("status", [z.object({ status: z.literal("released") }), lostSchema, finalizedSchema]);
+
+export function toStudentExamRelease(value: unknown): StudentExamReleaseOutcome {
+  const release = releaseSchema.parse(value);
+  if (release.status === "lost") return { kind: "editor_lost", reason: release.reason };
+  if (release.status === "finalized") return { kind: "finalized", state: toTerminal(release.state) };
+  return { kind: "released" };
+}
+
+const version = z.number().int().nonnegative();
+
+/**
+ * Save outcomes. A replayed receipt carries only its outcome and version; the state beside it is
+ * freshly authorized (brief for the current editor, terminal after finalization, none otherwise).
+ */
+const saveSchema = z.union([
+  z.object({ outcome: z.literal("saved"), answers_version: version, replayed: z.boolean(), state: briefSchema }),
+  z.object({ outcome: z.literal("saved"), answers_version: version, replayed: z.literal(true), finalized: z.literal(true), state: terminalSchema }),
+  z.object({ outcome: z.literal("saved"), answers_version: version, replayed: z.literal(true), editor: z.object({ status: z.literal("lost"), reason: lostReason }) }),
+  z.object({ outcome: z.literal("conflict"), answers_version: version, state: briefSchema }),
+  z.object({ outcome: z.literal("finalized"), state: terminalSchema }),
+  z.object({ outcome: z.literal("editor_lost"), reason: lostReason }),
+]);
+
+export function toStudentExamSave(value: unknown): StudentExamSaveOutcome {
+  const save = saveSchema.parse(value);
+  if (save.outcome === "editor_lost") return { kind: "editor_lost", reason: save.reason, acknowledgedVersion: null };
+  if (save.outcome === "finalized") return { kind: "finalized", state: toTerminal(save.state), acknowledged: false };
+  if (save.outcome === "conflict") return { kind: "conflict", answersVersion: save.answers_version, state: toBrief(save.state) };
+  if ("editor" in save) return { kind: "editor_lost", reason: save.editor.reason, acknowledgedVersion: save.answers_version };
+  if ("finalized" in save) return { kind: "finalized", state: toTerminal(save.state), acknowledged: true };
+  return { kind: "saved", answersVersion: save.answers_version, replayed: save.replayed, state: toBrief(save.state) };
+}
+
+const submitSchema = z.union([
+  z.object({ outcome: z.enum(["submitted", "finalized", "source_conflict"]), replayed: z.boolean(), state: terminalSchema }),
+  z.object({ outcome: z.literal("conflict"), answers_version: version, state: briefSchema }),
+  z.object({ outcome: z.literal("editor_lost"), reason: lostReason }),
+]);
+
+export function toStudentExamSubmit(value: unknown): StudentExamSubmitOutcome {
+  const submit = submitSchema.parse(value);
+  if (submit.outcome === "editor_lost") return { kind: "editor_lost", reason: submit.reason };
+  if (submit.outcome === "conflict") return { kind: "conflict", answersVersion: submit.answers_version, state: toBrief(submit.state) };
+  const state = toTerminal(submit.state);
+  if (submit.outcome === "submitted") return { kind: "submitted", replayed: submit.replayed, state };
+  return { kind: submit.outcome === "source_conflict" ? "source_conflict" : "finalized", replayed: submit.replayed, state };
+}
+
+const departureOutcomeSchema = z.union([
+  z.object({ outcome: z.literal("editor_lost"), reason: lostReason }),
+  z.object({
+    outcome: z.enum(["warned", "duplicate", "kicked", "finalized"]),
+    departure: departureSchema.nullable(),
+    state: z.record(z.string(), z.unknown()),
+  }),
+]);
+
+/** The database returns the terminal state once the attempt has ended, and the brief state otherwise. */
+export function toStudentExamDeparture(value: unknown): StudentExamDepartureOutcome {
+  const result = departureOutcomeSchema.parse(value);
+  if (result.outcome === "editor_lost") return { kind: "editor_lost", reason: result.reason };
+  const departure = result.departure && toDeparture(result.departure);
+  if ("submission" in result.state) {
+    return { kind: result.outcome === "kicked" ? "kicked" : "finalized", departure, state: toTerminal(terminalSchema.parse(result.state)) };
+  }
+  if (result.outcome !== "warned" && result.outcome !== "duplicate") throw new Error("Unexpected departure outcome");
+  return { kind: result.outcome === "warned" ? "warned" : "duplicate", departure, state: toBrief(briefSchema.parse(result.state)) };
+}
+
+const imagesSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("ok"), academy_id: uuid, image_ids: z.array(uuid) }),
+  z.object({ status: z.literal("lost") }),
+  z.object({ status: z.literal("finalized") }),
+]);
+
+export type StudentExamImageAuthorization = { kind: "ok"; academyId: string; imageIds: string[] } | { kind: "editor_lost" } | { kind: "finalized" };
+
+export function toStudentExamImageAuthorization(value: unknown): StudentExamImageAuthorization {
+  const result = imagesSchema.parse(value);
+  if (result.status === "ok") return { kind: "ok", academyId: result.academy_id, imageIds: result.image_ids };
+  return result.status === "lost" ? { kind: "editor_lost" } : { kind: "finalized" };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Review (EDRA-235).
+
+const reviewAnswerSchema = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("choice"), choice_id: uuid }),
+  z.object({ state: z.literal("text"), text: z.string() }),
+  z.object({ state: z.literal("blank") }),
+  z.object({ state: z.literal("paper_work") }),
+]);
+
+const reviewBase = { account_id: uuid, server_now: timestamp };
+
+const reviewSchema = z.discriminatedUnion("status", [
+  z.object({ ...reviewBase, status: z.literal("unavailable"), reason: z.enum(["not_submitted", "awaiting_closure", "awaiting_result"]) }),
+  z.object({
+    ...reviewBase,
+    status: z.literal("available"),
+    source: z.enum(EXAM_SOURCES),
+    notes: z.string(),
+    parts: z.array(z.object({
+      id: uuid, title: z.string(), instructions: z.string().nullable(), kind: z.enum(EXAM_PART_KINDS),
+      questions: z.array(z.object({
+        id: uuid, number: z.number().int().positive(), prompt: z.string(), excluded: z.boolean(),
+        choices: z.array(z.object({ id: uuid, label: z.string() })),
+        answer: reviewAnswerSchema,
+        correct_choice_id: uuid.nullable(),
+        model_answer: z.string(),
+      })),
+    })),
+  }),
+]);
+
+function toReviewAnswer(value: z.infer<typeof reviewAnswerSchema>): StudentExamReviewAnswer {
+  if (value.state === "choice") return { state: "choice", choiceId: value.choice_id };
+  if (value.state === "text") return { state: "text", text: value.text };
+  return { state: value.state };
+}
+
+/** Each variant is mapped explicitly: an unavailable review never carries material. */
+export function toStudentExamReview(value: unknown): StudentExamReview {
+  const review = reviewSchema.parse(value);
+  const base = { accountId: review.account_id, serverNow: review.server_now };
+  if (review.status === "unavailable") return { status: "unavailable", ...base, reason: review.reason };
+  return {
+    status: "available",
+    ...base,
+    source: review.source,
+    notes: review.notes,
+    parts: review.parts.map((part) => ({
+      id: part.id, title: part.title, instructions: part.instructions ?? "", kind: part.kind,
+      questions: part.questions.map((question) => ({
+        id: question.id, number: question.number, prompt: question.prompt, excluded: question.excluded, kind: part.kind,
+        choices: question.choices.map((choice) => ({ id: choice.id, label: choice.label })),
+        answer: toReviewAnswer(question.answer),
+        correctChoiceId: part.kind === "question_sheet" ? question.correct_choice_id : null,
+        modelAnswer: question.model_answer,
+      })),
+    })),
+  };
+}
+
+const reviewImagesSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("ok"), academy_id: uuid, image_ids: z.array(uuid) }),
+  z.object({ status: z.literal("unavailable") }),
+]);
+
+export type StudentExamReviewImageAuthorization = { kind: "ok"; academyId: string; imageIds: string[] } | { kind: "unavailable" };
+
+export function toStudentExamReviewImageAuthorization(value: unknown): StudentExamReviewImageAuthorization {
+  const result = reviewImagesSchema.parse(value);
+  return result.status === "ok" ? { kind: "ok", academyId: result.academy_id, imageIds: result.image_ids } : { kind: "unavailable" };
 }

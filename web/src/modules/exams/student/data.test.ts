@@ -18,9 +18,10 @@ vi.mock("@/lib/supabase/authority", () => ({
   } : null,
 }));
 
-const { getMyExamOverview, listMyExams, startMyExam } = await import("./data");
+const { getMyExamOverview, listMyExams, enterMyExam, recordMyExamDeparture } = await import("./data");
 
 const attempt = {
+  id: "33333333-3333-4333-8333-333333333333", answers_version: 0,
   started_at: "2026-10-20T08:00:00Z", deadline_at: "2026-10-20T08:30:00Z", cutoff_at: "2026-10-20T08:30:00Z",
   departure_count: 1, finalized_at: null, finalization_reason: null, superseded: false,
 };
@@ -41,7 +42,7 @@ describe("student exam boundary", () => {
     expect(await listMyExams({ academyId: "not-a-uuid", page: 1 })).toMatchObject({ ok: false, code: "validation" });
     expect(await listMyExams({ academyId: ACADEMY, page: 0 })).toMatchObject({ ok: false, code: "validation" });
     expect(await getMyExamOverview({ academyId: ACADEMY, examId: "../x" })).toMatchObject({ ok: false, code: "not_found" });
-    expect(await startMyExam({ academyId: ACADEMY, examId: "nope" })).toMatchObject({ ok: false, code: "validation" });
+    expect(await enterMyExam({ academyId: ACADEMY, examId: "nope", token: null })).toMatchObject({ ok: false, code: "validation" });
     expect(state.calls).toEqual([]);
   });
 
@@ -81,26 +82,35 @@ describe("student exam boundary", () => {
   });
 
   it("acknowledges the attempt from the start response without question material", async () => {
-    state.response = { data: { attempt, parts: [{ questions: [{ prompt: "secret" }] }] }, error: null };
-    const result = await startMyExam({ academyId: ACADEMY, examId: EXAM });
-    expect(result).toEqual({ ok: true, active: true, attempt: {
+    state.response = { data: { attempt, active: true, editor: { status: "claimed", token: "a".repeat(64), generation: 1, expires_at: "2026-10-20T08:10:45Z", heartbeat_seconds: 10, lease_seconds: 45 }, parts: [{ questions: [{ prompt: "secret" }] }] }, error: null };
+    const result = await enterMyExam({ academyId: ACADEMY, examId: EXAM, token: null });
+    expect(result).toMatchObject({ ok: true, active: true, attempt: {
       startedAt: attempt.started_at, deadlineAt: attempt.deadline_at, cutoffAt: attempt.cutoff_at,
       departureCount: 1, finalizedAt: null, finalizationReason: null, superseded: false,
     } });
-    expect(state.calls).toEqual([{ name: "start_my_exam", args: { p_academy_id: ACADEMY, p_exam_id: EXAM } }]);
+    expect(state.calls).toEqual([{ name: "enter_my_exam", args: { p_academy_id: ACADEMY, p_exam_id: EXAM, p_token: null } }]);
   });
 
   it("reports a finalized attempt as inactive", async () => {
-    state.response = { data: { attempt: { ...attempt, finalized_at: "2026-10-20T08:20:00Z", finalization_reason: "kicked" } }, error: null };
-    expect(await startMyExam({ academyId: ACADEMY, examId: EXAM })).toMatchObject({ ok: true, active: false });
+    state.response = { data: { active: false, editor: null, attempt: { ...attempt, finalized_at: "2026-10-20T08:20:00Z", finalization_reason: "kicked" } }, error: null };
+    expect(await enterMyExam({ academyId: ACADEMY, examId: EXAM, token: null })).toMatchObject({ ok: true, active: false });
+  });
+
+  it("preserves explicit null question context through the fenced RPC boundary", async () => {
+    const eventId = "44444444-4444-4444-8444-444444444444";
+    state.response = { data: { outcome: "warned", departure: { event_id: eventId, ordinal: 1, question_id: null,
+      outcome: "warned", next_question_id: null }, state: { server_now: overview.server_now, attempt, excluded_question_ids: [] } }, error: null };
+    const result = await recordMyExamDeparture({ academyId: ACADEMY, examId: EXAM, token: "a".repeat(64), generation: 1, eventId, questionId: null });
+    expect(result).toMatchObject({ ok: true, kind: "warned", departure: { questionId: null } });
+    expect(state.calls[0]).toMatchObject({ name: "record_my_exam_departure", args: { p_question_id: null, p_generation: 1, p_event_id: eventId } });
   });
 
   it("maps database codes to student messages and hides unknown errors", async () => {
     state.response = { data: null, error: { code: "P0001", message: "not_open" } };
-    expect(await startMyExam({ academyId: ACADEMY, examId: EXAM })).toMatchObject({ ok: false, code: "not_open", message: "This exam isn’t open for new attempts." });
+    expect(await enterMyExam({ academyId: ACADEMY, examId: EXAM, token: null })).toMatchObject({ ok: false, code: "not_open", message: "This exam isn’t open for new attempts." });
     state.response = { data: null, error: { code: "P0001", message: "throttled", details: "12" } };
-    expect(await startMyExam({ academyId: ACADEMY, examId: EXAM })).toMatchObject({ ok: false, code: "throttled", retryAfter: 12 });
+    expect(await enterMyExam({ academyId: ACADEMY, examId: EXAM, token: null })).toMatchObject({ ok: false, code: "throttled", retryAfter: 12 });
     state.response = { data: null, error: { code: "42501", message: "permission denied for function" } };
-    expect(await startMyExam({ academyId: ACADEMY, examId: EXAM })).toMatchObject({ ok: false, code: "unavailable" });
+    expect(await enterMyExam({ academyId: ACADEMY, examId: EXAM, token: null })).toMatchObject({ ok: false, code: "unavailable" });
   });
 });

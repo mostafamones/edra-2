@@ -28,7 +28,7 @@ async function signedIn(authority?: Authority | null): Promise<Db | null> {
 
 /** The academy of a session the caller can see (RLS), or null for unknown and foreign sessions. */
 export async function sessionAcademy(sessionId: string, authority?: Authority | null): Promise<string | null> {
-  if (!z.uuid().safeParse(sessionId).success) return null;
+  if (!z.guid().safeParse(sessionId).success) return null;
   const db = await signedIn(authority);
   if (!db) return null;
   const { data, error } = await db.rpc("session_academy", { p_session_id: sessionId });
@@ -153,7 +153,7 @@ export function readLiveSessionQuery(params: URLSearchParams): LiveSessionQuery 
   const cursor = params.get("cursor");
   const limitText = params.get("limit");
   const limit = limitText === null ? null : Number(limitText);
-  if (academyId !== null && !z.uuid().safeParse(academyId).success) return null;
+  if (academyId !== null && !z.guid().safeParse(academyId).success) return null;
   if (cursor !== null && !decodeCursor(cursor)) return null;
   if (limit !== null && (!Number.isInteger(limit) || limit < 1 || limit > MAX_PAGE_SIZE)) return null;
   return { academyId, cursor, limit };
@@ -269,7 +269,7 @@ export async function listSessionHistory(query: SessionHistoryQuery = {}, author
 
 /** One session with its historical roster, by tenant and stable id. */
 export async function getSession(academyId: string, sessionId: string, authority?: Authority | null): Promise<ReadResult<SessionDetail>> {
-  if (!z.uuid().safeParse(sessionId).success) return { ok: false, status: 400 };
+  if (!z.guid().safeParse(sessionId).success) return { ok: false, status: 400 };
   const actor = await sessionActor(academyId, authority);
   if (!actor) return { ok: false, status: 403 };
   try {

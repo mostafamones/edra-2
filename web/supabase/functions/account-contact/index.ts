@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
+import { deliveryBlocked } from "../_shared/synthetic-recipient.ts";
 import {
   buildWhatsAppDevelopmentMessage,
   buildWhatsAppTemplateMessage,
@@ -92,6 +93,12 @@ function deliveryReady(settings: Settings) {
 /** Sends a code through the shared WhatsApp adapter. Production fails on any delivery failure. */
 async function deliver(settings: Settings, recipient: string, code: string, name: string) {
   const phone = e164(recipient);
+  try {
+    if (await deliveryBlocked(settings.url!, settings.serviceKey!, { phone })) return "unsupported_recipient";
+  } catch {
+    console.error("Contact code registry check failed");
+    return "delivery_unavailable";
+  }
   if (settings.developmentMode) {
     // Development projects use fake numbers; the code is logged for manual verification.
     console.log("EDRA_DEV_CONTACT_CODE", { phoneLast4: phone.slice(-4), code });
@@ -152,7 +159,7 @@ async function updateAuthPhone(url: string, serviceKey: string, userId: string, 
 
 const STATUS: Record<string, number> = {
   cooldown: 429, rate_limited: 429, session_inactive: 401, busy: 409, phone_taken: 409,
-  delivery_failed: 502, delivery_unavailable: 503, unavailable: 503,
+  delivery_failed: 502, delivery_unavailable: 503, unavailable: 503, unsupported_account: 403, unsupported_recipient: 403,
 };
 
 function failure(error: string, extra: Record<string, unknown> = {}) {
@@ -254,6 +261,15 @@ Deno.serve(async (request) => {
     if (settled === "completed") return respond({ completed: true });
     if (outcome === "phone_taken") return failure("phone_taken");
     return failure(settled === "retry" ? "commit_failed" : "ended");
+  }
+
+  if (body.action !== "status" && body.action !== "cancel") {
+    try {
+      if (await deliveryBlocked(settings.url, serviceKey, { userId })) return failure("unsupported_account");
+    } catch {
+      console.error("Account contact registry check failed");
+      return failure("unavailable");
+    }
   }
 
   const operationId = typeof body.operationId === "string" && UUID_PATTERN.test(body.operationId) ? body.operationId : null;

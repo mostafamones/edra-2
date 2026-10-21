@@ -5,6 +5,7 @@ import { Geist, Geist_Mono, Noto_Sans_Arabic, Nunito_Sans } from "next/font/goog
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/modules/auth";
+import { DeveloperPreviewFrame } from "@/modules/development";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -53,7 +54,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           <QueryProvider>
             <TooltipProvider>
-              <AuthProvider initialPlatform={initialPlatform}><PortalTransition>{children}</PortalTransition></AuthProvider>
+              <AuthProvider initialPlatform={initialPlatform}>
+                <DeveloperPreviewFrame>
+                  <PortalTransition>{children}</PortalTransition>
+                </DeveloperPreviewFrame>
+              </AuthProvider>
               <Toaster />
             </TooltipProvider>
           </QueryProvider>

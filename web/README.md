@@ -8,6 +8,21 @@ From web/, install the locked dependencies with npm ci, copy .env.example to .en
 
 Development hosts use lvh.me, app.lvh.me and learn.lvh.me on port 3000; see [routing](docs/technical/routing.md). Check available commands in package.json. test:db runs the database assertions against an explicitly configured, marked isolated test target; it never starts a local stack, resets a database or applies migrations. CI runs it against a disposable database on the GitHub runner (scripts/db-ci.sh). See [database assertions](docs/engineering.md#database-assertions).
 
+## Test commands
+
+From `web/`:
+
+```sh
+npm test                  # Node unit tests (includes shared WhatsApp handler)
+npm run test:edge          # Deno static checks, per-function frozen lockfiles
+npm run test:edge:runtime  # Deno entrypoint and request-boundary tests
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Both Edge commands require Deno 2 on PATH. Runtime tests capture the real handlers without listening ports and use synthetic signed requests/configuration with intercepted fetch. They deny runtime network and need no Supabase instance, credentials or paid service. Dependency cache population may need network. The Deno suites stay separate from Vitest discovery. These checks do not verify hosted delivery, gateway authentication or authenticated database workflows; see [Edge verification](docs/engineering.md#edge-function-checks). CI runs static and runtime checks in the same independent Edge job; Actions minutes remain quota-limited.
+
 ## Browser smoke tests
 
 From `web/`:
@@ -36,3 +51,7 @@ PR/main CI runs an independent Chromium job and uploads `playwright-failure` (HT
 - [Native app](../mobile/README.md).
 
 Source/API documentation does not establish deployment readiness. Follow AGENTS.md and keep application implementation separate from Master-thread planning.
+
+Authenticated attendance CI uses `bash scripts/attendance-e2e-ci.sh` on a disposable **GitHub-hosted runner only**. It creates its own migrated Supabase Auth/API/PostgREST/Realtime/database instance, synthetic password accounts and three academies, runs `npm run test:e2e:attendance`, and destroys the complete instance. The Playwright command requires private CI-generated manifests; it has no placeholder or cloud fallback. This is separate from secret-free `npm run test:e2e` and the database-only SQL/concurrency job.
+
+Keep 3100 free; the authenticated and smoke suites share `.next-e2e` and must run serially. Test origins remain `lvh.me`, `app.lvh.me`, `learn.lvh.me` on 3100; isolated Supabase API/DB use 54321/54322. No local Supabase/Docker setup is authorized. Failure artifacts include phase logs and scoped Playwright reports/traces for seven days, excluding private manifests/status/env/database dumps. Traces may contain synthetic credentials. See [Verification](docs/engineering.md#authenticated-attendance-integration) for lifecycle, diagnosis, outstanding runner/hosted acceptance evidence and coverage limits. The job verifies persisted draft Present plus signed-out/cross-academy denial; finalization, delivery and production HTTPS/cookies remain separate checks.

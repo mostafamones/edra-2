@@ -13,9 +13,14 @@ await new Promise((resolve, reject) => {
 });
 await new Promise((resolve, reject) => portCheck.close((error) => error ? reject(error) : resolve()));
 
+// Privileged fixture settings are used only by Node setup/assertion helpers.
+const serverEnv = { ...process.env };
+for (const key of Object.keys(serverEnv)) {
+  if (/^(ATTENDANCE_|PG|SUPABASE_|EDRA_DB_TEST_)/.test(key)) delete serverEnv[key];
+}
 const server = spawn(process.execPath, [
-  require.resolve("next/dist/bin/next"), "dev", "--hostname", "127.0.0.1", "--port", "3100",
-], { stdio: "inherit" });
+  require.resolve("next/dist/bin/next"), "dev", "--hostname", process.env.GITHUB_ACTIONS ? "0.0.0.0" : "127.0.0.1", "--port", "3100",
+], { stdio: "inherit", env: serverEnv });
 
 server.on("error", (error) => {
   console.error(error);
@@ -24,6 +29,8 @@ server.on("error", (error) => {
 server.on("exit", (code) => process.exit(code ?? 1));
 
 // Playwright kills the whole process group at teardown, including this child.
+// Next normalizes its request origin to localhost; an explicit 127.0.0.1 bind makes it treat the proxy's
+// /app rewrite as external. The disposable CI runner binds 0.0.0.0 (rewrites stay internal); local runs stay on loopback.
 // Use loopback transport with the canonical Host to avoid DNS and preserve
 // host validation. Warm the login route before the 30-second tests begin.
 function loginReady() {

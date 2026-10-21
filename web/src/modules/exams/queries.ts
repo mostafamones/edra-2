@@ -55,7 +55,7 @@ export async function loadExams(academyId: string, filters: ExamListFilters, pag
 
 /** One exam's staff document, or null when it is not in this academy. Settles due deadlines first. */
 export async function loadExam(academyId: string, examId: string): Promise<Exam | null> {
-  if (!z.uuid().safeParse(examId).success) return null;
+  if (!z.guid().safeParse(examId).success) return null;
   const { data, error } = await createClient().rpc("get_exam", { p_academy_id: academyId, p_exam_id: examId });
   if (error) throw new Error(error.message);
   return data === null ? null : toExam(data);

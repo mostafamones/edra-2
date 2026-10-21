@@ -44,12 +44,12 @@ export async function saveStudentCodeSettings(value: unknown): Promise<StudentCo
 }
 
 const changeInputSchema = z.object({
-  academyId: z.uuid(),
-  recordId: z.uuid(),
+  academyId: z.guid(),
+  recordId: z.guid(),
   action: z.enum(CODE_ACTIONS),
   code: z.string().max(100).optional(),
   expectedVersion: z.number().int().nonnegative(),
-  requestKey: z.uuid(),
+  requestKey: z.guid(),
 });
 
 /**
@@ -86,7 +86,7 @@ export async function changeStudentCode(value: unknown): Promise<StudentCodeResu
  * moves no cursor; assigning it still goes through `changeStudentCode` and can fail if it was taken.
  */
 export async function peekNextStudentCode(academyId: unknown, recordId: unknown): Promise<StudentCodeResult<{ code: string }>> {
-  const ids = z.object({ academyId: z.uuid(), recordId: z.uuid() }).safeParse({ academyId, recordId });
+  const ids = z.object({ academyId: z.guid(), recordId: z.guid() }).safeParse({ academyId, recordId });
   if (!ids.success) return failure("validation");
   const actor = await staffContext(ids.data.academyId);
   if (!actor) return failure("forbidden");
@@ -103,7 +103,7 @@ export async function peekNextStudentCode(academyId: unknown, recordId: unknown)
 }
 
 const scopeSchema = z.object({
-  academyId: z.uuid(),
+  academyId: z.guid(),
   mode: z.enum(GENERATION_MODES),
   ids: z.array(z.string().min(1).max(100)).max(100),
   options: generationOptionsSchema,
@@ -136,7 +136,7 @@ export async function previewStudentCodeGeneration(value: unknown): Promise<Stud
 const generateSchema = scopeSchema.extend({
   expectedVersion: z.number().int().positive(),
   previewToken: z.string().regex(/^[0-9a-f]{32}$/),
-  requestKey: z.uuid(),
+  requestKey: z.guid(),
 });
 
 /**

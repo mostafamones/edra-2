@@ -57,19 +57,42 @@ export function useImages() {
   return value;
 }
 
+/**
+ * Read-only image URLs from a trusted server resolver, for surfaces without staff Storage access
+ * (the student exam). `scope` keys the cache, so URLs never cross accounts or attempts; `resolve`
+ * returns the URLs it authorized (an id it leaves out is unavailable). URLs are kept in memory only
+ * and requested again once they near `lifetimeSeconds`.
+ */
+export type ImageSource = { scope: string; lifetimeSeconds: number; resolve: (id: string) => Promise<string> };
+
+const SourceContext = createContext<ImageSource | null>(null);
+
+export function ImageSourceProvider({ source, children }: { source: ImageSource; children: ReactNode }) {
+  return <SourceContext.Provider value={source}>{children}</SourceContext.Provider>;
+}
+
 /** A short-lived URL for an image, once its upload has finished. */
 export function useImageUrl(id: string) {
-  const { academyId, uploading } = useImages();
-  const pending = uploading.has(id);
-  const query = useQuery({
-    queryKey: ["question-image", academyId, id],
+  const source = useContext(SourceContext);
+  const images = useContext(ImagesContext);
+  if (!source && !images) throw new Error("useImageUrl must be used inside ImagesProvider or ImageSourceProvider");
+  const pending = !source && Boolean(images?.uploading.has(id));
+  const query = useQuery(source ? {
+    queryKey: ["question-image", "source", source.scope, id],
+    staleTime: Math.max(0, source.lifetimeSeconds - 15) * 1000,
+    gcTime: source.lifetimeSeconds * 1000,
+    refetchOnWindowFocus: false,
+    retry: false,
+    queryFn: () => source.resolve(id),
+  } : {
+    queryKey: ["question-image", images!.academyId, id],
     enabled: !pending,
     staleTime: (URL_SECONDS - 5 * 60) * 1000,
     queryFn: async () => {
-      const { data, error } = await createClient().storage.from(IMAGE_BUCKET).createSignedUrl(imagePath(academyId, id), URL_SECONDS);
+      const { data, error } = await createClient().storage.from(IMAGE_BUCKET).createSignedUrl(imagePath(images!.academyId, id), URL_SECONDS);
       if (error) throw error;
       return data.signedUrl;
     },
   });
-  return { url: query.data, loading: pending || query.isPending, failed: query.isError };
+  return { url: query.data, loading: pending || query.isPending, failed: query.isError, retry: () => void query.refetch() };
 }

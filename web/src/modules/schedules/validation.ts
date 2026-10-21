@@ -13,7 +13,7 @@ type Issue = { path: (string | number)[]; message: string };
 function scheduleIssues(value: ScheduleInputShape): Issue[] {
   const issues: Issue[] = [];
   const fail = (path: (string | number)[], message: string) => issues.push({ path, message });
-  const isId = (id: string | null) => Boolean(id && z.uuid().safeParse(id).success);
+  const isId = (id: string | null) => Boolean(id && z.guid().safeParse(id).success);
 
   if (value.title.length < 2) fail(["title"], "Enter a name of at least 2 characters.");
   if (value.title.length > 100) fail(["title"], "Keep the name to 100 characters or fewer.");
@@ -66,7 +66,7 @@ function scheduleIssues(value: ScheduleInputShape): Issue[] {
 }
 
 const scheduleInputShape = z.object({
-  academyId: z.uuid(),
+  academyId: z.guid(),
   title: z.string().trim(),
   kind: z.enum(["recurring", "one_off"]),
   audience: z.enum(["group", "level", "program"]),

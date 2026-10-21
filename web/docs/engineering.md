@@ -22,7 +22,7 @@ Application source uses Tabler icons only; `lucide-react` and `react-icons` are 
 
 ## Verification
 
-Use the applicable web scripts: npm run lint, npm run typecheck, npm run test, npm run build and npm run test:edge. Run required checks appropriate to the changed behavior; do not mistake script presence for a pass.
+Use the applicable web scripts: npm run lint, npm run typecheck, npm run test, npm run build, npm run test:edge and npm run test:edge:runtime. Run required checks appropriate to the changed behavior; do not mistake script presence for a pass.
 
 `npm run typecheck` generates Next.js route types before running TypeScript, so a clean CI checkout can resolve `PageProps` and `LayoutProps`. `npm run test:edge` checks each Edge Function with its own `deno.json` dependency map and frozen `deno.lock`; it does not rely on the web application's installed npm dependencies. When changing a function's dependencies, update its lockfile with Deno before running the frozen check.
 
@@ -31,6 +31,24 @@ Verify affected database behavior against an authorized cloud development/isolat
 During implementation, changes affecting database behavior, authorization, tenant isolation or concurrency require relevant cloud database verification; use selected suites where sufficient. Documentation-only and presentation-only changes do not require manual database testing. The full database suite remains an automated CI check on every PR and push to `main`, run against a disposable database built from that checkout (see [CI database](#ci-database)). It does not replace the selected cloud verification above or hosted integration and release checks. Do not manually repeat a passing CI run unless subsequent changes or unresolved concerns justify it.
 
 Report source, test, cloud and deployed-flow evidence separately. Documentation edits do not establish runtime readiness.
+
+### Edge Function checks
+
+From `web/`, with Deno 2 on PATH:
+
+```sh
+npm run test:edge          # Static entrypoint checks
+npm run test:edge:runtime  # Deno entrypoint/boundary behavior
+npm test                  # Node unit tests, including _shared/whatsapp-auth.test.ts
+```
+
+The runtime command explicitly runs `send-whatsapp-auth`, `account-contact`, `account-password` and `student-onboarding` in separate Deno processes, each with its existing dependency map and frozen lockfile. The co-located `index_test.ts` suites capture `Deno.serve` before importing the real entrypoint once, then call its handler directly. No listening ports, Supabase instance, credentials, provider requests or paid services are needed. Dependency downloads/cache population may need network; runtime execution denies network, allows only each function's named configuration variables, and grants no file or subprocess access. Tests clear those variables before using dummy values, restore process state, intercept provider fetch and suppress captured development OTP logs. Unexpected fetches fail even when production catches delivery errors. Operation/resource sanitizers remain enabled.
+
+The signed WhatsApp suite verifies Deno environment wiring, signature rejection, provider routing/default version, development mode normalization/logging and existing HTTP/JSON error contracts. The other three suites cover only preflight/CORS, unsupported methods, missing bearer and missing required configuration before network access. These do not establish JWT authenticity, RPC/RLS behavior, password changes, challenge persistence, hosted gateway behavior or actual delivery. The existing 13-case WhatsApp Vitest suite remains in `npm test`; only Deno `*_test.ts` files are excluded from Node discovery. The web TypeScript program excludes those files and Deno-only helpers. Deno still typechecks its tests and entrypoints.
+
+The independent `CI / edge` job runs static checks followed by the same `scripts/edge-test.sh` runtime command on PRs and pushes to `main`, with Deno 2 and a ten-minute timeout. Assertion failures fail the job. Local implementation verification on 2026-10-20 used Deno 2.9.6; this is not evidence of a hosted CI run or Supabase's deployed runtime version. Hosted delivery remains a separate controlled release check. Test tooling has no paid-service requirement; GitHub Actions minutes remain quota-limited.
+
+References: [Supabase function testing](https://supabase.com/docs/guides/functions/unit-test), [Deno test command](https://docs.deno.com/runtime/reference/cli/test/).
 
 ### Browser smoke tests
 
@@ -84,3 +102,23 @@ The job needs no cloud credentials or concurrency group, since each runner has i
 ### Task 4 verification configuration — 2026-10-19
 
 The owner directed Task 4 to use only the disposable GitHub-hosted database runs, superseding this task’s earlier cloud-test-target requirement. No Task 4 migration or suite is run against shared/cloud projects. The database job exports `database-types` from its isolated schema before running suites; retrieve that artifact to update `src/lib/supabase/database.types.ts`. Generation never reads a linked cloud schema. This task-scoped verification decision does not establish a hosted production deployment.
+
+### Authenticated attendance integration
+
+`CI / attendance-e2e` is an independent, failing-on-assertion job on every PR and push to `main`. It uses Ubuntu, Node 22, Chromium, PostgreSQL client and Supabase CLI **2.117.0**. It has a 30-minute job budget, a bounded 15-minute stack startup and a ten-minute browser suite. It has no cancel-in-progress group. Configuring it as a required branch-protection check remains an owner settings action; the workflow cannot enforce that setting.
+
+`bash scripts/attendance-e2e-ci.sh` is **GitHub-hosted CI only**. It refuses local execution. Unlike the database-only job above, it starts actual Auth, API gateway/PostgREST, Realtime and Storage alongside PostgreSQL 17. Storage remains enabled for managed-schema initialization. Studio, analytics, SMTP and Edge runtime are disabled; seeding is off. No cloud project, paid branch, linked state, developer seeds, env files or legacy foundation are used. The fresh workspace copies only its dedicated config, bootstrap roles and timestamped migrations. Existing `prepare.sql` asserts the baseline, pauses unrelated deadline workers and marks the target. Setup verifies the complete migration history and proves the PostgREST live-session hook rejects a genuinely revoked password token.
+
+The wrapper obtains status as private JSON, validates loopback API **54321** / database **54322**, and records a unique project identity under `RUNNER_TEMP`. Fixture writes and assertions require the matching database marker. Generated admin settings and DB credentials stay in private setup/assertion helpers; Next receives only the public URL/key. Two synthetic confirmed phone/password users are created with Auth admin, then real password sessions invoke the domain commands. Bootstrap SQL creates three academies with current Cairo academic years, levels and groups. A/B grant the instructor access; C has no membership. Fixtures commit for HTTP connections and are destroyed with the whole instance, preserving ordinary history guards.
+
+`npm run test:e2e:attendance` is the guarded Playwright entrypoint, invoked by the wrapper after setup. It requires the private generated manifests and services and refuses missing settings; use `npm run test:e2e` for the existing secret-free smoke suite. Both use the dedicated development server on **3100**, `.next-e2e`, the three `lvh.me` hosts and parent-cookie domain. Never run them together or concurrently with another process generating that build directory. The normal port-3000 process is never reused.
+
+The authenticated scenario signs in through the UI, switches to B through the existing menu, starts a session, checks in one student with Late-after 0, then reloads and checks the fresh cookie API result and database persistence. The control stays Unknown; attendance remains unpublished. A fresh signed-out context must preserve the exact login return path; a cookie-free v1 mutation must return `401 UNAUTHENTICATED`. A genuine instructor login cannot see C in the switcher or through its direct page; separate public-key password bearer requests require `404 NOT_FOUND` for C and a successful B read. Full attendance, sheet and receipt snapshots prove denial changes nothing.
+
+Teardown is registered before startup, retains the first failure, stops only this run's project without backup and deletes temporary files. An `always()` Actions step retries cleanup; destruction of the GitHub runner is the final boundary after forced cancellation. No local Docker execution is required or permitted for implementation verification. Guard tests exercise rejected targets and startup failure/cleanup with fake executables only.
+
+For failures, first inspect the named phase and exit code in `artifacts/attendance/phases.log`; browser failures also have the scoped HTML report and screenshots/traces. The `attendance-e2e` artifact is retained for seven days. Raw service/startup/status output, credential manifests, auth state, env files and database dumps are deliberately excluded. Traces can contain disposable synthetic login credentials; never use this suite against real accounts. Compilation/readiness failure is distinct from an assertion failure. Tooling requires no paid service, but Actions minutes/storage are quota-limited.
+
+Acceptance requires observed GitHub-hosted evidence: two independent passing authenticated jobs, a deliberately broken persistence/authorization expectation failing before restoration, cleanup/artifacts on that failed run, and the existing database CI suite passing. Record observed results in the pull request; source review and local guard tests do not establish this evidence. Selected hosted verification remains separate and requires an explicitly authorized isolated cloud target. A runner pass proves browser → Next cookie action/API → real Auth/PostgREST/database persistence; it does not prove hosted configuration, production HTTPS/cookies, scheduled services, realtime collaboration, scanning, offline/retry UI, finalization, notifications or SMS/WhatsApp delivery.
+
+References: [CLI lifecycle](https://supabase.com/docs/reference/cli/supabase-start), [CLI configuration](https://supabase.com/docs/guides/local-development/cli/config), [Auth admin createUser](https://supabase.com/docs/reference/javascript/auth-admin-createuser), [Playwright authentication](https://playwright.dev/docs/auth).

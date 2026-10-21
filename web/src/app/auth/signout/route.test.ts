@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const state = vi.hoisted(() => ({ claims: null as { sub: string } | null, signOut: vi.fn() }));
+const state = vi.hoisted(() => ({ claims: null as { sub: string } | null, signOut: vi.fn(), endPreview: vi.fn(async () => true) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/headers", () => ({
   cookies: async () => ({ getAll: () => [{ name: "edra-auth-v1.0", value: "old" }] }),
@@ -9,8 +9,12 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: {
   getClaims: async () => ({ data: { claims: state.claims } }), signOut: state.signOut,
 } }) }));
 vi.mock("@/modules/staff/server", () => ({ clearPendingStaffInvite: vi.fn() }));
+vi.mock("@/modules/development/server", () => ({
+  endPreviewForSignOut: state.endPreview,
+  clearedControlCookie: () => ({ name: "edra-dev-control", value: "", path: "/", maxAge: 0, httpOnly: true }),
+}));
 import { POST } from "./route";
-beforeEach(() => { state.claims = null; state.signOut.mockReset(); vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co"); });
+beforeEach(() => { state.claims = null; state.signOut.mockReset(); state.endPreview.mockClear(); vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co"); });
 afterEach(() => vi.unstubAllEnvs());
 describe("platform sign-out", () => {
   it("expires both cookie scopes and chunks even without a valid token", async () => {
@@ -26,5 +30,12 @@ describe("platform sign-out", () => {
     state.claims = { sub: "user" };
     await POST();
     expect(state.signOut).toHaveBeenCalledWith({ scope: "global" });
+  });
+  it("ends a Developer mode control before revoking the session and clears its cookie", async () => {
+    state.claims = { sub: "user" };
+    const response = await POST();
+    expect(state.endPreview).toHaveBeenCalledOnce();
+    expect(state.endPreview.mock.invocationCallOrder[0]).toBeLessThan(state.signOut.mock.invocationCallOrder[0]);
+    expect(response.headers.getSetCookie().some(cookie => cookie.startsWith("edra-dev-control=;") && cookie.includes("Max-Age=0"))).toBe(true);
   });
 });

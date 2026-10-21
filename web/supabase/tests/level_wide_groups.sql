@@ -5,7 +5,7 @@
 
 begin;
 
-create function pg_temp.expect_error(statement text, expected text) returns void language plpgsql as $$
+create function pg_temp.expect_error(statement text, expected text, expected_state text default null) returns void language plpgsql as $$
 begin
   execute statement;
   raise exception 'expected error "%" but the statement succeeded: %', expected, statement using errcode = 'XX001';
@@ -14,6 +14,9 @@ exception
   when others then
     if sqlerrm not like expected then
       raise exception 'expected error "%" but got "%": %', expected, sqlerrm, statement;
+    end if;
+    if expected_state is not null and sqlstate <> expected_state then
+      raise exception 'expected SQLSTATE % but got %: %', expected_state, sqlstate, statement;
     end if;
 end;
 $$;
@@ -55,9 +58,29 @@ insert into public.groups (id, academy_id, academic_year_id, level_id, track_id,
   ('b7000000-0000-4000-8000-b70000000001', 'b0b0b0b0-b0b0-4b0b-8b0b-b0b0b0b0b0b0', 'b0b0b0b0-1111-4111-8111-b0b0b0b0b0b0', 'secondary-2', null, 'M level 11 all');
 update public.groups set archived_at = now() where id = 'a7000000-0000-4000-8000-a70000000005';
 select pg_temp.expect_error($s$ insert into public.groups (academy_id, academic_year_id, level_id, track_id, name)
-  values ('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'secondary-2', 'b5555555-5555-4555-8555-b55555555555', 'Foreign track') $s$, '%foreign key%');
+  values ('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'secondary-2', 'b5555555-5555-4555-8555-b55555555555', 'Foreign track') $s$, '%foreign key%', '23503');
 select pg_temp.expect_error($s$ insert into public.groups (academy_id, academic_year_id, level_id, track_id, name)
-  values ('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'preparatory-3', 'a5555555-5555-4555-8555-a55555555555', 'Other level track') $s$, '%foreign key%');
+  values ('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0', 'a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0', 'preparatory-3', 'a5555555-5555-4555-8555-a55555555555', 'Other level track') $s$, '%foreign key%', '23503');
+
+-- Lifecycle denial remains distinct from an invalid reference.
+select pg_temp.expect_error($s$ insert into public.groups (academy_id,academic_year_id,level_id,name)
+  values ('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0','a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0','secondary-3','Missing level') $s$, '%foreign key%', '23503');
+select pg_temp.expect_error($s$ insert into public.groups (academy_id,academic_year_id,level_id,track_id,name)
+  values ('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0','a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0','secondary-2','a9999999-9999-4999-8999-a99999999999','Missing track') $s$, '%foreign key%', '23503');
+update public.academy_levels set stopped_at=now(),stopped_by='a1111111-1111-4111-8111-a11111111111' where academy_id='a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0' and level_id='preparatory-3';
+select pg_temp.expect_error($s$ insert into public.groups (academy_id,academic_year_id,level_id,name)
+  values ('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0','a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0','preparatory-3','Stopped') $s$, 'offering_unavailable', 'P0001');
+select pg_temp.expect_error($s$ select edra_private.check_assignment_audience('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0','a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0','level','preparatory-3',null,array[]::uuid[]) $s$, 'offering_unavailable', 'P0001');
+select pg_temp.expect_error($s$ select edra_private.check_quiz_audience('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0','a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0','level','preparatory-3',null,array[]::uuid[]) $s$, 'offering_unavailable', 'P0001');
+select pg_temp.expect_error($s$ select edra_private.check_exam_audience('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0','a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0','level','preparatory-3',null,array[]::uuid[]) $s$, 'offering_unavailable', 'P0001');
+update public.academy_levels set stopped_at=null,stopped_by=null where academy_id='a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0' and level_id='preparatory-3';
+update public.academy_tracks set retired_at=now(),retired_by='a1111111-1111-4111-8111-a11111111111' where id='a5555555-5555-4555-8555-a55555555555';
+select pg_temp.expect_error($s$ insert into public.groups (academy_id,academic_year_id,level_id,track_id,name)
+  values ('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0','a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0','secondary-2','a5555555-5555-4555-8555-a55555555555','Retired') $s$, 'offering_unavailable', 'P0001');
+select pg_temp.expect_error($s$ select edra_private.check_assignment_audience('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0','a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0','program','secondary-2','a5555555-5555-4555-8555-a55555555555',array[]::uuid[]) $s$, 'offering_unavailable', 'P0001');
+select pg_temp.expect_error($s$ select edra_private.check_quiz_audience('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0','a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0','program','secondary-2','a5555555-5555-4555-8555-a55555555555',array[]::uuid[]) $s$, 'offering_unavailable', 'P0001');
+select pg_temp.expect_error($s$ select edra_private.check_exam_audience('a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a0','a0a0a0a0-1111-4111-8111-a0a0a0a0a0a0','program','secondary-2','a5555555-5555-4555-8555-a55555555555',array[]::uuid[]) $s$, 'offering_unavailable', 'P0001');
+update public.academy_tracks set retired_at=null,retired_by=null where id='a5555555-5555-4555-8555-a55555555555';
 
 grant usage on schema public, auth to authenticated, anon;
 

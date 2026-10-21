@@ -1,0 +1,44 @@
+# CI-only full Auth/API stack; never copied from developer/linked configuration.
+project_id = "edra-attendance-ci-placeholder"
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+health_timeout = "2m"
+[db.pooler]
+enabled = false
+[db.migrations]
+enabled = true
+[db.seed]
+enabled = false
+[auth]
+enabled = true
+site_url = "http://app.lvh.me:3100"
+[auth.sms]
+enable_signup = true
+enable_confirmations = false
+# Phone Auth needs an SMS provider configured; fixed test OTPs mean nothing is ever sent.
+[auth.sms.test_otp]
+201999999999 = "123456"
+[auth.sms.twilio]
+enabled = true
+account_sid = "ACci000000000000000000000000000000"
+message_service_sid = "MGci000000000000000000000000000000"
+auth_token = "ci-placeholder-never-used"
+[realtime]
+enabled = true
+[storage]
+enabled = true
+[studio]
+enabled = false
+[local_smtp]
+enabled = false
+[edge_runtime]
+enabled = false
+[analytics]
+enabled = false

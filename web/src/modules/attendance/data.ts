@@ -103,7 +103,7 @@ const toEntry = (row: z.infer<typeof entrySchema>): AttendanceEntry => ({
 
 /** A session's attendance: lifecycle, revision, publication state, counts, and every roster entry. */
 export async function getAttendance(academyId: string, sessionId: string, authority?: Authority | null): Promise<ReadResult<AttendanceSheet>> {
-  if (!z.uuid().safeParse(sessionId).success) return { ok: false, status: 400 };
+  if (!z.guid().safeParse(sessionId).success) return { ok: false, status: 400 };
   const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
@@ -161,11 +161,11 @@ export const MAX_LATE_AFTER_MINUTES = 1440;
 /** Longest raw `student_id`/code text accepted before normalization (outer whitespace is trimmed). */
 export const MAX_CODE_INPUT_LENGTH = 64;
 const checkInBase = z.object({
-  academyId: z.uuid(), sessionId: z.uuid(), idempotencyKey: z.uuid(),
+  academyId: z.guid(), sessionId: z.guid(), idempotencyKey: z.guid(),
   lateAfterMinutes: z.number().int().min(0).max(MAX_LATE_AFTER_MINUTES).optional(),
 });
 const checkInInput = z.union([
-  checkInBase.extend({ annualStudentRecordId: z.uuid() }).strict(),
+  checkInBase.extend({ annualStudentRecordId: z.guid() }).strict(),
   checkInBase.extend({ studentCode: z.string().max(MAX_CODE_INPUT_LENGTH) }).strict(),
 ]);
 export type CheckInInput = z.input<typeof checkInBase> & ({ annualStudentRecordId: string; studentCode?: never } | { studentCode: string; annualStudentRecordId?: never });
@@ -206,12 +206,12 @@ export async function checkIn(input: CheckInInput, authority?: Authority | null)
 }
 
 export const MAX_BULK_CHANGES = MAX_SELECTED_CHANGES;
-const changeItem = z.object({ annualStudentRecordId: z.uuid(), status: z.enum(ATTENDANCE_STATUSES), expectedVersion: z.number().int().min(0) });
+const changeItem = z.object({ annualStudentRecordId: z.guid(), status: z.enum(ATTENDANCE_STATUSES), expectedVersion: z.number().int().min(0) });
 const changesInput = z.object({
-  academyId: z.uuid(),
-  sessionId: z.uuid(),
+  academyId: z.guid(),
+  sessionId: z.guid(),
   changes: z.array(changeItem).min(1).max(MAX_BULK_CHANGES),
-  idempotencyKey: z.uuid(),
+  idempotencyKey: z.guid(),
 });
 
 /**
@@ -248,7 +248,7 @@ export async function changeAttendance(
   }
 }
 
-const publishInput = z.object({ academyId: z.uuid(), sessionId: z.uuid(), expectedRevision: z.number().int().min(0), idempotencyKey: z.uuid() });
+const publishInput = z.object({ academyId: z.guid(), sessionId: z.guid(), expectedRevision: z.number().int().min(0), idempotencyKey: z.guid() });
 
 /** Makes the reviewed revision official. Fails with publication_stale when attendance changed since. */
 export async function publishAttendance(input: z.input<typeof publishInput>, authority?: Authority | null): Promise<PublishResult> {
@@ -272,7 +272,7 @@ export async function publishAttendance(input: z.input<typeof publishInput>, aut
   }
 }
 
-const reviewedInput = z.object({ academyId: z.uuid(), sessionId: z.uuid(), expectedRevision: z.number().int().min(0), idempotencyKey: z.uuid() });
+const reviewedInput = z.object({ academyId: z.guid(), sessionId: z.guid(), expectedRevision: z.number().int().min(0), idempotencyKey: z.guid() });
 const unrecordedSchema = z.object({
   outcome: z.enum(["updated", "unchanged", "stale"]),
   changed: z.number().int().nonnegative(),
@@ -307,7 +307,7 @@ export async function markUnrecordedAbsent(input: z.input<typeof reviewedInput>,
 export const MAX_ATTENDEE_PAGE = 50;
 export const MAX_ATTENDEE_QUERY_LENGTH = 100;
 const searchInput = z.object({
-  academyId: z.uuid(), sessionId: z.uuid(), query: z.string().max(MAX_ATTENDEE_QUERY_LENGTH).default(""),
+  academyId: z.guid(), sessionId: z.guid(), query: z.string().max(MAX_ATTENDEE_QUERY_LENGTH).default(""),
   limit: z.number().int().min(1).max(MAX_ATTENDEE_PAGE).default(20), offset: z.number().int().min(0).max(10_000).default(0),
 });
 const candidateSchema = z.object({
@@ -348,7 +348,7 @@ export async function searchAttendees(input: z.input<typeof searchInput>, author
   }
 }
 
-const addInput = reviewedInput.extend({ annualStudentRecordId: z.uuid() });
+const addInput = reviewedInput.extend({ annualStudentRecordId: z.guid() });
 const addSchema = z.discriminatedUnion("outcome", [
   z.object({ outcome: z.enum(["added", "already_on_roster"]), entry: entrySchema, revision: z.number().int(), replayed: z.boolean() }),
   z.object({ outcome: z.literal("stale"), entry: z.null(), revision: z.number().int(), replayed: z.boolean() }),

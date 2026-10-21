@@ -42,7 +42,7 @@ const fail = (context: StaffApiContext, result: AttendanceFailure) =>
 /** The required `Idempotency-Key` header (a UUID created per action and reused on retry), or null. */
 function idempotencyKey(request: Request) {
   const value = request.headers.get("idempotency-key")?.trim() ?? "";
-  return z.uuid().safeParse(value).success ? value : null;
+  return z.guid().safeParse(value).success ? value : null;
 }
 
 const missingKey = (context: StaffApiContext) =>
@@ -60,7 +60,7 @@ export async function attendanceResponse(context: StaffApiContext, academyId: st
  */
 const checkInBody = z.object({
   student_id: z.string().max(MAX_CODE_INPUT_LENGTH).optional(),
-  annual_student_record_id: z.uuid().optional(),
+  annual_student_record_id: z.guid().optional(),
   late_after_minutes: z.number().int().min(0).max(MAX_LATE_AFTER_MINUTES).optional(),
 }).strict().refine((body) => (body.student_id === undefined) !== (body.annual_student_record_id === undefined))
   .refine((body) => body.student_id === undefined || normalizeStudentCode(body.student_id) !== null);
@@ -88,7 +88,7 @@ export async function patchResponse(context: StaffApiContext, request: Request, 
   const key = idempotencyKey(request);
   if (!key) return missingKey(context);
   const body = patchBody.safeParse(await readJson(request));
-  if (!body.success || !z.uuid().safeParse(recordId).success) return apiError(context, "INVALID_REQUEST");
+  if (!body.success || !z.guid().safeParse(recordId).success) return apiError(context, "INVALID_REQUEST");
   const result = await changeAttendance({
     academyId, sessionId, idempotencyKey: key,
     changes: [{ annualStudentRecordId: recordId, status: body.data.status, expectedVersion: body.data.expected_version }],
@@ -102,7 +102,7 @@ export async function patchResponse(context: StaffApiContext, request: Request, 
 
 const bulkBody = z.object({
   changes: z.array(z.object({
-    annual_student_record_id: z.uuid(), status: z.enum(ATTENDANCE_STATUSES), expected_version: z.number().int().min(0),
+    annual_student_record_id: z.guid(), status: z.enum(ATTENDANCE_STATUSES), expected_version: z.number().int().min(0),
   }).strict()).min(1).max(MAX_BULK_CHANGES),
 }).strict();
 
@@ -175,7 +175,7 @@ export async function attendeeSearchResponse(context: StaffApiContext, request: 
   return apiJson(context, snakeKeys({ items: result.items, hasMore: result.hasMore }));
 }
 
-const addBody = z.object({ annual_student_record_id: z.uuid(), expected_revision: z.number().int().min(0) }).strict();
+const addBody = z.object({ annual_student_record_id: z.guid(), expected_revision: z.number().int().min(0) }).strict();
 
 /** Explicitly appends an unexpected attendee (Unknown) to the roster; adding never checks the student in. */
 export async function addAttendeeResponse(context: StaffApiContext, request: Request, academyId: string, sessionId: string) {

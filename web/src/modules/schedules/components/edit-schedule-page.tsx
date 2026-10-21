@@ -35,7 +35,7 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
 function EditScheduleContent({ academy, id }: { academy: AcademyEntry; id: string }) {
   const href = useCanonicalHref();
   const backLink = <Button variant="outline" size="sm" asChild><Link href={href("/app/schedules")} >Back to schedules</Link></Button>;
-  const validId = z.uuid().safeParse(id).success;
+  const validId = z.guid().safeParse(id).success;
   // Fetched directly by academy and id, so the link works however many schedules exist.
   const query = useQuery({ queryKey: scheduleQueryKey(academy.id, id), queryFn: () => loadSchedule(academy.id, id), enabled: validId });
 

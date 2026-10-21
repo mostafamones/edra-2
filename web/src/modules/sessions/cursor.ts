@@ -6,7 +6,7 @@ import { z } from "zod";
  */
 export type SessionCursor = { startedAt: string; id: string };
 
-const cursorSchema = z.object({ startedAt: z.iso.datetime({ offset: true }), id: z.uuid() });
+const cursorSchema = z.object({ startedAt: z.iso.datetime({ offset: true }), id: z.guid() });
 
 export function encodeCursor(cursor: SessionCursor) {
   return Buffer.from(JSON.stringify(cursor)).toString("base64url");

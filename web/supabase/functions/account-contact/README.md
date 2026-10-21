@@ -19,6 +19,8 @@ Errors include `invalid_phone`, `same_phone`, `phone_taken`, `parent_phone`, `ac
 
 Uses SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (backend-only; the service-role key is also the code HMAC secret, as in the other account functions) plus the shared WhatsApp variables. Development mode logs EDRA_DEV_CONTACT_CODE (last four digits and code) and sends to the development recipient; production sends the approved Authentication template to the actual number and fails the request when delivery fails.
 
+Synthetic development accounts and contacts registered in the development registry never receive codes, and registry lookup failures fail closed. Blocked accounts get `unsupported_account` (403), blocked recipients get `unsupported_recipient` (403), and lookup failures return `unavailable` or `delivery_unavailable` (503).
+
 Requires migration `20261018210000_account_contact_changes.sql`. Deploy with JWT verification enabled:
 
 ```sh
@@ -28,3 +30,11 @@ npx supabase functions deploy account-contact --project-ref <project-ref> --use-
 ## Limits
 
 The `auth.users` guard trigger makes the old-number proof apply to every writer of a confirmed phone, including Auth's own phone change API and dashboard edits. A future support process for unreachable old numbers needs its own deliberate path through that guard.
+
+## Testing
+
+From `web/`, with Deno 2 on PATH, run `npm run test:edge` for static checks and `npm run test:edge:runtime` for all four isolated entrypoint suites, including this function's `index_test.ts`. Each uses its own dependency map and frozen lockfile; runtime tests are typechecked.
+
+The Deno suite invokes this real entrypoint directly and covers OPTIONS/CORS, unsupported methods, missing bearer and missing required environment configuration before any network call. It does not verify JWT authenticity, database RPCs/RLS, password changes or challenge persistence.
+
+Tests capture `Deno.serve` without opening a listener, clear/restore named configuration, use only dummy values and explicitly intercept fetch; unexpected calls fail. Runtime network is denied, with no Supabase instance, real credentials, messages or paid services. Dependency caching may download packages. Neither static checks, Node unit tests nor these Deno tests establish hosted gateway behavior or actual delivery. See [verification](../../../docs/engineering.md#edge-function-checks) for the CI command and evidence boundaries.

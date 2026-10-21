@@ -15,7 +15,7 @@ export async function schedulesResponse(context: StaffApiContext, academyId: str
   const search = params.get("q");
   const limit = intParam(params.get("limit"));
   const offset = intParam(params.get("offset"));
-  if (!z.uuid().safeParse(academyId).success || (search !== null && search.length > MAX_SCHEDULE_SEARCH)
+  if (!z.guid().safeParse(academyId).success || (search !== null && search.length > MAX_SCHEDULE_SEARCH)
     || (limit !== null && !(limit >= 1 && limit <= MAX_SCHEDULE_PAGE)) || (offset !== null && !(offset >= 0))) {
     return apiError(context, "INVALID_REQUEST");
   }
