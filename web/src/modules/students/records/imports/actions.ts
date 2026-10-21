@@ -15,7 +15,7 @@ import { CELL_PROBLEMS, IMPORT_FIELDS, IMPORT_FORMATS, type ImportBatchResult, t
  * owner and state, and the open academic year; nothing here trusts client-supplied statuses or counts.
  */
 
-const sessionId = z.uuid();
+const sessionId = z.guid();
 const revision = z.number().int().positive();
 const ordinal = z.number().int().min(1).max(IMPORT_LIMITS.rows);
 
@@ -25,9 +25,9 @@ async function client() {
   return data?.claims ? db : null;
 }
 
-const idOrEmpty = z.union([z.uuid(), z.literal("")]);
+const idOrEmpty = z.union([z.guid(), z.literal("")]);
 const startSchema = z.object({
-  scope: z.object({ academyId: z.uuid(), academicYearId: z.uuid() }),
+  scope: z.object({ academyId: z.guid(), academicYearId: z.guid() }),
   source: z.object({
     fileName: z.string().trim().min(1).max(255),
     format: z.enum(IMPORT_FORMATS),
@@ -39,7 +39,7 @@ const startSchema = z.object({
       participationType: z.union([z.enum(PARTICIPATION_TYPES), z.literal("")]),
     }),
     /** The caller's unconfirmed session this one replaces, which is cancelled. */
-    replaces: z.uuid().nullable(),
+    replaces: z.guid().nullable(),
   }),
   expectedRows: z.number().int().min(1).max(IMPORT_LIMITS.rows),
 });

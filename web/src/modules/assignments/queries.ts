@@ -77,7 +77,7 @@ export async function loadAssignments(academyId: string, filters: AssignmentList
 
 /** One assignment's staff view, or null when it is not in this academy. */
 export async function loadAssignment(academyId: string, assignmentId: string): Promise<Assignment | null> {
-  if (!z.uuid().safeParse(assignmentId).success) return null;
+  if (!z.guid().safeParse(assignmentId).success) return null;
   const { data, error } = await createClient().rpc("get_assignment", { p_academy_id: academyId, p_assignment_id: assignmentId });
   if (error) throw new Error(error.message);
   return data === null ? null : toAssignment(data);

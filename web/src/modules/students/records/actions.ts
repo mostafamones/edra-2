@@ -66,7 +66,7 @@ export async function createStudentRecord(value: unknown): Promise<StudentRecord
 }
 
 export async function updateStudentRecord(recordId: string, expectedVersion: number, value: unknown): Promise<StudentRecordResult<RecordVersion>> {
-  if (!z.uuid().safeParse(recordId).success || !Number.isInteger(expectedVersion) || expectedVersion < 1) return failure("not_found");
+  if (!z.guid().safeParse(recordId).success || !Number.isInteger(expectedVersion) || expectedVersion < 1) return failure("not_found");
   const parsed = parseInput(value);
   if (parsed.failure) return parsed.failure;
   const { input } = parsed;
@@ -88,9 +88,9 @@ export async function updateStudentRecord(recordId: string, expectedVersion: num
 }
 
 const batchSchema = z.object({
-  academyId: z.uuid(),
-  academicYearId: z.uuid(),
-  records: z.array(z.object({ id: z.uuid(), version: z.number().int().positive() })).min(1).max(500),
+  academyId: z.guid(),
+  academicYearId: z.guid(),
+  records: z.array(z.object({ id: z.guid(), version: z.number().int().positive() })).min(1).max(500),
   archived: z.boolean(),
 });
 
@@ -118,9 +118,9 @@ export async function setStudentRecordsArchived(
 }
 
 const groupScopeSchema = z.object({
-  academyId: z.uuid(),
-  academicYearId: z.uuid(),
-  records: z.array(z.object({ id: z.uuid(), version: z.number().int().positive() })).min(1).max(500)
+  academyId: z.guid(),
+  academicYearId: z.guid(),
+  records: z.array(z.object({ id: z.guid(), version: z.number().int().positive() })).min(1).max(500)
     .refine((records) => new Set(records.map((record) => record.id)).size === records.length),
 });
 
@@ -133,7 +133,7 @@ export async function previewStudentGroupChange(
   scope: { academyId: string; academicYearId: string }, records: RecordVersion[], destination?: string | null,
 ): Promise<StudentRecordResult<GroupChangePreview>> {
   const parsed = groupScopeSchema.safeParse({ ...scope, records });
-  if (!parsed.success || (destination != null && !z.uuid().safeParse(destination).success)) return failure("validation");
+  if (!parsed.success || (destination != null && !z.guid().safeParse(destination).success)) return failure("validation");
   const actor = await staffContext(parsed.data.academyId);
   if (!actor || !canChangeStudentGroups(actor.role)) return failure("forbidden");
   try {
@@ -153,7 +153,7 @@ export async function setStudentRecordsGroup(
   scope: { academyId: string; academicYearId: string }, records: RecordVersion[], primaryGroupId: string | null,
 ): Promise<StudentRecordResult<{ changed: RecordVersion[]; unchanged: string[] }>> {
   const parsed = groupScopeSchema.safeParse({ ...scope, records });
-  if (!parsed.success || (primaryGroupId !== null && !z.uuid().safeParse(primaryGroupId).success)) return failure("validation");
+  if (!parsed.success || (primaryGroupId !== null && !z.guid().safeParse(primaryGroupId).success)) return failure("validation");
   const actor = await staffContext(parsed.data.academyId);
   if (!actor || !canChangeStudentGroups(actor.role)) return failure("forbidden");
   try {

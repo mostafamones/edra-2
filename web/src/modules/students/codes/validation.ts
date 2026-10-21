@@ -9,7 +9,7 @@ export const MAX_LEVEL_PATTERNS = 50;
  * failing field; the database repeats every check.
  */
 export const studentCodeSettingsInputSchema = z.object({
-  academyId: z.uuid(),
+  academyId: z.guid(),
   expectedVersion: z.number().int().nonnegative(),
   enabled: z.boolean(),
   defaultPattern: z.string().max(100),

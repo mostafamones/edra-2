@@ -103,7 +103,7 @@ export function toStudentExamOverview(value: unknown): StudentExamOverview {
 // ---------------------------------------------------------------------------------------------
 // Answering (EDRA-233).
 
-const uuid = z.uuid();
+const uuid = z.guid();
 
 const attemptStateSchema = attemptSchema.extend({ id: uuid, answers_version: z.number().int().nonnegative() });
 

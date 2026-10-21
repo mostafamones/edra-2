@@ -35,7 +35,7 @@ export async function createGroup(value: unknown): Promise<Result> {
 }
 
 export async function updateGroup(groupId: string, value: unknown): Promise<Result> {
-  if (!z.uuid().safeParse(groupId).success) return { ok: false, message: "Invalid group." };
+  if (!z.guid().safeParse(groupId).success) return { ok: false, message: "Invalid group." };
   const parsed = groupInputSchema.safeParse(value);
   if (!parsed.success) return { ok: false, message: "Check the group fields and try again." };
   const input = parsed.data;
@@ -52,7 +52,7 @@ export async function updateGroup(groupId: string, value: unknown): Promise<Resu
 }
 
 export async function archiveGroup(academyId: string, groupId: string): Promise<Result> {
-  if (!z.uuid().safeParse(academyId).success || !z.uuid().safeParse(groupId).success)
+  if (!z.guid().safeParse(academyId).success || !z.guid().safeParse(groupId).success)
     return { ok: false, message: "Invalid group." };
   const db = await manager(academyId);
   if (!db) return { ok: false, message: "You do not have permission to archive groups." };
@@ -65,7 +65,7 @@ export async function archiveGroup(academyId: string, groupId: string): Promise<
 }
 
 export async function restoreGroup(academyId: string, groupId: string): Promise<Result> {
-  if (!z.uuid().safeParse(academyId).success || !z.uuid().safeParse(groupId).success)
+  if (!z.guid().safeParse(academyId).success || !z.guid().safeParse(groupId).success)
     return { ok: false, message: "Invalid group." };
   const db = await manager(academyId);
   if (!db) return { ok: false, message: "You do not have permission to unarchive groups." };

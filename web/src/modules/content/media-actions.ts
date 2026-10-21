@@ -6,7 +6,7 @@ import { contentCaller, contentError, contentResult } from "./data";
 import { mediaAdmin, synchronizeVideo } from "./media";
 import { DOCUMENT_TYPES, MAX_DOCUMENT_BYTES } from "./types";
 
-const uploadSchema = z.object({ academyId: z.uuid(), unitId: z.uuid(), assetId: z.uuid(), name: z.string().min(1).max(250), mime: z.string().max(150), size: z.number().int().positive().max(2 * 1024 ** 3), kind: z.enum(["video", "document"]) });
+const uploadSchema = z.object({ academyId: z.guid(), unitId: z.guid(), assetId: z.guid(), name: z.string().min(1).max(250), mime: z.string().max(150), size: z.number().int().positive().max(2 * 1024 ** 3), kind: z.enum(["video", "document"]) });
 export async function beginUpload(value: unknown) {
   return contentResult(async () => {
   const input = uploadSchema.parse(value);
@@ -50,13 +50,13 @@ export async function beginUpload(value: unknown) {
 }
 export async function finishDocument(academyId: string, assetId: string) {
   return contentResult(async () => {
-  z.uuid().parse(assetId); const { db } = await contentCaller(academyId);
+  z.guid().parse(assetId); const { db } = await contentCaller(academyId);
   const { error } = await db.rpc("complete_content_document", { p_academy_id: academyId, p_asset_id: assetId }); contentError(error);
   });
 }
 export async function refreshVideo(academyId: string, assetId: string) {
   return contentResult(async () => {
-  z.uuid().parse(assetId); const { db } = await contentCaller(academyId);
+  z.guid().parse(assetId); const { db } = await contentCaller(academyId);
   const { data, error } = await db.from("content_assets").select("id,provider_upload_id,status,deletion_token").eq("academy_id", academyId).eq("id", assetId).single(); contentError(error);
   if (data?.deletion_token) return "deleting";
   if (!data?.provider_upload_id) return data?.status ?? "uploading";
@@ -67,7 +67,7 @@ export async function refreshVideo(academyId: string, assetId: string) {
 /** Staff-only preview. Student playback must use annual student/access authority, not this action. */
 export async function previewAsset(academyId: string, assetId: string) {
   return contentResult(async () => {
-  z.uuid().parse(assetId); const { db } = await contentCaller(academyId);
+  z.guid().parse(assetId); const { db } = await contentCaller(academyId);
   const { data, error } = await db.from("content_assets").select("*").eq("academy_id", academyId).eq("id", assetId).single(); contentError(error);
   if (!data || data.status !== "ready" || data.deletion_token) throw new Error("This material is not available for preview.");
   if (data.kind === "video" && data.playback_id) return { kind: "video" as const, playbackId: data.playback_id, ...playbackToken(data.playback_id), thumbnailToken: playbackToken(data.playback_id, "t").token, storyboardToken: playbackToken(data.playback_id, "s").token };
@@ -79,7 +79,7 @@ export async function previewAsset(academyId: string, assetId: string) {
 }
 export async function permanentlyDeleteVideo(academyId: string, assetId: string) {
   return contentResult(async () => {
-    z.uuid().parse(assetId);
+    z.guid().parse(assetId);
     const { db } = await contentCaller(academyId);
     const reservation = await db.rpc("request_content_video_deletion", { p_academy_id: academyId, p_asset_id: assetId }); contentError(reservation.error);
     const admin = mediaAdmin();

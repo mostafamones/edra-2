@@ -65,7 +65,7 @@ async function studentCommand(run: () => PromiseLike<{ data: unknown; error: Dat
 // ---------------------------------------------------------------------------------------------
 // Preparation and availability.
 
-const createInput = z.object({ academyId: z.uuid(), academicYearId: z.uuid(), examId: z.uuid(), draft: examDraftSchema });
+const createInput = z.object({ academyId: z.guid(), academicYearId: z.guid(), examId: z.guid(), draft: examDraftSchema });
 
 /** Creates an exam (preparation may be incomplete). `examId` is generated per create action and reused on retry. */
 export async function createExam(input: z.input<typeof createInput>, authority?: Authority | null): Promise<ExamResult> {
@@ -82,7 +82,7 @@ export async function createExam(input: z.input<typeof createInput>, authority?:
   }));
 }
 
-const updateInput = z.object({ academyId: z.uuid(), examId: z.uuid(), expectedVersion: z.number().int().min(1), draft: examDraftSchema });
+const updateInput = z.object({ academyId: z.guid(), examId: z.guid(), expectedVersion: z.number().int().min(1), draft: examDraftSchema });
 
 /**
  * Saves preparation against `expectedVersion` (exam_conflict when stale). The target and timer lock
@@ -100,7 +100,7 @@ export async function updateExam(input: z.input<typeof updateInput>, authority?:
 }
 
 const availabilityInput = z.object({
-  academyId: z.uuid(), examId: z.uuid(), expectedVersion: z.number().int().min(1),
+  academyId: z.guid(), examId: z.guid(), expectedVersion: z.number().int().min(1),
   opensAt: z.iso.datetime({ offset: true }).nullable(), closesAt: z.iso.datetime({ offset: true }).nullable(),
 }).refine((value) => (value.opensAt === null) === (value.closesAt === null)
   && (value.opensAt === null || Date.parse(value.opensAt) < Date.parse(value.closesAt as string)));
@@ -118,7 +118,7 @@ export async function configureAvailability(input: z.input<typeof availabilityIn
   }));
 }
 
-const archiveInput = z.object({ academyId: z.uuid(), examId: z.uuid(), expectedVersion: z.number().int().min(1) });
+const archiveInput = z.object({ academyId: z.guid(), examId: z.guid(), expectedVersion: z.number().int().min(1) });
 
 /** Owner/Head Admin/Admin: archives once no attempt is still running. Work and history stay. */
 export async function archiveExam(input: z.input<typeof archiveInput>, authority?: Authority | null): Promise<ExamResult> {
@@ -134,12 +134,12 @@ export async function archiveExam(input: z.input<typeof archiveInput>, authority
 // Corrections (Owner/Head Admin/Admin, after the structure locks).
 
 const correctionInput = z.object({
-  academyId: z.uuid(), examId: z.uuid(), questionId: z.uuid(), expectedScoringRevision: z.number().int().min(1), key: z.uuid(),
+  academyId: z.guid(), examId: z.guid(), questionId: z.guid(), expectedScoringRevision: z.number().int().min(1), key: z.guid(),
 });
 
 /** Changes a Question Sheet question's correct choice. Results recalculate privately. */
 export async function correctKey(input: z.input<typeof correctionInput> & { choiceId: string }, authority?: Authority | null): Promise<ExamResult> {
-  const parsed = correctionInput.extend({ choiceId: z.uuid() }).safeParse(input);
+  const parsed = correctionInput.extend({ choiceId: z.guid() }).safeParse(input);
   if (!parsed.success) return failure("validation");
   const { academyId, examId, questionId, choiceId, expectedScoringRevision, key } = parsed.data;
   const caller = await academyMember(academyId, authority);
@@ -165,11 +165,11 @@ export async function excludeQuestion(input: z.input<typeof correctionInput>, au
 // ---------------------------------------------------------------------------------------------
 // Physical work, marks and announcement (every staff role).
 
-const draftAnswer = z.object({ questionId: z.uuid(), choiceId: z.uuid().nullable() }).strict();
+const draftAnswer = z.object({ questionId: z.guid(), choiceId: z.guid().nullable() }).strict();
 const physicalInput = z.object({
-  academyId: z.uuid(), examId: z.uuid(), recordId: z.uuid(), expectedVersion: z.number().int().min(0),
+  academyId: z.guid(), examId: z.guid(), recordId: z.guid(), expectedVersion: z.number().int().min(0),
   answers: z.array(draftAnswer).max(300).refine((answers) => new Set(answers.map((answer) => answer.questionId)).size === answers.length),
-  key: z.uuid(),
+  key: z.guid(),
 });
 
 /** Saves the whole physical draft (transcribed choices) against its version. Never chooses a source or announces. */
@@ -185,7 +185,7 @@ export async function savePhysicalDraft(input: z.input<typeof physicalInput>, au
   }));
 }
 
-const confirmInput = z.object({ academyId: z.uuid(), examId: z.uuid(), recordId: z.uuid(), expectedVersion: z.number().int().min(0), key: z.uuid() });
+const confirmInput = z.object({ academyId: z.guid(), examId: z.guid(), recordId: z.guid(), expectedVersion: z.number().int().min(0), key: z.guid() });
 
 /** Confirms received physical work as the student's accepted submission unless online work was accepted first. */
 export async function confirmPhysical(input: z.input<typeof confirmInput>, authority?: Authority | null): Promise<StudentWorkResult> {
@@ -200,11 +200,11 @@ export async function confirmPhysical(input: z.input<typeof confirmInput>, autho
 }
 
 const marksInput = z.object({
-  academyId: z.uuid(), examId: z.uuid(), recordId: z.uuid(), expectedVersion: z.number().int().min(1),
-  marks: z.array(z.object({ questionId: z.uuid(), score: z.string().max(10).nullable() }).strict()).max(300)
+  academyId: z.guid(), examId: z.guid(), recordId: z.guid(), expectedVersion: z.number().int().min(1),
+  marks: z.array(z.object({ questionId: z.guid(), score: z.string().max(10).nullable() }).strict()).max(300)
     .refine((marks) => new Set(marks.map((mark) => mark.questionId)).size === marks.length),
   feedback: z.string().max(5000).optional(),
-  key: z.uuid(),
+  key: z.guid(),
 }).refine((value) => value.marks.length > 0 || value.feedback !== undefined);
 
 /** Saves private Written Work marks and/or feedback on the accepted submission. Blank clears; zero is a mark. */
@@ -224,8 +224,8 @@ export async function saveMarks(input: z.input<typeof marksInput>, authority?: A
 }
 
 const announceInput = z.object({
-  academyId: z.uuid(), examId: z.uuid(), expectedScoringRevision: z.number().int().min(1), key: z.uuid(),
-  items: z.array(z.object({ recordId: z.uuid(), expectedVersion: z.number().int().min(1) }).strict()).min(1).max(500)
+  academyId: z.guid(), examId: z.guid(), expectedScoringRevision: z.number().int().min(1), key: z.guid(),
+  items: z.array(z.object({ recordId: z.guid(), expectedVersion: z.number().int().min(1) }).strict()).min(1).max(500)
     .refine((items) => new Set(items.map((item) => item.recordId)).size === items.length),
 });
 
@@ -253,7 +253,7 @@ export async function announceResults(input: z.input<typeof announceInput>, auth
 
 /** One exam's staff document, or 404 for unknown and foreign exams. */
 export async function getExam(academyId: string, examId: string, authority?: Authority | null): Promise<ReadResult<Exam>> {
-  if (!z.uuid().safeParse(examId).success) return { ok: false, status: 400 };
+  if (!z.guid().safeParse(examId).success) return { ok: false, status: 400 };
   const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
@@ -267,7 +267,7 @@ export async function getExam(academyId: string, examId: string, authority?: Aut
 }
 
 const listInput = z.object({
-  academyId: z.uuid(), academicYearId: z.uuid().nullable(), search: z.string().max(200), phase: z.enum(EXAM_PHASES).nullable(),
+  academyId: z.guid(), academicYearId: z.guid().nullable(), search: z.string().max(200), phase: z.enum(EXAM_PHASES).nullable(),
   audience: z.enum(EXAM_AUDIENCES).nullable(), includeArchived: z.boolean(), limit: z.number().int().min(1).max(100), offset: z.number().int().min(0).max(100000),
 });
 export type ExamListInput = z.input<typeof listInput>;
@@ -294,7 +294,7 @@ export async function listExams(input: Partial<ExamListInput> & { academyId: str
 
 /** The current eligible roster plus every historical participant, with work and result state. */
 export async function listStudents(academyId: string, examId: string, authority?: Authority | null): Promise<ReadResult<{ total: number; students: ExamStudent[] }>> {
-  if (!z.uuid().safeParse(examId).success) return { ok: false, status: 400 };
+  if (!z.guid().safeParse(examId).success) return { ok: false, status: 400 };
   const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
@@ -309,7 +309,7 @@ export async function listStudents(academyId: string, examId: string, authority?
 
 /** One student's row and per-question detail (answers by source, marks, history). */
 export async function getStudent(academyId: string, examId: string, recordId: string, authority?: Authority | null): Promise<ReadResult<{ student: ExamStudent; detail: StudentDetail }>> {
-  if (!z.uuid().safeParse(examId).success || !z.uuid().safeParse(recordId).success) return { ok: false, status: 400 };
+  if (!z.guid().safeParse(examId).success || !z.guid().safeParse(recordId).success) return { ok: false, status: 400 };
   const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
@@ -323,8 +323,8 @@ export async function getStudent(academyId: string, examId: string, recordId: st
 }
 
 const previewInput = z.object({
-  academyId: z.uuid(), academicYearId: z.uuid(), audience: z.enum(EXAM_AUDIENCES),
-  levelId: z.string().min(1).max(40).nullable(), trackId: z.uuid().nullable(), groupIds: z.array(z.uuid()).max(MAX_AUDIENCE_GROUPS),
+  academyId: z.guid(), academicYearId: z.guid(), audience: z.enum(EXAM_AUDIENCES),
+  levelId: z.string().min(1).max(40).nullable(), trackId: z.guid().nullable(), groupIds: z.array(z.guid()).max(MAX_AUDIENCE_GROUPS),
 });
 
 /** Advisory count of the active students the audience matches now. Eligibility stays live. */
@@ -348,7 +348,7 @@ export async function previewAudience(input: z.input<typeof previewInput>, autho
 
 /** The academy of an exam the caller can see (RLS), or null for unknown and foreign exams. */
 export async function examAcademy(examId: string, authority?: Authority | null): Promise<string | null> {
-  if (!z.uuid().safeParse(examId).success) return null;
+  if (!z.guid().safeParse(examId).success) return null;
   const caller = authority ?? await cookieAuthority();
   if (!caller) return null;
   const { data, error } = await caller.db.from("exams").select("academy_id").eq("id", examId).maybeSingle();

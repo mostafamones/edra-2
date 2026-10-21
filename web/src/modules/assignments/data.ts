@@ -52,7 +52,7 @@ async function command(run: () => PromiseLike<{ data: unknown; error: { code?: s
   }
 }
 
-const createInput = z.object({ academyId: z.uuid(), academicYearId: z.uuid(), assignmentId: z.uuid(), draft: assignmentDraftSchema });
+const createInput = z.object({ academyId: z.guid(), academicYearId: z.guid(), assignmentId: z.guid(), draft: assignmentDraftSchema });
 
 /**
  * Creates an active assignment (no content or due date needed) and snapshots its recipients.
@@ -70,7 +70,7 @@ export async function createAssignment(input: z.input<typeof createInput>, autho
   }));
 }
 
-const updateInput = z.object({ academyId: z.uuid(), assignmentId: z.uuid(), expectedVersion: z.number().int().min(1), draft: assignmentDraftSchema });
+const updateInput = z.object({ academyId: z.guid(), assignmentId: z.guid(), expectedVersion: z.number().int().min(1), draft: assignmentDraftSchema });
 
 /**
  * Saves an edit made against `expectedVersion`; a stale version writes nothing (assignment_conflict).
@@ -88,7 +88,7 @@ export async function updateAssignment(input: z.input<typeof updateInput>, autho
   }));
 }
 
-const stateInput = z.object({ academyId: z.uuid(), assignmentId: z.uuid(), expectedVersion: z.number().int().min(1), action: z.enum(ASSIGNMENT_ACTIONS) });
+const stateInput = z.object({ academyId: z.guid(), assignmentId: z.guid(), expectedVersion: z.number().int().min(1), action: z.enum(ASSIGNMENT_ACTIONS) });
 
 /** Owner/Head Admin/Admin lifecycle actions: close, reopen, archive. */
 export async function changeAssignmentState(
@@ -106,7 +106,7 @@ export async function changeAssignmentState(
 
 /** One assignment's staff view: structure, maxima, audience, state, and version. */
 export async function getAssignment(academyId: string, assignmentId: string, authority?: Authority | null): Promise<ReadResult<Assignment>> {
-  if (!z.uuid().safeParse(assignmentId).success) return { ok: false, status: 400 };
+  if (!z.guid().safeParse(assignmentId).success) return { ok: false, status: 400 };
   const caller = await academyMember(academyId, authority);
   if (!caller) return { ok: false, status: 403 };
   try {
@@ -120,8 +120,8 @@ export async function getAssignment(academyId: string, assignmentId: string, aut
 }
 
 const previewInput = z.object({
-  academyId: z.uuid(), academicYearId: z.uuid(), audience: z.enum(ASSIGNMENT_AUDIENCES),
-  levelId: z.string().min(1).max(40).nullable(), trackId: z.uuid().nullable(), groupIds: z.array(z.uuid()).max(MAX_AUDIENCE_GROUPS),
+  academyId: z.guid(), academicYearId: z.guid(), audience: z.enum(ASSIGNMENT_AUDIENCES),
+  levelId: z.string().min(1).max(40).nullable(), trackId: z.guid().nullable(), groupIds: z.array(z.guid()).max(MAX_AUDIENCE_GROUPS),
 });
 
 /** Advisory count of the active students an audience matches now. Saving recomputes it. */
@@ -149,31 +149,31 @@ export async function previewAudience(input: z.input<typeof previewInput>, autho
 type DatabaseError = { code?: string; message?: string; details?: string };
 
 const markChange = z.object({
-  partId: z.uuid(),
+  partId: z.guid(),
   score: z.string().max(10).nullable(),
   excusedReason: z.string().trim().min(1).max(500).optional(),
 }).strict();
 
 const answerChange = z.union([
-  z.object({ questionId: z.uuid(), choiceId: z.uuid().nullable() }).strict(),
-  z.object({ questionId: z.uuid(), score: z.string().max(10) }).strict(),
-  z.object({ questionId: z.uuid(), clear: z.literal(true) }).strict(),
+  z.object({ questionId: z.guid(), choiceId: z.guid().nullable() }).strict(),
+  z.object({ questionId: z.guid(), score: z.string().max(10) }).strict(),
+  z.object({ questionId: z.guid(), clear: z.literal(true) }).strict(),
 ]);
 
 const saveInput = z.object({
-  academyId: z.uuid(),
-  assignmentId: z.uuid(),
+  academyId: z.guid(),
+  assignmentId: z.guid(),
   /** Exactly one of recordId (permanent) or code (typed or scanned, resolved inside the transaction). */
-  recordId: z.uuid().nullable(),
+  recordId: z.guid().nullable(),
   code: z.string().trim().min(1).max(40).nullable(),
   /** Code saves only: the recipient the code was resolved to (previewed); the save fails if it now names someone else. */
-  expectedRecordId: z.uuid().nullable().optional(),
+  expectedRecordId: z.guid().nullable().optional(),
   expectedVersion: z.number().int().min(1),
   marks: z.array(markChange).max(50),
   answers: z.array(answerChange).max(5000).default([]),
   feedback: z.string().max(5000).optional(),
   /** One key per save action; a retry of the same action reuses it. */
-  key: z.uuid(),
+  key: z.guid(),
 }).refine((value) => (value.recordId === null) !== (value.code === null) && (value.marks.length > 0 || value.answers.length > 0 || value.feedback !== undefined)
   && (value.expectedRecordId == null || value.code !== null)
   && new Set(value.marks.map((mark) => mark.partId)).size === value.marks.length
@@ -217,7 +217,7 @@ export async function saveMarks(input: { academyId: string; assignmentId: string
 }
 
 const workInput = z.object({
-  academyId: z.uuid(), assignmentId: z.uuid(), recordId: z.uuid(), expectedVersion: z.number().int().min(1),
+  academyId: z.guid(), assignmentId: z.guid(), recordId: z.guid(), expectedVersion: z.number().int().min(1),
   status: z.enum(WORK_STATUSES), receivedAt: z.iso.datetime({ offset: true }).nullable(), note: z.string().max(500),
 });
 
@@ -245,8 +245,8 @@ export async function recordWork(
 }
 
 const publishInput = z.object({
-  academyId: z.uuid(), assignmentId: z.uuid(), key: z.uuid(),
-  items: z.array(z.object({ recordId: z.uuid(), expectedVersion: z.number().int().min(1) }).strict()).min(1).max(500)
+  academyId: z.guid(), assignmentId: z.guid(), key: z.guid(),
+  items: z.array(z.object({ recordId: z.guid(), expectedVersion: z.number().int().min(1) }).strict()).min(1).max(500)
     .refine((items) => new Set(items.map((item) => item.recordId)).size === items.length),
 });
 
@@ -276,7 +276,7 @@ export async function publishResults(
 }
 
 const listInput = z.object({
-  academyId: z.uuid(), assignmentId: z.uuid(),
+  academyId: z.guid(), assignmentId: z.guid(),
   filter: z.enum(["all", "not_received", "needs_marking", "marked", "unpublished"]),
   limit: z.number().int().min(1).max(1000), offset: z.number().int().min(0),
   search: z.string().trim().max(100).nullable(),
@@ -307,7 +307,7 @@ export async function listMarks(
   }
 }
 
-const resolveInput = z.object({ academyId: z.uuid(), assignmentId: z.uuid(), code: z.string().trim().min(1).max(40) });
+const resolveInput = z.object({ academyId: z.guid(), assignmentId: z.guid(), code: z.string().trim().min(1).max(40) });
 
 /** Looks up the recipient a typed or scanned code identifies, without changing anything. */
 export async function resolveStudent(input: { academyId: string; assignmentId: string; code: string }, authority?: Authority | null): Promise<StudentLookup> {
@@ -338,7 +338,7 @@ export async function studentCodesEnabled(academyId: string, authority?: Authori
 
 /** The academy of an assignment the caller can see (RLS), or null for unknown and foreign assignments. */
 export async function assignmentAcademy(assignmentId: string, authority?: Authority | null): Promise<string | null> {
-  if (!z.uuid().safeParse(assignmentId).success) return null;
+  if (!z.guid().safeParse(assignmentId).success) return null;
   const caller = authority ?? await cookieAuthority();
   if (!caller) return null;
   const { data, error } = await caller.db.from("assignments").select("academy_id").eq("id", assignmentId).maybeSingle();
@@ -352,7 +352,7 @@ export type AssignmentSummary = {
 };
 
 const listAssignmentsInput = z.object({
-  academyId: z.uuid(),
+  academyId: z.guid(),
   state: z.enum(ASSIGNMENT_STATES).nullable(),
   limit: z.number().int().min(1).max(100),
   offset: z.number().int().min(0).max(100000),
@@ -390,7 +390,7 @@ export async function listAssignments(
   }
 }
 
-const correctionInput = z.object({ academyId: z.uuid(), assignmentId: z.uuid(), questionId: z.uuid(), expectedScoringRevision: z.number().int().min(1), key: z.uuid(), choiceId: z.uuid().optional() });
+const correctionInput = z.object({ academyId: z.guid(), assignmentId: z.guid(), questionId: z.guid(), expectedScoringRevision: z.number().int().min(1), key: z.guid(), choiceId: z.guid().optional() });
 
 /** Manager-only scoring commands. The database binds reviewed revision, question and operation to the receipt. */
 export async function correctScoring(input: z.input<typeof correctionInput>, authority?: Authority | null): Promise<AssignmentResult> {

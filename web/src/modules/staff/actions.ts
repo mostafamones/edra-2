@@ -17,7 +17,7 @@ type Failure = { ok: false; message: string };
 /** `unchanged` reports a retry or concurrent change that left the member as requested. */
 type MemberResult = { ok: true; unchanged: boolean } | Failure;
 
-const uuid = z.uuid();
+const uuid = z.guid();
 
 const MEMBER_MESSAGES: Record<string, string> = {
   forbidden: "You don’t have permission to manage this member.",
@@ -85,7 +85,7 @@ const REVOKE_MESSAGES: Record<string, string> = {
 
 const createdSchema = z.object({
   result: z.literal("created"),
-  invitation: z.object({ id: z.uuid(), phone: z.string(), role: invitationRoleSchema, expiresAt: z.string() }),
+  invitation: z.object({ id: z.guid(), phone: z.string(), role: invitationRoleSchema, expiresAt: z.string() }),
 });
 
 function encryptOrNull(token: string, academyId: string) {
@@ -134,7 +134,7 @@ export async function revokeStaffInvitation(academyId: string, invitationId: str
 
 /** Loads copy links with the invitations list for managers who can manage each invitation. */
 export async function getStaffInvitationLinks(academyId: string, invitationIds: string[]): Promise<{ ok: true; links: Record<string, string | null> } | Failure> {
-  if (!uuid.safeParse(academyId).success || !z.array(z.uuid()).max(1000).safeParse(invitationIds).success) {
+  if (!uuid.safeParse(academyId).success || !z.array(z.guid()).max(1000).safeParse(invitationIds).success) {
     return { ok: false, message: "Invalid invitation." };
   }
   const db = await createClient();

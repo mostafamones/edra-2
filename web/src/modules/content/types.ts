@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 export const itemSchema = z.object({
-  id: z.uuid(), kind: z.enum(["explanation", "document", "assessment", "answer"]),
-  title: z.string().trim().min(1).max(250), assetId: z.uuid().optional(),
-  assessmentKind: z.enum(["assignment", "quiz", "exam"]).optional(), assessmentId: z.uuid().optional(),
+  id: z.guid(), kind: z.enum(["explanation", "document", "assessment", "answer"]),
+  title: z.string().trim().min(1).max(250), assetId: z.guid().optional(),
+  assessmentKind: z.enum(["assignment", "quiz", "exam"]).optional(), assessmentId: z.guid().optional(),
 }).strict().superRefine((item, ctx) => {
   if (item.kind !== "assessment" && !item.assetId) ctx.addIssue({ code: "custom", message: "Choose a file.", path: ["assetId"] });
   if ((item.kind === "assessment" || item.kind === "answer") && (!item.assessmentId || !item.assessmentKind))
