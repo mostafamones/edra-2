@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
+import { deliveryBlocked } from "../_shared/synthetic-recipient.ts";
 import {
   buildWhatsAppDevelopmentMessage,
   buildWhatsAppTemplateMessage,
@@ -189,6 +190,21 @@ Deno.serve(async (request) => {
     if (status !== "sent") {
       const httpStatus = status === "cooldown" || status === "rate_limited" ? 429 : 400;
       return respond({ error: status }, httpStatus);
+    }
+
+    const undoChallenge = () => admin.from("student_phone_challenges")
+      .update({ consumed_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("challenge_id", challengeId);
+    try {
+      if (await deliveryBlocked(settings.url, settings.serviceKey, { phone })) {
+        await undoChallenge();
+        return respond({ error: "unsupported_recipient" }, 403);
+      }
+    } catch {
+      console.error("Parent verification registry check failed");
+      await undoChallenge();
+      return respond({ error: "delivery_unavailable" }, 503);
     }
 
     if (settings.developmentMode) {

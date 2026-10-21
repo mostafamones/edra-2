@@ -11,10 +11,11 @@ const config = {
   phoneNumberId: "123456789",
   templateLanguage: "en_US",
   graphApiVersion: "v23.0",
+  deliveryBlocked: async () => false,
 };
 
 function signedRequest(payload: {
-  user: { phone?: string };
+  user: { id?: string; phone?: string };
   sms: { otp: string; phone?: string };
 } = { user: { phone: "+201001234567" }, sms: { otp: "123456" } }) {
   const body = JSON.stringify(payload);
@@ -70,6 +71,7 @@ describe("WhatsApp authentication hook", () => {
           hookSecret,
           devLogPhone: "+201025126690",
           devLogUntil: new Date(Date.now() + 60_000).toISOString(),
+          deliveryBlocked: async () => false,
         },
         fetcher,
       );
@@ -208,5 +210,90 @@ describe("WhatsApp authentication hook", () => {
       error: { http_code: 504, message: "WhatsApp delivery timed out." },
     });
     expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses a registry-blocked recipient before any development code is logged or sent", async () => {
+    const logger = vi.spyOn(console, "log").mockImplementation(() => {});
+    const fetcher = vi.fn();
+    try {
+      const response = await handleWhatsAppAuthHook(
+        signedRequest({ user: {}, sms: { otp: "123456", phone: "201025126690" } }),
+        {
+          ...config,
+          whatsappDevelopmentMode: true,
+          whatsappDevelopmentRecipientPhone: "+201001234567",
+          devLogPhone: "+201025126690",
+          devLogUntil: new Date(Date.now() + 60_000).toISOString(),
+          deliveryBlocked: async () => true,
+        },
+        fetcher,
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        error: { http_code: 403, message: "This test account cannot receive authentication codes." },
+      });
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(logger).not.toHaveBeenCalled();
+    } finally {
+      logger.mockRestore();
+    }
+  });
+
+  it("fails closed with 503 when the registry lookup throws", async () => {
+    const logger = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errorLogger = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetcher = vi.fn();
+    try {
+      const response = await handleWhatsAppAuthHook(
+        signedRequest({ user: {}, sms: { otp: "123456", phone: "201025126690" } }),
+        {
+          ...config,
+          whatsappDevelopmentMode: true,
+          whatsappDevelopmentRecipientPhone: "+201001234567",
+          deliveryBlocked: async () => {
+            throw new Error("registry unavailable");
+          },
+        },
+        fetcher,
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        error: { http_code: 503, message: "Authentication codes are temporarily unavailable." },
+      });
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(logger).not.toHaveBeenCalled();
+    } finally {
+      logger.mockRestore();
+      errorLogger.mockRestore();
+    }
+  });
+
+  it("fails closed with 500 when no registry guard is configured", async () => {
+    const fetcher = vi.fn();
+    const response = await handleWhatsAppAuthHook(signedRequest(), { ...config, deliveryBlocked: undefined }, fetcher);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      error: { http_code: 500, message: "WhatsApp authentication delivery is not configured." },
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("passes the signed user id and SMS delivery phone to the registry guard", async () => {
+    const deliveryBlocked = vi.fn().mockResolvedValue(false);
+    const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    await handleWhatsAppAuthHook(signedRequest({
+      user: { id: "user-123", phone: "+201001234567" },
+      sms: { otp: "123456", phone: "201025126690" },
+    }), { ...config, deliveryBlocked }, fetcher);
+    expect(deliveryBlocked).toHaveBeenCalledWith({ userId: "user-123", phone: "201025126690" });
+  });
+
+  it("rejects an invalid signature before the registry guard runs", async () => {
+    const deliveryBlocked = vi.fn();
+    const request = signedRequest();
+    request.headers.set("webhook-signature", "v1,invalid");
+    const response = await handleWhatsAppAuthHook(request, { ...config, deliveryBlocked }, vi.fn());
+    expect(response.status).toBe(401);
+    expect(deliveryBlocked).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
+import { deliveryBlocked } from "../_shared/synthetic-recipient.ts";
 import {
   buildWhatsAppDevelopmentMessage,
   buildWhatsAppTemplateMessage,
@@ -129,6 +130,12 @@ Deno.serve(async (request) => {
     if (!settings.developmentMode && (!settings.accessToken || !settings.phoneNumberId || !settings.templateLanguage)) {
       return respond({ error: "delivery_unavailable" }, 503);
     }
+    try {
+      if (await deliveryBlocked(settings.url, settings.serviceKey, { userId })) return respond({ error: "unsupported_account" }, 403);
+    } catch {
+      console.error("Account password registry check failed");
+      return respond({ error: "unavailable" }, 503);
+    }
     const id = crypto.randomUUID();
     const code = randomCode();
     const { data, error } = await admin.rpc("start_account_password_challenge", {
@@ -147,12 +154,22 @@ Deno.serve(async (request) => {
     }
 
     const phone = e164(started.phone);
+    const cancel = () => admin.rpc("cancel_account_password_challenge", { p_user_id: userId, p_challenge_id: id });
+    try {
+      if (await deliveryBlocked(settings.url, settings.serviceKey, { phone })) {
+        await cancel();
+        return respond({ error: "unsupported_recipient" }, 403);
+      }
+    } catch {
+      console.error("Password code registry check failed");
+      await cancel();
+      return respond({ error: "delivery_unavailable" }, 503);
+    }
     if (settings.developmentMode) {
       // Development projects use fake numbers; the code is logged for manual verification.
       console.log("EDRA_DEV_PASSWORD_CODE", { phoneLast4: phone.slice(-4), code });
     }
     const deliveryPhone = settings.developmentMode ? settings.developmentRecipient : phone;
-    const cancel = () => admin.rpc("cancel_account_password_challenge", { p_user_id: userId, p_challenge_id: id });
     if (deliveryPhone && settings.accessToken && settings.phoneNumberId) {
       const name = typeof auth.user.user_metadata?.full_name === "string"
         ? auth.user.user_metadata.full_name.trim().replace(/\s+/g, " ").slice(0, 60) || "there"

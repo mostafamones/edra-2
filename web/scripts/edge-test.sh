@@ -22,7 +22,7 @@ done
 deno --version
 for suite in "${suites[@]}"; do
   case "$suite" in
-    send-whatsapp-auth) config_env="SEND_SMS_HOOK_SECRET,EDRA_AUTH_DEV_LOG_PHONE,EDRA_AUTH_DEV_LOG_UNTIL" ;;
+    send-whatsapp-auth) config_env="SEND_SMS_HOOK_SECRET,EDRA_AUTH_DEV_LOG_PHONE,EDRA_AUTH_DEV_LOG_UNTIL,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY" ;;
     account-password) config_env="SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,SUPABASE_ANON_KEY" ;;
     account-contact|student-onboarding) config_env="SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY" ;;
   esac
