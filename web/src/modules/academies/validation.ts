@@ -21,10 +21,12 @@ export const ACADEMY_ICON_IDS = [
   "world",
 ] as const;
 
+export const academyTrackNameSchema = z.string().trim().min(1).max(60);
+
 const academyTrackSchema = z.object({
   id: z.string().min(1).max(80),
   levelId: globalLevelIdSchema,
-  name: z.string().trim().min(1).max(60),
+  name: academyTrackNameSchema,
 });
 
 export const createAcademySetupSchema = z.object({
