@@ -149,9 +149,9 @@ select set_config('test.structure_quiz',public.create_content_assessment(pg_temp
 select set_config('test.structure_programs',(select jsonb_agg(program_id order by id)::text from public.content_units where id in(pg_temp.id('u1'),pg_temp.id('u2'))),true);
 
 -- A completed teaching snapshot must be byte-for-byte unchanged by retirement.
-select set_config('test.structure_schedule',gen_random_uuid()::text,true);
-insert into public.schedules(id,academy_id,academic_year_id,title,kind,audience,group_id,mandatory,starts_on,ends_on)
-select pg_temp.id('schedule'),pg_temp.academy(),pg_temp.year(),'Science teaching','recurring','group',pg_temp.id('g1'),true,starts_on,ends_on from public.academic_years where id=pg_temp.year();
+select set_config('test.structure_schedule',public.create_schedule(
+  pg_temp.academy(),pg_temp.year(),'Science teaching','recurring','group',pg_temp.id('g1'),null,null,true,null,
+  '[{"weekday":1,"startsAt":"16:00","endsAt":"17:00"}]'::jsonb,'[]'::jsonb)::text,true);
 select set_config('test.structure_session',session_id::text,true) from public.start_session(pg_temp.academy(),pg_temp.id('schedule'),gen_random_uuid());
 select public.end_session(pg_temp.academy(),pg_temp.id('session'));
 select set_config('test.structure_history',jsonb_build_object('session',(select to_jsonb(s) from public.sessions s where id=pg_temp.id('session')),
@@ -186,9 +186,9 @@ select set_config('test.structure_stopgroup',gen_random_uuid()::text,true);
 insert into public.groups(id,academy_id,academic_year_id,level_id,name) values(pg_temp.id('stopgroup'),pg_temp.academy(),pg_temp.year(),'secondary-3','Stop group');
 select set_config('test.structure_stop'||n,id::text,true) from generate_series(1,10) n cross join lateral public.create_student_record(
   pg_temp.academy(),pg_temp.year(),'Stop pupil '||n,'010691291'||lpad(n::text,2,'0'),'01269129001','secondary-3',null,pg_temp.id('stopgroup'),'in_person');
-select set_config('test.structure_stopschedule',gen_random_uuid()::text,true);
-insert into public.schedules(id,academy_id,academic_year_id,title,kind,audience,group_id,mandatory,starts_on,ends_on)
-select pg_temp.id('stopschedule'),pg_temp.academy(),pg_temp.year(),'Stop teaching','recurring','group',pg_temp.id('stopgroup'),true,starts_on,ends_on from public.academic_years where id=pg_temp.year();
+select set_config('test.structure_stopschedule',public.create_schedule(
+  pg_temp.academy(),pg_temp.year(),'Stop teaching','recurring','group',pg_temp.id('stopgroup'),null,null,true,null,
+  '[{"weekday":1,"startsAt":"16:00","endsAt":"17:00"}]'::jsonb,'[]'::jsonb)::text,true);
 select set_config('test.structure_live',session_id::text,true) from public.start_session(pg_temp.academy(),pg_temp.id('stopschedule'),gen_random_uuid());
 select pg_temp.check(pg_temp.apply('{"operation":"stop_level","levelId":"secondary-3"}')->>'outcome'='blocked','live session blocks shutdown');
 select pg_temp.check((select count(*)=10 from public.annual_student_records where academy_id=pg_temp.academy() and level_id='secondary-3' and archived_at is null),'blocked shutdown has no partial archive');
