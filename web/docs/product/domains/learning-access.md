@@ -1,6 +1,6 @@
 # Edra — learning access, coupons and playback
 
-Approved by the owner, 2026-10-11. Unresolved policies and implementation follow-ups are in the separate planning review notes.
+Approved by the owner, 2026-10-11; unit durations, instructor grants, extensions, code redemption and document access updated 2026-10-21.
 
 ## Learning access
 
@@ -12,19 +12,27 @@ Explanation access belongs to the student's annual record and the annual content
 
 Qualifying finalized attendance, finalized replacement attendance, coupon redemption and manual grants can provide explanation access.
 
-Standard access lasts seven days. Attendance access starts when the qualifying attendance is finalized; coupon access starts at redemption; manual access starts when issued. Saving draft attendance does not start access.
+Each unit has a configurable default explanation-access duration, initially seven days. Instructors may configure their own units under the unit-editing rules; managers may configure academy units. Longer durations, such as a month for revision material, are supported product requirements rather than a fixed seven-day limit. Direct staff grants and generated unit codes use the unit's default duration; staff do not choose a different duration when issuing a direct grant or generating codes. Individual additional time is provided through the separate extension action.
+
+Direct access starts when issued; code-based access starts at redemption. Each issued grant records its duration and expiry so later default-duration edits do not silently rewrite existing access. Confirmed 2026-10-21: unused codes use the current published unit default at redemption, including when it has changed since generation. A later default edit never changes an already redeemed grant's expiry.
+
+Supporting documents require the same active explanation access as the unit's explanation videos, confirmed 2026-10-21. Eligible browsing alone does not authorize document retrieval. Private document links must be issued after current student, publication and effective-access checks; answer material retains its distinct rules.
+
+The existing attendance-access policy remains seven days from qualifying attendance finalization. Saving draft attendance does not start access. Applying configurable unit durations to attendance-generated grants has not been agreed and is outside the current direct-grant/code delivery slice.
 
 Each grant retains its source, issue time, duration and revocation history. The latest issued grant controls access. Durations are not added together. When that grant expires or is revoked, an older grant does not become active again, even if its original expiry was later.
 
-Issuing a new grant starts its own period rather than adding time to the existing period. A shorter new grant can therefore replace a longer remaining period; staff must be able to see that effect before issuing it.
+Issuing a new full-access grant starts its own period rather than adding time to the existing period. A shorter new grant can therefore replace a longer remaining period; staff must be able to see that effect before issuing it. An explicit instructor/manager extension follows the additive rule below instead of resetting the period.
 
 ## Extensions and manual grants
 
-A student may activate one self-service 48-hour extension per content release after standard explanation access expires. The period starts when activated. Expiry qualifies for this extension; revocation does not. The extension does not reopen assessments or extend their submission and attempt windows.
+A student may activate one self-service 48-hour extension per academy per academic year, applied to one unit they choose. This replaces the earlier allowance of one extension per content release. The selected unit must have previously granted explanation access that has expired; this action cannot unlock a never-accessed unit, extend still-active access or bypass revocation or suspension. The period starts at activation. The annual allowance is shared across that academy's units, not across different academies. Concurrent requests and retries must not consume or issue the allowance more than once.
 
-Owners, Head Admins and Admins may issue either 48-hour Extension or seven-day Full access. They may issue further grants when needed; arbitrary dates and durations are outside this MVP flow.
+Owners, Head Admins, Admins and active Instructors may issue direct explanation access and instructor/manager extensions. Full access uses the unit's configured default duration. For an extension, staff choose the additional period: add it to the current expiry when access is active, or start the period at issuance when prior access has expired. Retain the actor, additional duration, original expiry and resulting expiry. An extension is not a new first-access route for a never-accessed unit and does not restore revoked access implicitly.
 
-Instructors can inspect a student's effective access and its source but cannot issue or revoke manual grants.
+Instructors may inspect access and issue grants, extensions and unit codes. General access revocation and academy-wide online suspension remain manager permissions; granting these new instructor actions does not grant those administrative powers.
+
+Neither staff nor student extensions reopen assessments or extend their submission and attempt windows. Explanation grants and extensions do not unlock assessment answer material.
 
 ## Answer materials
 
@@ -40,13 +48,13 @@ For quiz and exam solutions, availability closure means actual closure after the
 
 ## Coupons
 
-A coupon grants one eligible student seven days of explanation access to one content release. Coupons are generated in batches for a release and its eligible level or track audience, and can be exported for printing or distribution.
+A unit-access code (also called a coupon in existing delivery issues) grants one eligible student explanation access to one content release, using its default-duration policy above. Codes may be generated together for a release and its eligible level or track audience, and exported for printing or distribution. Code generation has no per-code or per-batch custom-duration override.
 
-Redemption requires the student's academy access, current-year participation and audience eligibility. Suspended online access prevents redemption. A coupon does not enroll the student or replace an academy invite.
+Redemption requires the student's academy access, current-year participation and audience eligibility. Suspended online access prevents redemption. Academy joining invites/codes and unit-access codes are separate workflows: a unit code neither joins an academy nor creates annual participation. The current academy invite flow remains the existing integration; an additional short joining-code interface is not claimed implemented by this requirement.
 
 Each code can be redeemed once and becomes permanently associated with the redeeming annual student record. A student can redeem only one coupon for a release, including after its access has expired. Further access uses extensions or manual grants rather than another coupon.
 
-Owners, Head Admins and Admins manage batches, view redemption state, export codes and revoke unused codes. Instructors can see the student's resulting access but cannot inspect raw codes or manage batches. Students redeem their own codes; staff do not redeem on their behalf or reassign redeemed coupons.
+Owners, Head Admins, Admins and active Instructors may generate and distribute unit-access codes and inspect redemption state. Manager authority to revoke unused codes remains unchanged; this update does not infer instructor code-revocation authority. Students redeem their own codes; staff do not redeem on their behalf or reassign redeemed coupons. Raw codes and exports remain restricted to authorized academy staff and are not exposed through student browsing.
 
 Revoking an unused code prevents redemption. Removing access already granted by redemption is a separate recorded access action. Period coupons, subscriptions and payment-managed access are outside this MVP flow.
 

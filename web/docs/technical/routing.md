@@ -21,6 +21,7 @@ Development defaults are lvh.me:3000, app.lvh.me:3000 and learn.lvh.me:3000. NEX
 | Student global area | / and supported global paths on student host | src/app/learn/ |
 | Student academy area | /<slug>/<path> on student host | src/app/learn/academy/[academySlug]/[[...path]]/ |
 | Student exams | /<slug>/exams, /<slug>/exams/<examId> on student host | src/app/learn/academy/[academySlug]/exams/ (concrete routes; other academy paths still use the catch-all) |
+| Student content | /<slug>, /<slug>/units/<unitId> on student host | Connected academy entry renders published eligible units; concrete unit route under src/app/learn/academy/[academySlug]/units/ |
 | Authentication/setup | /auth/* and /onboarding/* | Existing authentication/onboarding files |
 | HTTP API | /api/* | No page rewrite; existing handlers authorize independently |
 
