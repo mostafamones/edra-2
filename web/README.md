@@ -51,3 +51,7 @@ PR/main CI runs an independent Chromium job and uploads `playwright-failure` (HT
 - [Native app](../mobile/README.md).
 
 Source/API documentation does not establish deployment readiness. Follow AGENTS.md and keep application implementation separate from Master-thread planning.
+
+Authenticated attendance CI uses `bash scripts/attendance-e2e-ci.sh` on a disposable **GitHub-hosted runner only**. It creates its own migrated Supabase Auth/API/PostgREST/Realtime/database instance, synthetic password accounts and three academies, runs `npm run test:e2e:attendance`, and destroys the complete instance. The Playwright command requires private CI-generated manifests; it has no placeholder or cloud fallback. This is separate from secret-free `npm run test:e2e` and the database-only SQL/concurrency job.
+
+Keep 3100 free; the authenticated and smoke suites share `.next-e2e` and must run serially. Test origins remain `lvh.me`, `app.lvh.me`, `learn.lvh.me` on 3100; isolated Supabase API/DB use 54321/54322. No local Supabase/Docker setup is authorized. Failure artifacts include phase logs and scoped Playwright reports/traces for seven days, excluding private manifests/status/env/database dumps. Traces may contain synthetic credentials. See [Verification](docs/engineering.md#authenticated-attendance-integration) for lifecycle, diagnosis, outstanding runner/hosted acceptance evidence and coverage limits. The job verifies persisted draft Present plus signed-out/cross-academy denial; finalization, delivery and production HTTPS/cookies remain separate checks.
