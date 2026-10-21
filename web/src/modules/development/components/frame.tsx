@@ -38,7 +38,7 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
     <>
       {preview && (
         <>
-          <div ref={bar} role="region" aria-label="Developer preview" className="sticky top-1 z-50 mx-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-t-xl border-b bg-background px-3 py-1.5 text-sm sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+          <div ref={bar} role="region" aria-label="Developer preview" className="sticky top-1 z-50 mx-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-t-xl border-b bg-background px-3 h-12 text-sm sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
             <span className="hidden text-muted-foreground sm:block">Viewing academy as</span>
             <div className="flex min-w-0 items-center justify-center gap-2">
               {preview.current.kind !== "student" ? (
@@ -67,7 +67,6 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
             ) : (
               <>
                 <span className="font-medium">{preview.current.displayName}</span>
-                <Badge variant="secondary">Student</Badge>
               </>
             )}
             </div>
@@ -88,7 +87,7 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
               </Button>
             </div>
           </div>
-          <div aria-hidden="true" className="pointer-events-none fixed inset-1 z-50 rounded-xl border-2 border-primary" />
+          <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-50 rounded-md border-2 border-primary" />
           <style>{`[data-slot=sidebar-container]{top:var(--edra-preview-bar,0px);height:calc(100svh - var(--edra-preview-bar,0px))}[data-slot=sidebar-wrapper]{min-height:calc(100svh - var(--edra-preview-bar,0px))}`}</style>
         </>
       )}
