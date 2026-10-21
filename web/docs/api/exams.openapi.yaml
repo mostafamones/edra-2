@@ -17,7 +17,7 @@ info:
     connected academy/year record through the shared ordinary-session resolver. Standalone exams
     need no content release. Before an own online attempt starts or solutions qualify, state returns
     empty question parts; physical drafts/submissions alone do not reveal material. Reads never start
-    or extend an attempt. Student answering uses cookie web actions with EDRA-234 fullscreen/departure integration. A bounded cookie-only teardown POST is described below; hosted readiness remains unverified. A client-supplied
+    or extend an attempt. Student answering uses cookie web actions with EDRA-234 fullscreen/departure integration. A bounded cookie-only teardown POST is described below. Connected browser/cloud verification (EDRA-236) is recorded in `docs/technical/student-exam-release.md`; hosted HTTPS readiness remains unverified. A client-supplied
     annual record id or phone is never ownership. Source behavior is not a deployment assertion.
 
     **Rules.** An exam has ordered Question Sheet (choices, one correct, scored automatically) and

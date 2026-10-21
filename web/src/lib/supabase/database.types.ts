@@ -5936,10 +5936,6 @@ export type Database = {
         Args: { p_fingerprint: string; p_key: string; p_operation: string }
         Returns: Json
       }
-      authorize_my_exam_review_images: {
-        Args: { p_academy_id: string; p_exam_id: string; p_image_ids: string[] }
-        Returns: Json
-      }
       authorize_my_exam_images: {
         Args: {
           p_academy_id: string
@@ -5947,6 +5943,10 @@ export type Database = {
           p_image_ids: string[]
           p_token: string
         }
+        Returns: Json
+      }
+      authorize_my_exam_review_images: {
+        Args: { p_academy_id: string; p_exam_id: string; p_image_ids: string[] }
         Returns: Json
       }
       bump_attendance_revision: {
@@ -6951,11 +6951,11 @@ export type Database = {
       }
       save_my_exam_answers: {
         Args: {
-          p_generation: number
           p_academy_id: string
           p_answers: Json
           p_exam_id: string
           p_expected_version: number
+          p_generation: number
           p_key: string
           p_token: string
         }
@@ -7276,10 +7276,10 @@ export type Database = {
       }
       submit_my_exam: {
         Args: {
-          p_generation: number
           p_academy_id: string
           p_exam_id: string
           p_expected_version: number
+          p_generation: number
           p_key: string
           p_token: string
         }

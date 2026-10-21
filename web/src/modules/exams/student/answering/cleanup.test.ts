@@ -10,7 +10,7 @@ vi.mock("./journal", () => ({
 }));
 import { installExamSignOutCleanup, onExamAccountChange, setExamJournalAccount } from "./cleanup";
 
-afterEach(() => { storage.rows.clear(); document.body.innerHTML = ""; vi.restoreAllMocks(); });
+afterEach(() => { storage.rows.clear(); sessionStorage.clear(); document.body.innerHTML = ""; vi.restoreAllMocks(); });
 describe("cleanup outside the exam mount", () => {
   it("clears pending data before a native POST sign-out leaves the document", async () => {
     await setExamJournalAccount("account-a");
@@ -29,6 +29,18 @@ describe("cleanup outside the exam mount", () => {
     expect(event.defaultPrevented).toBe(true); expect(nativeSubmit).toHaveBeenCalledOnce(); expect(stop).toHaveBeenCalledOnce();
     expect(sessionStorage.getItem("edra:exam-editor:exam")).toBeNull();
     remove(); unsubscribe();
+  });
+  it("keeps this tab's editor tokens when a reload establishes the same account", async () => {
+    const load = async () => { vi.resetModules(); return import("./cleanup"); };
+    await (await load()).setExamJournalAccount("account-a");
+    sessionStorage.setItem("edra:exam-editor:exam", "token");
+    const reloaded = await load();
+    const stop = vi.fn(); reloaded.onExamAccountChange(stop);
+    await reloaded.setExamJournalAccount("account-a");
+    expect(sessionStorage.getItem("edra:exam-editor:exam")).toBe("token");
+    expect(stop).toHaveBeenCalledWith("account-a");
+    await (await load()).setExamJournalAccount("account-b");
+    expect(sessionStorage.getItem("edra:exam-editor:exam")).toBeNull();
   });
   it("purges the previous account while preserving the current account's pending answers", async () => {
     storage.rows.set("account-a:attempt", {}); storage.rows.set("account-b:attempt", {});

@@ -3,10 +3,10 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StrictMode } from "react";
 
-const api = vi.hoisted(() => ({ sign: vi.fn(), signAnswering: vi.fn(), accountChange: [] as (() => void)[] }));
+const api = vi.hoisted(() => ({ sign: vi.fn(), signAnswering: vi.fn(), accountChange: [] as ((next: string | null) => void)[] }));
 vi.mock("../actions", () => ({ signStudentExamReviewImages: api.sign, signStudentExamImages: api.signAnswering }));
 vi.mock("../answering/cleanup", () => ({
-  onExamAccountChange: (stop: () => void) => { api.accountChange.push(stop); return () => { api.accountChange = api.accountChange.filter((item) => item !== stop); }; },
+  onExamAccountChange: (stop: (next: string | null) => void) => { api.accountChange.push(stop); return () => { api.accountChange = api.accountChange.filter((item) => item !== stop); }; },
 }));
 import { StudentExamReviewSection } from "./review";
 import type { StudentExamReview } from "../types";
@@ -63,9 +63,16 @@ describe("read-only exam review", () => {
     expect(screen.getByRole("heading", { name: "Question 1" })).toBeTruthy();
   });
 
+  it("keeps material when a page load establishes the same account", () => {
+    mount();
+    act(() => { for (const stop of [...api.accountChange]) stop(review.accountId); });
+    expect(screen.getByText("Answers and solutions")).toBeTruthy();
+    expect(screen.getByText("Read chapter 2")).toBeTruthy();
+  });
+
   it("clears visible material when the signed-in account changes", () => {
     mount();
-    act(() => { for (const stop of [...api.accountChange]) stop(); });
+    act(() => { for (const stop of [...api.accountChange]) stop(id(2)); });
     expect(screen.queryByText("Answers and solutions")).toBeNull();
     expect(screen.queryByText("Read chapter 2")).toBeNull();
   });
