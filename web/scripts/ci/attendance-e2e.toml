@@ -22,6 +22,9 @@ site_url = "http://app.lvh.me:3100"
 [auth.sms]
 enable_signup = true
 enable_confirmations = false
+# Phone Auth needs an SMS provider configured; fixed test OTPs mean nothing is ever sent.
+[auth.sms.test_otp]
+201999999999 = "123456"
 [realtime]
 enabled = true
 [storage]
