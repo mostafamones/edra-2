@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { newUuid } from "@/lib/uuid";
 import { useAcademyScope, useAuth } from "@/modules/auth";
 import { GLOBAL_LEVELS, type LevelId } from "../../levels";
 import { changeStructure, previewStructureChange } from "../actions";
@@ -49,7 +50,7 @@ export function OfferingEditor({ slug, accountId, academyId, structure, initial,
           const preview = await previewStructureChange(slug, parsed.data);
           if (!current()) return;
           if (!preview.ok) { setMessage(preview.message); return; }
-          sending = { change: parsed.data, revision: preview.value.revision, fingerprint: preview.value.fingerprint, requestKey: crypto.randomUUID() };
+          sending = { change: parsed.data, revision: preview.value.revision, fingerprint: preview.value.fingerprint, requestKey: newUuid() };
           setRequest(sending);
         }
         const result = await changeStructure(slug, sending);
