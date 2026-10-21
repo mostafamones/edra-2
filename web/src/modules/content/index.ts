@@ -3,3 +3,5 @@ export { ContentEditorPage } from "./components/editor";
 export { ContentTaughtSection } from "./teaching/section";
 export { taughtRootKey } from "./teaching/types";
 export { ContentTaughtReview } from "./teaching/review";
+export { LearningBrowse } from "./student/browse";
+export { StudentLearningUnit } from "./student/unit";

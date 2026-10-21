@@ -46,11 +46,13 @@ export async function deleteVideo(assetId: string | null, uploadId: string | nul
 export function createVideoUpload(assetId: string, origin: string) {
   return muxRequest<MuxUpload>("video/v1/uploads", { cors_origin: origin, timeout: 3600, new_asset_settings: { playback_policies: ["signed"], video_quality: "basic", passthrough: assetId } });
 }
-export function playbackToken(playbackId: string, audience: "v" | "t" | "s" = "v") {
+export function playbackToken(playbackId: string, audience: "v" | "t" | "s" = "v", expiresBefore?: number) {
   const keyId = process.env.MUX_SIGNING_KEY_ID, privateKey = process.env.MUX_SIGNING_PRIVATE_KEY;
   if (!keyId || !privateKey) throw new Error("Protected video playback is not configured.");
   const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
-  const expires = Math.floor(Date.now() / 1000) + 15 * 60;
+  const now = Math.floor(Date.now() / 1000);
+  const expires = Math.min(now + 15 * 60, expiresBefore ?? Infinity);
+  if (!Number.isFinite(expires) || expires <= now) throw new Error("Playback access has expired.");
   const payload = `${encode({ alg: "RS256", typ: "JWT", kid: keyId })}.${encode({ sub: playbackId, aud: audience, exp: expires, kid: keyId })}`;
   const key = createPrivateKey(Buffer.from(privateKey, "base64").toString("utf8"));
   return { token: `${payload}.${createSign("RSA-SHA256").update(payload).sign(key, "base64url")}`, expires };
