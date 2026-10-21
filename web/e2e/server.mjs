@@ -35,7 +35,7 @@ server.on("exit", (code) => process.exit(code ?? 1));
 function loginReady() {
   return new Promise((resolve) => {
     const request = http.get({
-      hostname: "127.0.0.1",
+      hostname: "localhost",
       port: 3100,
       path: "/auth/login",
       headers: { host: "app.lvh.me:3100" },
