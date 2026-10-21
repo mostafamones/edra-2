@@ -44,7 +44,9 @@ function ReviewSession({ academyId, examId, review }: Props) {
 
   useEffect(() => {
     images.setOpen(true);
-    const stop = onExamAccountChange(() => {
+    // A page load establishes the signed-in account after this mount; only another account clears.
+    const stop = onExamAccountChange((next) => {
+      if (next === review.accountId) return;
       images.setOpen(false);
       queryClient.clear();
       setCleared(true);
@@ -54,7 +56,7 @@ function ReviewSession({ academyId, examId, review }: Props) {
       images.setOpen(false);
       queryClient.clear();
     };
-  }, [images, queryClient]);
+  }, [images, queryClient, review.accountId]);
 
   if (cleared) return null;
 
