@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Authority } from "@/lib/supabase/authority";
 import { academyMember } from "@/lib/supabase/membership";
+import { startableOfferingSchedules } from "@/modules/academies/structure";
 import { fetchAllPages } from "@/lib/supabase/paginate";
 import type { Database } from "@/lib/supabase/database.types";
 import { ACADEMY_TIME_ZONE, academyNow } from "./time";
@@ -86,7 +87,7 @@ export async function listStartableSchedules(query: ScheduleQuery, authority?: A
     if (year.error) return { ok: false, status: 500 };
     if (!year.data) return { ok: true, data: empty };
 
-    let schedulesQuery = db.from("schedules").select("id,title,kind,audience,group_id,level_id,track_id,mandatory,location")
+    let schedulesQuery = startableOfferingSchedules(query.academyId, db).select("id,title,kind,audience,group_id,level_id,track_id,mandatory,location")
       .eq("academy_id", query.academyId).eq("academic_year_id", year.data.id).is("archived_at", null);
     if (search) schedulesQuery = schedulesQuery.ilike("title", likePattern(search));
     // One extra row tells whether another page exists.

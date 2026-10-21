@@ -72,7 +72,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
 
   const names = useMemo(() => ({
     levelNames: structureQuery.data?.levelNames ?? {},
-    trackNames: new Map((structureQuery.data?.tracks ?? []).map((track) => [track.id, track.name])),
+    trackNames: new Map((structureQuery.data?.historicalTracks ?? structureQuery.data?.tracks ?? []).map((track) => [track.id, track.name])),
     groupNames: new Map([...(activeGroupsQuery.data?.groups ?? []), ...(archivedGroupsQuery.data?.groups ?? [])].map((group) => [group.id, group.name])),
   }), [structureQuery.data, activeGroupsQuery.data, archivedGroupsQuery.data]);
 

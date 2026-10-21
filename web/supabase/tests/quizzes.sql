@@ -204,6 +204,7 @@ select pg_temp.expect_error($s$ insert into public.quiz_marks (quiz_id) values (
 -- Availability is manager-only; an instructor cannot set it.
 select pg_temp.as_user('e3333333-3333-4333-8333-333333333333');
 select pg_temp.expect_error($s$ select public.configure_quiz_availability(pg_temp.academy(), pg_temp.qa(), 3, now(), now() + interval '1 hour') $s$, 'forbidden');
+select pg_temp.expect_error($s$ select public.configure_quiz_availability(pg_temp.academy(), gen_random_uuid(), 3, now(), now() + interval '1 hour') $s$, 'forbidden');
 select pg_temp.as_user('e2222222-2222-4222-8222-222222222222');
 select pg_temp.expect_error($s$ select public.configure_quiz_availability(pg_temp.academy(), pg_temp.qa(), 3, now(), now() - interval '1 minute') $s$, 'validation');
 do $$ declare q jsonb; begin
