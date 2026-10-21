@@ -47,7 +47,7 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
                 onValueChange={(value) => {
                   if (value === "original" || value === preview.current.logicalId) return;
                   void run("switch", {
-                    runId: preview.run.id, logicalId: value, expectedRevision: preview.revision, commandId: crypto.randomUUID(), returnTo: null,
+                    runId: preview.run.id, logicalId: value, expectedRevision: preview.revision, returnTo: null,
                   });
                 }}
               >
@@ -71,7 +71,7 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
                   size="sm"
                   variant="outline"
                   disabled={pending}
-                  onClick={() => void run("return", { runId: preview.run.id, expectedRevision: preview.revision, commandId: crypto.randomUUID() })}
+                  onClick={() => void run("return", { runId: preview.run.id, expectedRevision: preview.revision })}
                 >
                   <IconArrowBackUp />Return to staff
                 </Button>

@@ -31,12 +31,15 @@ describe("viewAsStudentRequest", () => {
     });
   });
 
-  it("switches from active staff with the current revision and a command id", () => {
+  it("resolves an active staff switch without generating a command during rendering", () => {
+    const uuid = vi.spyOn(crypto, "randomUUID");
     const request = viewAsStudentRequest(active(), "rec-1", "/back");
     expect(request).toEqual({
       action: "switch",
-      body: { runId, logicalId: "account:student:ana", expectedRevision: 4, commandId: expect.any(String), returnTo: "/back" },
+      body: { runId, logicalId: "account:student:ana", expectedRevision: 4, returnTo: "/back" },
     });
+    expect(uuid).not.toHaveBeenCalled();
+    uuid.mockRestore();
   });
 
   it("returns null while a student is already current", () => {
