@@ -20,6 +20,8 @@ export default defineConfig({
     command: "node e2e/server.mjs",
     timeout: 180_000,
     reuseExistingServer: false,
+    stdout: "pipe",
+    stderr: "pipe",
     env: {
       ...(smoke.webServer as { env: Record<string, string> }).env,
       NEXT_PUBLIC_SUPABASE_URL: target.apiUrl,
