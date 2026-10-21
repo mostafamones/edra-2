@@ -59,9 +59,11 @@ export type Database = {
           icon: string
           id: string
           name: string
+          phone: string | null
           slug: string
           subject: string
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
           created_at?: string
@@ -69,9 +71,11 @@ export type Database = {
           icon: string
           id?: string
           name: string
+          phone?: string | null
           slug: string
           subject: string
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
           created_at?: string
@@ -79,9 +83,11 @@ export type Database = {
           icon?: string
           id?: string
           name?: string
+          phone?: string | null
           slug?: string
           subject?: string
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: [
           {
