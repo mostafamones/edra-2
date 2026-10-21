@@ -84,7 +84,9 @@ test("password UI check-in persists as a draft; signed-out and cross-academy req
   await signIn(page);
   if (new URL(page.url()).pathname.split("/")[1] === b.slug) await switchTo(page, a);
   await switchTo(page, b);
-  await page.getByRole("link", { name: "Sessions", exact: true }).click();
+  const sessions = page.getByRole("link", { name: "Sessions", exact: true });
+  if (!await sessions.isVisible()) await page.getByRole("button", { name: "Toggle Teaching pages" }).click();
+  await sessions.click();
   await page.getByRole("button", { name: "Start session", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Start a session" });
   await dialog.getByRole("combobox", { name: "Schedule" }).click();
