@@ -156,6 +156,7 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
   return (
     <>
       <StudentsTable
+        academyId={academy.id}
         query={query} rows={students} filters={filters} sort={SORT} scope={scope} columns={columns} announce={announce}
         toolbar={focus && target ? <FocusFilter focus={focus} onChange={onFocusChange} /> : undefined}
         actions={canMark ? (row) => <Button size="sm" variant="ghost" onClick={() => setEditing(row.recordId)}>Edit</Button> : undefined}

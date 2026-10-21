@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { IconArchive, IconDots, IconLock, IconLockOpen } from "@tabler/icons-react";
@@ -36,13 +36,14 @@ const COPY: Record<AssignmentAction, { title: string; body: string; confirm: str
 };
 
 /** Owner/Head Admin/Admin lifecycle controls in a menu, each confirmed. */
-export function LifecycleActions({ assignment, permissions }: { assignment: Assignment; permissions: AssignmentPermissions }) {
+/** `edit` is the Edit item, first in the menu, once setup is locked. */
+export function LifecycleActions({ assignment, permissions, edit }: { assignment: Assignment; permissions: AssignmentPermissions; edit?: ReactNode }) {
   const queryClient = useQueryClient();
   const isCurrentAcademy = useAcademyScope();
   const [pending, setPending] = useState<AssignmentAction | null>(null);
   const [running, setRunning] = useState(false);
   const menu = ASSIGNMENT_ACTIONS.filter((action) => permissions[action]);
-  if (menu.length === 0) return null;
+  if (menu.length === 0 && !edit) return null;
 
   async function run(action: AssignmentAction) {
     const academyId = assignment.academyId;
@@ -72,6 +73,7 @@ export function LifecycleActions({ assignment, permissions }: { assignment: Assi
           <Button variant="outline" size="icon" aria-label="More actions"><IconDots /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {edit}
           {menu.map((action) => {
             const Icon = icons[action];
             return (

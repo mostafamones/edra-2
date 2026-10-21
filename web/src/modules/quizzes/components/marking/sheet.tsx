@@ -19,7 +19,7 @@ export function QuizMarking({ academy, quiz }: { academy: AcademyEntry; quiz: Qu
   const rows = (query.data ?? []).filter((row) => row.submission !== null || (enterWork && row.eligible));
   return (
     <MarkingSheet
-      disabled={query.isSuccess && rows.length === 0 ? "Marking opens once the quiz is ready for work or a student’s work is accepted." : undefined}
+      unavailable={query.isPending || (query.isSuccess && rows.length === 0)}
       roster={{ isPending: query.isPending, isError: query.isError, rows }}
       summary={(row) => (row.result?.complete ? `${formatScore(row.result.total)} / ${formatScore(row.result.maxScore)}` : STATUS_LABELS[studentStatus(row)])}
       form={(student, { onSaved }) => <QuizMarks key={student.recordId} academy={academy} quiz={quiz} student={student} onSaved={onSaved} />}

@@ -2,10 +2,11 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { IconAlertCircle, IconPencil } from "@tabler/icons-react";
+import { IconAlertCircle, IconDots, IconPencil } from "@tabler/icons-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCanonicalHref } from "@/modules/navigation";
 
@@ -23,8 +24,10 @@ type Props = {
   /** The marking sheet trigger. */
   mark?: ReactNode;
   canEdit: boolean;
-  /** The lifecycle menu or dialogs of the type. */
-  more?: ReactNode;
+  /** Once setup is locked, Edit moves into the actions menu and Mark takes its place. */
+  editInMenu?: boolean;
+  /** The lifecycle menu or dialogs of the type; `edit` is the Edit menu item while `editInMenu`. */
+  more?: (edit: ReactNode) => ReactNode;
   /** Icon-only archive control, leftmost of the actions. */
   archive?: ReactNode;
   yearOpen: boolean;
@@ -45,9 +48,11 @@ type Props = {
  * setup notices, then an Overview tab and a Students tab. Types fill the slots.
  */
 export function WorkspaceView(props: Props) {
-  const { noun, route, id, title, badge, meta, mark, canEdit, more, archive, yearOpen, archived, ready, setup, notices, studentCount, overview, students } = props;
+  const { noun, route, id, title, badge, meta, mark, canEdit, editInMenu, more, archive, yearOpen, archived, ready, setup, notices, studentCount, overview, students } = props;
   const href = useCanonicalHref();
   const [view, setView] = useState<WorkspaceTab>("overview");
+  const editHref = href(`/app/${route}/${id}/edit`);
+  const menuEdit = canEdit && editInMenu ? <DropdownMenuItem asChild><Link href={editHref}><IconPencil />Edit</Link></DropdownMenuItem> : null;
   return (
     <>
       <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
@@ -60,9 +65,11 @@ export function WorkspaceView(props: Props) {
         </div>
         <div className="flex flex-wrap gap-2">
           {archive}
-          {mark}
-          {more}
-          {canEdit && <Button asChild><Link href={href(`/app/${route}/${id}/edit`)}><IconPencil />{ready ? "Edit" : "Continue editing"}</Link></Button>}
+          {editInMenu ? <>{more?.(menuEdit)}{mark}</> : <>
+            {mark}
+            {more?.(null)}
+            {canEdit && <Button asChild><Link href={editHref}><IconPencil />{ready ? "Edit" : "Continue editing"}</Link></Button>}
+          </>}
         </div>
       </header>
 
@@ -94,5 +101,15 @@ export function WorkspaceView(props: Props) {
         <TabsContent value="students">{students}</TabsContent>
       </Tabs>
     </>
+  );
+}
+
+/** The actions menu for types without one of their own. */
+export function WorkspaceMenu({ children }: { children: ReactNode }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild><Button variant="outline" size="icon" aria-label="More actions"><IconDots /></Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end">{children}</DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -7,12 +7,10 @@ import { ScoreDistribution } from "@/components/shared/assessment/workspace/dist
 import { PartsCard, type PartRow } from "@/components/shared/assessment/workspace/parts";
 import { StatStrip } from "@/components/shared/assessment/workspace/stats";
 import { TopStudents } from "@/components/shared/assessment/workspace/top";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatScore, sumScores } from "@/lib/score";
 import type { AcademyEntry } from "@/modules/academies";
 import { loadExamStudents, examStudentsQueryKey } from "../../queries";
 import type { Exam } from "../../types";
-import { ExamScoring } from "./scoring";
 import { ISSUE_LABELS, KIND_LABELS } from "../shared/labels";
 
 const number = new Intl.NumberFormat("en");
@@ -51,13 +49,6 @@ export function ExamOverview({ academy, exam, onViewStudents }: { academy: Acade
         { label: "Average", loading, value: average === null ? "—" : `${percent.format(average)}%` },
       ]} />
 
-      {exam.instructions && (
-        <Card>
-          <CardHeader><CardTitle>Instructions</CardTitle></CardHeader>
-          <CardContent><p className="text-sm whitespace-pre-wrap text-muted-foreground">{exam.instructions}</p></CardContent>
-        </Card>
-      )}
-
       {exam.ready && <ScoreDistribution scores={loading ? undefined : shares} />}
 
       {!exam.ready ? <PartsCard parts={partRows(exam)} /> : (
@@ -66,7 +57,6 @@ export function ExamOverview({ academy, exam, onViewStudents }: { academy: Acade
           <TopStudents students={scored} maxScore={exam.effectiveMaxScore} onViewAll={onViewStudents} />
         </div>
       )}
-      <ExamScoring exam={exam} role={academy.role} />
     </div>
   );
 }

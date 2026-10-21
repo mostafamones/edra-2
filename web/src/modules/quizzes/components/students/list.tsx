@@ -96,6 +96,7 @@ export function QuizStudents({ academy, quiz, permissions }: Props) {
   return (
     <>
       <StudentsTable
+        academyId={academy.id}
         query={query} rows={students} filters={filters} columns={columns} announce={announce}
         badges={(row) => !row.eligible && <Badge variant="outline" className="ml-2">Not in audience now</Badge>}
         actions={(row) => (

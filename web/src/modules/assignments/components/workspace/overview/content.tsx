@@ -3,7 +3,6 @@
 import { StatStrip } from "@/components/shared/assessment/workspace/stats";
 import { PartsCard, type PartRow } from "@/components/shared/assessment/workspace/parts";
 import { TopStudents } from "@/components/shared/assessment/workspace/top";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MarkFocus } from "../../../focus";
 import { useMarks } from "../../../hooks/use-marks";
 import { formatScore } from "../../../score";
@@ -24,11 +23,11 @@ function Stats({ assignment }: { assignment: Assignment }) {
   const max = Number(assignment.maxScore);
   const average = totals.length > 0 && max > 0 ? (totals.reduce((sum, total) => sum + total, 0) / totals.length / max) * 100 : null;
   const required = assignment.currentRequiredCount ?? assignment.recipientCount;
+  const audience = required + (assignment.optionalEligibleCount ?? 0);
   return (
     <StatStrip stats={[
       { label: "Total marks", value: formatScore(assignment.maxScore) },
-      { label: "Required", value: number.format(required) },
-      { label: "Optional", value: number.format(assignment.optionalEligibleCount ?? 0) },
+      { label: "Audience", value: <>{number.format(audience)}{audience !== required && <span className="text-base font-medium text-muted-foreground"> {number.format(required)}</span>}</> },
       { label: "Marked", loading, value: number.format(marked) },
       { label: "Average", loading, value: average === null ? "—" : `${percent.format(average)}%` },
     ]} />
@@ -61,17 +60,6 @@ export function AssignmentOverview({ assignment, onViewStudents, onSelectBar }: 
   return (
     <div className="flex flex-col gap-4">
       <Stats assignment={assignment} />
-
-      {assignment.instructions && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Instructions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm whitespace-pre-wrap text-muted-foreground">{assignment.instructions}</p>
-          </CardContent>
-        </Card>
-      )}
 
       <MarkAnalytics assignment={assignment} onSelect={onSelectBar} />
 

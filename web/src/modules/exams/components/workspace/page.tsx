@@ -1,10 +1,11 @@
 "use client";
 
-import { IconClock, IconUsersGroup } from "@tabler/icons-react";
+import { IconClock } from "@tabler/icons-react";
 
-import { useAudienceNames, describeAudience } from "@/components/shared/assessment/workspace/names";
+import { useAudienceNames } from "@/components/shared/assessment/workspace/names";
+import { AudienceFact } from "@/components/shared/assessment/workspace/audience";
 import { AssessmentWorkspacePage } from "@/components/shared/assessment/workspace/page";
-import { WorkspaceView } from "@/components/shared/assessment/workspace/view";
+import { WorkspaceMenu, WorkspaceView } from "@/components/shared/assessment/workspace/view";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatScore } from "@/lib/score";
@@ -50,7 +51,7 @@ function Workspace({ academy, exam }: { academy: AcademyEntry; exam: Exam }) {
       )}
       meta={(
         <>
-          <span className="flex items-center gap-1.5"><IconUsersGroup className="size-4" aria-hidden="true" />{describeAudience(exam, names)}</span>
+          <AudienceFact value={exam} names={names} />
           <span className="flex items-center gap-1.5"><IconClock className="size-4" aria-hidden="true" />{exam.timeLimitMinutes ? `${exam.timeLimitMinutes} min timer` : "No timer yet"}</span>
           <span className="tabular-nums">
             {formatScore(exam.effectiveMaxScore)} marks{exam.effectiveMaxScore !== exam.maxScore ? ` (of ${formatScore(exam.maxScore)} authored)` : ""}
@@ -58,11 +59,12 @@ function Workspace({ academy, exam }: { academy: AcademyEntry; exam: Exam }) {
         </>
       )}
       mark={permissions.mark ? <ExamMarking academy={academy} exam={exam} /> : undefined}
-      canEdit={permissions.edit}
+      canEdit={permissions.edit} editInMenu={!permissions.editStructure}
       archive={permissions.archive ? <ArchiveExam exam={exam} /> : undefined}
-      more={(
+      more={(edit) => (
         <>
           {permissions.availability && <AvailabilityDialog key={exam.version} exam={exam} />}
+          {edit && <WorkspaceMenu>{edit}</WorkspaceMenu>}
         </>
       )}
       yearOpen={exam.yearOpen} archived={exam.archivedAt !== null} ready={exam.ready}
