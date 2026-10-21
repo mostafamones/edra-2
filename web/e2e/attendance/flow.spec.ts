@@ -97,7 +97,7 @@ test("password UI check-in persists as a draft; signed-out and cross-academy req
   const path = `/${b.slug}/attendance/${session}`;
   await expect(page.getByRole("heading", { name: b.title, exact: true })).toBeVisible();
   for (const student of [target, control]) {
-    await expect(page.getByRole("group", { name: `Attendance for ${student.name}`, exact: true }).getByRole("button", { name: "Unknown", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("group", { name: `Attendance for ${student.name}`, exact: true }).getByRole("button", { name: "—", exact: true })).toHaveAttribute("aria-pressed", "true");
   }
   await page.getByRole("textbox", { name: "Minutes after the session start before a check-in is Late (0 for never)" }).fill("0");
   await page.getByRole("combobox", { name: /^Check in a student by name/ }).fill(target.name);
@@ -109,7 +109,7 @@ test("password UI check-in persists as a draft; signed-out and cross-academy req
   verifySheet(await (await refreshed).json());
   await expect(page.getByRole("group", { name: `Attendance for ${target.name}`, exact: true }).getByRole("button", { name: "Present", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("row").filter({ hasText: target.name })).toContainText(`Checked in by ${fixture.instructorName}`);
-  await expect(page.getByRole("group", { name: `Attendance for ${control.name}`, exact: true }).getByRole("button", { name: "Unknown", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("group", { name: `Attendance for ${control.name}`, exact: true }).getByRole("button", { name: "—", exact: true })).toHaveAttribute("aria-pressed", "true");
   const persisted = snapshot(session);
   expect(persisted.session.academy_id).toBe(b.id);
   expect(persisted.session.schedule_id).toBe(b.schedule);
