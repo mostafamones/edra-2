@@ -6320,6 +6320,67 @@ export type Database = {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: undefined
       }
+      dev_account: {
+        Args: { p_logical_id: string; p_run_id: string }
+        Returns: Json
+      }
+      dev_command_begin: {
+        Args: {
+          p_command_id: string
+          p_control_id: string
+          p_expected_revision: number
+          p_kind: string
+          p_previous_session_id: string
+          p_target_logical_id: string
+        }
+        Returns: Json
+      }
+      dev_command_complete: {
+        Args: {
+          p_command_id: string
+          p_control_id: string
+          p_original_tokens: string
+          p_prior_logical_id: string
+          p_prior_return_path: string
+          p_receipt: string
+          p_session_id: string
+          p_set_prior: boolean
+          p_user_id: string
+        }
+        Returns: string
+      }
+      dev_control_end: {
+        Args: { p_control_id: string; p_reason: string }
+        Returns: string
+      }
+      dev_control_open: {
+        Args: {
+          p_control_id: string
+          p_developer_id: string
+          p_original_session_id: string
+          p_original_tokens: string
+          p_return_path: string
+          p_run_id: string
+          p_token_hash: string
+        }
+        Returns: string
+      }
+      dev_control_original: { Args: { p_control_id: string }; Returns: string }
+      dev_control_sessions: {
+        Args: { p_control_id: string; p_keep: string[] }
+        Returns: Json
+      }
+      dev_control_state: { Args: { p_token_hash: string }; Returns: Json }
+      dev_delivery_blocked: {
+        Args: { p_phone: string; p_user_id: string }
+        Returns: boolean
+      }
+      dev_preview_context: { Args: { p_developer_id: string }; Returns: Json }
+      dev_run_targets: { Args: { p_run_id: string }; Returns: Json }
+      dev_session_revoked: {
+        Args: { p_control_id: string; p_session_id: string }
+        Returns: undefined
+      }
       end_session: {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: string
