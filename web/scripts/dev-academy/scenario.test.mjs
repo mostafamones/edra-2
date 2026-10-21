@@ -58,13 +58,22 @@ describe("S2 determinism", () => {
   });
 });
 
-describe("edra-dev-v1 compatibility", () => {
+describe("legacy recipe compatibility", () => {
   // Captured before edra-dev-v2 existed; the registered development run was created from the first hash.
   it("rebuilds the registered v1 scenarios byte for byte", () => {
     assert.equal(scenarioHash(buildScenario({ recipeVersion: "edra-dev-v1" })), "b25cf643746ed25297cdace5a893bbfcccbe2c104fc65b8f15a4890627360ba8");
     assert.equal(
       scenarioHash(buildScenario({ recipeVersion: "edra-dev-v1", seed: "edra-20-v2", referenceDate: "2026-12-09" })),
       "84298de595c829a16900dccf17fb859a1605e81e4abf8d5923066d0bc65e3cb9",
+    );
+  });
+
+  // Captured before edra-dev-v3 existed; v2 runs (none loaded yet) must keep rebuilding identically.
+  it("rebuilds v2 scenarios byte for byte", () => {
+    assert.equal(scenarioHash(buildScenario({ recipeVersion: "edra-dev-v2" })), "7345ec92c61c8ff590ba4678da373010f07fce76476ff71fe06c36123bf83d12");
+    assert.equal(
+      scenarioHash(buildScenario({ recipeVersion: "edra-dev-v2", seed: "edra-20-v2", referenceDate: "2026-12-09" })),
+      "828f497fc346fedc9d7d3ce8bf2e5cebd0ad07cc87bb94d84dae70c5acc78f98",
     );
   });
 
@@ -76,7 +85,7 @@ describe("edra-dev-v1 compatibility", () => {
   });
 
   it("refuses unknown recipe identifiers", () => {
-    assert.throws(() => buildScenario({ recipeVersion: "edra-dev-v3" }), /Unknown recipe "edra-dev-v3"/);
+    assert.throws(() => buildScenario({ recipeVersion: "edra-dev-v9" }), /Unknown recipe "edra-dev-v9"/);
     assert.throws(() => buildScenario({ recipeVersion: "toString" }), /Unknown recipe/);
   });
 });

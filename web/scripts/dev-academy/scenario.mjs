@@ -1,7 +1,9 @@
 // Pure, deterministic dev-academy scenario builder: no I/O, network, environment or credentials.
-// Recipes: edra-dev-v1 follows web/planning/development-tools/01-scenario.md; edra-dev-v2 adds profiles.mjs (see README "Recipes").
+// Recipes: edra-dev-v1 follows web/planning/development-tools/01-scenario.md; edra-dev-v2 adds profiles.mjs;
+// edra-dev-v3 adds the programming assessments of assessments.mjs (see README "Recipes").
 import { createHash } from "node:crypto";
 
+import { programmingContent } from "./assessments.mjs";
 import { profileModel } from "./profiles.mjs";
 import { FAMILY_NAMES, FATHER_NAMES, FIRST_NAMES } from "./names.mjs";
 import { normalizeEgyptianPhone, validateScenario } from "./validate.mjs";
@@ -10,7 +12,7 @@ import { TIMEZONE, addDays, cairoToUtcMs, iso, isCalendarDate, weekdayOf } from 
 export { validateScenario };
 
 export const DEFAULTS = Object.freeze({
-  recipeVersion: "edra-dev-v2",
+  recipeVersion: "edra-dev-v3",
   seed: "edra-20-v1",
   referenceDate: "2026-10-21",
   students: 20,
@@ -118,7 +120,9 @@ function patternModel(rand, weeks) {
 }
 
 // A registered run is rebuilt with its own recipe; unknown versions are refused, never approximated.
-const RECIPES = { "edra-dev-v1": patternModel, "edra-dev-v2": profileModel };
+const RECIPES = { "edra-dev-v1": patternModel, "edra-dev-v2": profileModel, "edra-dev-v3": profileModel };
+// Recipes without content keep the generic placeholder assessments of v1 and v2.
+const CONTENT = { "edra-dev-v3": programmingContent };
 export const RECIPE_VERSIONS = Object.freeze(Object.keys(RECIPES));
 
 export function buildScenario(options = {}) {
@@ -186,7 +190,8 @@ export function buildScenario(options = {}) {
   ];
   const teachers = staff.filter((s) => s.role === "instructor" && !s.placeholder);
   const teacherAt = (index) => teachers[index % TEACHER_COUNT].id;
-  const academy = { id: rand.uuid("academy:edra-dev"), key: "academy:edra-dev", name: "Edra Dev Academy" };
+  const content = CONTENT[recipeVersion]?.(rand) ?? null;
+  const academy = { id: rand.uuid("academy:edra-dev"), key: "academy:edra-dev", name: "Edra Dev Academy", ...(content && { subject: content.subject }) };
 
   const groups = GROUPS.map(({ key, name, levelKey, track }) => ({ id: rand.uuid(key), key, name, levelKey, track }));
   const schedules = GROUPS.map((def, gi) => ({
@@ -297,6 +302,7 @@ export function buildScenario(options = {}) {
   // Assignments: historical physical work every second week; four current items in the last complete week.
   const assignments = [];
   groups.forEach((group) => {
+    let ordinal = 0;
     weeks.forEach((weekStart, w) => {
       const kinds = [];
       if (w % 2 === 1) kinds.push("historical");
@@ -312,7 +318,9 @@ export function buildScenario(options = {}) {
           deliveryMode: "physical",
           assignedAt: at(firstSessionMs(group.id, w)),
           dueAt: utc(addDays(weekStart, 3), "23:59"),
-          parts: [1, 2].map((n) => ({ id: rand.uuid(`${key}:part${n}`), key: `${key}:part${n}`, title: `Written Work ${n}`, maxScore: 50 })),
+          ...(content
+            ? content.assignment({ key, levelKey: group.levelKey, ordinal: ordinal++ })
+            : { parts: [1, 2].map((n) => ({ id: rand.uuid(`${key}:part${n}`), key: `${key}:part${n}`, title: `Written Work ${n}`, maxScore: 50 })) }),
         });
       }
     });
@@ -354,9 +362,12 @@ export function buildScenario(options = {}) {
   const exams = [];
   const examResults = [];
   groups.forEach((group, gi) => {
+    let ordinal = 0;
     weeks.forEach((_, w) => {
       if (w % 4 !== 3) return;
-      const exam = examRecord({ key: `exam:${GROUPS[gi].key}:w${pad2(w + 1)}`, kind: "historical", format: "paper", groupIds: [group.id], week: w + 1, opensMs: firstSessionMs(group.id, w) });
+      const key = `exam:${GROUPS[gi].key}:w${pad2(w + 1)}`;
+      const record = examRecord({ key, kind: "historical", format: "paper", groupIds: [group.id], week: w + 1, opensMs: firstSessionMs(group.id, w) });
+      const exam = content ? { ...record, ...content.paperExam({ key, levelKey: group.levelKey, ordinal: ordinal++ }) } : record;
       exams.push(exam);
       const closesMs = Date.parse(exam.closesAt);
       const examSession = sessions.find((s) => s.groupId === group.id && s.startsAt === exam.opensAt);
@@ -372,9 +383,10 @@ export function buildScenario(options = {}) {
   });
   const preparatoryIds = groups.filter((g) => g.levelKey === "preparatory-3").map((g) => g.id);
   const secondaryIds = groups.filter((g) => g.levelKey === "secondary-2").map((g) => g.id);
+  const practice = (record, levelKey) => (content ? { ...record, ...content.practiceExam({ key: record.key, levelKey }) } : record);
   exams.push(
-    examRecord({ key: "exam:level:preparatory-3:open", kind: "open", format: "mcq", groupIds: preparatoryIds, opensMs: cairoToUtcMs(addDays(referenceDate, -1), "16:00"), closesMs: cairoToUtcMs(addDays(referenceDate, 2), "16:00") }),
-    examRecord({ key: "exam:level:secondary-2:upcoming", kind: "upcoming", format: "mcq", groupIds: secondaryIds, opensMs: cairoToUtcMs(addDays(referenceDate, 3), "16:00"), closesMs: cairoToUtcMs(addDays(referenceDate, 5), "16:00") }),
+    practice(examRecord({ key: "exam:level:preparatory-3:open", kind: "open", format: "mcq", groupIds: preparatoryIds, opensMs: cairoToUtcMs(addDays(referenceDate, -1), "16:00"), closesMs: cairoToUtcMs(addDays(referenceDate, 2), "16:00") }), "preparatory-3"),
+    practice(examRecord({ key: "exam:level:secondary-2:upcoming", kind: "upcoming", format: "mcq", groupIds: secondaryIds, opensMs: cairoToUtcMs(addDays(referenceDate, 3), "16:00"), closesMs: cairoToUtcMs(addDays(referenceDate, 5), "16:00") }), "secondary-2"),
   );
 
   const scenario = {

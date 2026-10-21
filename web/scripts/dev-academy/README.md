@@ -11,14 +11,15 @@ npm run dev:academy -- dry-run --out scripts/dev-academy/out/scenario.json   # o
 npm run test:dev-academy
 ```
 
-Defaults: `--recipe edra-dev-v2`, `--reference-date 2026-10-21`, `--seed edra-20-v1`, `--students 20`. Unknown actions, options or recipes, `--students` other than 20, and `--out` outside `scripts/dev-academy/out/` exit with code 2. An invalid or insufficient reference date exits with code 1.
+Defaults: `--recipe edra-dev-v3`, `--reference-date 2026-10-21`, `--seed edra-20-v1`, `--students 20`. Unknown actions, options or recipes, `--students` other than 20, and `--out` outside `scripts/dev-academy/out/` exit with code 2. An invalid or insufficient reference date exits with code 1.
 
 ## Recipes
 
 A recipe, seed and reference date fix the scenario byte for byte. Recipes never change once a run uses them; new behaviour gets a new recipe ID. Any other ID is refused.
 
 - `edra-dev-v1`: four fixed patterns of five students (consistent, improving, temporary dip, irregular), each tying attendance, hand-ins and marks together. Run `be8db1dc-6eb2-48af-9c0b-c02d531f43ac` uses it.
-- `edra-dev-v2` (default for new runs): each student has an independent ability tier (top, strong, middle, struggling), attendance habit (reliable, usual, patchy), submission habit (diligent, usual, careless) and trajectory (`pattern`: steady, improving, temporary-dip). Each seed covers the same 20 combinations, including top students with patchy attendance and struggling students who attend reliably. Marks follow the student's ability, trajectory and a slowly changing week-to-week form, in half points. A dip also lowers attendance and hand-ins for about two weeks. Historical paper exams are sat exactly by students present or late at that session. Current assignments keep the five deliberate states.
+- `edra-dev-v2`: each student has an independent ability tier (top, strong, middle, struggling), attendance habit (reliable, usual, patchy), submission habit (diligent, usual, careless) and trajectory (`pattern`: steady, improving, temporary-dip). Each seed covers the same 20 combinations, including top students with patchy attendance and struggling students who attend reliably. Marks follow the student's ability, trajectory and a slowly changing week-to-week form, in half points. A dip also lowers attendance and hand-ins for about two weeks. Historical paper exams are sat exactly by students present or late at that session. Current assignments keep the five deliberate states.
+- `edra-dev-v3` (default for new runs): the students of `edra-dev-v2` with real programming assessments from the committed question bank (`bank/README.md`). Preparatory 3 groups follow JavaScript Basics and Secondary 2 groups C++ Fundamentals; each group's first assignment comes from Programming Foundations, then the course's units in order (variants are keyed draws). Assignments and paper exams have authored titles, instructions, parts and questions with varied maxima (10 to 100); they stay hand-marked written work with part or question marks only. The open exam (JavaScript, choice questions only) and the upcoming exam (C++, choice questions and typed answers) are playable in the student exam flow; no online answers are seeded. The academy subject is Programming. The dry-run reports marks as percentages of each assessment's maximum.
 
 `create` and `verify` without `--recipe` use the recipe the run was registered with, so the documented commands for an existing run are unchanged; a new run uses the default. An explicit `--recipe` that differs from the registered run fails the scenario-hash check. Check the existing run with:
 
@@ -51,7 +52,7 @@ npm run dev:academy -- verify --project fgbcjlibwgxylfwmocgx --run <uuid> --mode
 ## Scenario schema (`schema: "edra-dev-scenario"`, `schemaVersion: 1`)
 
 - `config`: `recipeVersion`, `seed`, `referenceDate`, `timezone`, `academicYear` (`startsOn`, `endsOn`, `startsAt`, `endsBefore` as UTC ISO), `teachingWeeks`, exam timer values.
-- `academy`: `{id, key, name}`.
+- `academy`: `{id, key, name, subject?}` (`subject` from `edra-dev-v3`).
 - `staff[]`: `{id, key, role, displayName, phone, synthetic, accountKey, placeholder}`. The real owner is `staff:real-owner` with `placeholder: true` and null contact and account fields. Every other person has `synthetic: true`.
 - `students[]`: `{id, key, displayName, phone, synthetic, accountKey, pattern, profile?, parentPhone}`. `accountKey` is a logical link only. `profile` (`edra-dev-v2` only) is `{tier, ability, attendance, submission}`; `ability` is the mid-year level in percent.
 - `placements[]`: `{id, key, studentId, groupId, levelKey, track, mode: "in-person", enrolledAt}`.
@@ -59,9 +60,9 @@ npm run dev:academy -- verify --project fgbcjlibwgxylfwmocgx --run <uuid> --mode
 - `sessions[]`: `{id, key, groupId, week, startsAt, endsAt, status: "ended", startedById}`.
 - `roster[]`: `{id, key, sessionId, studentId}`.
 - `attendancePublications[]`: `{id, key, sessionId, publishedAt, items: [{id, key, rosterId, studentId, status}]}`.
-- `assignments[]`: `{id, key, kind: "historical"|"current", groupId, week, deliveryMode: "physical", assignedAt, dueAt, parts: [{id, key, title, maxScore}]}`.
+- `assignments[]`: `{id, key, kind: "historical"|"current", groupId, week, deliveryMode: "physical", assignedAt, dueAt, parts: [{id, key, title, maxScore}]}`. From `edra-dev-v3` an assignment also has `title`, `instructions`, `pack`, `unit`, `bankId`, and each part `kind: "file_upload"`, `instructions` and `questions: [{id, key, position, prompt, maxScore}]` summing to the part maximum.
 - `assignmentResults[]`: `{id, key, assignmentId, studentId, state, receivedAt, late, gradedAt, announcedAt, gradedById, components: [{partId, score}] | null, total}`. States: `missing`, `received_unmarked`, `marked_private`, `announced`, `late_announced`.
-- `exams[]`: `{id, key, kind: "historical"|"open"|"upcoming", format: "paper"|"mcq", groupIds, week, opensAt, scheduledClosesAt, closesAt, timerMinutes: 60, questions: [{id, key, position, maxScore, prompt?, choices?, correctChoice?}]}`.
+- `exams[]`: `{id, key, kind: "historical"|"open"|"upcoming", format: "paper"|"mcq", groupIds, week, opensAt, scheduledClosesAt, closesAt, timerMinutes: 60, questions: [{id, key, position, maxScore, prompt?, choices?, correctChoice?}]}`. From `edra-dev-v3` an exam also has `title`, `instructions`, `solutionNotes`, `pack`, `bankId` and `parts: [{id, key, position, title, kind: "question_sheet"|"written_work", instructions}]`; each question has `partId` and `modelAnswer`, and only Question Sheet questions have choices. A current exam with a Written Work part has `format: "online"`.
 
 ## Timing rules
 

@@ -195,6 +195,65 @@ export function validateScenario(scenario) {
     if (r.announcedAt && ms(r.announcedAt) < ms(r.gradedAt)) fail(`${label} is announced before it is graded`);
   };
 
+  // Authored content (edra-dev-v3 and later) must fit the database limits and readiness rules.
+  const text = (value, max, label, { required = true, trimmed = false } = {}) => {
+    if (value === undefined) return;
+    if (typeof value !== "string" || value.length > max || (required && !value.trim()) || (trimmed && value !== value.trim())) {
+      fail(`${label} is empty, too long or untrimmed`);
+    }
+  };
+  const positions = (list, label) => {
+    if (list.some((item, i) => item.position !== i + 1)) fail(`${label} positions are not 1..n`);
+  };
+  for (const a of scenario.assignments) {
+    text(a.title, 200, `${a.key} title`, { trimmed: true });
+    text(a.instructions, 10000, `${a.key} instructions`, { required: false });
+    for (const part of a.parts) {
+      if (!part.questions) continue;
+      text(part.title, 200, `${part.key} title`, { trimmed: true });
+      text(part.instructions, 5000, `${part.key} instructions`, { required: false });
+      if (part.kind !== "file_upload") fail(`${part.key} must be a Written Work part: no per-question answers are seeded`);
+      if (!part.questions.length) fail(`${part.key} has no questions`);
+      positions(part.questions, part.key);
+      for (const q of part.questions) {
+        text(q.prompt, 2000, `${q.key} prompt`, { trimmed: true });
+        if (!(q.maxScore > 0 && q.maxScore <= 1000)) fail(`${q.key} maximum is out of range`);
+      }
+      if (round2(part.questions.reduce((n, q) => n + q.maxScore, 0)) !== part.maxScore) fail(`${part.key} maximum is not the sum of its questions`);
+    }
+  }
+  for (const e of scenario.exams) {
+    if (!e.parts) continue;
+    text(e.title, 200, `${e.key} title`, { trimmed: true });
+    text(e.instructions, 10000, `${e.key} instructions`, { required: false });
+    text(e.solutionNotes, 10000, `${e.key} solution notes`, { required: false });
+    positions(e.parts, e.key);
+    for (const part of e.parts) {
+      text(part.title, 200, `${part.key} title`, { trimmed: true });
+      text(part.instructions, 5000, `${part.key} instructions`, { required: false });
+      const questions = e.questions.filter((q) => q.partId === part.id);
+      if (!questions.length) fail(`${part.key} has no questions`);
+      positions(questions, part.key);
+      if (e.kind === "historical" && part.kind !== "written_work") fail(`${part.key}: paper exams have no seeded answers, so only Written Work`);
+      for (const q of questions) {
+        text(q.prompt, 5000, `${q.key} prompt`);
+        text(q.modelAnswer, 10000, `${q.key} model answer`, { required: false });
+        if (!(q.maxScore > 0 && q.maxScore <= 1000)) fail(`${q.key} maximum is out of range`);
+        if (part.kind === "written_work") {
+          if (q.choices !== undefined || q.correctChoice !== undefined) fail(`${q.key} Written Work has no choices`);
+          continue;
+        }
+        if (part.kind !== "question_sheet") fail(`${part.key} has an unknown kind`);
+        const choices = q.choices ?? [];
+        if (choices.length < 2 || choices.length > 10 || new Set(choices).size !== choices.length) fail(`${q.key} needs 2 to 10 distinct choices`);
+        for (const label of choices) text(label, 1000, `${q.key} choice`);
+        const correct = "ABCDEFGHIJ".indexOf(q.correctChoice);
+        if (q.correctChoice?.length !== 1 || correct < 0 || correct >= choices.length) fail(`${q.key} needs exactly one correct choice`);
+      }
+    }
+    if (e.questions.some((q) => !e.parts.some((part) => part.id === q.partId))) fail(`${e.key} has a question outside its parts`);
+  }
+
   for (const a of scenario.assignments) {
     if (!groups.has(a.groupId)) fail(`${a.key} references an unknown group`);
     inYear(a.assignedAt, a.key);

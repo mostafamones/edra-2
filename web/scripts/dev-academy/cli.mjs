@@ -152,8 +152,16 @@ export function parseArgs(argv) {
 const pct = (part, whole) => (whole ? `${Math.round((100 * part) / whole)}%` : "-");
 const avg = (list) => (list.length ? (list.reduce((a, b) => a + b, 0) / list.length).toFixed(1) : "-");
 
+/** Each assessment's maximum: the sum of its assignment parts or exam questions. */
+export function assessmentMaxima(scenario) {
+  const sum = (list) => list.reduce((n, x) => n + x.maxScore, 0);
+  return new Map([...scenario.assignments.map((a) => [a.id, sum(a.parts)]), ...scenario.exams.map((e) => [e.id, sum(e.questions)])]);
+}
+
 // One line per student, keyed by logical key only: profile, realised attendance, hand-ins and marks over time.
+// Marks are percentages of each assessment's maximum, so a 10-mark assignment weighs as much as a 100-mark exam.
 function studentLines(scenario) {
+  const maxOf = assessmentMaxima(scenario);
   const groupName = new Map(scenario.groups.map((g) => [g.id, g.name]));
   const groupOf = new Map(scenario.placements.map((p) => [p.studentId, p.groupId]));
   const weeks = scenario.config.teachingWeeks.count;
@@ -167,13 +175,13 @@ function studentLines(scenario) {
     const exams = mine(scenario.examResults);
     const marked = [...mine(scenario.assignmentResults), ...exams]
       .filter((r) => r.total !== null)
-      .map((r) => ({ week: weekOf.get(r.assignmentId ?? r.examId), total: r.total }));
+      .map((r) => ({ week: weekOf.get(r.assignmentId ?? r.examId), total: (100 * r.total) / maxOf.get(r.assignmentId ?? r.examId) }));
     const half = (early) => avg(marked.filter((m) => (m.week <= weeks / 2) === early).map((m) => m.total));
     const totals = marked.map((m) => m.total);
     const profile = s.profile ? `${s.profile.tier} ${s.profile.ability} | attend ${s.profile.attendance} | submit ${s.profile.submission} | ` : "";
     return `  ${s.key} | ${groupName.get(groupOf.get(s.id))} | ${profile}${s.pattern} | attended ${pct(attended, mine(items).length)}`
       + ` | handed in ${work.filter((r) => r.receivedAt).length}/${work.length} | exams sat ${exams.filter((r) => r.receivedAt).length}/${exams.length}`
-      + ` | marks avg ${avg(totals)} (early ${half(true)}, late ${half(false)}, low ${totals.length ? Math.min(...totals) : "-"})`;
+      + ` | marks avg ${avg(totals)}% (early ${half(true)}%, late ${half(false)}%, low ${totals.length ? Math.min(...totals).toFixed(1) : "-"}%)`;
   });
 }
 
@@ -186,7 +194,10 @@ function examWindowStatus(exam, now) {
 
 function summarize(scenario, validation, now) {
   const count = (list, predicate) => list.filter(predicate).length;
-  const tally = (pick) => Object.entries(Object.groupBy(scenario.students, pick)).map(([k, list]) => `${k} ${list.length}`).join(", ");
+  const tally2 = (list, pick) => Object.entries(Object.groupBy(list, pick)).map(([k, items]) => `${k} ${items.length}`).join(", ");
+  const tally = (pick) => tally2(scenario.students, pick);
+  const maxOf = assessmentMaxima(scenario);
+  const maxima = (list) => [...new Set(list.map((x) => maxOf.get(x.id)))].sort((a, b) => a - b).join("/");
   const { config } = scenario;
   return [
     "Dev academy dry-run (pure build, no database or network access)",
@@ -195,11 +206,14 @@ function summarize(scenario, validation, now) {
     `Students ${scenario.students.length} in ${scenario.groups.length} groups | staff ${count(scenario.staff, (s) => !s.placeholder)} generated + ${count(scenario.staff, (s) => s.placeholder)} real-owner placeholder`,
     `Sessions (ended) ${scenario.sessions.length} | roster entries ${scenario.roster.length} | attendance publications ${scenario.attendancePublications.length} (items ${scenario.attendancePublications.reduce((n, p) => n + p.items.length, 0)})`,
     `Assignments ${count(scenario.assignments, (a) => a.kind === "historical")} historical + ${count(scenario.assignments, (a) => a.kind === "current")} current | assignment results ${scenario.assignmentResults.length}`,
+    `Assessment maxima: assignments ${maxima(scenario.assignments)} | exams ${maxima(scenario.exams)}`,
+    ...(scenario.academy.subject ? [`Subject ${scenario.academy.subject} | packs: ${tally2([...scenario.assignments, ...scenario.exams], (x) => x.pack)}`] : []),
     `Exams ${count(scenario.exams, (e) => e.kind === "historical")} historical + ${count(scenario.exams, (e) => e.kind === "open")} open + ${count(scenario.exams, (e) => e.kind === "upcoming")} upcoming | exam results ${scenario.examResults.length}`,
     ...scenario.exams.filter((e) => e.kind !== "historical").map((e) => `${e.kind} exam: ${examWindowStatus(e, now)}`),
+    ...scenario.exams.filter((e) => e.kind !== "historical" && e.parts).map((e) => `  ${e.kind}: ${e.title} | ${e.questions.length} questions | ${e.parts.map((p) => p.kind).join(" + ")}`),
     `Patterns: ${tally((s) => s.pattern)}`,
     ...(scenario.students[0].profile ? [`Tiers: ${tally((s) => s.profile.tier)}`] : []),
-    "Students (marks are out of 100):",
+    "Students (marks are % of each assessment's maximum):",
     ...studentLines(scenario),
     `Validation: ${validation.valid ? "passed" : "failed"} (${validation.errors.length} errors)`,
   ].join("\n");

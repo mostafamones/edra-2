@@ -47,9 +47,10 @@ describe("S6 dry-run CLI", () => {
   it("prints a per-student realism summary without names or phones", () => {
     const result = run(["dry-run"]);
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /^Recipe edra-dev-v2 /m);
+    assert.match(result.stdout, /^Recipe edra-dev-v3 /m);
+    assert.match(result.stdout, /^Assessment maxima: assignments 10\/.+\/50 \| exams 20\/.+\/100$/m);
     assert.match(result.stdout, /^Tiers: /m);
-    assert.match(result.stdout, /^  student:01 \| .+ \| attended \d+% \| handed in \d\/\d \| exams sat \d\/\d \| marks avg /m);
+    assert.match(result.stdout, /^  student:01 \| .+ \| attended \d+% \| handed in \d\/\d \| exams sat \d\/\d \| marks avg \d+\.\d% \(early /m);
     assert.doesNotMatch(result.stdout, /\+20\d|\*\*/, "no phones or masked names");
   });
 
@@ -60,7 +61,7 @@ describe("S6 dry-run CLI", () => {
     assert.match(v1.stdout, /^Patterns: .*consistent 5/m);
     const unknown = run(["dry-run", "--recipe", "edra-dev-v9"]);
     assert.equal(unknown.status, 2);
-    assert.match(unknown.stderr, /Unknown recipe "edra-dev-v9"; supported recipes: edra-dev-v1, edra-dev-v2/);
+    assert.match(unknown.stderr, /Unknown recipe "edra-dev-v9"; supported recipes: edra-dev-v1, edra-dev-v2, edra-dev-v3/);
   });
 
   it("rejects --out outside the gitignored out folder", () => {
@@ -163,7 +164,8 @@ describe("recipe of an existing run", () => {
   });
 
   it("uses the latest recipe for a new run and an explicit --recipe over the registered one", () => {
-    assert.equal(buildChecked(defaults, null).config.recipeVersion, "edra-dev-v2");
+    assert.equal(buildChecked(defaults, null).config.recipeVersion, "edra-dev-v3");
+    assert.equal(buildChecked(defaults, { recipe_version: "edra-dev-v2" }).config.recipeVersion, "edra-dev-v2");
     const explicit = parseArgs(["verify", "--project", PROJECT, "--run", RUN, "--mode", "baseline", "--recipe", "edra-dev-v2"]).options;
     assert.notEqual(scenarioHash(buildChecked(explicit, { recipe_version: "edra-dev-v1" })), V1_HASH);
   });
