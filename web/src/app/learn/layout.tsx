@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/supabase/server";
-import { PUBLIC_PATH_HEADER } from "@/lib/routing";
+import { PUBLIC_PATH_HEADER, staffEntryHref } from "@/lib/routing";
+import { isStaffAccount } from "@/modules/staff/server";
 import { getStudentProfile, listMyStudentAcademies } from "@/modules/students/server";
 import { PortalHeader } from "@/modules/navigation/components/header";
 import { StudentMobileNav } from "@/modules/navigation/components/student-mobile-nav";
@@ -16,6 +17,8 @@ export default async function LearnLayout({ children }: LayoutProps<"/learn">) {
     const path = (await headers()).get(PUBLIC_PATH_HEADER) ?? "/";
     redirect(`/auth/login?next=${encodeURIComponent(path)}`);
   }
+
+  if (await isStaffAccount()) redirect(staffEntryHref());
 
   const { data: profile, error } = await getStudentProfile(data.claims.sub);
   if (error) throw error;
