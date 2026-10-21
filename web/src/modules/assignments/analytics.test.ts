@@ -17,7 +17,7 @@ describe("mark analytics", () => {
   const assignment = { parts: [part({}), manual] } as Assignment;
   const student = (marks: StudentWork["marks"], answers: StudentWork["answers"]) => ({ marks, answers }) as StudentWork;
 
-  it("averages parts and questions from answers and leaves fast marks out", () => {
+  it("counts fast marks for parts only and leaves excused marks out", () => {
     const students = [
       student([{ partId: "p1", kind: "mark", score: "2", reason: null, fromAnswers: true }], [
         { questionId: "q1", partId: "p1", choiceId: "q1-c", score: "1" }, { questionId: "q2", partId: "p1", choiceId: "q2-c", score: "1" },
@@ -25,11 +25,16 @@ describe("mark analytics", () => {
       student([{ partId: "p1", kind: "mark", score: "1", reason: null, fromAnswers: true }], [
         { questionId: "q1", partId: "p1", choiceId: "q1-c", score: "1" }, { questionId: "q2", partId: "p1", choiceId: null, score: "0" },
       ]),
-      // Fast marked: counts nowhere.
+      // Fast marked: counts for its parts, not for questions.
       student([{ partId: "p1", kind: "mark", score: "0", reason: null, fromAnswers: false }, { partId: "p2", kind: "mark", score: "8", reason: null, fromAnswers: false }], []),
+      // Excused: not a score.
+      student([{ partId: "p2", kind: "excused", score: "0", reason: "Absent", fromAnswers: false }], []),
     ];
     const { parts, questions } = markBars(assignment, students);
-    expect(parts).toEqual([{ id: "p1", label: "P1", title: "MCQ", percent: 75, count: 2 }]);
+    expect(parts).toEqual([
+      { id: "p1", label: "P1", title: "MCQ", percent: 50, count: 3 },
+      { id: "p2", label: "P2", title: "Essay", percent: 100, count: 1 },
+    ]);
     expect(questions.map((bar) => [bar.label, bar.percent, bar.count])).toEqual([["1.1", 100, 2], ["1.2", 50, 2]]);
   });
 });

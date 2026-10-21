@@ -161,8 +161,8 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
         actions={canMark ? (row) => <Button size="sm" variant="ghost" onClick={() => setEditing(row.recordId)}>Edit</Button> : undefined}
         emptyText="This assignment has no matching students or recorded work."
         noMatchText={focus ? (focus.outcome === "unmarked"
-          ? "Every student has a question-level mark on this part or question, or no student matches the other filters."
-          : "Only students marked question by question on this part or question are counted.") : undefined}
+          ? `Every student has a mark on this ${focus.kind}, or no student matches the other filters.`
+          : focus.kind === "part" ? "No student with a mark on this part matches." : "Only students marked question by question on this question are counted.") : undefined}
         onClear={() => onFocusChange(null)}
       />
       <StudentMarkSheet student={students?.find((row) => row.recordId === editing) ?? null} onClose={() => setEditing(null)}

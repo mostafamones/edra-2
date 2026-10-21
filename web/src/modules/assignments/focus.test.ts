@@ -29,10 +29,12 @@ describe("mark focus", () => {
     expect([wrong, right, unanswered].map((row) => matchesFocus(row, { ...focus, outcome: "unmarked" }, 2))).toEqual([false, false, true]);
   });
 
-  it("only counts part marks entered question by question", () => {
+  it("counts fast part marks but not excused ones", () => {
     const fast = student([{ partId: "p2", kind: "mark", score: "4", reason: null, fromAnswers: false }], []);
     const answered = student([{ partId: "p2", kind: "mark", score: "4", reason: null, fromAnswers: true }], []);
-    expect(focusScore(fast, { kind: "part", id: "p2" })).toBeNull();
+    const excused = student([{ partId: "p2", kind: "excused", score: "0", reason: "Absent", fromAnswers: false }], []);
+    expect(focusScore(fast, { kind: "part", id: "p2" })).toBe(4);
     expect(focusScore(answered, { kind: "part", id: "p2" })).toBe(4);
+    expect(focusScore(excused, { kind: "part", id: "p2" })).toBeNull();
   });
 });

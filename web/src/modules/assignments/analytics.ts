@@ -6,9 +6,9 @@ export type MarkBar = { id: string; label: string; title: string; percent: numbe
 const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
 
 /**
- * Average marks per part and per question. Only marks entered question by question count: fast
- * (typed) part marks and excused adjustments carry no per-question detail, so they are left out.
- * Bars without any such mark are omitted.
+ * Average marks per part and per question. Part bars count every part mark, fast (typed) ones
+ * included; question bars need per-question answers. Excused adjustments are not scores and stay
+ * out. Bars without any mark are omitted.
  */
 export function markBars(assignment: Assignment, students: StudentWork[]): { parts: MarkBar[]; questions: MarkBar[] } {
   const parts: MarkBar[] = [];
@@ -16,7 +16,7 @@ export function markBars(assignment: Assignment, students: StudentWork[]): { par
   for (const part of assignment.parts) {
     const max = Number(part.maxScore);
     const scores = students.flatMap((student) =>
-      student.marks.filter((mark) => mark.partId === part.id && mark.fromAnswers).map((mark) => Number(mark.score)));
+      student.marks.filter((mark) => mark.partId === part.id && mark.kind === "mark").map((mark) => Number(mark.score)));
     if (scores.length > 0 && max > 0) {
       parts.push({ id: part.id, label: `P${part.position}`, title: part.title, percent: (average(scores) / max) * 100, count: scores.length });
     }
