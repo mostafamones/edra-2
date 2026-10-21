@@ -19,7 +19,7 @@ function preserveSession(source: NextResponse, target: NextResponse) {
 export async function proxy(request: NextRequest) {
   // The URL is normalized by Next; classification deliberately uses the actual Host.
   const platform = classifyHost(request.headers.get("host") ?? "");
-  if (!platform) { console.error("[421-debug]", JSON.stringify(request.headers.get("host")), request.method, request.nextUrl.pathname); return new NextResponse("Unknown platform host", { status: 421 }); }
+  if (!platform) return new NextResponse("Unknown platform host", { status: 421 });
   const publicPath = request.nextUrl.pathname + request.nextUrl.search;
   const descriptor = describeRoute(platform, publicPath);
   request.headers.set(ROUTE_HEADER, platform);
@@ -45,6 +45,9 @@ export async function proxy(request: NextRequest) {
   // back through this proxy and canonicalize the internal path again.
   const destination = request.nextUrl.clone();
   destination.search = request.nextUrl.search;
+  // In dev, nextUrl can carry the bind hostname (e.g. localhost) instead of the public Host; a differing
+  // origin makes Next proxy the rewrite as an external fetch, which the host check then rejects.
+  destination.host = request.headers.get("host") ?? destination.host;
   if (platform === "staff" && descriptor.legacy) {
     if (!READ_METHODS.has(request.method)) return preserveSession(session, new NextResponse("Use the canonical academy URL", { status: 409 }));
     destination.pathname = "/app";
