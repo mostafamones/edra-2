@@ -145,5 +145,10 @@ async function main() {
 main().catch((error) => {
   const safe = /^(Fixture RPC [a-z_]+ failed \([A-Z0-9]+\)|Synthetic Auth user creation failed|Fixture password login failed|Password AMR\/session absent|Live Auth session absent|Migration history differs from checkout|Required PostgREST pre-request hook absent|PostgREST live-session hook is not active|Auth readiness timeout|PostgREST readiness timeout|Auxiliary Auth signout failed)$/;
   console.error('attendance-ci: ' + (safe.test(error.message) ? error.message : 'setup/assertion failed; raw service output withheld'));
+  if (!safe.test(error.message)) {
+    // Diagnostics only: error class, the first psql ERROR line (no credentials) and the throwing source line.
+    const sqlError = String(error.stderr ?? '').split('\n').find((line) => line.includes('ERROR:'));
+    console.error(`attendance-ci: ${error.name}${sqlError ? `: ${sqlError.replace(/\s+/g, ' ').slice(0, 300)}` : ''} at ${(error.stack ?? '').split('\n').find((line) => line.includes('setup.mjs'))?.trim() ?? 'unknown'}`);
+  }
   process.exitCode = 1;
 });
