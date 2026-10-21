@@ -14,7 +14,7 @@ async function rpc(client, name, args) {
 async function login(target, phone, password) {
   const client = createClient(target.apiUrl, target.publicKey, options);
   const { data, error } = await client.auth.signInWithPassword({ phone, password });
-  if (error || !data.session) throw new Error('Fixture password login failed');
+  if (error || !data.session) throw new Error(`Fixture password login failed (${error?.code ?? error?.status ?? 'no_session'})`);
   const claims = JSON.parse(Buffer.from(data.session.access_token.split('.')[1], 'base64url').toString());
   if (!claims.amr?.some((entry) => entry.method === 'password') || !claims.session_id) throw new Error('Password AMR/session absent');
   if (sql(target, "select count(*) from auth.sessions where id = :'session'::uuid and user_id = :'user'::uuid;", { session: claims.session_id, user: data.user.id }) !== '1') throw new Error('Live Auth session absent');
@@ -148,7 +148,7 @@ async function main() {
   }
 }
 main().catch((error) => {
-  const safe = /^(Fixture RPC [a-z_]+ failed \([A-Z0-9]+\)|Synthetic Auth user creation failed|Fixture password login failed|Password AMR\/session absent|Live Auth session absent|Migration history differs from checkout|Required PostgREST pre-request hook absent|PostgREST live-session hook is not active|Auth readiness timeout|PostgREST readiness timeout|Auxiliary Auth signout failed)$/;
+  const safe = /^(Fixture RPC [a-z_]+ failed \([A-Z0-9]+\)|Synthetic Auth user creation failed|Fixture password login failed \\([a-z_0-9]+\\)|Password AMR\/session absent|Live Auth session absent|Migration history differs from checkout|Required PostgREST pre-request hook absent|PostgREST live-session hook is not active|Auth readiness timeout|PostgREST readiness timeout|Auxiliary Auth signout failed)$/;
   console.error('attendance-ci: ' + (safe.test(error.message) ? error.message : 'setup/assertion failed; raw service output withheld'));
   if (!safe.test(error.message)) {
     // Diagnostics only: error class, the first psql ERROR line (no credentials) and the throwing source line.
