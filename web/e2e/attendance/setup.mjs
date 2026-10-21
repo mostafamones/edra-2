@@ -72,7 +72,7 @@ async function main() {
   mask(password);
   // Synthetic numbers are unique within this disposable instance and never sent to an SMS service.
   const digits = String(parseInt(randomBytes(4).toString('hex'), 16) % 10000000).padStart(7, '0');
-  const ownerNumber = `+20100${digits}`;
+  const ownerNumbers = ['0', '2', '3'].map((prefix) => `+2010${prefix}${digits}`);
   const instructorNumber = `+20101${digits}`;
   const admin = createClient(target.apiUrl, target.adminKey, options);
   async function user(number, name) {
@@ -80,11 +80,14 @@ async function main() {
     if (error || !data.user) throw new Error('Synthetic Auth user creation failed');
     return data.user.id;
   }
-  const owner = await user(ownerNumber, `Fixture Owner ${suffix}`);
+  // One owned academy per user, so each fixture academy gets its own owner.
+  const owners = [];
+  for (const number of ownerNumbers) owners.push(await user(number, `Fixture Owner ${suffix}`));
   const instructorName = `Fixture Instructor ${suffix}`;
   const instructor = await user(instructorNumber, instructorName);
   const academies = [];
-  for (const letter of ['A', 'B', 'C']) {
+  for (const [index, letter] of ['A', 'B', 'C'].entries()) {
+    const owner = owners[index];
     const id = randomUUID(), group = randomUUID();
     const name = `Fixture ${letter} ${suffix}`, slug = `fixture-${letter.toLowerCase()}-${suffix}`;
     // Tightly scoped bootstrap, committed for HTTP connections. Academy triggers create the
@@ -101,10 +104,11 @@ async function main() {
       commit;`, { id, name, slug, owner, instructor, group });
     academies.push({ id, name, slug, group, year, schedule: '', title: `Fixture Schedule ${letter} ${suffix}`, students: [], session: '' });
   }
-  const ownerClient = await login(target, ownerNumber, password);
+  const ownerClients = [];
+  for (const number of ownerNumbers) ownerClients.push(await login(target, number, password));
   const instructorClient = await login(target, instructorNumber, password);
   for (let attempt = 0; ; attempt++) {
-    const result = await ownerClient.from('profiles').select('id').eq('id', owner);
+    const result = await ownerClients[0].from('profiles').select('id').eq('id', owners[0]);
     if (!result.error && result.data?.length === 1) break;
     if (attempt >= 30) throw new Error('PostgREST readiness timeout');
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -112,7 +116,8 @@ async function main() {
   const { data: probeSession } = await instructorClient.auth.getSession();
   const revokedToken = probeSession.session.access_token;
   try {
-    for (const academy of academies) {
+    for (const [index, academy] of academies.entries()) {
+      const ownerClient = ownerClients[index];
       academy.schedule = await rpc(ownerClient, 'create_schedule', {
         p_academy_id: academy.id, p_academic_year_id: academy.year, p_title: academy.title,
         p_kind: 'recurring', p_audience: 'group', p_group_id: academy.group, p_level_id: null, p_track_id: null,
@@ -130,11 +135,11 @@ async function main() {
       }
     }
     const c = academies[2];
-    const started = await rpc(ownerClient, 'start_session', { p_academy_id: c.id, p_schedule_id: c.schedule, p_start_key: randomUUID() });
+    const started = await rpc(ownerClients[2], 'start_session', { p_academy_id: c.id, p_schedule_id: c.schedule, p_start_key: randomUUID() });
     c.session = started[0].session_id;
     save(process.env.ATTENDANCE_FIXTURE, { project: target.project, apiUrl: target.apiUrl, publicKey: target.publicKey, phone: instructorNumber, password, instructor, instructorName, academies });
   } finally {
-    const signedOut = await Promise.all([ownerClient.auth.signOut(), instructorClient.auth.signOut()]);
+    const signedOut = await Promise.all([...ownerClients.map((client) => client.auth.signOut()), instructorClient.auth.signOut()]);
     if (signedOut.some((result) => result.error)) throw new Error('Auxiliary Auth signout failed');
     const revoked = await fetch(`${target.apiUrl}/rest/v1/profiles?select=id`, {
       headers: { apikey: target.publicKey, Authorization: `Bearer ${revokedToken}` }, signal: AbortSignal.timeout(5000),
