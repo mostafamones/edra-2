@@ -30,9 +30,9 @@ export default async function LearnLayout({ children }: LayoutProps<"/learn">) {
   const academies = await listMyStudentAcademies();
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen} className="min-h-svh">
+    <SidebarProvider defaultOpen={defaultOpen} className="h-svh min-h-0 overflow-hidden">
       <StudentSidebar academies={academies} />
-      <SidebarInset className="min-h-svh">
+      <SidebarInset className="min-h-0 overflow-y-auto overscroll-none">
         <PortalHeader portal="student" />
         <div className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</div>
       </SidebarInset>

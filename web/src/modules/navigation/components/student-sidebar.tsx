@@ -35,7 +35,7 @@ export function StudentSidebar({ academies = [] }: { academies?: StudentSidebarA
   const href = useCanonicalHref();
   const pathname = usePathname();
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
         <Link href={href("/learn")} className="flex h-12 items-center gap-2 rounded-md px-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">

@@ -28,7 +28,8 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
   const parentItem = parent && parent !== homeHref ? findStaffItem(parent) : undefined;
   const inManagement = portal === "staff" && pathname.startsWith("/app/manage/");
   const managementItem = inManagement ? findStaffItem("/app/manage") : undefined;
-  const title = override ?? item?.label ?? (portal === "staff" && pathname === "/app/students/import" ? "Review Import" : portal === "staff" && pathname === "/app/students/imports" ? "Import logs" : portal === "staff" && /^\/app\/schedules\/[^/]+\/edit$/.test(pathname) ? "Edit schedule" : homeLabel);
+  const studentPage = portal === "student" ? /^\/learn\/(?:academy\/)?[^/]+\/exams(\/[^/]+)?$/.exec(pathname) : null;
+  const title = override ?? item?.label ?? (studentPage ? (studentPage[1] ? "Exam" : "Exams") : portal === "staff" && pathname === "/app/students/import" ? "Review Import" : portal === "staff" && pathname === "/app/students/imports" ? "Import logs" : portal === "staff" && /^\/app\/schedules\/[^/]+\/edit$/.test(pathname) ? "Edit schedule" : homeLabel);
 
   return (
     <header className="sticky top-0 z-20 flex h-[var(--header-height,4rem)] shrink-0 items-center gap-2 border-b border-border bg-background px-4">
