@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { IconArchive, IconDots, IconEye, IconId, IconPencil, IconRestore } from "@tabler/icons-react";
+import { IconArchive, IconDots, IconEye, IconId, IconPencil, IconRestore, IconUserScan } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ export type ColumnOptions = {
   onArchive: (row: StudentRecordRow, archive: boolean) => void;
   /** Opens the student code dialog; omitted while student codes are off. */
   onCode?: (row: StudentRecordRow) => void;
+  /** Developer mode student entry for generated linked students; undefined otherwise. */
+  viewAsStudent?: (row: StudentRecordRow) => (() => void) | undefined;
   /** Current code per record id for the rows on this page; the column is hidden while codes are off. */
   codes: Record<string, string>;
 };
@@ -126,6 +128,7 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row }) => {
       const archived = Boolean(row.original.archivedAt);
+      const view = archived ? undefined : options.viewAsStudent?.(row.original);
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -140,6 +143,7 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
             {options.onCode && !archived && (
               <DropdownMenuItem onSelect={() => options.onCode?.(row.original)}><IconId />Student code</DropdownMenuItem>
             )}
+            {view && <DropdownMenuItem onSelect={view}><IconUserScan />View as student</DropdownMenuItem>}
             {options.canManage && (
               <>
                 <DropdownMenuSeparator />
