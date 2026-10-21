@@ -32,6 +32,7 @@ import { StudentCodeDialog, type CodeTarget } from "../../codes/components/dialo
 import { fetchStudentCodes, studentCodeQueryKeys } from "../../codes/queries";
 import { useStudentCodeSettings } from "../../codes/use-settings";
 import { StudentEditSheet } from "./edit-sheet";
+import { useViewAsStudent } from "@/modules/development";
 import { GroupChangeSheet } from "./group-sheet";
 import { AddStudentMenu } from "./add-menu";
 import { BulkBar } from "./table/bulk-bar";
@@ -127,6 +128,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   });
   const codes = codesQuery.data ?? NO_CODES;
   const [codeTarget, setCodeTarget] = useState<CodeTarget | null>(null);
+  const viewAsStudent = useViewAsStudent();
   const columns = useMemo(() => buildColumns({
     canManage,
     isSelected,
@@ -137,7 +139,8 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     onArchive: (row, archive) => setArchiveRequest({ archive, records: [{ id: row.id, version: row.version }], name: row.fullName }),
     codes,
     onCode: codesEnabled ? (row) => setCodeTarget({ id: row.id, fullName: row.fullName, levelId: row.levelId }) : undefined,
-  }), [canManage, codes, codesEnabled, isSelected, pageSelection, rows]);
+    viewAsStudent: (row) => viewAsStudent(row.id),
+  }), [canManage, codes, codesEnabled, isSelected, pageSelection, rows, viewAsStudent]);
 
   const columnOrder = useMemo(
     () => [...(canManage ? [SELECT_COLUMN] : []), ...preferences.order, ACTIONS_COLUMN],

@@ -18,6 +18,7 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/c
 import { isAcademyManager } from "@/modules/academies";
 import { useAccountProfile } from "@/modules/account";
 import { useAuth } from "@/modules/auth";
+import { DeveloperModeMenuItem } from "@/modules/development";
 
 export function AccountMenu({ portal }: { portal: "staff" | "student" }) {
   const href = useCanonicalHref();
@@ -62,6 +63,7 @@ export function AccountMenu({ portal }: { portal: "staff" | "student" }) {
                 </Link>
               </DropdownMenuItem>
             ) : null}
+            <DeveloperModeMenuItem />
             <DropdownMenuSeparator />
             <form ref={signOutForm} action="/auth/signout" method="post">
               <DropdownMenuItem
