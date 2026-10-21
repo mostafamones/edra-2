@@ -10,8 +10,9 @@ export default defineConfig({
   ...smoke,
   testDir: "./e2e/attendance",
   testMatch: "flow.spec.ts",
-  timeout: 180_000,
-  expect: { timeout: 30_000 },
+  // Cold `next dev` compiles each academy route on first visit.
+  timeout: 400_000,
+  expect: { timeout: 90_000 },
   globalTimeout: 600_000,
   outputDir: "test-results/attendance",
   reporter: [["line"], ["html", { outputFolder: "playwright-report/attendance", open: "never" }]],
