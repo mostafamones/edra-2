@@ -40,7 +40,7 @@ Use an Edra-owned Mux account and a development environment separate from produc
 
 Signed playback uses MUX_SIGNING_KEY_ID and MUX_SIGNING_PRIVATE_KEY (Mux's base64-encoded PEM), both server-only. The optional /api/webhooks/mux endpoint needs the matching MUX_WEBHOOK_SECRET from a configured Mux webhook. Configure it only on a deliberately reachable deployment; the editor also checks processing status without a callback. The official packaged Mux CLI has no Windows binary at the time of implementation; Windows setup can use the Mux REST API directly. Do not point development webhooks at production.
 
-The implementation must authorize uploads, use provider direct uploads, verify processing callbacks and issue signed playback only after Edra's access checks. Retain the configured cloud Supabase application target and an isolated cloud test target for schema/RLS verification; Mux does not replace either. No local Supabase database is required.
+The implementation must authorize uploads, use provider direct uploads, verify processing callbacks and issue signed playback only after Edra's access checks. Use the configured cloud Supabase application target for hosted integration checks and disposable GitHub Actions databases for schema/RLS verification; Mux does not replace these checks. No local Supabase database is required.
 
 References: [Mux API credentials and permissions](https://www.mux.com/docs/core/make-api-requests), [signed playback](https://www.mux.com/docs/guides/secure-video-playback), and [local webhook forwarding](https://www.mux.com/docs/core/listen-for-webhooks). These are setup instructions, not evidence of provider verification or deployment.
 

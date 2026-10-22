@@ -10,7 +10,6 @@ Verification record for the integrated EDRA-232–235 standalone exam journey (p
 | Web server | Local `next dev` (Next.js 16.3.5) on `http://learn.lvh.me:3100`, configured from `web/.env.local` with the server signing key. Production `next start` correctly refuses non-HTTPS origins, so no production-mode HTTP run was possible |
 | Hosted deployment | **None identified.** There are no GitHub deployments and no deployment configuration in the repository. No hosted artifact was verified |
 | Database / Storage / worker | Cloud project `edra-1` (`fgbcjlibwgxylfwmocgx`), the application's configured shared development project |
-| Isolated test target | `edra-ci` (`msnjxvnblgkdeigctbhk`): **not usable** (see Database) |
 | Browser | Playwright 1.64.1 Chromium 156.0.8078.4, headless (headless shell and full `chromium` channel), Linux/WSL2 |
 | CI | `CI` run 39455956095 on `30ae1e0`: web, edge, e2e and database jobs passed |
 
@@ -18,7 +17,7 @@ Verification record for the integrated EDRA-232–235 standalone exam journey (p
 
 - **Migration history (catalog).** `edra-1` records `20261020000456_student_exam_entry`, `20261020004701_student_exam_answering`, `20261020123036_student_exam_departure_context` and `20261020132535_student_exam_review`. When inspection started, 235 and five non-exam repository migrations were missing. A concurrent session recorded them between 19:38 and 19:41 UTC. This verification applied **no** migrations.
 - **Function drift (catalog): Passed.** The bodies (`pg_proc.prosrc`, whitespace-normalized) of all 50 functions defined by the four exam migrations match the latest repository definitions. Review RPC grants are `authenticated` only; the private helpers are owner-only.
-- **Remaining non-exam drift.** `assignment_marks_search` is recorded as `20261018110415` instead of the repository's `20261018160000`. `20261019210000_session_content` (from unmerged commit `ee59bbf`) is applied but is absent from `main`. `edra-ci` is missing 11 repository migrations and also has `session_content`. Either problem makes `npm run test:db` reject the target, and rewriting recorded history is not permitted. Resolving this is a separate owner decision.
+- **Remaining non-exam drift.** `assignment_marks_search` is recorded as `20261018110415` instead of the repository's `20261018160000`. `20261019210000_session_content` (from unmerged commit `ee59bbf`) is applied but is absent from `main`. Preserve recorded shared-project history; fixture-suite verification runs on disposable CI databases built from the checkout.
 - **Types: Passed.** TypeScript types generated from `edra-1` (Management API) were compared with `src/lib/supabase/database.types.ts`. Every exam table/RPC block matches. The EDRA-235 hand-added declarations were semantically identical; their position and the argument order of `save_my_exam_answers`/`submit_my_exam` were aligned to the generator. The only remaining differences are the seven `session_content` blocks from the unmerged migration, which were deliberately not added.
 - **Deadline worker (catalog): Passed.** `edra-exam-deadlines` (every 30 s, `run_exam_deadlines(50)`) is active: 2,875 succeeded / 0 failed runs in the preceding 24 h.
 - **Storage (catalog): Passed.** The `assignment-images` bucket is private (5 MB, image types) and only staff have select/insert policies.
@@ -30,7 +29,6 @@ Verification record for the integrated EDRA-232–235 standalone exam journey (p
 | --- | --- | --- |
 | `exams`, `student_exams`, `student_exam_answering`, `student_exam_review`, `assessment_exposure`, `student_enrollment`, `session_authority` and the other 25 suites | Passed | CI database, run 39455956095 (32 suites, PostgreSQL 17 disposable instance) |
 | Concurrency harness, including exam scenarios 26–33, 42 and 46–47 | Passed | Same CI run |
-| Same suites on an isolated cloud target | Not run | `edra-ci` history diverges from this checkout and `psql` is not installed here; the shared app project must not be used |
 
 The fixes below change only browser code, so they do not affect these results. The CI run for the fixed head will happen once it is pushed.
 
@@ -141,6 +139,5 @@ The standalone logic, authority and disclosure rules pass in CI and in a connect
 1. Push the fixes and obtain a passing CI run, including the database job, for that head.
 2. Deploy that head to an HTTPS environment with `SUPABASE_SERVICE_ROLE_KEY` set server-side, then rerun the connected journey there. No hosted artifact exists yet.
 3. Test Firefox, Safari and real Android/iOS hardware, including OS-level Escape, app switch and minimize. Only Chromium was available.
-4. Owner decision on `edra-1`/`edra-ci` migration-history drift (`assignment_marks_search` version, unmerged `session_content`) before an isolated cloud `test:db` run is possible.
 
 EDRA-83 keeps its content-attached integration and deferred media (answer uploads, solution videos) as explicit remainder; this record does not deliver them.

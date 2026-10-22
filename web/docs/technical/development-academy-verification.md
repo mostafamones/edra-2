@@ -8,15 +8,13 @@ Verification record for the [development tools plan](../../planning/development-
 | --- | --- |
 | Source | Branch `feat/development-academy` from `15f00ec` |
 | Development project | `edra-1` (`fgbcjlibwgxylfwmocgx`), schema `20261021054218` |
-| Isolated test project | `edra-ci` (`msnjxvnblgkdeigctbhk`), schema `20261021054218` |
 | Development run | `be8db1dc-6eb2-48af-9c0b-c02d531f43ac`, state `ready`, recipe `edra-dev-v1`, seed `edra-20-v1`, reference date 2026-10-21 |
 | Development academy | `02bf25b2-49df-e305-2d71-7590c36ca312`, slug `edra-dev-be8db1dc` |
 | Real developer | `1de4d007-11ec-4290-85f6-73f8937ce083`, the only allowlisted developer; Instructor in the academy, and still a member of its one other academy |
 
 ## Schema and Edge Functions
 
-- Migrations `20261021052402_development_tooling_registry` and `20261021054218_development_preview_sessions` are applied to both projects. They are additive: private `edra_private` tables, `service_role`-only RPC adapters and the narrowed `edra_auth.session_allowed()` check for generated accounts.
-- `edra-ci` also received the 11 repository migrations it was missing. Phone sign-in is enabled there only (no SMS provider or hook configured, so delivery is impossible). `edra-1` Auth settings are unchanged.
+- Migrations `20261021052402_development_tooling_registry` and `20261021054218_development_preview_sessions` are applied to the development project. They are additive: private `edra_private` tables, `service_role`-only RPC adapters and the narrowed `edra_auth.session_allowed()` check for generated accounts.
 - `database.types.ts` gained only the 12 new `dev_*` function signatures. The remote `session_content` blocks from an unmerged branch were deliberately left out.
 - Deployed no-delivery guards on `edra-1`: `send-whatsapp-auth` v31, `account-contact` v2, `account-password` v2, `student-onboarding` v4. Each checks `dev_delivery_blocked` before logging or development routing and fails closed when that lookup fails.
 
@@ -51,25 +49,8 @@ There is one registered run on `edra-1`. No generated account has signed in ther
 | Vitest (whole app) | Passed | 126 files, 779 tests (1 skipped). Includes the development module (config, crypto, HTTP gating, paths, client resolver, frame and menu components) |
 | `npm run test:dev-academy` | Passed | 91 tests: scenario, validation, names, registry, credentials, connection, create, verify, CLI and reset |
 | `npm run test:edge` and `test:edge:runtime` | Passed | Deno check plus 4 runtime suites, including synthetic-recipient blocking |
-| `supabase/tests/development_tooling.sql`, `session_authority`, `attendance`, `session_archival` | Passed | `edra-ci`, run once after the migrations. The database code has not changed since, so they were not re-run |
-| `scripts/dev-academy/preview-check.mjs` | Passed | 24/24 checks over real HTTP against `next dev` on `edra-ci` (see below) |
 
-The preview HTTP check signs in a synthetic developer on `edra-ci` with a real password session. It covers:
-
-- Status with and without cookies; the inactive status lists the 20 generated students.
-- Origin, run and target rejection.
-- Owner entry and the control cookie attributes.
-- Nested-entry refusal.
-- RLS role enforcement for the original developer and the target roles.
-- A staff switch, then a replay that restores the same session.
-- Stale-command conflict.
-- Moving between two students while keeping the prior staff target.
-- Return to staff with a sanitized directory destination.
-- Exit back to the original developer.
-- Direct student entry and return to the original identity.
-- Rejection of a tampered control cookie.
-- Sign-out revoking the generated and original sessions.
-- Rejection of an invalid target.
+Database assertion evidence now comes from disposable GitHub Actions runs; the retired preview-check harness is removed. This record does not establish a new CI run.
 
 ## No-delivery evidence
 
@@ -107,6 +88,6 @@ An unregistered run or a run belonging to another project is refused. A destruct
 ## Limitations
 
 - Browser journeys have not been run. The frame layout (sidebar offset, wrapping on mobile), the cross-tab reload and the identity `Select` are covered only by component tests and code review.
-- Preview sessions have been exercised end to end only on `edra-ci`. On `edra-1`, no control has been opened, because that needs your real password session.
+- On `edra-1`, no control has been opened, because that needs your real password session.
 - BroadcastChannel only reaches tabs on the same origin. Staff and student tabs pick up identity changes through the existing focus and navigation revalidation.
 - Expansion to 300–500 students and reset execution are outside this scope.
