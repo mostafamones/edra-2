@@ -1,4 +1,4 @@
--- Isolated cloud/disposable CI only. Random fixtures; no retained changes.
+-- Disposable GitHub Actions database only; all fixtures roll back.
 begin;
 do $$ begin
   if (select count(*) from edra_db_test.target)<>1 or not exists(select 1 from edra_db_test.target where name like 'edra-db-check-%') then raise exception 'Isolated Edra test target required'; end if;
