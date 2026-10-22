@@ -52,13 +52,17 @@ async function switchTo(page: Page, academy: Academy) {
   await expect(page).toHaveURL((url) => url.pathname.split("/")[1] === academy.slug);
   await expect(page.getByRole("button", { name: `Switch academy, current: ${academy.name}`, exact: true })).toBeVisible();
 }
-function cookieResponse(page: Page, session: string) {
-  return page.waitForResponse(async (response) => {
+async function cookieSheet(page: Page, session: string) {
+  let matched: AttendanceSheet | undefined;
+  await page.waitForResponse(async (response) => {
     const url = new URL(response.url());
     if (url.pathname !== `/api/sessions/${session}/attendance` || url.searchParams.get("academy") !== b.id || response.status() !== 200) return false;
     const sheet = await response.json() as AttendanceSheet;
-    return sheet.entries.some((entry) => entry.annualStudentRecordId === target.id && entry.status === "present");
+    if (!sheet.entries.some((entry) => entry.annualStudentRecordId === target.id && entry.status === "present")) return false;
+    matched = sheet;
+    return true;
   });
+  return matched!;
 }
 function verifySheet(sheet: AttendanceSheet) {
   expect(sheet.session.academyId).toBe(b.id);
@@ -101,12 +105,15 @@ test("password UI check-in persists as a draft; signed-out and cross-academy req
   }
   await page.getByRole("textbox", { name: "Minutes after the session start before a check-in is Late (0 for never)" }).fill("0");
   await page.getByRole("combobox", { name: /^Check in a student by name/ }).fill(target.name);
-  const acknowledged = cookieResponse(page, session);
+  const acknowledged = cookieSheet(page, session);
   await page.getByRole("option", { name: new RegExp(target.name) }).click();
-  verifySheet(await (await acknowledged).json());
-  const refreshed = cookieResponse(page, session);
+  verifySheet(await acknowledged);
+  // Ignore responses from the old document: reload can discard their bodies.
+  const refreshed = page.waitForEvent("framenavigated", {
+    predicate: (frame) => frame === page.mainFrame(),
+  }).then(() => cookieSheet(page, session));
   await page.reload();
-  verifySheet(await (await refreshed).json());
+  verifySheet(await refreshed);
   await expect(page.getByRole("group", { name: `Attendance for ${target.name}`, exact: true }).getByRole("button", { name: "Present", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("row").filter({ hasText: target.name })).toContainText(`Checked in by ${fixture.instructorName}`);
   await expect(page.getByRole("group", { name: `Attendance for ${control.name}`, exact: true }).getByRole("button", { name: "—", exact: true })).toHaveAttribute("aria-pressed", "true");

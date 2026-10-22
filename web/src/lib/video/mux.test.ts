@@ -54,6 +54,13 @@ it("signs an expiring playback permission for one video and audience", () => {
     expect(expires).toBeLessThanOrEqual(before + 901);
     expect(verify("RSA-SHA256", Buffer.from(`${header}.${payload}`), publicKey, Buffer.from(signature, "base64url"))).toBe(true);
     expect(verify("RSA-SHA256", Buffer.from(`${header}.${payload}changed`), publicKey, Buffer.from(signature, "base64url"))).toBe(false);
+    const deadline = before + 60;
+    const bounded = playbackToken("only-this-video", audience, deadline);
+    expect(bounded.expires).toBe(deadline);
+    expect(JSON.parse(Buffer.from(bounded.token.split(".")[1], "base64url").toString()).exp).toBe(deadline);
+    expect(playbackToken("only-this-video", audience, before + 3600).expires).toBeLessThanOrEqual(before + 901);
+    expect(() => playbackToken("only-this-video", audience, before - 1)).toThrow("expired");
+    expect(() => playbackToken("only-this-video", audience, NaN)).toThrow("expired");
   }
 });
 

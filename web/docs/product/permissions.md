@@ -12,15 +12,18 @@ These are intended product permissions. Current source enforces the Owner, Head 
 | Recurring schedules | Yes | Yes | Yes | Read/use only |
 | One-off schedules | Yes | Yes | Yes | Create/edit; archive own only |
 | Start/end sessions; record/finalize/correct attendance | Yes | Yes | Yes | Yes |
+| Record taught units before first attendance finalization | Yes | Yes | Yes | Yes |
 | Archive/restore sessions in an open academic year | Yes | Yes | Yes | Read preserved history only |
 | Prepare assessments; mark/announce complete results | Yes | Yes | Yes | Yes |
-| Prepare draft content units | Yes | Yes | Yes | Own drafts only, including during review; submit for manager review |
-| Review submitted content units; edit published units | Yes | Yes | Yes | No |
+| Prepare/edit content units, including working changes to published units | Yes | Yes | Yes | Own units only; may edit during review and submit changes |
+| Review submitted units; publish working changes | Yes | Yes | Yes | No |
 | Publish changes; archive/restore content (restores as draft) | Yes | Yes | Yes | No |
 | Correct shared answer keys/exclude questions after work begins | Yes | Yes | Yes | No |
 | Assignment submission availability/archive | Yes | Yes | Yes | No |
 | Quiz/exam availability windows/archive | Yes | Yes | Yes | No |
-| Manual learning grants/revocation/suspension; manage coupon codes | Yes | Yes | Yes | Inspect student access only |
+| Inspect learning access; issue unit-default grants and additional-time extensions | Yes | Yes | Yes | Yes |
+| Generate/distribute unit-access codes; inspect redemption | Yes | Yes | Yes | Yes |
+| Revoke learning access/unused codes; suspend academy online access | Yes | Yes | Yes | No |
 | Manage parent report links | Yes | Yes | Yes | Preview only; no secret access |
 | Notes | Manage | Manage | Manage | Create; manage own notes under sharing rules |
 | Delivery diagnostics/retries | Yes | Yes | Yes | Basic delivery outcome only |

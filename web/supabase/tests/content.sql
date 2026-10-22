@@ -94,9 +94,38 @@ do $$ declare c record; u public.content_units; doc jsonb; p public.content_prog
   perform public.save_content_unit(c.academy,c.unit_id,15,doc);
 end $$;
 select set_config('request.jwt.claim.sub',actor::text,true) from content_test_context;
-do $$ declare c record; begin
+do $$ declare c record; doc jsonb; live_doc jsonb; v integer; upload_id uuid:=gen_random_uuid(); invalid_days jsonb; begin
   select * into c from content_test_context;
-  perform pg_temp.expect_content_error(format('select public.save_content_unit(%L,%L,16,%L)',c.academy,c.unit_id,'{"title":"Instructor edit after publication","description":"","items":[]}'),'forbidden');
+  select draft,version into doc,v from public.content_units where id=c.unit_id;
+  select document into live_doc from public.content_revisions where unit_id=c.unit_id order by revision desc limit 1;
+  if (doc->>'accessDays')::integer<>7 then raise exception 'New unit duration is not seven days'; end if;
+  foreach invalid_days in array array['0'::jsonb,'-1'::jsonb,'1.5'::jsonb,'null'::jsonb,'"30"'::jsonb,'2147483648'::jsonb] loop
+    perform pg_temp.expect_content_error(format('select public.save_content_unit(%L,%L,%s,%L)',c.academy,c.unit_id,v,(doc||jsonb_build_object('accessDays',invalid_days))::text),'validation');
+  end loop;
+  -- The author can maintain published working material without replacing history.
+  v:=public.save_content_unit(c.academy,c.unit_id,v,doc||jsonb_build_object('title','Instructor revision','accessDays',45));
+  perform pg_temp.expect_content_error(format('select public.save_content_unit(%L,%L,%s,%L)',c.academy,c.unit_id,v-1,doc::text),'content_conflict');
+  -- A legacy caller omitting the field must not reset the configured duration.
+  v:=public.save_content_unit(c.academy,c.unit_id,v,(doc-'accessDays')||jsonb_build_object('title','Instructor revision'));
+  if (select (draft->>'accessDays')::integer from public.content_units where id=c.unit_id)<>45 then raise exception 'Legacy save reset configured duration'; end if;
+  v:=public.change_content_unit(c.academy,c.unit_id,v,'submit');
+  if not exists(select 1 from public.content_units where id=c.unit_id and state='published' and review_requested_at is not null) then raise exception 'Review request hid publication or disappeared'; end if;
+  if (select document from public.content_revisions where unit_id=c.unit_id order by revision desc limit 1)<>live_doc then raise exception 'Instructor edit changed published snapshot'; end if;
+  perform public.register_content_asset(c.academy,c.unit_id,upload_id,'document','Published author upload.pdf','application/pdf');
+  if not edra_private.content_storage_write((select storage_path from public.content_assets where id=upload_id)) then raise exception 'Author cannot upload to own published unit'; end if;
+  perform pg_temp.expect_content_error(format('select public.change_content_unit(%L,%L,%s,''publish'')',c.academy,c.unit_id,v),'forbidden');
+  perform pg_temp.expect_content_error(format('select public.change_content_unit(%L,%L,%s,''archive'')',c.academy,c.unit_id,v),'forbidden');
+  -- The manager can request changes while keeping the live release available.
+  perform set_config('request.jwt.claim.sub',c.other_actor::text,true);
+  v:=public.change_content_unit(c.academy,c.unit_id,v,'request_changes','Review the revision.');
+  if not exists(select 1 from public.content_units where id=c.unit_id and state='published' and review_requested_at is null) then raise exception 'Request changes altered publication visibility'; end if;
+  perform set_config('request.jwt.claim.sub',c.actor::text,true);
+  v:=public.change_content_unit(c.academy,c.unit_id,v,'submit');
+  perform set_config('request.jwt.claim.sub',c.other_actor::text,true);
+  v:=public.change_content_unit(c.academy,c.unit_id,v,'publish');
+  if not exists(select 1 from public.content_units where id=c.unit_id and review_requested_at is null and published_version=v) then raise exception 'Publish did not acknowledge review'; end if;
+  if (select (document->>'accessDays')::integer from public.content_revisions where unit_id=c.unit_id order by revision desc limit 1)<>45 then raise exception 'Published duration missing'; end if;
+  perform set_config('request.jwt.claim.sub',c.actor::text,true);
 end $$;
 reset role;
 -- Exercise deferred guards too: ROLLBACK alone never fires deferred triggers.
@@ -124,6 +153,10 @@ do $$ declare c record; private_draft uuid:=gen_random_uuid(); target public.con
   perform public.create_content_unit(c.academy,c.year_id,'secondary-1',null,private_draft,'Owner draft');
   perform set_config('request.jwt.claim.sub',c.other_actor::text,true);
   perform pg_temp.expect_content_error(format('select public.save_content_unit(%L,%L,1,%L)',c.academy,private_draft,'{"title":"Another instructor","description":"","items":[]}'),'forbidden');
+  select * into target from public.content_units where id=c.unit_id;
+  perform pg_temp.expect_content_error(format('select public.save_content_unit(%L,%L,%s,%L)',c.academy,c.unit_id,target.version,target.draft::text),'forbidden');
+  perform pg_temp.expect_content_error(format('select public.change_content_unit(%L,%L,%s,''submit'')',c.academy,c.unit_id,target.version),'forbidden');
+  perform pg_temp.expect_content_error(format('select public.register_content_asset(%L,%L,%L,''document'',''Other author.pdf'',''application/pdf'')',c.academy,c.unit_id,gen_random_uuid()),'forbidden');
   perform set_config('request.jwt.claim.sub',c.actor::text,true);
   select * into target from public.content_units where id=private_draft;
   perform pg_temp.expect_content_error(format('select public.save_content_unit(%L,%L,1,%L)',c.academy,private_draft,

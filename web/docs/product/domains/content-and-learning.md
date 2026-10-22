@@ -26,7 +26,7 @@ Owners, Head Admins, Admins and Instructors can create content units, prepare dr
 
 Owners, Head Admins and Admins release content, manage its published audience and archive units or releases. Instructors prepare learning material but do not release it to students.
 
-Draft ownership and review confirmed by the owner, 2026-10-16: instructors edit only their own draft units and submit them to Admins or Head Admins for checking and publication. Instructors can continue editing their own drafts while manager review is pending; submission for review does not lock their editing. Managers can leave feedback and request changes inside Edra. Only managers may publish or edit published units; the existing Owner authority remains applicable. Detailed review handoff and resubmission behavior remain to be specified. These content-unit permissions do not change assessment preparation, marking or announcement permissions.
+Ownership and review updated by the owner, 2026-10-21: instructors may edit their own units, including units that have already been published. Their edits remain in the working draft until a manager explicitly publishes them; the existing published snapshot stays visible to students. Instructors may continue editing while review is pending and submit their changes for manager review. Managers may edit academy units, leave feedback, request changes and publish. Instructors cannot edit another instructor's units or publish changes. These content-unit permissions do not change assessment preparation, marking or announcement permissions. This replaces the earlier restriction to never-published instructor drafts; implementation must enforce the updated rule on the server and in the database.
 
 Materials can be arranged in a teaching order within the unit. Adding an assignment or quiz makes it part of the unit’s learning experience; assessment rules still govern submissions, marking and results.
 
@@ -46,7 +46,7 @@ Answer material belongs to the assessment it explains. A release’s explanation
 
 ## Student experience
 
-Students navigate their academy’s learning area to find releases matching their current level and track. Eligible released units are shown with their access state, including when they are locked.
+Current delivery scope confirmed by the owner, 2026-10-21: students enter their connected academy and see published content units matching their current academic year, level and optional track directly. There is no separate student program/course enrollment step in this slice. Program-versus-course redesign and optional academic terms are deferred; existing year/level/track scope remains in use. Eligible released units are shown with their access state, including when locked; draft working changes are not exposed. Units are ordered newest published first. An academy with no eligible published units shows an empty state.
 
 Within a unit, students watch available explanation videos, open resources, complete assignments and quizzes, and view answer material when eligible. They can follow their progress and resume video playback where they left off.
 
@@ -60,11 +60,15 @@ Staff record which released material was taught in a session. A session may cove
 
 The association records the material actually covered. Finalized attendance and replacement attendance use that information to determine the corresponding explanation access and resolved missed material.
 
+Initial session-linking implementation scope, 2026-10-19, under the owner's delegated implementation direction: all active staff, including instructors, may record taught units in a live or ended session while its year is open, the session is not archived and attendance has never been finalized. Select published units in the same academy/year whose grade and optional track cover the session's captured audience. Links are optional; attendance can be finalized without any. The first finalization locks the links for this slice, including an empty list. Post-finalization content corrections remain separate work and do not establish the unresolved access-revocation policy.
+
+Each saved association preserves the selected published content revision and title. Subsequent unit edits, republication, archival and track removal do not rewrite what was recorded as taught. Changes before finalization retain their own versioned history and invalidate an older attendance review. Recording taught units alone does not grant student access; the access consumer remains a separate integration.
+
 ## Changes and history
 
 Staff may revise draft material. Once students have activity on a release, changes preserve their submissions, results, progress and the material needed to explain that history.
 
-Confirmed by the owner, 2026-10-16: manager edits to a published unit remain unpublished until the manager explicitly publishes the changes. Saving edits alone does not change what students see. The currently published material remains the student-visible version while edits are being prepared. Publishing changes still obeys assessment locks and academic-history preservation.
+Confirmed by the owner, 2026-10-16, and extended to instructor-owned units on 2026-10-21: edits to a published unit remain unpublished until a manager explicitly publishes the changes. Saving edits alone does not change what students see. The currently published material remains the student-visible version while edits are being prepared. Publishing changes still obeys assessment locks and academic-history preservation. Editing or replacing material does not reset student access periods.
 
 Archiving a unit removes its published release from active student learning while retaining its records. Managers can archive and restore units. Restoration returns a unit to a draft, not directly to student visibility; a manager must explicitly publish it again under the usual readiness and history rules. This does not authorize deleting stored video assets, resetting access periods or rewriting earlier academic history. Closed-year records remain read-only under the academic-year rules.
 

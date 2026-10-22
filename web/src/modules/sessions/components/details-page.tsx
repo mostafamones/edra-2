@@ -25,11 +25,11 @@ import { formatDayMonth, formatMoment, startedByLabel } from "./format";
 const DETAIL_REFRESH_MS = 30_000;
 
 /** `/app/attendance/<id>`: the session's headline facts, with its attendance section underneath. */
-export function SessionDetailsPage({ id, attendance }: { id: string; attendance: ReactNode }) {
-  return <AcademyGate>{(academy) => <DetailsContent academy={academy} sessionId={id} attendance={attendance} />}</AcademyGate>;
+export function SessionDetailsPage({ id, attendance, content }: { id: string; attendance: ReactNode; content?: ReactNode }) {
+  return <AcademyGate>{(academy) => <DetailsContent academy={academy} sessionId={id} attendance={attendance} content={content} />}</AcademyGate>;
 }
 
-function DetailsContent({ academy, sessionId, attendance }: { academy: AcademyEntry; sessionId: string; attendance: ReactNode }) {
+function DetailsContent({ academy, sessionId, attendance, content }: { academy: AcademyEntry; sessionId: string; attendance: ReactNode; content?: ReactNode }) {
   const href = useCanonicalHref();
   const query = useQuery({
     queryKey: sessionQueryKey(academy.id, sessionId),
@@ -77,6 +77,7 @@ function DetailsContent({ academy, sessionId, attendance }: { academy: AcademyEn
       )}
 
       {query.data && <Details academyId={academy.id} session={query.data} />}
+      {query.data && content}
       {query.data && attendance}
     </main>
   );

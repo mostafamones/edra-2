@@ -1,5 +1,7 @@
 "use client";
 
+import { taughtRootKey } from "@/modules/content";
+
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -106,6 +108,7 @@ export function ArchiveSessionDialog({ academyId, sessionId, mode, open, onClose
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: sessionsRootKey(targetAcademyId) }),
         queryClient.invalidateQueries({ queryKey: attendanceRootKey(targetAcademyId) }),
+        queryClient.invalidateQueries({ queryKey: taughtRootKey(targetAcademyId, session.id) }),
       ]);
       if (!isCurrentAcademy(targetAcademyId)) return;
       if (result.outcome === "conflict") {
