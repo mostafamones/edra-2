@@ -32,7 +32,7 @@ Result announcement (web action and `POST .../results/publications`) validates c
 
 ## Product work still outstanding
 
-Student submissions, content integration, automatic result announcement, controlled key corrections/exclusions and source locks require their respective implementation. Student account linking is implemented in the students/enrollment module; it does not itself grant submission/content access. Do not describe these approved rules as implemented by the staff HTTP API. Check SQL/TypeScript/handlers again when updating a slice; no deployment/cloud status is asserted here.
+Student submissions, content integration, automatic result announcement and source locks require their respective implementation. Controlled key corrections/exclusions are present in the staff implementation (`20261019172557_assignment_scoring_corrections.sql`); do not rebuild them as student-submission work. Student account linking is implemented in the students/enrollment module; it does not itself grant submission/content access. EDRA-81's confirmed student scope is in the product assessments reference, including its separate entitlement and answer-video rules. Do not describe that planned student flow as implemented by the staff HTTP API. Check SQL/TypeScript/handlers again when updating a slice; no deployment/cloud status is asserted here.
 
 ## Task 4 verification — G06, 2026-10-19
 
