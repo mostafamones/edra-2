@@ -13,6 +13,7 @@ import { saveStudentMarks } from "../../actions";
 import { markParts, savedAnswers, toAnswerChanges } from "../../answers";
 import { assignmentQueryKey, loadAssignment, assignmentsRootKey } from "../../queries";
 import type { Assignment, StudentWork } from "../../types";
+import { ReceivedFiles } from "./received";
 
 type Props = {
   assignment: Assignment;
@@ -65,5 +66,5 @@ export function AssignmentMarks({ assignment, student, onChanged, onSaved }: Pro
     return { ok: true, saved: true, baseline: baselineFor(result.student) };
   }
 
-  return <MarksForm parts={parts} baseline={baselineFor(student)} feedback={student.feedback} fast={{ saved: student.marks }} onSave={save} onDone={onSaved} />;
+  return <div className="flex flex-col gap-4"><ReceivedFiles assignment={assignment} recordId={student.recordId} /><MarksForm parts={parts} baseline={baselineFor(student)} feedback={student.feedback} fast={{ saved: student.marks }} onSave={save} onDone={onSaved} /></div>;
 }

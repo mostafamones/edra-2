@@ -15,6 +15,8 @@ import { ASSIGNMENT_STATES, type AssignmentErrorCode, type AssignmentFailure, ty
 
 const API_CODES: Record<AssignmentErrorCode, ApiErrorCode> = {
   stale_basis: "ASSIGNMENT_CONFLICT",
+  online_draft: "ASSIGNMENT_CONFLICT",
+  source_locked: "ASSIGNMENT_CONFLICT",
   question_excluded: "INVALID_REQUEST",
   validation: "INVALID_REQUEST",
   forbidden: "FORBIDDEN",
