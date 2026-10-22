@@ -299,7 +299,7 @@ language sql stable security definer set search_path = '' as $$
           from public.assignment_question_choices c where c.question_id = q.id), '[]')) order by q.position)
         from public.assignment_part_questions q where q.part_id = p.id and not q.excluded and p.kind <> 'file_upload'), '[]')) order by p.position)
       from public.assignment_parts p where p.assignment_id = a.id), '[]'),
-    'files', coalesce((select jsonb_agg(jsonb_build_object('id', f.id, 'partId', f.part_id, 'name', f.name, 'size', f.size, 'mime', f.mime, 'state', f.state)
+    'files', coalesce((select jsonb_agg(jsonb_build_object('id', f.id, 'partId', f.part_id, 'name', f.name, 'size', f.size, 'mime', f.mime, 'state', f.state, 'path', f.storage_path)
       order by f.created_at, f.id) from public.assignment_work_files f
       where f.assignment_id = a.id and f.record_id = d.record_id and f.state in ('pending', 'complete')), '[]'))
   from edra_private.assignment_online_drafts d join public.assignments a on a.id = d.assignment_id

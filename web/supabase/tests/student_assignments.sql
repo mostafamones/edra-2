@@ -266,7 +266,7 @@ do $$ declare d jsonb; r jsonb; begin
   perform pg_temp.check((public.get_my_assignment(pg_temp.sid('academy'),pg_temp.sid('attached'))->>'canEdit')::boolean,'current entitlement permits work');
   d:=pg_temp.cmd('attached','claim','t6');
   perform pg_temp.cmd('attached','save','t6',jsonb_build_object('generation',1,'version',0,'key',gen_random_uuid(),
-    'answers',jsonb_build_object(d#>>'{parts,0,questions,0,id}',d#>>'{parts,0,questions,0,choices,1,id}'))));
+    'answers',jsonb_build_object(d#>>'{parts,0,questions,0,id}',d#>>'{parts,0,questions,0,choices,1,id}')));
   r:=pg_temp.cmd('attached','submit','t6',jsonb_build_object('generation',1,'version',1,'key',gen_random_uuid(),'scoringRevision',1));
   perform pg_temp.check(jsonb_array_length(r->'answerVideos')=1 and r->'result'->>'total'='0.00','submission qualifies answer videos');
   perform pg_temp.check(public.authorize_content_material(pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('answer-video'))->>'playbackId'='playback-answer-video','answer video authorized');
