@@ -14,34 +14,62 @@ const EDITOR = "edra:assignment-editor:";
 
 /** An uncertain command: retried with its exact identity and payload, never rebuilt. */
 export type PendingOperation = { kind: "save" | "submit"; payload: Record<string, unknown> };
-export type LocalDraft = { generation: number; baseVersion: number; pending: Answers; operation: PendingOperation | null };
+/**
+ * `pending` awaits saving under `generation`; `conflicts` are this device's choices that differ
+ * from newer saved work and wait for the student to keep or discard each one.
+ */
+export type LocalDraft = { generation: number; baseVersion: number; pending: Answers; conflicts: Answers; operation: PendingOperation | null };
 
-const draftKey = (userId: string, assignmentId: string) => `${DRAFT}${userId}:${assignmentId}`;
+const draftKey = (userId: string, recordId: string, assignmentId: string) => `${DRAFT}${userId}:${recordId}:${assignmentId}`;
+const empty = (draft: LocalDraft) => Object.keys(draft.pending).length === 0 && Object.keys(draft.conflicts).length === 0 && !draft.operation;
 
-export function loadLocalDraft(userId: string, assignmentId: string): LocalDraft | null {
+export function loadLocalDraft(userId: string, recordId: string, assignmentId: string): LocalDraft | null {
   try {
-    const raw = window.localStorage.getItem(draftKey(userId, assignmentId));
+    const raw = window.localStorage.getItem(draftKey(userId, recordId, assignmentId));
     if (!raw) return null;
     const value = JSON.parse(raw) as LocalDraft;
-    return typeof value.generation === "number" && typeof value.baseVersion === "number" && value.pending && typeof value.pending === "object" ? value : null;
+    if (typeof value.generation !== "number" || typeof value.baseVersion !== "number" || !value.pending || typeof value.pending !== "object") return null;
+    return { ...value, conflicts: value.conflicts && typeof value.conflicts === "object" ? value.conflicts : {} };
   } catch {
     return null;
   }
 }
 
 /** False when the browser refused to store it (the status then says "Not kept on this device"). */
-export function storeLocalDraft(userId: string, assignmentId: string, draft: LocalDraft): boolean {
+export function storeLocalDraft(userId: string, recordId: string, assignmentId: string, draft: LocalDraft): boolean {
   try {
-    if (Object.keys(draft.pending).length === 0 && !draft.operation) window.localStorage.removeItem(draftKey(userId, assignmentId));
-    else window.localStorage.setItem(draftKey(userId, assignmentId), JSON.stringify(draft));
+    if (empty(draft)) window.localStorage.removeItem(draftKey(userId, recordId, assignmentId));
+    else window.localStorage.setItem(draftKey(userId, recordId, assignmentId), JSON.stringify(draft));
     return true;
   } catch {
     return false;
   }
 }
 
-export function clearLocalDraft(userId: string, assignmentId: string) {
-  try { window.localStorage.removeItem(draftKey(userId, assignmentId)); } catch { /* Storage may be blocked. */ }
+export function clearLocalDraft(userId: string, recordId: string, assignmentId: string) {
+  try { window.localStorage.removeItem(draftKey(userId, recordId, assignmentId)); } catch { /* Storage may be blocked. */ }
+}
+
+/** This device's choices that differ from the saved answers (a blank is null either way). */
+export function conflictsAgainst(candidate: Answers, saved: Answers): Answers {
+  return Object.fromEntries(Object.entries(candidate).filter(([id, value]) => (saved[id] ?? null) !== value));
+}
+
+/**
+ * How local data reconciles with the claimed server draft. The same generation at the acknowledged
+ * version (or one save ahead, when that save's response was lost) resumes and replays exactly.
+ * Anything else never replays: differing choices become per-question conflicts for the student.
+ */
+export function reconcile(local: LocalDraft | null, server: { generation: number; version: number; answers: Answers }):
+  { kind: "none" } | { kind: "resume"; draft: LocalDraft } | { kind: "conflicts"; conflicts: Answers } {
+  if (!local || empty(local)) return { kind: "none" };
+  const conflicts = conflictsAgainst(local.conflicts, server.answers);
+  if (local.generation === server.generation
+    && (local.baseVersion === server.version || (local.operation?.kind === "save" && local.baseVersion + 1 === server.version))) {
+    return { kind: "resume", draft: { ...local, conflicts } };
+  }
+  const all = conflictsAgainst({ ...local.conflicts, ...local.pending }, server.answers);
+  return Object.keys(all).length ? { kind: "conflicts", conflicts: all } : { kind: "none" };
 }
 
 /** This tab's editor identity. A refresh keeps it (same tab recovers its claim); another tab gets its own. */
@@ -76,14 +104,3 @@ function safe<T>(read: () => T): T | null {
   try { return read(); } catch { return null; }
 }
 
-/**
- * How locally pending choices reconcile with the claimed server draft. Only the same generation
- * at the same acknowledged version may continue; newer server work or another editor wins.
- */
-export function reconcile(local: LocalDraft | null, server: { generation: number; version: number }): "resume" | "discard" | "none" {
-  if (!local || (Object.keys(local.pending).length === 0 && !local.operation)) return "none";
-  if (local.generation !== server.generation) return "discard";
-  // A save whose response was lost may already be applied: its exact retry replays the receipt.
-  if (local.baseVersion === server.version || (local.operation?.kind === "save" && local.baseVersion + 1 === server.version)) return "resume";
-  return "discard";
-}

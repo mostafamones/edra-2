@@ -31,7 +31,7 @@ const file = z.object({
   state: z.enum(["pending", "complete"]), path: z.string(),
 });
 export const editorSchema = z.object({
-  generation: z.number().int().positive(), version: z.number().int().min(0), answers: z.record(z.string(), z.guid().nullable()),
+  recordId: z.guid(), generation: z.number().int().positive(), version: z.number().int().min(0), answers: z.record(z.string(), z.guid().nullable()),
   leaseUntil: z.string(), scoringRevision: z.number().int().positive(), parts: z.array(part), files: z.array(file),
 });
 export const claimSchema = z.union([z.object({ busy: z.literal(true) }), editorSchema]);

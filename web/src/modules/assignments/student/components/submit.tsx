@@ -10,13 +10,13 @@ import { Button } from "@/components/ui/button";
 
 import type { Answers, EditorDocument } from "../types";
 
-type Props = { doc: EditorDocument; answers: Answers; dueAt: string | null; busy: boolean; onSubmit: () => Promise<string | null> };
+type Props = { doc: EditorDocument; answers: Answers; dueAt: string | null; conflicts: number; busy: boolean; onSubmit: () => Promise<string | null> };
 
 /**
  * The one explicit final submission. Blank choices are warned about but allowed; every Written Work
  * part needs at least one uploaded file, and saves and uploads must finish first.
  */
-export function StudentAssignmentSubmit({ doc, answers, dueAt, busy, onSubmit }: Props) {
+export function StudentAssignmentSubmit({ doc, answers, dueAt, conflicts, busy, onSubmit }: Props) {
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,11 +44,12 @@ export function StudentAssignmentSubmit({ doc, answers, dueAt, busy, onSubmit }:
           {late && <li>This submission will be late.</li>}
           {missing.map((part) => <li key={part.id} className="text-destructive">Upload at least one file for {part.title}.</li>)}
           {unfinished && <li className="text-destructive">Remove uploads that didn’t finish.</li>}
+          {conflicts > 0 && <li className="text-destructive">Choose which answer to keep for {conflicts === 1 ? "1 question" : `${conflicts} questions`} first.</li>}
         </ul>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={sending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={sending || busy || missing.length > 0 || unfinished} onClick={(event) => { event.preventDefault(); void confirm(); }}>
+          <AlertDialogAction disabled={sending || busy || missing.length > 0 || unfinished || conflicts > 0} onClick={(event) => { event.preventDefault(); void confirm(); }}>
             {sending ? "Submitting…" : "Submit"}
           </AlertDialogAction>
         </AlertDialogFooter>

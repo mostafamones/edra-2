@@ -3,6 +3,7 @@ import type { AssignmentErrorCode, AssignmentFailure } from "./types";
 const MESSAGES: Record<AssignmentErrorCode, string> = {
   stale_basis: "The scoring basis changed. Review the latest key and exclusions before correcting it.",
   question_excluded: "This question is excluded and cannot be changed or marked.",
+  not_qualified: "This student has no qualifying work for answer videos.",
   online_draft: "This student is working on this assignment online. Their work can be marked after they submit it.",
   source_locked: "This student submitted online. Their choice answers are their own; only Written Work can be marked here.",
   validation: "Some details aren’t valid. Check the fields and try again.",

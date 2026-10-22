@@ -120,6 +120,7 @@ export type AudiencePreview = { recipientCount: number; uncodedCount: number };
 
 export type AssignmentErrorCode =
   | "online_draft"
+  | "not_qualified"
   | "source_locked"
   | "validation"
   | "forbidden"

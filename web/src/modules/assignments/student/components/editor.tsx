@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 import { claimAssignmentEditor, readAssignmentEditor, renewAssignmentEditor, saveAssignmentAnswers, signAssignmentImages, submitAssignment } from "../actions";
 import { blockedMessage } from "../errors";
-import { clearLocalDraft, editorToken, loadLocalDraft, reconcile, storeLocalDraft, type PendingOperation } from "../local";
+import { clearLocalDraft, conflictsAgainst, editorToken, loadLocalDraft, reconcile, storeLocalDraft, type PendingOperation } from "../local";
 import type { Answers, EditorDocument, StudentAssignmentErrorCode, StudentAssignmentFailure } from "../types";
 import { StudentAssignmentPart } from "./part";
 import { StudentAssignmentSubmit } from "./submit";
@@ -28,6 +28,12 @@ const BLOCKING = new Set<StudentAssignmentErrorCode>([
 ]);
 const RENEW_MS = 30_000;
 
+/** Conflicts only for questions still answerable (an excluded question cannot be resolved or saved). */
+function answerable(conflicts: Answers, doc: EditorDocument): Answers {
+  const ids = new Set(doc.parts.flatMap((part) => part.questions.map((question) => question.id)));
+  return Object.fromEntries(Object.entries(conflicts).filter(([id]) => ids.has(id)));
+}
+
 /**
  * The single active editor for one assignment draft: claims an expiring server-owned generation,
  * autosaves choices (kept on this device until acknowledged), uploads Written Work and submits once.
@@ -38,6 +44,7 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
   const [phase, setPhase] = useState<Phase>("claiming");
   const [doc, setDoc] = useState<EditorDocument | null>(null);
   const [pending, setPending] = useState<Answers>({});
+  const [conflicts, setConflicts] = useState<Answers>({});
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [kept, setKept] = useState(true);
   const [online, setOnline] = useState(true);
@@ -49,22 +56,27 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
   const token = useRef<string | null>(null);
   const docRef = useRef<EditorDocument | null>(null);
   const pendingRef = useRef<Answers>({});
+  const conflictsRef = useRef<Answers>({});
   const operation = useRef<PendingOperation | null>(null);
   const saving = useRef(false);
   // Refs mirror the latest state for async save/submit callbacks.
   const applyDoc = useCallback((next: EditorDocument | null) => { docRef.current = next; setDoc(next); }, []);
   const applyPending = useCallback((next: Answers) => { pendingRef.current = next; setPending(next); }, []);
+  const applyConflicts = useCallback((next: Answers) => { conflictsRef.current = next; setConflicts(next); }, []);
 
   const base = useCallback(() => ({ academyId, assignmentId, token: token.current! }), [academyId, assignmentId]);
   const persist = useCallback((next: Answers, current: EditorDocument | null = docRef.current) => {
     if (!current) return;
-    setKept(storeLocalDraft(userId, assignmentId, { generation: current.generation, baseVersion: current.version, pending: next, operation: operation.current }));
+    setKept(storeLocalDraft(userId, current.recordId, assignmentId, {
+      generation: current.generation, baseVersion: current.version, pending: next, conflicts: conflictsRef.current, operation: operation.current,
+    }));
   }, [userId, assignmentId]);
+  const forget = useCallback(() => { const current = docRef.current; if (current) clearLocalDraft(userId, current.recordId, assignmentId); }, [userId, assignmentId]);
 
   const reclaim = useRef<(() => void) | null>(null);
   const fail = useCallback((failure: StudentAssignmentFailure) => {
     // A lapsed lease (e.g. a throttled background tab) recovers with this tab's own token; a live
-    // editor elsewhere answers busy, and a newer generation discards this tab's pending choices.
+    // editor elsewhere answers busy, and a newer generation turns pending choices into conflicts.
     if (failure.code === "editor_stale") { if (reclaim.current) reclaim.current(); else setPhase("stale"); }
     else if (BLOCKING.has(failure.code)) { setProblem(failure.message); setPhase("blocked"); }
     return failure;
@@ -80,18 +92,14 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
     }
     if ("busy" in result.data) { setPhase(recovering ? "stale" : "busy"); return; }
     const claimed = result.data;
-    const local = loadLocalDraft(userId, assignmentId);
-    const outcome = reconcile(local, claimed);
-    operation.current = outcome === "resume" ? local!.operation : null;
-    const restored = outcome === "resume" ? local!.pending : {};
-    if (outcome === "discard") {
-      setNotice("Answers on this device weren’t saved before this assignment changed elsewhere. You’re seeing the latest saved work.");
-      clearLocalDraft(userId, assignmentId);
-    }
+    const outcome = reconcile(loadLocalDraft(userId, claimed.recordId, assignmentId), claimed);
+    operation.current = outcome.kind === "resume" ? outcome.draft.operation : null;
     applyDoc(claimed);
-    applyPending(restored);
+    applyPending(outcome.kind === "resume" ? outcome.draft.pending : {});
+    applyConflicts(answerable(outcome.kind === "resume" ? outcome.draft.conflicts : outcome.kind === "conflicts" ? outcome.conflicts : {}, claimed));
+    persist(pendingRef.current, claimed);
     setPhase("editing");
-  }, [applyDoc, applyPending, assignmentId, base, fail, userId]);
+  }, [applyConflicts, applyDoc, applyPending, assignmentId, base, fail, persist, userId]);
 
   // A repeated claim with this tab's token is harmless (StrictMode probes run it twice).
   const start = useEffectEvent(() => { void claim(false); });
@@ -117,14 +125,16 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
     return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); };
   }, []);
 
+  // Newer saved work wins the display; this device's differing choices wait as conflicts.
   const reload = useCallback(async () => {
     const result = await readAssignmentEditor({ ...base(), operation: "read" });
     if (!result.ok) { fail(result); return; }
     operation.current = null;
+    applyConflicts(answerable(conflictsAgainst({ ...conflictsRef.current, ...pendingRef.current }, result.data.answers), result.data));
     applyDoc(result.data);
     applyPending({});
-    clearLocalDraft(userId, assignmentId);
-  }, [applyDoc, applyPending, assignmentId, base, fail, userId]);
+    persist({}, result.data);
+  }, [applyConflicts, applyDoc, applyPending, base, fail, persist]);
 
   // One save in flight. An uncertain save is retried with its exact payload until answered.
   const flush = useCallback(async () => {
@@ -156,7 +166,7 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
     operation.current = null;
     setSaveState("failed");
     if (result.code === "draft_conflict" || result.code === "question_excluded" || result.code === "idempotency_conflict") {
-      setNotice(result.code === "question_excluded" ? result.message : "Your work changed elsewhere. You’re seeing the latest saved work.");
+      if (result.code === "question_excluded") setNotice(result.message);
       await reload();
       setSaveState("idle");
       return;
@@ -173,8 +183,16 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
 
   const choose = (questionId: string, choiceId: string | null) => {
     const next = { ...pendingRef.current, [questionId]: choiceId };
+    if (questionId in conflictsRef.current) applyConflicts(Object.fromEntries(Object.entries(conflictsRef.current).filter(([id]) => id !== questionId)));
     applyPending(next);
     persist(next);
+  };
+  // Explicit per-question resolution; keeping this device's answer saves it under the current editor.
+  const resolve = (questionId: string, keep: "saved" | "mine") => {
+    const mine = conflictsRef.current[questionId] ?? null;
+    applyConflicts(Object.fromEntries(Object.entries(conflictsRef.current).filter(([id]) => id !== questionId)));
+    if (keep === "mine") choose(questionId, mine);
+    else persist(pendingRef.current);
   };
 
   const images = useMemo<ImageSource>(() => ({
@@ -197,7 +215,7 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
     const result = await submitAssignment(operation.current.payload);
     if (result.ok) {
       operation.current = null;
-      clearLocalDraft(userId, assignmentId);
+      forget();
       router.refresh();
       return null;
     }
@@ -207,7 +225,7 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
     if (result.code === "editor_stale" || result.code === "submitted" || BLOCKING.has(result.code)) fail(result);
     if (result.code === "submitted") router.refresh();
     return result.message;
-  }, [assignmentId, base, fail, persist, reload, router, userId]);
+  }, [base, fail, forget, persist, reload, router]);
 
   if (phase === "claiming") return <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><IconLoader2 className="size-4 animate-spin" aria-hidden="true" />Opening your work…</p>;
   if (phase === "busy" || phase === "stale") {
@@ -216,7 +234,7 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
         <IconAlertCircle aria-hidden="true" />
         <AlertTitle>{phase === "busy" ? "This assignment is open on another device or tab" : "Editing moved to another device or tab"}</AlertTitle>
         <AlertDescription className="flex flex-col items-start gap-3">
-          {phase === "stale" && Object.keys(pending).length > 0 && <span>Answers not yet saved here were kept off the other device.</span>}
+          {phase === "stale" && Object.keys(pending).length > 0 && <span>Answers not yet saved here are kept on this device. If you continue here, you can choose which to keep.</span>}
           <Button onClick={() => retryClaim(true)}>Continue on this device</Button>
         </AlertDescription>
       </Alert>
@@ -245,11 +263,20 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
               <Button key={entry.id} type="button" size="sm" variant={entry.id === part.id ? "default" : "outline"}
                 aria-current={entry.id === part.id ? "step" : undefined} onClick={() => setPartIndex(index)}>
                 {entry.title || `Part ${index + 1}`}
+                {entry.questions.some((question) => question.id in conflicts) && <span className="sr-only">, has answers to resolve</span>}
+                {entry.questions.some((question) => question.id in conflicts) && <IconAlertCircle aria-hidden="true" className="text-amber-600" />}
               </Button>
             ))}
           </nav>
           <SaveStatus unsaved={unsaved} state={saveState} online={online} kept={kept} />
         </div>
+        {Object.keys(conflicts).length > 0 && (
+          <Alert>
+            <IconAlertCircle aria-hidden="true" />
+            <AlertTitle>Some answers on this device differ from your saved work</AlertTitle>
+            <AlertDescription>Choose which answer to keep for each marked question.</AlertDescription>
+          </Alert>
+        )}
         {notice && (
           <Alert>
             <IconAlertCircle aria-hidden="true" />
@@ -260,14 +287,15 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
         {part.kind === "file_upload" ? (
           <StudentAssignmentWrittenWork part={part} doc={doc} editor={base} onDocument={applyDoc} onUploading={(delta) => setUploading((count) => count + delta)} onFailure={fail} />
         ) : (
-          <StudentAssignmentPart part={part} answers={answers} onChoose={choose} />
+          <StudentAssignmentPart part={part} answers={answers} conflicts={conflicts} onChoose={choose} onResolve={resolve} />
         )}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <div className="flex gap-2">
             <Button type="button" variant="outline" disabled={partIndex === 0} onClick={() => setPartIndex(partIndex - 1)}><IconChevronLeft aria-hidden="true" />Previous part</Button>
             <Button type="button" variant="outline" disabled={partIndex >= doc.parts.length - 1} onClick={() => setPartIndex(partIndex + 1)}>Next part<IconChevronRight aria-hidden="true" /></Button>
           </div>
-          <StudentAssignmentSubmit doc={doc} answers={answers} dueAt={dueAt} busy={unsaved || saveState === "saving" || uploading > 0} onSubmit={submit} />
+          <StudentAssignmentSubmit doc={doc} answers={answers} dueAt={dueAt} conflicts={Object.keys(conflicts).length}
+            busy={unsaved || saveState === "saving" || uploading > 0} onSubmit={submit} />
         </div>
       </div>
     </ImageSourceProvider>
