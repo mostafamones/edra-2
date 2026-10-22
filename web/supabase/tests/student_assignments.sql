@@ -5,7 +5,7 @@ do $$ begin
 end $$;
 create temporary table sa_ids(name text primary key,id uuid not null default gen_random_uuid());
 insert into sa_ids(name) values('owner'),('instructor'),('student'),('inperson'),('other-level'),('outsider'),('academy'),('other-academy'),
-  ('choice'),('written'),('attached'),('unit'),('video'),('answer-video'),('explanation'),('t1'),('t2'),('t3'),('t4'),('t5'),('t6');
+  ('choice'),('written'),('attached'),('unit'),('video'),('answer-video'),('explanation'),('t1'),('t2'),('t3'),('t4'),('t5'),('t6'),('t7');
 grant select on sa_ids to authenticated, service_role;
 create function pg_temp.sid(label text) returns uuid language sql as $$ select id from pg_temp.sa_ids where name=label $$;
 create function pg_temp.act(label text) returns void language plpgsql as $$ begin
@@ -273,6 +273,52 @@ do $$ declare d jsonb; r jsonb; begin
 end $$;
 select pg_temp.act('outsider');
 select pg_temp.fails(format('select public.authorize_content_material(%L,%L,%L)',pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('answer-video')),'student_unavailable');
+
+-- Answer access: managers revoke invalid qualifying work with a reason, and restore it while that
+-- work remains valid. The latest event decides every answer surface; history is immutable.
+select pg_temp.act('instructor');
+select pg_temp.fails(format('select public.change_assignment_answer_access(%L,%L,%L,''revoke'',''Copied'',%L)',
+  pg_temp.sid('academy'),pg_temp.sid('attached'),pg_temp.sid('record-student'),gen_random_uuid()),'forbidden');
+select pg_temp.check((public.get_assignment_answer_access(pg_temp.sid('academy'),pg_temp.sid('attached'),pg_temp.sid('record-student'))->>'qualifyingWork')::boolean,'staff see qualifying work');
+select pg_temp.act('owner');
+create temporary table sa_request(id uuid);
+insert into sa_request values(gen_random_uuid());
+grant select on sa_request to authenticated;
+do $$ declare first jsonb; begin
+  first:=public.change_assignment_answer_access(pg_temp.sid('academy'),pg_temp.sid('attached'),pg_temp.sid('record-student'),'revoke','Copied work',(select id from sa_request));
+  perform pg_temp.check((first->>'revoked')::boolean and jsonb_array_length(first->'history')=1,'revocation recorded');
+  perform pg_temp.check(public.change_assignment_answer_access(pg_temp.sid('academy'),pg_temp.sid('attached'),pg_temp.sid('record-student'),'revoke','Copied work',(select id from sa_request))=first,'revocation retry replays');
+  perform pg_temp.fails(format('select public.change_assignment_answer_access(%L,%L,%L,''revoke'',''Other reason'',%L)',
+    pg_temp.sid('academy'),pg_temp.sid('attached'),pg_temp.sid('record-student'),(select id from sa_request)),'idempotency_conflict');
+  perform pg_temp.fails(format('select public.change_assignment_answer_access(%L,%L,%L,''revoke'',''Again'',%L)',
+    pg_temp.sid('academy'),pg_temp.sid('attached'),pg_temp.sid('record-student'),gen_random_uuid()),'assignment_conflict');
+  perform pg_temp.fails(format('select public.change_assignment_answer_access(%L,%L,%L,''revoke'',''No work'',%L)',
+    pg_temp.sid('academy'),pg_temp.sid('attached'),pg_temp.sid('record-inperson'),gen_random_uuid()),'not_qualified');
+  perform pg_temp.fails(format('select public.change_assignment_answer_access(%L,%L,%L,''revoke'','' '',%L)',
+    pg_temp.sid('academy'),pg_temp.sid('attached'),pg_temp.sid('record-student'),gen_random_uuid()),'validation');
+end $$;
+select pg_temp.act('student');
+select pg_temp.check(jsonb_array_length(public.get_my_assignment(pg_temp.sid('academy'),pg_temp.sid('attached'))->'answerVideos')=0,'revoked answers hidden');
+select pg_temp.fails(format('select public.authorize_content_material(%L,%L,%L)',pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('answer-video')),'material_unavailable');
+select pg_temp.check(not (select (i->>'available')::boolean from jsonb_array_elements(public.get_my_content_unit(pg_temp.sid('academy'),pg_temp.sid('unit'))->'items') i where i->>'kind'='answer'),'unit page shows revoked answers locked');
+select pg_temp.act('owner');
+select pg_temp.check(not (public.change_assignment_answer_access(pg_temp.sid('academy'),pg_temp.sid('attached'),pg_temp.sid('record-student'),'restore','Reviewed: original work',gen_random_uuid())->>'revoked')::boolean,'restoration recorded');
+select pg_temp.act('student');
+select pg_temp.check(public.authorize_content_material(pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('answer-video'))->>'playbackId'='playback-answer-video','restored answers play again');
+reset role;
+select pg_temp.fails(format('delete from public.assignment_answer_access_events where record_id=%L',pg_temp.sid('record-student')),'validation');
+set local role authenticated;
+
+-- HEIC photos are accepted Written Work types; the editor document names its annual record.
+select pg_temp.act('inperson');
+do $$ declare d jsonb; begin
+  d:=pg_temp.cmd('written','claim','t7');
+  perform pg_temp.check(d->>'recordId'=pg_temp.sid('record-inperson')::text,'editor document is record-scoped');
+  perform pg_temp.check(pg_temp.cmd('written','register','t7',jsonb_build_object('generation',1,'key',gen_random_uuid(),'partId',d#>>'{parts,1,id}',
+    'name','IMG_0001.HEIC','mime','image/heic','size',2048))->>'fileId' is not null,'HEIC registration accepted');
+  perform pg_temp.fails(pg_temp.cmd_sql('written','register','t7',jsonb_build_object('generation',1,'key',gen_random_uuid(),'partId',d#>>'{parts,1,id}',
+    'name','anim.gif','mime','image/gif','size',2048)),'validation');
+end $$;
 
 -- Direct table and private function access stays denied.
 select pg_temp.act('student');

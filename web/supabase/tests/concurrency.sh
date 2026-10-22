@@ -1060,6 +1060,121 @@ expect_ok l4a "first annual learning extension failed"
 expect_rejected l4b "annual extension was consumed twice across units" extension_used
 psqlx -tA -c "select count(*)=1 from public.content_access_grants where annual_record_id='$LR2' and kind='student_extension'" | grep -qx t || fail "annual allowance produced duplicate grants"
 
+# a1-a6. EDRA-81 student assignment journey. Student writes take assignment (share) -> annual
+# record -> profile -> draft -> recipient; staff closure/corrections hold the assignment row and
+# publication holds recipients, so each race resolves in one order without deadlock.
+AS1="$(uuid)"; AS2="$(uuid)"
+AR1="$(new_student 'Assignment race one' 01088880201 null)"
+AR2="$(new_student 'Assignment race two' 01088880202 null)"
+AC="$(uuid)"; AW="$(uuid)"; AX="$(uuid)"; AK="$(uuid)"
+choices='[{"label":"A","is_correct":true},{"label":"B","is_correct":false}]'
+choice_draft="{\"title\":\"Online race\",\"audience\":\"level\",\"level_id\":\"secondary-1\",\"parts\":[{\"title\":\"Q\",\"kind\":\"online_questions\",\"questions\":[{\"prompt\":\"One\",\"max_score\":\"1\",\"choices\":$choices},{\"prompt\":\"Two\",\"max_score\":\"1\",\"choices\":$choices}]}]}"
+written_draft='{"title":"Upload race","audience":"level","level_id":"secondary-1","parts":[{"title":"W","kind":"file_upload","questions":[{"prompt":"","max_score":"2"}]}]}'
+psqlx >/dev/null <<SQL
+begin;
+insert into auth.users(id) values('$AS1'),('$AS2');
+update public.academy_student_profiles p set user_id=v.user_id,linked_at=now()
+ from public.annual_student_records r join (values('$AR1'::uuid,'$AS1'::uuid),('$AR2'::uuid,'$AS2'::uuid)) v(record_id,user_id) on r.id=v.record_id
+ where p.id=r.academy_student_profile_id;
+$as_admin
+select public.assignment_online_setting('$ACADEMY',true,1);
+select public.create_assignment('$ACADEMY','$YEAR','$AC','$choice_draft');
+select public.create_assignment('$ACADEMY','$YEAR','$AX','$choice_draft');
+select public.create_assignment('$ACADEMY','$YEAR','$AK','$choice_draft');
+select public.create_assignment('$ACADEMY','$YEAR','$AW','$written_draft');
+commit;
+SQL
+cmd() { # $1 student user, $2 assignment, $3 JSON fields after academy/assignment
+  echo "$(as_user "$1") select public.assignment_student_command('{\"academyId\":\"$ACADEMY\",\"assignmentId\":\"$2\",$3}');"
+}
+question() { psqlx -tA -c "select id from public.assignment_part_questions where assignment_id='$1' order by position limit 1"; }
+choice() { psqlx -tA -c "select id from public.assignment_question_choices where question_id='$1' and is_correct"; }
+T1="$(uuid)"; T2="$(uuid)"
+run a0 "$(cmd "$AS1" "$AC" "\"operation\":\"claim\",\"token\":\"$T1\"")"
+expect_ok a0 "the first student editor did not claim"
+QC="$(question "$AC")"; CC="$(choice "$QC")"
+
+# a1. Explicit transfer holds the draft row; the old generation's save queues behind it and is fenced.
+hold a1a a1b "$(cmd "$AS1" "$AC" "\"operation\":\"claim\",\"token\":\"$T2\",\"transfer\":true")"
+start a1b "$(cmd "$AS1" "$AC" "\"operation\":\"save\",\"token\":\"$T1\",\"generation\":1,\"version\":0,\"key\":\"$(uuid)\",\"answers\":{\"$QC\":\"$CC\"}")"
+wait
+expect_ok a1a "the explicit transfer failed"
+expect_rejected a1b "a stale editor generation saved after transfer" editor_stale
+psqlx -tA -c "select generation=2 and version=0 and not source_selected from edra_private.assignment_online_drafts where assignment_id='$AC' and record_id='$AR1'" \
+  | grep -qx t || fail "transfer race left a stale write or wrong generation"
+
+# a2. Two submissions of one draft with different keys: the first holds the draft, the second then
+#     finds submitted work. One submission, one automatic publication, one effect.
+run a2s "$(cmd "$AS1" "$AC" "\"operation\":\"save\",\"token\":\"$T2\",\"generation\":2,\"version\":0,\"key\":\"$(uuid)\",\"answers\":{\"$QC\":\"$CC\"}")"
+expect_ok a2s "the transferred editor could not save"
+submit_json() { echo "\"operation\":\"submit\",\"token\":\"$2\",\"generation\":$3,\"version\":$4,\"key\":\"$1\",\"scoringRevision\":${5:-1}"; }
+hold a2a a2b "$(cmd "$AS1" "$AC" "$(submit_json "$(uuid)" "$T2" 2 1)")"
+start a2b "$(cmd "$AS1" "$AC" "$(submit_json "$(uuid)" "$T2" 2 1)")"
+wait
+expect_ok a2a "the first submission failed"
+expect_rejected a2b "a second submission was accepted" submitted
+psqlx -tA -c "select (select count(*) from public.assignment_online_submissions where assignment_id='$AC')=1
+ and (select count(*) from public.assignment_result_publications where assignment_id='$AC')=1
+ and (select count(*) from public.assignment_result_effects where assignment_id='$AC')=1" | grep -qx t || fail "double submission duplicated effects"
+
+# a3. Staff announce physical work while the student's first online save waits on the recipient;
+#     the save then finds an announced result and selects no online source.
+T3="$(uuid)"
+run a3c "$(cmd "$AS2" "$AX" "\"operation\":\"claim\",\"token\":\"$T3\"")"
+expect_ok a3c "the second student editor did not claim"
+QX="$(question "$AX")"; CX="$(choice "$QX")"
+PX="$(psqlx -tA -c "select id from public.assignment_parts where assignment_id='$AX'")"
+run a3m "$as_admin select public.save_assignment_marks('$ACADEMY','$AX','$AR2',null,1,'{\"marks\":[{\"part_id\":\"$PX\",\"score\":\"2\"}]}',gen_random_uuid());"
+expect_ok a3m "physical marks before the race failed"
+hold a3a a3b "$as_admin select public.publish_assignment_results('$ACADEMY','$AX','[{\"annual_student_record_id\":\"$AR2\",\"expected_version\":2}]',gen_random_uuid());"
+start a3b "$(cmd "$AS2" "$AX" "\"operation\":\"save\",\"token\":\"$T3\",\"generation\":1,\"version\":0,\"key\":\"$(uuid)\",\"answers\":{\"$QX\":\"$CX\"}")"
+wait
+expect_ok a3a "the physical publication failed"
+expect_rejected a3b "an online draft replaced an announced physical result" result_announced
+psqlx -tA -c "select not source_selected and version=0 from edra_private.assignment_online_drafts where assignment_id='$AX' and record_id='$AR2'" | grep -qx t \
+  || fail "the online save wrote after the announcement"
+
+# a4. Closing holds the assignment row; a submission queues and is refused. The draft survives.
+T4="$(uuid)"
+run a4c "$(cmd "$AS2" "$AK" "\"operation\":\"claim\",\"token\":\"$T4\"")"
+QK="$(question "$AK")"; CK="$(choice "$QK")"
+run a4s "$(cmd "$AS2" "$AK" "\"operation\":\"save\",\"token\":\"$T4\",\"generation\":1,\"version\":0,\"key\":\"$(uuid)\",\"answers\":{\"$QK\":\"$CK\"}")"
+expect_ok a4s "the closure-race draft could not save"
+VK="$(psqlx -tA -c "select version from public.assignments where id='$AK'")"
+hold a4a a4b "$as_admin select public.change_assignment_state('$ACADEMY','$AK',$VK,'close');"
+start a4b "$(cmd "$AS2" "$AK" "$(submit_json "$(uuid)" "$T4" 1 1)")"
+wait
+expect_ok a4a "closing the assignment failed"
+expect_rejected a4b "a submission crossed a concurrent closure" assignment_closed
+psqlx -tA -c "select version=1 and source_selected from edra_private.assignment_online_drafts where assignment_id='$AK' and record_id='$AR2'
+ and not exists(select 1 from public.assignment_online_submissions where assignment_id='$AK')" | grep -qx t || fail "closure lost the draft or accepted work"
+
+# a5. A key correction holds the assignment; a submission against the old scoring basis is refused.
+VK="$(psqlx -tA -c "select version from public.assignments where id='$AK'")"
+run a5o "$as_admin select public.change_assignment_state('$ACADEMY','$AK',$VK,'reopen');"
+expect_ok a5o "reopening the assignment failed"
+WRONG="$(psqlx -tA -c "select id from public.assignment_question_choices where question_id='$QK' and not is_correct")"
+run a5r "$(cmd "$AS2" "$AK" "\"operation\":\"claim\",\"token\":\"$T4\"")"
+hold a5a a5b "$as_admin select public.correct_assignment_key('$ACADEMY','$AK','$QK','$WRONG',1,gen_random_uuid());"
+start a5b "$(cmd "$AS2" "$AK" "$(submit_json "$(uuid)" "$T4" 1 1 1)")"
+wait
+expect_ok a5a "the key correction failed"
+expect_rejected a5b "a submission used a superseded scoring basis" draft_conflict
+
+# a6. Twenty-one concurrent registrations for one Written Work part: the draft row serializes the
+#     per-part quota, so exactly twenty pending files exist.
+T6="$(uuid)"
+run a6c "$(cmd "$AS1" "$AW" "\"operation\":\"claim\",\"token\":\"$T6\"")"
+PW="$(psqlx -tA -c "select id from public.assignment_parts where assignment_id='$AW'")"
+for n in $(seq 1 21); do
+  start "a6-$n" "$(cmd "$AS1" "$AW" "\"operation\":\"register\",\"token\":\"$T6\",\"generation\":1,\"key\":\"$(uuid)\",\"partId\":\"$PW\",\"name\":\"page-$n.pdf\",\"mime\":\"application/pdf\",\"size\":1000")"
+done
+wait
+psqlx -tA -c "select count(*)=20 from public.assignment_work_files where assignment_id='$AW' and record_id='$AR1' and state='pending'" | grep -qx t \
+  || fail "concurrent registrations exceeded the per-part file limit"
+grep -l file_limit "$OUT"/a6-* >/dev/null || fail "the over-limit registration was not refused with file_limit"
+grep -qi deadlock "$OUT"/a1a "$OUT"/a1b "$OUT"/a2a "$OUT"/a2b "$OUT"/a3a "$OUT"/a3b "$OUT"/a4a "$OUT"/a4b "$OUT"/a5a "$OUT"/a5b && fail "a student assignment race deadlocked"
+
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
 #     neither deadlocks. After the commit the worker finds a closed year and the command is refused.
