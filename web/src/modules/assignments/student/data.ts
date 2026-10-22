@@ -9,7 +9,7 @@ import { cookieAuthority, type Db } from "@/lib/supabase/authority";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { detectWorkFile } from "./content";
 import { studentAssignmentFailure, studentAssignmentFailureFromDatabase } from "./errors";
-import { WORK_FILE_MAX_BYTES, WORK_FILE_TYPES } from "./files";
+import { sameWorkFileType, WORK_FILE_MAX_BYTES, WORK_FILE_TYPES } from "./files";
 import {
   assignmentSchema, claimSchema, editorSchema, pageSchema, type ClaimOutcome, type EditorDocument, type StudentAssignment,
   type StudentAssignmentPage, type StudentAssignmentResult,
@@ -153,13 +153,13 @@ export async function finishWorkUpload(value: unknown): Promise<StudentAssignmen
     if (download.error || !download.data) return studentAssignmentFailure("file_unavailable");
     const bytes = new Uint8Array(await download.data.arrayBuffer());
     const type = bytes.length === file.size && bytes.length <= WORK_FILE_MAX_BYTES ? await detectWorkFile(bytes) : null;
-    if (type !== file.mime) {
+    if (!type || !sameWorkFileType(type, file.mime)) {
       await rpcCommand(caller.db, { ...base, operation: "remove", generation: command.generation, key: crypto.randomUUID(), fileId: file.id });
       await cleanupWorkFiles(command.academyId, command.assignmentId);
       return studentAssignmentFailure("unsupported_file");
     }
     const digest = createHash("sha256").update(bytes).digest("hex");
-    const attested = await admin.rpc("attest_assignment_upload", { p_file_id: file.id, p_sha256: digest, p_size: file.size, p_mime: type });
+    const attested = await admin.rpc("attest_assignment_upload", { p_file_id: file.id, p_sha256: digest, p_size: file.size, p_mime: file.mime });
     if (attested.error) return studentAssignmentFailureFromDatabase(attested.error);
     const finished = await rpcCommand(caller.db, command);
     if (finished.error) return studentAssignmentFailureFromDatabase(finished.error);

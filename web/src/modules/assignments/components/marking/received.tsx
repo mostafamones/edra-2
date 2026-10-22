@@ -6,6 +6,7 @@ import { IconExternalLink } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { formatAcademyDateTime } from "@/lib/academy-time";
+import { PREVIEWABLE_TYPES } from "../../student/files";
 import { loadReceivedFiles, openAssignmentReceivedFile } from "../../actions";
 import type { Assignment } from "../../types";
 
@@ -39,7 +40,7 @@ export function ReceivedFiles({ assignment, recordId }: { assignment: Assignment
           {query.data.files.map((file) => (
             <li key={file.id} className="flex items-center justify-between gap-3">
               <span className="min-w-0 truncate">{parts.get(file.partId)} · {file.name}</span>
-              <Button type="button" variant="outline" size="sm" onClick={() => void open(file.id)}><IconExternalLink aria-hidden="true" />Open</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => void open(file.id)}><IconExternalLink aria-hidden="true" />{PREVIEWABLE_TYPES.includes(file.mime) ? "Open" : "Download"}</Button>
             </li>
           ))}
         </ul>

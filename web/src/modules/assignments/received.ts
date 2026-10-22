@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { Database } from "@/lib/supabase/database.types";
 import { academyMember } from "@/lib/supabase/membership";
 import { failure, failureFromDatabase } from "./errors";
+import { PREVIEWABLE_TYPES } from "./student/files";
 import type { AssignmentFailure } from "./types";
 
 /**
@@ -47,11 +48,55 @@ export async function openReceivedFile(input: { academyId: string; fileId: strin
   try {
     const { data, error } = await caller.db.rpc("authorize_assignment_received_file", { p_academy_id: parsed.data.academyId, p_file_id: parsed.data.fileId });
     if (error) return failureFromDatabase(error);
-    const file = z.object({ path: z.string(), name: z.string() }).parse(data);
+    const file = z.object({ path: z.string(), name: z.string(), mime: z.string() }).parse(data);
     const admin = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, { auth: { persistSession: false, autoRefreshToken: false } });
-    const signed = await admin.storage.from("assignment-work").createSignedUrl(file.path, FILE_URL_SECONDS, { download: file.name });
+    const signed = await admin.storage.from("assignment-work").createSignedUrl(file.path, FILE_URL_SECONDS, PREVIEWABLE_TYPES.includes(file.mime) ? undefined : { download: file.name });
     if (signed.error || !signed.data) return failure("unavailable");
     return { ok: true, url: signed.data.signedUrl };
+  } catch {
+    return failure("unavailable");
+  }
+}
+
+const access = z.object({
+  hasAnswerVideos: z.boolean(), qualifyingWork: z.boolean(), revoked: z.boolean(),
+  history: z.array(z.object({ action: z.enum(["revoke", "restore"]), reason: z.string(), createdAt: z.string(), actor: z.string() })),
+});
+export type AnswerAccess = z.infer<typeof access>;
+const accessInput = z.object({ academyId: z.guid(), assignmentId: z.guid(), recordId: z.guid() });
+
+/** A student's earned answer-video access for this assignment, with its revoke/restore history. */
+export async function getAnswerAccess(input: z.input<typeof accessInput>): Promise<{ ok: true; data: AnswerAccess } | AssignmentFailure> {
+  const parsed = accessInput.safeParse(input);
+  if (!parsed.success) return failure("validation");
+  const caller = await academyMember(parsed.data.academyId);
+  if (!caller) return failure("forbidden");
+  try {
+    const { data, error } = await caller.db.rpc("get_assignment_answer_access", {
+      p_academy_id: parsed.data.academyId, p_assignment_id: parsed.data.assignmentId, p_record_id: parsed.data.recordId,
+    });
+    if (error) return failureFromDatabase(error);
+    return { ok: true, data: access.parse(data) };
+  } catch {
+    return failure("unavailable");
+  }
+}
+
+const changeInput = accessInput.extend({ action: z.enum(["revoke", "restore"]), reason: z.string().trim().min(1).max(1000), requestId: z.guid() });
+
+/** Owner/Head Admin/Admin revoke answer access for invalid qualifying work, or restore it while that work remains valid. */
+export async function changeAnswerAccess(input: z.input<typeof changeInput>): Promise<{ ok: true; data: AnswerAccess } | AssignmentFailure> {
+  const parsed = changeInput.safeParse(input);
+  if (!parsed.success) return failure("validation");
+  const { academyId, assignmentId, recordId, action, reason, requestId } = parsed.data;
+  const caller = await academyMember(academyId);
+  if (!caller) return failure("forbidden");
+  try {
+    const { data, error } = await caller.db.rpc("change_assignment_answer_access", {
+      p_academy_id: academyId, p_assignment_id: assignmentId, p_record_id: recordId, p_action: action, p_reason: reason, p_request_id: requestId,
+    });
+    if (error) return failureFromDatabase(error);
+    return { ok: true, data: access.parse(data) };
   } catch {
     return failure("unavailable");
   }

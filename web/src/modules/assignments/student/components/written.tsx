@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { newUuid } from "@/lib/uuid";
 
 import { finishAssignmentUpload, readAssignmentEditor, removeAssignmentFile, startAssignmentUpload } from "../actions";
-import { isWorkFileType, WORK_FILE_ACCEPT, WORK_FILE_MAX_COUNT, workFileProblem } from "../files";
+import { WORK_FILE_ACCEPT, WORK_FILE_MAX_COUNT, workFileMime, workFileProblem, type WorkFileType } from "../files";
 import type { EditorDocument, EditorPart, StudentAssignmentFailure } from "../types";
 import { uploadToSignedUrl } from "../upload";
 
@@ -17,7 +17,7 @@ type Props = {
   part: EditorPart; doc: EditorDocument; editor: Editor;
   onDocument: (doc: EditorDocument) => void; onUploading: (delta: 1 | -1) => void; onFailure: (failure: StudentAssignmentFailure) => void;
 };
-type Local = { id: string; file: File; progress: number; error: string | null };
+type Local = { id: string; file: File; mime: WorkFileType; progress: number; error: string | null };
 
 const size = (bytes: number) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
@@ -42,10 +42,10 @@ export function StudentAssignmentWrittenWork({ part, doc, editor, onDocument, on
       const generation = doc.generation;
       const started = await startAssignmentUpload({
         ...editor(), operation: "register", generation, key: newUuid(), partId: part.id,
-        name: entry.file.name.slice(0, 250) || "Upload", mime: entry.file.type, size: entry.file.size,
+        name: entry.file.name.slice(0, 250) || "Upload", mime: entry.mime, size: entry.file.size,
       });
       if (!started.ok) { onFailure(started); update(entry.id, { error: started.message }); return; }
-      const sent = await uploadToSignedUrl(started.data.url, entry.file, (progress) => update(entry.id, { progress }));
+      const sent = await uploadToSignedUrl(started.data.url, entry.file, entry.mime, (progress) => update(entry.id, { progress }));
       if (!sent) {
         await removeAssignmentFile({ ...editor(), operation: "remove", generation, key: newUuid(), fileId: started.data.fileId });
         update(entry.id, { error: "Upload failed. Check your connection and retry." });
@@ -75,7 +75,7 @@ export function StudentAssignmentWrittenWork({ part, doc, editor, onDocument, on
       const problem = workFileProblem(file);
       if (problem) { setError(`${file.name}: ${problem}`); return; }
     }
-    const entries = chosen.filter((file) => isWorkFileType(file.type)).map((file) => ({ id: newUuid(), file, progress: 0, error: null }));
+    const entries = chosen.flatMap((file) => { const mime = workFileMime(file); return mime ? [{ id: newUuid(), file, mime, progress: 0, error: null }] : []; });
     setLocals((current) => [...current, ...entries]);
     for (const entry of entries) void upload(entry);
   }
@@ -100,7 +100,7 @@ export function StudentAssignmentWrittenWork({ part, doc, editor, onDocument, on
         <Button type="button" variant="outline" disabled={used >= WORK_FILE_MAX_COUNT} onClick={() => input.current?.click()}>
           <IconFileUpload aria-hidden="true" />Add files
         </Button>
-        <span className="text-sm text-muted-foreground">{used} of {WORK_FILE_MAX_COUNT} · PDF, JPEG, PNG or WebP · up to 8 MB each</span>
+        <span className="text-sm text-muted-foreground">{used} of {WORK_FILE_MAX_COUNT} · PDF, JPEG, PNG, WebP or HEIC · up to 8 MB each</span>
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <ul className="flex flex-col gap-2">

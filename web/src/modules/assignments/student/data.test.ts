@@ -12,7 +12,8 @@ describe("student assignment command validation", () => {
     const register = { ...base, operation: "register", partId: id, name: "work.pdf", mime: "application/pdf", size: 8 * 1024 * 1024 };
     expect(commandSchema.safeParse(register).success).toBe(true);
     expect(commandSchema.safeParse({ ...register, size: 8 * 1024 * 1024 + 1 }).success).toBe(false);
-    expect(commandSchema.safeParse({ ...register, mime: "image/heic" }).success).toBe(false);
+    expect(commandSchema.safeParse({ ...register, mime: "image/heic" }).success).toBe(true);
+    expect(commandSchema.safeParse({ ...register, mime: "image/gif" }).success).toBe(false);
   });
   it("rejects unknown fields, empty saves and missing fencing", () => {
     expect(commandSchema.safeParse({ ...base, operation: "save", version: 0, answers: {} }).success).toBe(false);

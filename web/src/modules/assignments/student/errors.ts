@@ -14,7 +14,7 @@ const MESSAGES: Record<StudentAssignmentErrorCode, string> = {
   file_unavailable: "This file couldn’t be uploaded. Remove it and try again.",
   files_required: "Upload at least one file for every Written Work part.",
   uploads_pending: "Wait for uploads to finish, or remove failed uploads.",
-  unsupported_file: "This file isn’t a supported PDF, JPEG, PNG or WebP file.",
+  unsupported_file: "This file isn’t a supported PDF, JPEG, PNG, WebP or HEIC file.",
   throttled: "Too many requests in a short time. Wait a moment and try again.",
   unavailable: "Could not reach the server. Check your connection and try again.",
   submitted: "You already submitted this assignment.",
