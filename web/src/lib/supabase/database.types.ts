@@ -102,18 +102,42 @@ export type Database = {
       academy_levels: {
         Row: {
           academy_id: string
+          last_stopped_at: string | null
+          last_stopped_by: string | null
+          learning_epoch: number
           level_id: string
+          resumed_at: string | null
+          resumed_by: string | null
           sort_order: number
+          stopped_at: string | null
+          stopped_by: string | null
+          version: number
         }
         Insert: {
           academy_id: string
+          last_stopped_at?: string | null
+          last_stopped_by?: string | null
+          learning_epoch?: number
           level_id: string
+          resumed_at?: string | null
+          resumed_by?: string | null
           sort_order: number
+          stopped_at?: string | null
+          stopped_by?: string | null
+          version?: number
         }
         Update: {
           academy_id?: string
+          last_stopped_at?: string | null
+          last_stopped_by?: string | null
+          learning_epoch?: number
           level_id?: string
+          resumed_at?: string | null
+          resumed_by?: string | null
           sort_order?: number
+          stopped_at?: string | null
+          stopped_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -124,10 +148,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "academy_levels_last_stopped_by_fkey"
+            columns: ["last_stopped_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "academy_levels_level_id_fkey"
             columns: ["level_id"]
             isOneToOne: false
             referencedRelation: "global_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_levels_resumed_by_fkey"
+            columns: ["resumed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_levels_stopped_by_fkey"
+            columns: ["stopped_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -250,7 +295,10 @@ export type Database = {
           id: string
           level_id: string
           name: string
+          retired_at: string | null
+          retired_by: string | null
           sort_order: number
+          version: number
         }
         Insert: {
           academy_id: string
@@ -258,7 +306,10 @@ export type Database = {
           id?: string
           level_id: string
           name: string
+          retired_at?: string | null
+          retired_by?: string | null
           sort_order?: number
+          version?: number
         }
         Update: {
           academy_id?: string
@@ -266,7 +317,10 @@ export type Database = {
           id?: string
           level_id?: string
           name?: string
+          retired_at?: string | null
+          retired_by?: string | null
           sort_order?: number
+          version?: number
         }
         Relationships: [
           {
@@ -275,6 +329,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "academy_levels"
             referencedColumns: ["academy_id", "level_id"]
+          },
+          {
+            foreignKeyName: "academy_tracks_retired_by_fkey"
+            columns: ["retired_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -854,6 +915,109 @@ export type Database = {
           },
         ]
       }
+      assignment_online_settings: {
+        Row: {
+          academy_id: string
+          in_person_enabled: boolean
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          academy_id: string
+          in_person_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          academy_id?: string
+          in_person_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_online_settings_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: true
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_online_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_online_submissions: {
+        Row: {
+          actor_id: string
+          answers: Json
+          assignment_id: string
+          draft_version: number
+          generation: number
+          id: string
+          late: boolean
+          manifest: Json
+          record_id: string
+          scoring_revision: number
+          submitted_at: string
+        }
+        Insert: {
+          actor_id: string
+          answers: Json
+          assignment_id: string
+          draft_version: number
+          generation: number
+          id: string
+          late: boolean
+          manifest: Json
+          record_id: string
+          scoring_revision: number
+          submitted_at: string
+        }
+        Update: {
+          actor_id?: string
+          answers?: Json
+          assignment_id?: string
+          draft_version?: number
+          generation?: number
+          id?: string
+          late?: boolean
+          manifest?: Json
+          record_id?: string
+          scoring_revision?: number
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_online_submissions_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_online_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_online_submissions_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_part_questions: {
         Row: {
           academy_id: string
@@ -943,6 +1107,51 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "assignments"
             referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
+      assignment_physical_history: {
+        Row: {
+          answers: Json
+          assignment_id: string
+          id: string
+          marks: Json
+          recipient: Json
+          record_id: string
+          superseded_at: string
+        }
+        Insert: {
+          answers: Json
+          assignment_id: string
+          id?: string
+          marks: Json
+          recipient: Json
+          record_id: string
+          superseded_at?: string
+        }
+        Update: {
+          answers?: Json
+          assignment_id?: string
+          id?: string
+          marks?: Json
+          recipient?: Json
+          record_id?: string
+          superseded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_physical_history_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_physical_history_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1323,6 +1532,96 @@ export type Database = {
           },
         ]
       }
+      assignment_work_files: {
+        Row: {
+          actor_id: string
+          assignment_id: string
+          completed_at: string | null
+          created_at: string
+          generation: number
+          id: string
+          mime: string
+          name: string
+          part_id: string
+          record_id: string
+          sha256: string | null
+          size: number
+          state: string
+          storage_path: string
+          submission_id: string | null
+        }
+        Insert: {
+          actor_id: string
+          assignment_id: string
+          completed_at?: string | null
+          created_at?: string
+          generation: number
+          id?: string
+          mime: string
+          name: string
+          part_id: string
+          record_id: string
+          sha256?: string | null
+          size: number
+          state?: string
+          storage_path: string
+          submission_id?: string | null
+        }
+        Update: {
+          actor_id?: string
+          assignment_id?: string
+          completed_at?: string | null
+          created_at?: string
+          generation?: number
+          id?: string
+          mime?: string
+          name?: string
+          part_id?: string
+          record_id?: string
+          sha256?: string | null
+          size?: number
+          state?: string
+          storage_path?: string
+          submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_work_files_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_work_files_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_work_files_assignment_id_part_id_fkey"
+            columns: ["assignment_id", "part_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_parts"
+            referencedColumns: ["assignment_id", "id"]
+          },
+          {
+            foreignKeyName: "assignment_work_files_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_work_files_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_online_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           academic_year_id: string
@@ -1340,6 +1639,7 @@ export type Database = {
           instructions: string
           level_id: string | null
           max_score: number
+          offering_closed_at: string | null
           part_count: number
           published_at: string | null
           published_by: string | null
@@ -1368,6 +1668,7 @@ export type Database = {
           instructions?: string
           level_id?: string | null
           max_score?: number
+          offering_closed_at?: string | null
           part_count?: number
           published_at?: string | null
           published_by?: string | null
@@ -1396,6 +1697,7 @@ export type Database = {
           instructions?: string
           level_id?: string | null
           max_score?: number
+          offering_closed_at?: string | null
           part_count?: number
           published_at?: string | null
           published_by?: string | null
@@ -2316,6 +2618,7 @@ export type Database = {
           academy_id: string
           id: string
           level_id: string
+          original_track_name: string | null
           track_id: string | null
         }
         Insert: {
@@ -2323,6 +2626,7 @@ export type Database = {
           academy_id: string
           id?: string
           level_id: string
+          original_track_name?: string | null
           track_id?: string | null
         }
         Update: {
@@ -2330,6 +2634,7 @@ export type Database = {
           academy_id?: string
           id?: string
           level_id?: string
+          original_track_name?: string | null
           track_id?: string | null
         }
         Relationships: [
@@ -2419,6 +2724,7 @@ export type Database = {
           created_by: string
           draft: Json
           id: string
+          offering_epoch: number
           program_id: string
           published_revision: number
           published_version: number
@@ -2434,6 +2740,7 @@ export type Database = {
           created_by: string
           draft: Json
           id: string
+          offering_epoch?: number
           program_id: string
           published_revision?: number
           published_version?: number
@@ -2449,6 +2756,7 @@ export type Database = {
           created_by?: string
           draft?: Json
           id?: string
+          offering_epoch?: number
           program_id?: string
           published_revision?: number
           published_version?: number
@@ -3525,8 +3833,11 @@ export type Database = {
           instructions: string
           level_id: string | null
           max_score: number
+          offering_closed_at: string | null
           opens_at: string | null
           question_count: number
+          roster_frozen_at: string | null
+          roster_frozen_by: string | null
           scoring_revision: number
           solution_notes: string
           structure_locked_at: string | null
@@ -3554,8 +3865,11 @@ export type Database = {
           instructions?: string
           level_id?: string | null
           max_score?: number
+          offering_closed_at?: string | null
           opens_at?: string | null
           question_count?: number
+          roster_frozen_at?: string | null
+          roster_frozen_by?: string | null
           scoring_revision?: number
           solution_notes?: string
           structure_locked_at?: string | null
@@ -3583,8 +3897,11 @@ export type Database = {
           instructions?: string
           level_id?: string | null
           max_score?: number
+          offering_closed_at?: string | null
           opens_at?: string | null
           question_count?: number
+          roster_frozen_at?: string | null
+          roster_frozen_by?: string | null
           scoring_revision?: number
           solution_notes?: string
           structure_locked_at?: string | null
@@ -3635,6 +3952,13 @@ export type Database = {
           {
             foreignKeyName: "exams_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exams_roster_frozen_by_fkey"
+            columns: ["roster_frozen_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3691,6 +4015,7 @@ export type Database = {
           level_id: string
           name: string
           notes: string | null
+          retired_track_id: string | null
           track_id: string | null
           updated_at: string
         }
@@ -3704,6 +4029,7 @@ export type Database = {
           level_id: string
           name: string
           notes?: string | null
+          retired_track_id?: string | null
           track_id?: string | null
           updated_at?: string
         }
@@ -3717,6 +4043,7 @@ export type Database = {
           level_id?: string
           name?: string
           notes?: string | null
+          retired_track_id?: string | null
           track_id?: string | null
           updated_at?: string
         }
@@ -3741,6 +4068,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "academy_tracks"
             referencedColumns: ["academy_id", "level_id", "id"]
+          },
+          {
+            foreignKeyName: "groups_retired_track_id_fkey"
+            columns: ["retired_track_id"]
+            isOneToOne: false
+            referencedRelation: "academy_tracks"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4727,6 +5061,7 @@ export type Database = {
           instructions: string
           level_id: string | null
           max_score: number
+          offering_closed_at: string | null
           opens_at: string | null
           question_count: number
           scoring_revision: number
@@ -4756,6 +5091,7 @@ export type Database = {
           instructions?: string
           level_id?: string | null
           max_score?: number
+          offering_closed_at?: string | null
           opens_at?: string | null
           question_count?: number
           scoring_revision?: number
@@ -4785,6 +5121,7 @@ export type Database = {
           instructions?: string
           level_id?: string | null
           max_score?: number
+          offering_closed_at?: string | null
           opens_at?: string | null
           question_count?: number
           scoring_revision?: number
@@ -4940,6 +5277,7 @@ export type Database = {
           level_id: string | null
           location: string | null
           mandatory: boolean
+          original_track_name: string | null
           title: string
           track_id: string | null
           updated_at: string
@@ -4957,6 +5295,7 @@ export type Database = {
           level_id?: string | null
           location?: string | null
           mandatory?: boolean
+          original_track_name?: string | null
           title: string
           track_id?: string | null
           updated_at?: string
@@ -4974,6 +5313,7 @@ export type Database = {
           level_id?: string | null
           location?: string | null
           mandatory?: boolean
+          original_track_name?: string | null
           title?: string
           track_id?: string | null
           updated_at?: string
@@ -6462,6 +6802,19 @@ export type Database = {
         }
         Returns: Json
       }
+      assignment_file_cleanup: {
+        Args: {
+          p_academy_id: string
+          p_assignment_id: string
+          p_completed?: string[]
+        }
+        Returns: Json
+      }
+      assignment_online_setting: {
+        Args: { p_academy_id: string; p_enabled?: boolean; p_version?: number }
+        Returns: Json
+      }
+      assignment_student_command: { Args: { p_input: Json }; Returns: Json }
       attendance_entry: {
         Args: { p_record_id: string; p_session_id: string }
         Returns: Json
@@ -6471,9 +6824,30 @@ export type Database = {
         Args: { p_fingerprint: string; p_key: string; p_operation: string }
         Returns: Json
       }
+      attest_assignment_upload: {
+        Args: {
+          p_file_id: string
+          p_mime: string
+          p_sha256: string
+          p_size: number
+        }
+        Returns: undefined
+      }
+      authorize_assignment_received_file: {
+        Args: { p_academy_id: string; p_file_id: string }
+        Returns: Json
+      }
       authorize_content_material: {
         Args: { p_academy_id: string; p_item_id: string; p_unit_id: string }
         Returns: Json
+      }
+      authorize_content_material_before_assignments: {
+        Args: { p_academy_id: string; p_item_id: string; p_unit_id: string }
+        Returns: Json
+      }
+      authorize_my_assignment_images: {
+        Args: { p_ids: string[]; p_input: Json }
+        Returns: string[]
       }
       authorize_my_exam_images: {
         Args: {
@@ -7008,6 +7382,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_academy_structure: { Args: { p_academy_id: string }; Returns: Json }
       get_assignment: {
         Args: { p_academy_id: string; p_assignment_id: string }
         Returns: Json
@@ -7038,7 +7413,15 @@ export type Database = {
         Args: { p_academy_id: string; p_exam_id: string; p_record_id: string }
         Returns: Json
       }
+      get_my_assignment: {
+        Args: { p_academy_id: string; p_assignment_id: string }
+        Returns: Json
+      }
       get_my_content_unit: {
+        Args: { p_academy_id: string; p_unit_id: string }
+        Returns: Json
+      }
+      get_my_content_unit_before_assignments: {
         Args: { p_academy_id: string; p_unit_id: string }
         Returns: Json
       }
@@ -7057,6 +7440,14 @@ export type Database = {
       }
       get_my_quiz: { Args: { p_quiz_id: string }; Returns: Json }
       get_my_student_academy: { Args: { p_slug: string }; Returns: Json }
+      get_offering_track_labels: {
+        Args: { p_academy_id: string }
+        Returns: {
+          academic_year_id: string
+          name: string
+          track_id: string
+        }[]
+      }
       get_quiz: {
         Args: { p_academy_id: string; p_quiz_id: string }
         Returns: Json
@@ -7119,6 +7510,14 @@ export type Database = {
         }
         Returns: Json
       }
+      list_assignment_received_files: {
+        Args: {
+          p_academy_id: string
+          p_assignment_id: string
+          p_record_id: string
+        }
+        Returns: Json
+      }
       list_assignment_recipients: {
         Args: { p_academy_id: string; p_assignment_id: string }
         Returns: Json
@@ -7147,6 +7546,10 @@ export type Database = {
           p_before_started_at: string
           p_limit: number
         }
+        Returns: Json
+      }
+      list_my_assignments: {
+        Args: { p_academy_id: string; p_offset?: number; p_search?: string }
         Returns: Json
       }
       list_my_content_units: {
@@ -7311,6 +7714,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      maintain_academy_offering: {
+        Args: {
+          p_academy_id: string
+          p_change: Json
+          p_expected_revision: number
+          p_fingerprint: string
+          p_request_key: string
+        }
+        Returns: Json
+      }
       mark_unrecorded_absent: {
         Args: {
           p_academy_id: string
@@ -7334,6 +7747,33 @@ export type Database = {
       note_staff_invitation_lookup_failure: {
         Args: { p_user_id: string }
         Returns: undefined
+      }
+      offering_startable_schedules: {
+        Args: { p_academy_id: string }
+        Returns: {
+          academic_year_id: string
+          academy_id: string
+          archived_at: string | null
+          audience: Database["public"]["Enums"]["schedule_audience"]
+          created_at: string
+          created_by: string
+          group_id: string | null
+          id: string
+          kind: Database["public"]["Enums"]["schedule_kind"]
+          level_id: string | null
+          location: string | null
+          mandatory: boolean
+          original_track_name: string | null
+          title: string
+          track_id: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "schedules"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       own_suspended_staff_academies: {
         Args: never
@@ -7369,6 +7809,10 @@ export type Database = {
           p_level_id: string
           p_track_id: string
         }
+        Returns: Json
+      }
+      preview_offering_change: {
+        Args: { p_academy_id: string; p_change: Json }
         Returns: Json
       }
       preview_quiz_audience: {
