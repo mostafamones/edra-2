@@ -1,4 +1,4 @@
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back. Any failed assertion aborts psql with a
 -- non-zero exit status.
 -- Fixtures pin the academic year to 2030 so results do not depend on the wall clock.

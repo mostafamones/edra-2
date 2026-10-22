@@ -8,7 +8,6 @@ import { randomBytes } from "node:crypto";
 
 export const TARGETS = Object.freeze({
   fgbcjlibwgxylfwmocgx: "development",
-  msnjxvnblgkdeigctbhk: "isolated-test",
 });
 
 const MAX_ERROR_CHARS = 1500;

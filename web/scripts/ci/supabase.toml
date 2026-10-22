@@ -2,7 +2,7 @@
 # into a fresh RUNNER_TEMP workspace). Not the developer config: supabase/config.toml stays as is.
 # `supabase db start` runs only the database container plus short-lived Auth, Storage and Realtime
 # schema-migration jobs; the long-running API, Studio and other services are never started.
-project_id = "edra-ci-placeholder"
+project_id = "edra-db-check-placeholder"
 
 [api]
 enabled = false

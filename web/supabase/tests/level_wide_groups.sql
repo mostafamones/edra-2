@@ -1,6 +1,6 @@
 -- Level-wide group placement: a group with a null track accepts students of its level with or
 -- without a track; a track-specific group requires the same level and track.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back. Generated ids are kept in custom settings.
 
 begin;

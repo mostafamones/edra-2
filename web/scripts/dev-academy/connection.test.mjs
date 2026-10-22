@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import { createSqlRunner, jsonLiteral, managementToken, resolveTarget, sqlLiteral } from "./connection.mjs";
 
 const DEV = "fgbcjlibwgxylfwmocgx";
-const TEST = "msnjxvnblgkdeigctbhk";
+const OTHER = "abcdefghijklmnopqrst";
 
 /** Fake fetch that records the call and answers with the given status and body text. */
 function fakeFetcher(status, body) {
@@ -22,8 +22,8 @@ function fakeFetcher(status, body) {
 }
 
 describe("resolveTarget", () => {
-  it("accepts both allow-listed refs with a matching URL", () => {
-    for (const [ref, kind] of [[DEV, "development"], [TEST, "isolated-test"]]) {
+  it("accepts the development ref with a matching URL", () => {
+    for (const [ref, kind] of [[DEV, "development"]]) {
       const env = { NEXT_PUBLIC_SUPABASE_URL: `https://${ref}.supabase.co`, SUPABASE_SERVICE_ROLE_KEY: "svc" };
       assert.deepEqual(resolveTarget(ref, env), { projectRef: ref, kind, url: `https://${ref}.supabase.co`, serviceKey: "svc" });
     }
@@ -42,7 +42,7 @@ describe("resolveTarget", () => {
   });
 
   it("rejects a mismatched URL", () => {
-    const env = { NEXT_PUBLIC_SUPABASE_URL: `https://${TEST}.supabase.co`, SUPABASE_SERVICE_ROLE_KEY: "svc" };
+    const env = { NEXT_PUBLIC_SUPABASE_URL: `https://${OTHER}.supabase.co`, SUPABASE_SERVICE_ROLE_KEY: "svc" };
     assert.throws(() => resolveTarget(DEV, env), { message: "NEXT_PUBLIC_SUPABASE_URL does not match the selected project." });
   });
 

@@ -1,7 +1,7 @@
 -- Attendance corrections: atomic Late check-ins (UUID and code) with receipt replay and legacy UUID
 -- receipts, the reviewed all-remaining absence command at roster sizes above the explicit batch cap,
 -- and the explicit unexpected-attendee append with candidate search.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back.
 
 do $$ begin

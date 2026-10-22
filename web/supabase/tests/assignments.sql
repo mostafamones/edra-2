@@ -1,6 +1,6 @@
 -- Assignments, checkpoint 1: grants, roles, tenant isolation, exact part maxima, stale edits,
 -- audience validation, save-time recipient snapshots, activity locking, lifecycle, and closed years.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back.
 
 do $$ begin

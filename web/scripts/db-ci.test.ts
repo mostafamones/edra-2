@@ -64,7 +64,7 @@ function run(env: Record<string, string | undefined> = {}) {
     GITHUB_RUN_ATTEMPT: "2",
     // Supplied cloud connectivity must be ignored.
     EDRA_DB_TEST_URL: "postgresql://postgres.cloudref:pw@aws-0-eu.pooler.supabase.com:5432/postgres",
-    EDRA_DB_TEST_TARGET: "edra-ci",
+    EDRA_DB_TEST_TARGET: "edra-db-check",
     NEXT_PUBLIC_SUPABASE_URL: "https://cloudref.supabase.co",
   };
   const merged = { ...base, ...env };
@@ -96,7 +96,7 @@ describe("db-ci wrapper", () => {
     expect(status).toBe(0);
     expect(output).toMatch(/passed \d+ suite\(s\): .* concurrency/);
 
-    const project = log.match(/^project_id = "(edra-ci-123-2-[0-9a-f]{4})"$/m)?.[1];
+    const project = log.match(/^project_id = "(edra-db-check-123-2-[0-9a-f]{4})"$/m)?.[1];
     expect(project).toBeDefined();
     const files = lines(log, "WORKFILE ").map((line) => line.slice("WORKFILE ./".length));
     const migrations = readdirSync(join(web, "supabase/migrations")).filter((name) => /^\d+_.*\.sql$/.test(name));

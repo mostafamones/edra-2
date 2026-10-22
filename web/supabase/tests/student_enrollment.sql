@@ -2,7 +2,7 @@
 -- new, returning, archived, conflicts), closed enrollment, revoked/replaced links, one-to-one
 -- links, group capacity, cross-academy independence, archival/independent suspension, and the
 -- connected-record resolver used by quizzes and exams.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back. Separate-session races are not covered.
 
 begin;

@@ -1,5 +1,5 @@
 -- Staff access: Head Admin authority, four-role staff management, suspension and restoration.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back. Any failed assertion aborts with an error.
 -- Separate-session races (acceptance vs suspension, opposing management) are in concurrency.sh.
 

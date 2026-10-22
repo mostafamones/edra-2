@@ -1,6 +1,6 @@
 -- Student code check-in: permanent reservation, historical ambiguity, lifecycle retirement, receipt
 -- replay, authority/tenant isolation, quota charging, and lock-safe revalidation.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back.
 -- Concurrent races (scan vs retirement, two scanners, disable) live in concurrency.sh.
 

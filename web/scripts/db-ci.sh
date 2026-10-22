@@ -14,7 +14,7 @@ cd "$(dirname "$0")/.."
 reject() { echo "db-ci: $*" >&2; exit 2; }
 
 [ "${GITHUB_ACTIONS:-}" = true ] && [ "${RUNNER_ENVIRONMENT:-}" = github-hosted ] \
-  || reject "runs only on a GitHub-hosted Actions runner; use npm run test:db against a prepared target instead"
+  || reject "runs only on a GitHub-hosted Actions runner; use the CI / database job"
 [ -n "${RUNNER_TEMP:-}" ] && [ -d "$RUNNER_TEMP" ] || reject "RUNNER_TEMP is not an existing directory"
 for tool in supabase psql docker; do command -v "$tool" >/dev/null || reject "$tool is required on PATH"; done
 
@@ -23,7 +23,7 @@ unset EDRA_DB_TEST_URL EDRA_DB_TEST_TARGET EDRA_DB_TEST_CONN NEXT_PUBLIC_SUPABAS
   SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE
 
 run_id="$(printf '%s-%s' "${GITHUB_RUN_ID:-0}" "${GITHUB_RUN_ATTEMPT:-1}" | tr -cd '0-9-')"
-project="edra-ci-$run_id-$(od -An -N2 -tx1 /dev/urandom | tr -d ' \n')"
+project="edra-db-check-$run_id-$(od -An -N2 -tx1 /dev/urandom | tr -d ' \n')"
 work="$(mktemp -d "$RUNNER_TEMP/edra-db-XXXXXX")"
 # Fixed by scripts/ci/supabase.toml and the pinned CLI's local defaults; never a pooler.
 conn="postgresql://postgres:postgres@127.0.0.1:54322/postgres"

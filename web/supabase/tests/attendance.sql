@@ -1,7 +1,7 @@
 -- Attendance: grants/RLS, check-in outcomes, versioned edits, all-or-nothing bulk changes, request
 -- idempotency, publication (stale review, corrections, effect deduplication), ended-session and
 -- closed-year rules, tenant isolation, and realtime topic authorization.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back.
 
 do $$ begin

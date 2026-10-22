@@ -2,7 +2,7 @@
 // Dev academy CLI. dry-run is pure. create, inspect and verify act on one allow-listed cloud project and read
 // credentials from the environment or an env file; credential values are never printed.
 //   dry-run  [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--out FILE.json]
-//   create   --project REF --run UUID --developer UUID [--recipe ID] [--reference-date ...] [--seed ...] [--students 20] [--env FILE] [--skip-delivery-probe]
+//   create   --project REF --run UUID --developer UUID [--recipe ID] [--reference-date ...] [--seed ...] [--students 20] [--env FILE]
 //   inspect  --project REF --run UUID [--env FILE]
 //   verify   --project REF --run UUID --mode baseline|integrity [--recipe ID] [--reference-date ...] [--seed ...] [--students 20] [--env FILE]
 // Without --recipe, create and verify use the recipe a registered run was created with, else the latest recipe.
@@ -31,7 +31,7 @@ const ACTIONS = new Set(["dry-run", "create", "inspect", "verify", "reset"]);
 const SCENARIO_OPTIONS = ["--recipe", "--reference-date", "--seed", "--students"];
 const ALLOWED = {
   "dry-run": [...SCENARIO_OPTIONS, "--out"],
-  create: ["--project", "--run", "--developer", ...SCENARIO_OPTIONS, "--env", "--skip-delivery-probe"],
+  create: ["--project", "--run", "--developer", ...SCENARIO_OPTIONS, "--env"],
   inspect: ["--project", "--run", "--env"],
   verify: ["--project", "--run", "--mode", ...SCENARIO_OPTIONS, "--env"],
   reset: ["--project", "--run", "--env", "--dry-run", "--confirm-run", "--impact-hash"],
@@ -45,7 +45,7 @@ const RESET_REFUSAL = "Destructive reset is not enabled in this version. It requ
 const USAGE = [
   "Usage: npm run dev:academy -- <action> [options]",
   "  dry-run  [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--out scripts/dev-academy/out/NAME.json]",
-  "  create   --project REF --run UUID --developer UUID [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--env FILE] [--skip-delivery-probe]",
+  "  create   --project REF --run UUID --developer UUID [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--env FILE]",
   "  inspect  --project REF --run UUID [--env FILE]",
   "  verify   --project REF --run UUID --mode baseline|integrity [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--env FILE]",
   `  recipes: ${RECIPE_VERSIONS.join(", ")} (default ${DEFAULTS.recipeVersion}; create/verify default to a registered run's recipe)`,
@@ -60,7 +60,7 @@ export function parseArgs(argv) {
 
   const options = {
     recipe: null, referenceDate: DEFAULTS.referenceDate, seed: DEFAULTS.seed, students: DEFAULTS.students, out: null,
-    project: null, run: null, developer: null, mode: null, envFile: null, skipDeliveryProbe: false,
+    project: null, run: null, developer: null, mode: null, envFile: null,
     dryRun: false, confirmRun: null, impactHash: null,
   };
   const seen = new Set();
@@ -71,10 +71,6 @@ export function parseArgs(argv) {
     if (seen.has(flag)) throw new UsageError(`${flag} may be given only once`);
     seen.add(flag);
 
-    if (flag === "--skip-delivery-probe") {
-      options.skipDeliveryProbe = true;
-      continue;
-    }
     if (flag === "--dry-run") {
       options.dryRun = true;
       continue;
@@ -278,7 +274,7 @@ async function create(options, env, target, runSql) {
     target, runSql, key, runId: options.run, developerId: options.developer, scenario, hash: scenarioHash(scenario), slug,
     migrationFiles: readdirSync(MIGRATIONS).filter((file) => /^\d+_.+\.sql$/.test(file)),
     lockToken: randomUUID(),
-    probe: options.skipDeliveryProbe ? null : (account) => probeDeliveryGuard(target, env.SEND_SMS_HOOK_SECRET, account),
+    probe: (account) => probeDeliveryGuard(target, env.SEND_SMS_HOOK_SECRET, account),
   });
   printRun(options.run, result.report, env, slug);
   return 0;
@@ -341,10 +337,6 @@ async function cloud(action, options) {
   try {
     const env = loadEnv(options.envFile);
     const target = resolveTarget(options.project, env);
-    // Only the isolated test project may skip the delivery guard probe.
-    if (options.skipDeliveryProbe && target.kind !== "isolated-test") {
-      throw new UsageError("--skip-delivery-probe is allowed only on the isolated-test project");
-    }
     const runSql = createSqlRunner(options.project, { token: managementToken(env) });
     if (action === "create") return await create(options, env, target, runSql);
     if (action === "inspect") return await inspect(options, runSql);

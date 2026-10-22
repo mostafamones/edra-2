@@ -1,6 +1,6 @@
 -- Assignment marks and results: grants, authority, exact part marks, work recording, fast code entry,
 -- idempotent retries, per-student publication, corrections, the outbox, and closed years.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back.
 
 do $$ begin

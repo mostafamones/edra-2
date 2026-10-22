@@ -1,6 +1,6 @@
 -- Student codes foundation: grammar parity, settings permissions and versions, level validation,
 -- disable/re-enable preservation, allocation, and ledger invariants.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back.
 
 do $$ begin

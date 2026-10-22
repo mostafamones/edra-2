@@ -6,10 +6,17 @@
 # code ledger) cannot be removed through normal flows. Fresh identities keep reruns collision-free.
 set -euo pipefail
 
+[ "${GITHUB_ACTIONS:-}" = true ] && [ "${RUNNER_ENVIRONMENT:-}" = github-hosted ] \
+  || { echo "concurrency: runs only on a GitHub-hosted Actions runner through scripts/db-ci.sh" >&2; exit 2; }
+
 for name in EDRA_DB_TEST_CONN EDRA_DB_TEST_TARGET EDRA_DB_TEST_RUN; do
   [ -n "${!name:-}" ] || { echo "concurrency: $name is not set; run through npm run test:db" >&2; exit 2; }
 done
+[[ "$EDRA_DB_TEST_CONN" =~ ^postgres(ql)?://[^/@:?]+@127\.0\.0\.1:54322/postgres$ ]] \
+  && [[ "$EDRA_DB_TEST_TARGET" =~ ^edra-db-check-[0-9]+-[0-9]+-[0-9a-f]{4}$ ]] \
+  || { echo "concurrency: disposable CI connection and run marker required; nothing was written" >&2; exit 2; }
 psqlx() { psql "$EDRA_DB_TEST_CONN" -v ON_ERROR_STOP=1 -X -q "$@"; }
+unset PGHOSTADDR PGSERVICE PGSERVICEFILE
 redact() {
   local text; text="$(cat)"
   [ -z "${PGPASSWORD:-}" ] || text="${text//"$PGPASSWORD"/<password>}"

@@ -33,17 +33,20 @@ beforeEach(() => {
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-const target = "postgresql://postgres.abcdefghijklmnop:s3cr%40t-pw@aws-0-eu-central-1.pooler.supabase.com:5432/postgres";
+const target = "postgresql://postgres:s3cr%40t-pw@127.0.0.1:54322/postgres";
+const marker = "edra-db-check-123-2-abcd";
 
 function run(script: string, args: string[], env: Record<string, string | undefined> = {}) {
   const base: Record<string, string | undefined> = {
     PATH: `${dir}:${process.env.PATH}`,
     HOME: dir,
     FAKE_LOG: log,
-    FAKE_MARKER: "edra-ci",
+    FAKE_MARKER: marker,
+    GITHUB_ACTIONS: "true",
+    RUNNER_ENVIRONMENT: "github-hosted",
     NEXT_PUBLIC_SUPABASE_URL: "https://appprojectref.supabase.co",
     EDRA_DB_TEST_URL: target,
-    EDRA_DB_TEST_TARGET: "edra-ci",
+    EDRA_DB_TEST_TARGET: marker,
   };
   const merged = { ...base, ...env };
   const result = spawnSync("bash", [script, ...args], {
@@ -60,19 +63,25 @@ function run(script: string, args: string[], env: Record<string, string | undefi
 
 describe("db-test runner", () => {
   it.each([
+    ["outside GitHub Actions", { GITHUB_ACTIONS: undefined }, "GitHub-hosted Actions runner"],
+    ["a self-hosted runner", { RUNNER_ENVIRONMENT: "self-hosted" }, "GitHub-hosted Actions runner"],
     ["no URL", { EDRA_DB_TEST_URL: undefined }, "EDRA_DB_TEST_URL is not set"],
     ["no target name", { EDRA_DB_TEST_TARGET: undefined }, "EDRA_DB_TEST_TARGET is not set"],
+    ["a persistent target name", { EDRA_DB_TEST_TARGET: "shared-dev" }, "must identify this disposable CI run"],
     ["a non-URL connection", { EDRA_DB_TEST_URL: "host=db.example.com" }, "must be a postgres://"],
     [
       "a transaction pooler",
-      { EDRA_DB_TEST_URL: target.replace(":5432/", ":6543/") },
+      { EDRA_DB_TEST_URL: target.replace(":54322/", ":6543/") },
       "transaction pooler",
     ],
     [
-      "the app's own project",
-      { NEXT_PUBLIC_SUPABASE_URL: "https://abcdefghijklmnop.supabase.co" },
-      "app's configured Supabase project",
+      "a cloud database",
+      { EDRA_DB_TEST_URL: "postgresql://postgres:pw@db.example.supabase.co:5432/postgres" },
+      "must use the disposable CI database",
     ],
+    ["a cloud session pooler", { EDRA_DB_TEST_URL: "postgresql://postgres.example:pw@aws-0-eu.pooler.supabase.com:5432/postgres" }, "must use the disposable CI database"],
+    ["a query host override", { EDRA_DB_TEST_URL: target + "?host=cloud.example" }, "without connection overrides"],
+    ["another loopback service", { EDRA_DB_TEST_URL: target.replace(":54322/", ":5432/") }, "must use the disposable CI database"],
   ])("rejects %s before connecting", (_, env, message) => {
     const { status, output, calls } = run(runner, [], env);
     expect(status).toBe(2);
@@ -82,7 +91,7 @@ describe("db-test runner", () => {
 
   it.each([
     ["an unmarked target", { FAKE_MARKER: "" }, "no edra_db_test.target marker"],
-    ["a different target", { FAKE_MARKER: "shared-dev" }, "expected 'edra-ci'"],
+    ["a different target", { FAKE_MARKER: "shared-dev" }, `expected '${marker}'`],
     ["a read-only replica", { FAKE_READ_ONLY: "true" }, "target is a read-only replica"],
     ["missing migrations", { FAKE_MISSING: "20261009100000" }, "missing: 20261009100000"],
     ["migrations this checkout lacks", { FAKE_EXTRA: "20991231000000" }, "extra: 20991231000000"],
@@ -107,7 +116,7 @@ describe("db-test runner", () => {
     const failed = run(runner, ["--check"], { FAKE_CONNECT_FAIL: "1" });
     expect(failed.status).toBe(2);
     expect(failed.output).toContain("<host>");
-    expect(failed.output).not.toMatch(/s3cr|pooler\.supabase\.com|abcdefghijklmnop/);
+    expect(failed.output).not.toMatch(/s3cr|127\.0\.0\.1/);
   });
 
   it("writes nothing with --check", () => {
@@ -159,6 +168,21 @@ describe("db-test runner", () => {
 });
 
 describe("concurrency harness", () => {
+  it.each([
+    ["outside GitHub Actions", { GITHUB_ACTIONS: undefined }],
+    ["on a self-hosted runner", { RUNNER_ENVIRONMENT: "self-hosted" }],
+    ["with a cloud connection", { EDRA_DB_TEST_CONN: "postgresql://postgres@cloud.example:5432/postgres" }],
+    ["with a persistent target", { EDRA_DB_TEST_TARGET: "shared-dev" }],
+  ])("rejects direct execution %s before connecting", (_, env) => {
+    const { status, calls } = run(concurrency, [], {
+      EDRA_DB_TEST_CONN: "postgresql://postgres@127.0.0.1:54322/postgres",
+      EDRA_DB_TEST_RUN: "20261012t000000z-abcd",
+      ...env,
+    });
+    expect(status).toBe(2);
+    expect(calls).toEqual([]);
+  });
+
   it("refuses to run without the runner's validated target", () => {
     const { status, output, calls } = run(concurrency, []);
     expect(status).toBe(2);
@@ -189,7 +213,7 @@ describe("concurrency harness", () => {
 
   it("re-checks the target marker before writing", () => {
     const env = {
-      EDRA_DB_TEST_CONN: "postgresql://postgres@db.example.com:5432/postgres",
+      EDRA_DB_TEST_CONN: "postgresql://postgres@127.0.0.1:54322/postgres",
       EDRA_DB_TEST_RUN: "20261012t000000z-abcd",
       FAKE_MARKER: "shared-dev",
     };

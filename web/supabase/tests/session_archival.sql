@@ -1,7 +1,7 @@
 -- Session archival and restoration: manager-only and open-year-only commands, atomic end of a live
 -- session, read-only archived attendance, preserved history, counting exclusion, stopped pending
 -- effects, idempotent retries and stale versions, list filters, and restoration without reopening.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back. Generated ids are kept in custom settings.
 
 do $$ begin

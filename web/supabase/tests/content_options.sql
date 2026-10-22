@@ -1,7 +1,7 @@
--- Random fixtures on a marked isolated cloud or disposable GitHub CI target; nothing is retained.
+-- Random fixtures on the disposable GitHub Actions database; nothing is retained.
 begin;
 do $$ begin
-  if (select count(*) from edra_db_test.target)<>1 or not exists(select 1 from edra_db_test.target where name='edra-ci' or name like 'edra-ci-%') then raise exception 'Isolated Edra test target required'; end if;
+  if (select count(*) from edra_db_test.target)<>1 or not exists(select 1 from edra_db_test.target where name like 'edra-db-check-%') then raise exception 'Isolated Edra test target required'; end if;
 end $$;
 create temporary table option_context(actor uuid,outsider uuid,academy uuid,other_academy uuid,year_id uuid,other_year uuid,track_a uuid,track_b uuid,target uuid,wide uuid,foreign_unit uuid);
 insert into option_context select gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),null,null,gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),null;

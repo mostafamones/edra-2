@@ -1,7 +1,7 @@
--- Marked isolated cloud or disposable GitHub CI target only; all fixtures roll back.
+-- Disposable GitHub Actions database only; all fixtures roll back.
 begin;
 do $$ begin
-  if (select count(*) from edra_db_test.target)<>1 or not exists(select 1 from edra_db_test.target where name='edra-ci' or name like 'edra-ci-%') then raise exception 'Isolated Edra test target required'; end if;
+  if (select count(*) from edra_db_test.target)<>1 or not exists(select 1 from edra_db_test.target where name like 'edra-db-check-%') then raise exception 'Isolated Edra test target required'; end if;
 end $$;
 create temporary table content_test_context(actor uuid,other_actor uuid,outsider uuid,academy uuid,other_academy uuid,year_id uuid,unit_id uuid,asset_id uuid,copy_id uuid,assessment_id uuid);
 insert into content_test_context select gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid();

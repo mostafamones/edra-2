@@ -2,7 +2,7 @@
 -- (docs/product/domains/development-tools.md). Generated accounts gain application authority only
 -- through a live control's current session; ordinary users are unaffected; browser roles reach no
 -- registry table or adapter; synthetic delivery and effects fail closed.
--- Run with `npm run test:db -- development_tooling` against the marked isolated test target.
+-- Run with `npm run test:db -- development_tooling` against the disposable GitHub Actions database.
 -- Everything runs in one transaction that is rolled back. Fixture UUIDs use the d0e1 prefix.
 
 do $$
@@ -91,9 +91,9 @@ insert into auth.sessions (id, user_id, created_at, updated_at) values
 insert into edra_private.dev_developers (user_id) values ('d0e10000-0000-4000-8000-000000000001');
 insert into edra_private.dev_runs (id, project_ref, recipe_version, seed, reference_date, student_count, scenario_hash,
   developer_id, academy_id, state, ready_at) values
-  ('d0e10000-0000-4000-8000-0000000000e1', 'msnjxvnblgkdeigctbhk', 'edra-dev-v1', 't', '2026-10-21', 20, repeat('a', 64),
+  ('d0e10000-0000-4000-8000-0000000000e1', 'abcdefghijklmnopqrst', 'edra-dev-v1', 't', '2026-10-21', 20, repeat('a', 64),
     'd0e10000-0000-4000-8000-000000000001', 'd0e10000-0000-4000-8000-0000000000f1', 'ready', now()),
-  ('d0e10000-0000-4000-8000-0000000000e2', 'msnjxvnblgkdeigctbhk', 'edra-dev-v1', 't2', '2026-10-21', 20, repeat('a', 64),
+  ('d0e10000-0000-4000-8000-0000000000e2', 'abcdefghijklmnopqrst', 'edra-dev-v1', 't2', '2026-10-21', 20, repeat('a', 64),
     'd0e10000-0000-4000-8000-000000000001', null, 'failed', null);
 insert into edra_private.dev_contacts (phone, run_id, logical_id, purpose) values
   ('+201099000001', 'd0e10000-0000-4000-8000-0000000000e1', 'account:staff:owner', 'login'),

@@ -1,6 +1,6 @@
 -- Session authority: phone-code (recovery) sessions and revoked or expired sessions get no
 -- application authority, through the PostgREST pre-request hook or the membership helpers.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back.
 
 do $$ begin
