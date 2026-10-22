@@ -3,7 +3,7 @@ import { useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconBuilding, IconFileCertificate, IconSchool as GraduationCap } from "@tabler/icons-react";
+import { IconBuilding, IconClipboardText, IconFileCertificate, IconSchool as GraduationCap } from "@tabler/icons-react";
 
 import {
   Sidebar,
@@ -53,6 +53,7 @@ export function StudentSidebar({ academies = [] }: { academies?: StudentSidebarA
                 {academies.map((academy) => {
                   const home = studentAcademyPath(academy.slug);
                   const exams = studentAcademyPath(academy.slug, "exams");
+                  const assignments = studentAcademyPath(academy.slug, "assignments");
                   return (
                     <SidebarMenuItem key={academy.slug}>
                       <SidebarMenuButton asChild tooltip={academy.name} isActive={pathname === home || pathname.startsWith(`${home}/`)}>
@@ -62,6 +63,11 @@ export function StudentSidebar({ academies = [] }: { academies?: StudentSidebarA
                         </Link>
                       </SidebarMenuButton>
                       <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild isActive={pathname === assignments || pathname.startsWith(`${assignments}/`)}>
+                            <Link href={assignments}><IconClipboardText aria-hidden="true" /><span>Assignments</span></Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton asChild isActive={pathname === exams || pathname.startsWith(`${exams}/`)}>
                             <Link href={exams}><IconFileCertificate aria-hidden="true" /><span>Exams</span></Link>

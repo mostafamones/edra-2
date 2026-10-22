@@ -22,7 +22,7 @@ export const learningListSchema = z.object({ units: z.array(z.object({ id: z.gui
 export type LearningList = z.infer<typeof learningListSchema>;
 export const learningUnitSchema = z.object({
   id: z.guid(), title: z.string(), description: z.string(), accessDays: z.number().int().positive(), access: accessSchema, extensionAvailable: z.boolean(),
-  items: z.array(z.object({ id: z.guid(), kind: z.enum(["explanation", "document", "assessment", "answer"]), title: z.string(), available: z.boolean(), assessmentKind: z.enum(["assignment", "quiz", "exam"]).nullable() })),
+  items: z.array(z.object({ id: z.guid(), kind: z.enum(["explanation", "document", "assessment", "answer"]), title: z.string(), available: z.boolean(), assessmentKind: z.enum(["assignment", "quiz", "exam"]).nullable(), assessmentId: z.guid().optional() })),
 });
 export type LearningUnit = z.infer<typeof learningUnitSchema>;
 export const materialSchema = z.object({ kind: z.enum(["video", "document"]), playbackId: z.string().nullable(), storagePath: z.string().nullable(), expiresAt: z.string() });

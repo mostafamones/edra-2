@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Session, User } from "@supabase/supabase-js";
 
 import { academyQueryKeys, listUserAcademies, type AcademyEntry } from "@/modules/academies";
+import { purgeAssignmentDrafts } from "@/modules/assignments/browser";
 import { installExamSignOutCleanup, setExamJournalAccount } from "@/modules/exams/browser";
 import { clearBrowserQueryCache } from "@/lib/query-client";
 import { createClient } from "@/lib/supabase/client";
@@ -77,6 +78,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
     const applySession = (nextSession: Session | null) => {
       const nextUserId = nextSession?.user.id ?? null;
       void setExamJournalAccount(nextUserId);
+      purgeAssignmentDrafts(nextUserId);
       const accountChanged = initialized && previousUserId !== nextUserId;
       initialized = true;
       previousUserId = nextUserId;
