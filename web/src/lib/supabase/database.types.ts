@@ -593,6 +593,58 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_answer_access_events: {
+        Row: {
+          action: string
+          actor_id: string
+          assignment_id: string
+          created_at: string
+          id: string
+          reason: string
+          record_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          assignment_id: string
+          created_at?: string
+          id: string
+          reason: string
+          record_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          record_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_answer_access_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_answer_access_events_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_answer_access_events_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_audience_groups: {
         Row: {
           academic_year_id: string
@@ -6882,6 +6934,17 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: undefined
       }
+      change_assignment_answer_access: {
+        Args: {
+          p_academy_id: string
+          p_action: string
+          p_assignment_id: string
+          p_reason: string
+          p_record_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       change_assignment_state: {
         Args: {
           p_academy_id: string
@@ -7385,6 +7448,14 @@ export type Database = {
       get_academy_structure: { Args: { p_academy_id: string }; Returns: Json }
       get_assignment: {
         Args: { p_academy_id: string; p_assignment_id: string }
+        Returns: Json
+      }
+      get_assignment_answer_access: {
+        Args: {
+          p_academy_id: string
+          p_assignment_id: string
+          p_record_id: string
+        }
         Returns: Json
       }
       get_attendance: {
