@@ -1,6 +1,6 @@
 -- Staff invitations: grants, creation rules, list visibility, revocation, preview, acceptance, expiry,
 -- inviter authority, existing membership, cross-academy access, and lookup rate limiting.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back. Any failed assertion aborts with an error.
 -- Separate-session races (double accept, accept vs revoke) are not covered here.
 

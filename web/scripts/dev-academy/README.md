@@ -32,15 +32,15 @@ The dry-run lists each student by logical key with their profile, attendance, ha
 
 ## Cloud commands
 
-`create`, `inspect` and `verify` act on one allow-listed project: development `fgbcjlibwgxylfwmocgx` or isolated-test `msnjxvnblgkdeigctbhk`. Any other ref is rejected.
+`create`, `inspect` and `verify` act on one allow-listed project: development `fgbcjlibwgxylfwmocgx`. Any other ref is rejected.
 
 ```bash
-npm run dev:academy -- create --project fgbcjlibwgxylfwmocgx --run <uuid> --developer <uuid> [--recipe ID] [--env FILE] [--skip-delivery-probe]
+npm run dev:academy -- create --project fgbcjlibwgxylfwmocgx --run <uuid> --developer <uuid> [--recipe ID] [--env FILE]
 npm run dev:academy -- inspect --project fgbcjlibwgxylfwmocgx --run <uuid> [--env FILE]
 npm run dev:academy -- verify --project fgbcjlibwgxylfwmocgx --run <uuid> --mode baseline|integrity [--recipe ID] [--env FILE]
 ```
 
-- Run IDs and developer IDs are lowercase UUIDs. `--skip-delivery-probe` is accepted only on the isolated-test project.
+- Run IDs and developer IDs are lowercase UUIDs. The delivery guard probe is required before account provisioning.
 - Environment: `NEXT_PUBLIC_SUPABASE_URL` (must match the project), `SUPABASE_SERVICE_ROLE_KEY`, `EDRA_DEV_ACADEMY_ENCRYPTION_KEY` (base64 32 bytes), `SEND_SMS_HOOK_SECRET`, and `SUPABASE_ACCESS_TOKEN` or `~/.supabase/access-token`. Values come from the process environment, overlaid by `--env` or `./.env.local` when present.
 - SQL runs through the Management API query endpoint, because no direct database password or `psql` is provisioned.
 - `create` registers the run, reserves contacts, provisions Auth accounts with random passwords, loads the records and marks the run `ready` after baseline verification. Re-running with the same run and inputs resumes only that run's pre-registered accounts. Ready runs are never re-created; use `inspect` or `verify` instead. Different inputs for an existing run are refused.

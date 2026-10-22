@@ -1,7 +1,7 @@
 -- Personal account settings (EDRA-126): profile column grants and constraints, self-only profile
 -- writes without academy membership, avatar object ownership and session authority, race-safe
 -- avatar switching, and the password-change challenge lifecycle.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back. Separate-session races are not covered.
 
 begin;

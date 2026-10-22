@@ -1,6 +1,6 @@
 -- Academy profile and contacts (EDRA-128): column grants, Owner/Head Admin-only edits, contact
 -- format constraints, immutable identity, atomic failure and compare-and-update on updated_at.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back. Any failed assertion aborts with an error.
 
 begin;

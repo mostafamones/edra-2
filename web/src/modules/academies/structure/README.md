@@ -60,16 +60,14 @@ transitions are not yet implemented or verified.
 ## Verification and remaining delivery
 
 The owner instructed this thread not to test against cloud. No cloud query, migration or test runs
-have occurred since that instruction. The earlier read-only migration-history inspection found
-`edra-ci` has migrations absent from this checkout; it was not changed or used for fixtures.
-No local database, Supabase/Docker stack, reset, migration replay, commit, push or implementation
-thread was created.
+have occurred since that instruction. No local database, Supabase/Docker stack, reset, migration
+replay, commit, push or implementation thread was created.
 
 The initial SQL/PL/pgSQL parser check passed for all three draft migrations. This establishes syntax
 only, not execution, permissions, semantics or concurrency. `academy_structure.sql` is registered
-for isolated CI execution and currently covers the foundation; it has not been executed. Cloud and
-hosted browser evidence remain absent. The generated database type export remains pending an
-authorized migrated schema; `database.ts` explicitly describes the provisional RPC boundary.
+for isolated CI execution and currently covers the foundation; it has not been executed. Hosted
+browser evidence remains absent. The generated database type export remains pending a disposable
+CI schema; `database.ts` explicitly describes the provisional RPC boundary.
 
 Observed repository checks on 2026-10-21: typecheck passed; production build passed and includes the
 concrete structure route; full Vitest run passed 711 tests with one opt-in provider test skipped.
@@ -84,7 +82,7 @@ broadening, shared-assessment blocker, running-attempt blocker, due-attempt sett
 shutdown, markability after archival, resume without restoration, removal blockers). It enables the
 release switch only inside its rolled-back transaction. It has not been executed anywhere.
 
-Still required before enabling the release switch: execute the SQL suites (CI disposable instance or
-an authorized isolated target); concurrency races in `concurrency.sh`; database type export;
+Still required before enabling the release switch: execute the SQL suites on the disposable CI
+instance; concurrency races in `concurrency.sh`; database type export;
 authenticated manager/Instructor/bearer/student browser journeys; final domain READMEs/routing
 documentation and release evidence.

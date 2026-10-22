@@ -78,9 +78,8 @@ const HASH = "a".repeat(64);
 
 describe("dev-academy cloud argument parsing", () => {
   it("accepts valid create, inspect and verify argument sets", () => {
-    const create = parseArgs(["create", "--project", PROJECT, "--run", RUN, "--developer", DEVELOPER, "--skip-delivery-probe"]);
+    const create = parseArgs(["create", "--project", PROJECT, "--run", RUN, "--developer", DEVELOPER]);
     assert.equal(create.action, "create");
-    assert.equal(create.options.skipDeliveryProbe, true);
     assert.equal(create.options.run, RUN);
     assert.equal(parseArgs(["inspect", "--project", PROJECT, "--run", RUN]).options.project, PROJECT);
     assert.equal(parseArgs(["verify", "--project", PROJECT, "--run", RUN, "--mode", "integrity"]).options.mode, "integrity");
@@ -109,10 +108,8 @@ describe("dev-academy cloud argument parsing", () => {
     assert.throws(() => parseArgs(["verify", "--project", PROJECT, "--run", RUN, "--mode", "other"]), /--mode must be baseline or integrity/);
   });
 
-  it("rejects repeated flags and treats a value given to a boolean flag as an unknown option", () => {
+  it("rejects repeated flags", () => {
     assert.throws(() => parseArgs(["dry-run", "--seed", "a", "--seed", "b"]), /may be given only once/);
-    assert.throws(() => parseArgs(["create", "--project", PROJECT, "--run", RUN, "--developer", DEVELOPER, "--skip-delivery-probe", "--skip-delivery-probe"]), /may be given only once/);
-    assert.throws(() => parseArgs(["create", "--project", PROJECT, "--run", RUN, "--developer", DEVELOPER, "--skip-delivery-probe", "yes"]), /Unknown option "yes"/);
   });
 
   it("requires --project and --run for reset and validates --impact-hash and --confirm-run", () => {

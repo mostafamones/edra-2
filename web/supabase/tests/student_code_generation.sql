@@ -1,5 +1,5 @@
 -- Bulk student code generation: scope, preview, all-or-nothing runs, replay, and authority checks.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back.
 
 begin;

@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Runs the database assertions and the concurrency harness against an explicitly configured,
-# isolated test target: a prepared cloud target, or the disposable instance scripts/db-ci.sh builds
-# on a GitHub-hosted runner. It never starts infrastructure, resets a database, or applies
-# migrations: apply them to the target first with the normal migration workflow.
+# Runs database assertions and concurrency checks only against the disposable instance that
+# scripts/db-ci.sh builds on a GitHub-hosted runner. It never starts infrastructure, resets a
+# database, or applies migrations.
 #
-#   EDRA_DB_TEST_URL     postgres:// URL of the isolated target (direct or session pooler; not :6543)
+#   EDRA_DB_TEST_URL     postgres:// URL of the runner's loopback database
 #   EDRA_DB_TEST_TARGET  name recorded in the target's edra_db_test.target marker row
 #
 # Usage: npm run test:db [-- --check] [-- suite ...]   (suites: SQL file basenames, `concurrency`)
@@ -19,6 +18,9 @@ SQL_SUITES=(groups_schedules student_records student_imports student_import_logs
   attendance_corrections assignments assignment_marks assignment_eligibility session_archival staff_access quizzes exams assessment_exposure student_exams student_exam_answering student_exam_review level_wide_groups level_catalog student_enrollment account_settings account_contacts content content_options academy_profile academy_structure development_tooling)
 
 reject() { echo "db-test: $*" >&2; exit 2; }
+
+[ "${GITHUB_ACTIONS:-}" = true ] && [ "${RUNNER_ENVIRONMENT:-}" = github-hosted ] \
+  || reject "runs only on a GitHub-hosted Actions runner through scripts/db-ci.sh"
 
 check_only=false
 selected=()
@@ -36,6 +38,8 @@ done
 [ -n "${EDRA_DB_TEST_URL:-}" ] || reject "EDRA_DB_TEST_URL is not set (no default connection is used)"
 [ -n "${EDRA_DB_TEST_TARGET:-}" ] || reject "EDRA_DB_TEST_TARGET is not set (name of the isolated target's marker)"
 [[ "$EDRA_DB_TEST_TARGET" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]] || reject "EDRA_DB_TEST_TARGET must be lowercase letters, digits and hyphens"
+[[ "$EDRA_DB_TEST_TARGET" =~ ^edra-db-check-[0-9]+-[0-9]+-[0-9a-f]{4}$ ]] \
+  || reject "EDRA_DB_TEST_TARGET must identify this disposable CI run"
 
 [[ "$EDRA_DB_TEST_URL" =~ ^postgres(ql)?://([^@/?#]*@)?([^/:?#]+)(:([0-9]+))?(/[^?#]*)?(\?[^#]*)?$ ]] \
   || reject "EDRA_DB_TEST_URL must be a postgres:// or postgresql:// URL"
@@ -43,6 +47,8 @@ userinfo="${BASH_REMATCH[2]%@}"; host="${BASH_REMATCH[3]}"; port="${BASH_REMATCH
 path="${BASH_REMATCH[6]}"; query="${BASH_REMATCH[7]}"
 [[ "$query" != *password=* ]] || reject "put the password in the URL userinfo or ~/.pgpass, not a query parameter"
 [ "$port" != 6543 ] || reject "port 6543 is a transaction pooler; races need a direct or session-pooler connection"
+[ "$host" = 127.0.0.1 ] && [ "$port" = 54322 ] && [ "$path" = /postgres ] && [ -z "$query" ] \
+  || reject "EDRA_DB_TEST_URL must use the disposable CI database at 127.0.0.1:54322/postgres without connection overrides"
 
 user="${userinfo%%:*}"; password=""
 [[ "$userinfo" != *:* ]] || password="${userinfo#*:}"
@@ -54,18 +60,8 @@ export EDRA_DB_TEST_CONN="postgresql://${user:+$user@}$host:$port$path$query"
 unset EDRA_DB_TEST_URL
 export PGAPPNAME=edra-db-test PGCONNECT_TIMEOUT="${PGCONNECT_TIMEOUT:-15}"
 
-# A Supabase URL identifies its project by host (direct) or by user (pooler). The app's configured
-# project is the shared development target and is never an isolated test target.
-project_ref=""
-[[ "$host" =~ ^db\.([a-z0-9]+)\.supabase\.co$ ]] && project_ref="${BASH_REMATCH[1]}"
-[[ -z "$project_ref" && "$user" =~ ^[a-z_]+\.([a-z0-9]+)$ ]] && project_ref="${BASH_REMATCH[1]}"
-app_url="${NEXT_PUBLIC_SUPABASE_URL:-}"
-[ -n "$app_url" ] || [ ! -f .env.local ] || app_url="$(sed -n 's/^NEXT_PUBLIC_SUPABASE_URL=["'\'']\{0,1\}\([^"'\'']*\).*/\1/p' .env.local | tail -1)"
-if [ -n "$project_ref" ] && [[ "$app_url" =~ ^https://([a-z0-9]+)\.supabase\.co ]] && [ "${BASH_REMATCH[1]}" = "$project_ref" ]; then
-  reject "EDRA_DB_TEST_URL points at the app's configured Supabase project; use an isolated test target"
-fi
-
 command -v psql >/dev/null || reject "psql is required on PATH"
+unset PGHOSTADDR PGSERVICE PGSERVICEFILE
 
 # Never print the connection string: mask its parts in anything psql reports.
 redact() {
@@ -125,21 +121,18 @@ fi
 value() { sed -n "s/^$1=//p" "$preflight_out" | tail -1; }
 
 marker="$(value marker)"
-[ -n "$marker" ] || reject "target has no edra_db_test.target marker; it is not a prepared isolated test target"
+[ -n "$marker" ] || reject "target has no edra_db_test.target marker; it is not the disposable CI database"
 [ "$marker" = "$EDRA_DB_TEST_TARGET" ] || reject "target marker is '$marker', expected '$EDRA_DB_TEST_TARGET'"
 [ "$(value read_only)" = false ] || reject "target is a read-only replica"
 missing="$(value missing_migrations)"
-[ -z "$missing" ] || reject "target schema is behind the repository (missing: $missing). Apply migrations with the
-  normal migration workflow first; test:db never applies or replays them"
+[ -z "$missing" ] || reject "target schema is behind the repository (missing: $missing). Rebuild the disposable CI instance from this checkout"
 extra="$(value extra_migrations)"
-[ -z "$extra" ] || reject "target has migrations this checkout does not (extra: $extra); test a checkout that
-  includes them or use a target that matches this checkout"
+[ -z "$extra" ] || reject "target has migrations this checkout does not (extra: $extra); rebuild the disposable CI instance from this checkout"
 privileges="$(value privileges)"
 [ -z "$privileges" ] || reject "connection role lacks fixture privileges: $privileges"
 collisions="$(value collisions)"
-[ -z "$collisions" ] || reject "SQL suite fixtures already exist on the target ($collisions); remove the conflicting
-  rows through the target's own lifecycle or use a fresh isolated target"
-echo "db-test: preflight passed for isolated target '$EDRA_DB_TEST_TARGET'${project_ref:+ (project $project_ref)}"
+[ -z "$collisions" ] || reject "SQL suite fixtures already exist on the target ($collisions); rebuild the disposable CI instance"
+echo "db-test: preflight passed for disposable CI target '$EDRA_DB_TEST_TARGET'"
 if $check_only; then echo "db-test: --check wrote nothing"; exit 0; fi
 
 # Assertions --------------------------------------------------------------------------------------

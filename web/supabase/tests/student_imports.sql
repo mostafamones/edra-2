@@ -1,6 +1,6 @@
 -- Student imports and bulk group changes: RLS, grants, staging, validation, duplicates, corrections,
 -- confirmation, batch processing, idempotency, year closure, and set_student_records_group.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back. Generated ids are kept in custom settings.
 
 do $$ begin

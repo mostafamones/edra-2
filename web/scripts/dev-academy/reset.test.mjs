@@ -58,7 +58,7 @@ describe("refusals", () => {
 
   it("refuses a run from another project", () => {
     const report = cleanReport();
-    assert.deepEqual(refusals(report, "msnjxvnblgkdeigctbhk"), [`run belongs to project ${PROJECT}`]);
+    assert.deepEqual(refusals(report, "abcdefghijklmnopqrst"), [`run belongs to project ${PROJECT}`]);
   });
 
   it("refuses a run whose state is not resettable", () => {

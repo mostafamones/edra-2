@@ -2,7 +2,7 @@
 -- stage/purpose/session binding, stale and superseded operations, send limits across targets,
 -- login uniqueness, the auth.users phone guard (Auth commit and proof consumption in one
 -- transaction, late writes rejected) and preserved student setup.
--- Run with `npm run test:db` against the marked isolated test target (see docs/engineering.md).
+-- Run with `npm run test:db` against the disposable GitHub Actions database (see docs/engineering.md).
 -- Everything runs in one transaction that is rolled back. Separate-session races are not covered.
 
 begin;

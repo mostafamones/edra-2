@@ -1,7 +1,7 @@
 -- Quizzes: grants, authority, preparation and locks, availability, online attempts, physical entry,
 -- first-final-submission-wins, deadlines (timer, headroom, tie, window_closed, departure), private
 -- marks, announcement, corrections, solution qualification, archive, year closure and the student
--- projection. Run with `npm run test:db` against the marked isolated test target (see
+-- projection. Run with `npm run test:db` against the disposable GitHub Actions database (see
 -- docs/engineering.md). Everything runs in one transaction that is rolled back.
 --
 -- Time: commands read clock_timestamp(), so the suite moves windows and attempt times by updating
