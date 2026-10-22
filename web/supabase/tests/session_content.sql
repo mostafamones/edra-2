@@ -1,7 +1,7 @@
 -- Isolated cloud/disposable CI only. Random fixtures; no retained changes.
 begin;
 do $$ begin
-  if (select count(*) from edra_db_test.target)<>1 or not exists(select 1 from edra_db_test.target where name='edra-ci' or name like 'edra-ci-%') then raise exception 'Isolated Edra test target required'; end if;
+  if (select count(*) from edra_db_test.target)<>1 or not exists(select 1 from edra_db_test.target where name like 'edra-db-check-%') then raise exception 'Isolated Edra test target required'; end if;
   if has_function_privilege('anon','public.save_session_content(uuid,uuid,integer,jsonb,uuid)','execute')
     or has_table_privilege('authenticated','public.session_content_sets','insert')
     or has_table_privilege('authenticated','public.session_content_items','update')

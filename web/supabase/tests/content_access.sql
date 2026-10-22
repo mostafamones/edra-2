@@ -1,7 +1,7 @@
 -- Marked isolated cloud / disposable CI only. Every fixture and assertion rolls back.
 begin;
 do $$ begin
-  if (select count(*) from edra_db_test.target)<>1 or not exists(select 1 from edra_db_test.target where name='edra-ci' or name like 'edra-ci-%') then raise exception 'Isolated Edra test target required'; end if;
+  if (select count(*) from edra_db_test.target)<>1 or not exists(select 1 from edra_db_test.target where name like 'edra-db-check-%') then raise exception 'Isolated Edra test target required'; end if;
 end $$;
 create temporary table learning_ids(name text primary key,id uuid not null default gen_random_uuid());
 insert into learning_ids(name) values('owner'),('instructor'),('student'),('second'),('wrong-level'),('outsider'),('academy'),('other-academy'),('unit'),('second-unit'),('third-unit'),('draft'),('track-unit'),('track'),('request'),('batch'),('redeem'),('extension'),('revoke'),('allowance');
