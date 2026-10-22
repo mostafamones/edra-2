@@ -61,21 +61,24 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
     setKept(storeLocalDraft(userId, assignmentId, { generation: current.generation, baseVersion: current.version, pending: next, operation: operation.current }));
   }, [userId, assignmentId]);
 
+  const reclaim = useRef<(() => void) | null>(null);
   const fail = useCallback((failure: StudentAssignmentFailure) => {
-    if (failure.code === "editor_stale") setPhase("stale");
+    // A lapsed lease (e.g. a throttled background tab) recovers with this tab's own token; a live
+    // editor elsewhere answers busy, and a newer generation discards this tab's pending choices.
+    if (failure.code === "editor_stale") { if (reclaim.current) reclaim.current(); else setPhase("stale"); }
     else if (BLOCKING.has(failure.code)) { setProblem(failure.message); setPhase("blocked"); }
     return failure;
   }, []);
 
-  const claim = useCallback(async (transfer: boolean) => {
+  const claim = useCallback(async (transfer: boolean, recovering = false) => {
     token.current ??= editorToken(userId, assignmentId);
     const result = await claimAssignmentEditor({ ...base(), operation: "claim", ...(transfer ? { transfer: true } : {}) });
     if (!result.ok) {
-      fail(result);
-      if (!BLOCKING.has(result.code) && result.code !== "editor_stale") { setProblem(result.message); setPhase("failed"); }
+      if (BLOCKING.has(result.code)) fail(result);
+      else { setProblem(result.message); setPhase("failed"); }
       return;
     }
-    if ("busy" in result.data) { setPhase("busy"); return; }
+    if ("busy" in result.data) { setPhase(recovering ? "stale" : "busy"); return; }
     const claimed = result.data;
     const local = loadLocalDraft(userId, assignmentId);
     const outcome = reconcile(local, claimed);
@@ -94,6 +97,7 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
   const start = useEffectEvent(() => { void claim(false); });
   useEffect(() => { const timer = setTimeout(start, 0); return () => clearTimeout(timer); }, []);
   const retryClaim = (transfer: boolean) => { setPhase("claiming"); void claim(transfer); };
+  useEffect(() => { reclaim.current = () => { setPhase("claiming"); void claim(false, true); }; }, [claim]);
 
   // Keep the claim alive; a lost lease or a transfer elsewhere stops editing here.
   useEffect(() => {

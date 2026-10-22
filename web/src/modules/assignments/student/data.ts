@@ -92,7 +92,7 @@ export type AssignmentCommand = z.infer<typeof commandSchema>;
 /** Paths stay on the server: they locate bytes for validation and cleanup only. */
 function publicDocument(value: unknown): EditorDocument {
   const doc = editorSchema.parse(value);
-  return { ...doc, files: doc.files.map(({ path: _path, ...file }) => file) };
+  return { ...doc, files: doc.files.map(({ id, partId, name, size, mime, state }) => ({ id, partId, name, size, mime, state })) };
 }
 
 function rpcCommand(db: Db, command: AssignmentCommand) {
