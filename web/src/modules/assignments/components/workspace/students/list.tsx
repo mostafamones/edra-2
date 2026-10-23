@@ -13,7 +13,7 @@ import { announceStudentResults } from "../../../actions";
 import { focusScore, focusTarget, matchesFocus, type MarkFocus } from "../../../focus";
 import { isRequiredNotReceived, requirementLabel } from "../../../eligibility";
 import { useMarks } from "../../../hooks/use-marks";
-import { assignmentPermissions } from "../../../permissions";
+import { assignmentPermissions, isManager } from "../../../permissions";
 import { assignmentsRootKey } from "../../../queries";
 import { formatScore } from "../../../score";
 import type { Assignment, MarkFilter, PublishFailureReason, StudentSort, StudentWork } from "../../../types";
@@ -166,7 +166,7 @@ export function AssignmentStudents({ academy, assignment, focus, onFocusChange }
         onClear={() => onFocusChange(null)}
       />
       <StudentMarkSheet student={students?.find((row) => row.recordId === editing) ?? null} onClose={() => setEditing(null)}
-        form={(student, { onSaved }) => <AssignmentMarks key={student.recordId} assignment={assignment} student={student} onChanged={replace} onSaved={onSaved} />} />
+        form={(student, { onSaved }) => <AssignmentMarks key={student.recordId} assignment={assignment} manager={isManager(academy.role)} student={student} onChanged={replace} onSaved={onSaved} />} />
     </>
   );
 }

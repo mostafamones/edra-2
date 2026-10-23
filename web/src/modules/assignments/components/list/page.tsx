@@ -22,7 +22,9 @@ import {
   type AssignmentListFilters,
 } from "../../queries";
 import { ASSIGNMENT_AUDIENCES, ASSIGNMENT_STATES } from "../../types";
+import { isManager } from "../../permissions";
 import { AssignmentCard } from "./card";
+import { InPersonOnlineSetting } from "./online-setting";
 import { AUDIENCE_LABELS, STATE_LABELS } from "../shared/labels";
 import { describeAudience } from "@/components/shared/assessment/workspace/names";
 
@@ -85,7 +87,10 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
 
   return (
     <main className="page-shell">
-      <h1 className="font-heading text-2xl font-bold tracking-tight">Assignments</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-heading text-2xl font-bold tracking-tight">Assignments</h1>
+        {isManager(academy.role) && <InPersonOnlineSetting academyId={academyId} />}
+      </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <InputGroup className="sm:max-w-sm">

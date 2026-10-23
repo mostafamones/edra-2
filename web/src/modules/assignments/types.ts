@@ -119,6 +119,9 @@ export type DraftQuestion = { id?: string; prompt: string; maxScore: string; cho
 export type AudiencePreview = { recipientCount: number; uncodedCount: number };
 
 export type AssignmentErrorCode =
+  | "online_draft"
+  | "not_qualified"
+  | "source_locked"
   | "validation"
   | "forbidden"
   | "not_found"

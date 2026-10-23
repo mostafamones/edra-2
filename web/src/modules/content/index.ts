@@ -5,3 +5,4 @@ export { taughtRootKey } from "./teaching/types";
 export { ContentTaughtReview } from "./teaching/review";
 export { LearningBrowse } from "./student/browse";
 export { StudentLearningUnit } from "./student/unit";
+export { StudentMaterial } from "./student/material";
