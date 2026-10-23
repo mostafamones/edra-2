@@ -24,7 +24,7 @@ function NewGroupContent({ academy }: { academy: AcademyEntry }) {
   const query = useQuery({ queryKey: structureQueryKey(academy.id), queryFn: () => loadStructure(academy.id), enabled: canManage });
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-8 md:px-8">
-      <h1 className="font-heading text-2xl font-semibold">Create group</h1>
+      <h1 className="text-2xl font-semibold">Create group</h1>
       <p className="mt-1 mb-8 text-sm text-muted-foreground">Set up a class group for your students.</p>
 
       {!canManage && <p role="alert">Only academy Owners, Head Admins and Admins can create groups.</p>}

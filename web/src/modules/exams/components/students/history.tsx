@@ -13,7 +13,7 @@ export function WorkHistory({ exam, detail }: { exam: Exam; detail: StudentDetai
   const numbers = new Map(exam.parts.flatMap((part) => part.questions).map((question) => [question.id, question.number]));
   return (
     <section aria-labelledby="work-history" className="flex flex-col gap-3">
-      <h3 id="work-history" className="font-heading font-semibold">History</h3>
+      <h3 id="work-history" className="font-semibold">History</h3>
       {detail.departures.length > 0 && (
         <ol aria-label="Departures from the online exam" className="flex flex-col gap-1 text-sm">
           {detail.departures.map((departure) => (

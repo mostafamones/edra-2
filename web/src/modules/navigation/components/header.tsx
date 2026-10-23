@@ -38,7 +38,7 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
         className={`h-6 rounded-full mr-2 ${portal === "student" ? "hidden md:block" : ""}`}
         style={{ alignSelf: "center" }}
       />
-      <Breadcrumb className="font-(family-name:--font-poppins)">
+      <Breadcrumb className="font-heading">
         <BreadcrumbList>
           {pathname !== homeHref ? (
             <>

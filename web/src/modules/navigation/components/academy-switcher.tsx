@@ -73,7 +73,7 @@ export function AcademySwitcher() {
       <SidebarMenuItem>
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton size="lg" className="w-full font-(family-name:--font-poppins) data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground" aria-label={activeAcademy ? `Switch academy, current: ${activeAcademy.name}` : "Switch academy"}>
+            <SidebarMenuButton size="lg" className="w-full font-heading data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground" aria-label={activeAcademy ? `Switch academy, current: ${activeAcademy.name}` : "Switch academy"}>
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <AcademyIcon icon={activeAcademy?.icon} />
               </span>
@@ -84,7 +84,7 @@ export function AcademySwitcher() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent side={isMobile ? "bottom" : "right"} align="start" className="min-w-72">
-            <DropdownMenuLabel className="text-xs text-muted-foreground font-(family-name:--font-figtree)">Your academies</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Your academies</DropdownMenuLabel>
             {academiesError ? (
               <p className="px-2 py-3 text-sm text-destructive">Could not load your academies.</p>
             ) : academies.length === 0 ? (
@@ -95,8 +95,8 @@ export function AcademySwitcher() {
                   <AcademyIcon icon={academy.icon} />
                 </span>
                 <span className="grid min-w-0 flex-1 leading-tight">
-                  <span className="truncate font-medium font-(family-name:--font-poppins)">{academy.name}</span>
-                  <span className="truncate text-xs text-muted-foreground font-(family-name:--font-figtree)">{ACADEMY_ROLE_LABELS[academy.role]}</span>
+                  <span className="truncate font-medium font-heading">{academy.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{ACADEMY_ROLE_LABELS[academy.role]}</span>
                 </span>
                 <span className="flex w-10 shrink-0 justify-end">
                   {activeAcademy?.id === academy.id

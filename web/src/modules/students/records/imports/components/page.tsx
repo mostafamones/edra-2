@@ -131,7 +131,7 @@ function Shell({ info, session, children }: { info: DraftInfo | null; session?: 
         <Button variant="ghost" size="sm" className="-ml-2 w-fit text-muted-foreground" asChild>
           <Link href={href("/app/students")} ><ArrowLeft />Students</Link>
         </Button>
-        <h1 className="font-heading text-2xl font-bold tracking-tight">{title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
         <p className="text-sm text-muted-foreground">
           {session ? `${session.fileName} · Imported by ${session.importedByName}` : info ? `${info.fileName} · ${info.entries.toLocaleString("en")} ${info.entries === 1 ? "entry" : "entries"}` : "\u00a0"}
         </p>

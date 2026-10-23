@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { ROUTE_HEADER } from "@/lib/routing";
-import { Geist, Geist_Mono, Noto_Sans_Arabic, Figtree, Nunito_Sans, Poppins } from "next/font/google";
+import { Geist_Mono, Noto_Sans_Arabic, Figtree, Poppins } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/modules/auth";
@@ -11,17 +11,6 @@ import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { PortalTransition } from "@/components/shared/portal-transition";
-
-const nunitoSansHeading = Nunito_Sans({
-  subsets: ["latin"],
-  variable: "--font-nunito-sans",
-});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  adjustFontFallback: false,
-});
 
 const notoSansArabic = Noto_Sans_Arabic({
   variable: "--font-noto-sans-arabic",
@@ -59,7 +48,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, notoSansArabic.variable, nunitoSansHeading.variable, poppins.variable, figtree.variable)}
+      className={cn("h-full", "antialiased", geistMono.variable, notoSansArabic.variable, poppins.variable, figtree.variable)}
     >
       <body suppressHydrationWarning className="flex min-h-full flex-col">
         <ThemeProvider>

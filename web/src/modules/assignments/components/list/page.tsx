@@ -88,7 +88,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   return (
     <main className="page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-heading text-2xl font-bold tracking-tight">Assignments</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Assignments</h1>
         {isManager(academy.role) && <InPersonOnlineSetting academyId={academyId} />}
       </div>
 

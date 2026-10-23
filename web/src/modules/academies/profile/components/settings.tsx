@@ -19,6 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { FILLED_INPUTS } from "@/components/shared/filled-inputs";
 import { cn } from "@/lib/utils";
 import { useAcademyScope, useAuth } from "@/modules/auth";
 
@@ -107,7 +108,7 @@ function ProfileForm({ profile }: { profile: AcademyProfile }) {
   const readOnly = !profile.canEdit;
   const [name, subject, icon, phone, whatsapp] = useWatch({ control: form.control, name: ["name", "subject", "icon", "phone", "whatsapp"] });
   return (
-    <form className={cn("grid items-start gap-6 font-(family-name:--font-figtree) lg:grid-cols-[minmax(0,1fr)_20rem]", FILLED_INPUTS)} onSubmit={form.handleSubmit(onSubmit)} noValidate>
+    <form className={cn("grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]", FILLED_INPUTS)} onSubmit={form.handleSubmit(onSubmit)} noValidate>
       <div className="flex min-w-0 flex-col gap-8">
         <fieldset disabled={readOnly || isSubmitting} className="flex min-w-0 flex-col gap-10">
           <Section title="Identity">
@@ -130,7 +131,6 @@ function ProfileForm({ profile }: { profile: AcademyProfile }) {
               <ContactRow label="Phone" icon={CONTACT_ICONS.phone} id="academy-phone">
                 <PhoneInput id="academy-phone" aria-label="Phone" error={errors.phone?.message} {...form.register("phone")} />
               </ContactRow>
-              <div className="px-[10%]"><Separator /></div>
               <ContactRow label="WhatsApp" icon={CONTACT_ICONS.whatsapp} id="academy-whatsapp">
                 <PhoneInput id="academy-whatsapp" aria-label="WhatsApp" autoComplete="off" error={errors.whatsapp?.message} {...form.register("whatsapp")} />
               </ContactRow>
@@ -152,14 +152,20 @@ function ProfileForm({ profile }: { profile: AcademyProfile }) {
           </Alert>
         )}
       </div>
+      <InstagramGradient />
+      {/* On small screens the preview leads; on wide screens it stays beside the form while it scrolls. */}
+      <div className="order-first flex flex-col gap-2 lg:sticky lg:top-6 lg:order-none">
+        <span className="text-sm font-medium text-muted-foreground">Preview</span>
+        <ProfilePreview icon={icon} name={name} subject={subject} slug={profile.slug} phone={phone ?? ""} whatsapp={whatsapp ?? ""} />
+      </div>
       {!readOnly && (isDirty || isSubmitting) && (
-        <div className="pointer-events-none sticky bottom-6 z-10 flex justify-center lg:col-span-2">
+        <div className="pointer-events-none sticky order-last bottom-6 z-10 flex justify-center lg:col-span-2">
           <div role="region" aria-label="Unsaved changes"
-            className="pointer-events-auto flex items-center gap-4 rounded-full border bg-background/95 py-1.5 pr-1.5 pl-5 shadow-lg backdrop-blur animate-in fade-in-0 slide-in-from-bottom-2">
+            className="pointer-events-auto flex items-center gap-4 rounded-lg border bg-background/95 py-1.5 pr-1.5 pl-5 shadow-lg backdrop-blur animate-in fade-in-0 slide-in-from-bottom-2">
             <span className="text-sm font-medium">Unsaved changes</span>
             <div className="flex gap-1">
-              <Button type="button" variant="ghost" className="rounded-full" disabled={isSubmitting} onClick={() => { form.reset(); setNotice(null); }}>Discard</Button>
-              <Button type="submit" className="rounded-full" disabled={isSubmitting || notice?.kind === "conflict"}>
+              <Button type="button" variant="destructive" disabled={isSubmitting} onClick={() => { form.reset(); setNotice(null); }}>Discard</Button>
+              <Button type="submit" disabled={isSubmitting || notice?.kind === "conflict"}>
                 {isSubmitting && <IconLoader2 className="animate-spin" aria-hidden="true" />}
                 Save
               </Button>
@@ -167,23 +173,10 @@ function ProfileForm({ profile }: { profile: AcademyProfile }) {
           </div>
         </div>
       )}
-      <InstagramGradient />
-      {/* On small screens the preview leads; on wide screens it stays beside the form while it scrolls. */}
-      <div className="order-first flex flex-col gap-2 lg:sticky lg:top-6 lg:order-none">
-        <span className="text-sm font-medium text-muted-foreground">Preview</span>
-        <ProfilePreview icon={icon} name={name} subject={subject} slug={profile.slug} phone={phone ?? ""} whatsapp={whatsapp ?? ""} />
-      </div>
     </form>
   );
 }
 
-/** Filled inputs without borders or rings; focus shows as a darker fill. Errors stay on the label and message. */
-const FILLED_INPUTS = cn(
-  "[&_[data-slot=input]]:h-10 [&_[data-slot=input]]:border-transparent! [&_[data-slot=input]]:bg-muted/60! [&_[data-slot=input]]:shadow-none! [&_[data-slot=input]]:ring-0!",
-  "[&_[data-slot=input]]:focus-visible:bg-muted!",
-  "[&_[data-slot=input-group]]:border-transparent! [&_[data-slot=input-group]]:bg-muted/60! [&_[data-slot=input-group]]:shadow-none! [&_[data-slot=input-group]]:ring-0!",
-  "[&_[data-slot=input-group]]:focus-within:bg-muted! [&_[data-slot=input-group-control]]:bg-transparent!",
-);
 
 type ContactIcon = { Icon: ComponentType<{ className?: string }>; color: string };
 
@@ -238,7 +231,7 @@ function AddContact() {
       <DropdownMenuTrigger asChild>
         <Button type="button" variant="ghost" size="sm" className="-mr-2 text-muted-foreground"><IconPlus aria-hidden="true" />Add contact</Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="font-(family-name:--font-figtree)">
+      <DropdownMenuContent align="start">
         {options.map(({ label, icon }) => (
           <DropdownMenuItem key={label} disabled><icon.Icon className={cn("size-4", icon.color)} aria-hidden="true" />{label}</DropdownMenuItem>
         ))}
@@ -251,7 +244,7 @@ function Section({ title, className, action, children }: { title: string; classN
   return (
     <section className={cn("flex flex-col gap-5", className)}>
       <div className="flex min-h-8 items-center justify-between gap-3">
-        <h2 className="font-(family-name:--font-poppins) text-base font-semibold">{title}</h2>
+        <h2 className="text-base font-semibold">{title}</h2>
         {action}
       </div>
       {children}
@@ -291,7 +284,7 @@ function ProfilePreview({ icon, name, subject, slug, phone, whatsapp }: {
             <Icon className="size-9" aria-hidden="true" />
           </span>
           <div className="grid min-w-0 pt-2.5">
-            <p dir="auto" className={cn("truncate font-(family-name:--font-poppins) text-lg font-semibold", !name.trim() && "text-muted-foreground")}>
+            <p dir="auto" className={cn("truncate font-heading text-lg font-semibold", !name.trim() && "text-muted-foreground")}>
               {name.trim() || "Academy name"}
             </p>
           </div>
@@ -319,7 +312,7 @@ function IconPicker({ value, onChange, disabled }: { value: string; onChange: (v
           <Icon className="size-5" aria-hidden="true" stroke={1.75} />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto gap-2 px-1.5 py-1.5 font-(family-name:--font-figtree)">
+      <PopoverContent align="start" className="w-auto gap-2 px-1.5 py-1.5">
         <RadioGroupPrimitive.Root value={value} onValueChange={(next) => { onChange(next); setOpen(false); }} aria-label="Icon"
           className="grid grid-cols-9 gap-1.5">
           {Object.entries(ACADEMY_ICONS).map(([id, option]) => (

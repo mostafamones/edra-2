@@ -125,7 +125,7 @@ function Details({ academyId, session }: { academyId: string; session: SessionDe
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1.5">
-          <h1 className="font-heading text-2xl font-bold tracking-tight">{session.scheduleTitle}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{session.scheduleTitle}</h1>
           <div className="flex flex-wrap items-center gap-2">
             {live ? <Badge>Live</Badge> : <Badge variant="destructive">Ended</Badge>}
             {archived && <Badge variant="outline"><IconArchive aria-hidden="true" />Archived</Badge>}

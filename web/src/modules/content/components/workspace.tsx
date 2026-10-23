@@ -68,7 +68,7 @@ function WorkspaceContent({ academy, data, published }: { academy: AcademyEntry;
     } catch (e) { setError(e instanceof Error ? e.message : "Could not create the unit. Retry with the same action."); setBusy(false); }
   }
   return <main className="page-shell">
-    <div><h1 className="font-heading text-2xl font-bold tracking-tight">{published ? "Published lessons" : "Content library"}</h1><p className="text-sm text-muted-foreground">Choose a program to prepare its units. Published material can be copied into another program.</p></div>
+    <div><h1 className="text-2xl font-bold tracking-tight">{published ? "Published lessons" : "Content library"}</h1><p className="text-sm text-muted-foreground">Choose a program to prepare its units. Published material can be copied into another program.</p></div>
     <div className="grid gap-3 md:grid-cols-[12rem_1fr]">
       <Select value={yearId} onValueChange={value => { setYear(value); setProgram(""); }}><SelectTrigger className="w-full" aria-label="Academic year"><SelectValue placeholder="Academic year" /></SelectTrigger><SelectContent>{data.years.map(y => <SelectItem key={y.id} value={y.id}>{y.start_year}–{y.start_year + 1}{y.closed_at ? " · closed" : " · active"}</SelectItem>)}</SelectContent></Select>
       <Select value={program || "all"} onValueChange={v => setProgram(v === "all" ? "" : v)}><SelectTrigger className="w-full" aria-label="Program"><SelectValue placeholder="Choose a program" /></SelectTrigger><SelectContent><SelectItem value="all">All programs</SelectItem>{options.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}</SelectContent></Select>

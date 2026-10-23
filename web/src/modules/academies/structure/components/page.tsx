@@ -64,12 +64,12 @@ function StructureView({ slug, accountId, academyId, initial }: {
           onClick={() => void query.refetch()}>Retry</Button>
       </AlertDescription></Alert>}
       {!structure && query.isPending && <StructureLoading />}
-      {structure && stages.map(stage => <div key={stage.title} className="flex flex-col gap-3">
-        <h2 className="font-(family-name:--font-poppins) text-base font-semibold">{stage.title}</h2>
+      {structure && stages.map(stage => <div key={stage.title} className="flex flex-col gap-2">
+        <h2 className="text-base px-2 font-semibold text-foreground/80">{stage.title}</h2>
         {stage.levels.map(level => {
           const current = offered.get(level.id);
           if (current) return levelRow(current);
-          return <div key={level.id} className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-dashed px-4 py-2 text-muted-foreground">
+          return <div key={level.id} className="flex min-h-14 items-center justify-between gap-3 rounded-lg border border-dashed px-4 py-2 text-muted-foreground">
             <span>{level.label}</span>
             {structure.canManage
               ? <Button variant="ghost" size="sm" onClick={() => setEditing({ operation: "add_level", levelId: level.id })}>
@@ -80,7 +80,7 @@ function StructureView({ slug, accountId, academyId, initial }: {
         })}
       </div>)}
       {other.length > 0 && <div className="flex flex-col gap-3">
-        <h2 className="font-(family-name:--font-poppins) text-base font-semibold">Other</h2>
+        <h2 className="text-base font-semibold">Other</h2>
         {other.map(levelRow)}
       </div>}
       {editing && structure && <OfferingEditor key={`${editing.operation}:${editing.levelId}:${"trackId" in editing ? editing.trackId : ""}`}
@@ -119,10 +119,10 @@ function OfferedLevel({ level, canManage, transitionsEnabled, onEdit, onTransiti
     level.dependencies.groups !== undefined && plural(level.dependencies.groups, "group"),
   ].filter(Boolean).join(" · ");
   const editable = canManage && !stopped;
-  return <div className={cn("flex flex-col gap-3 rounded-xl bg-muted/50 p-4", stopped && "opacity-70")}>
+  return <div className={cn("flex flex-col gap-3 rounded-lg bg-muted/50 p-4", stopped && "opacity-70")}>
     <div className="flex items-center justify-between gap-3">
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        <span dir="auto" className="font-(family-name:--font-poppins) font-semibold">{level.name}</span>
+        <span dir="auto" className="font-heading font-semibold">{level.name}</span>
         {counts && <span className="text-sm text-muted-foreground">{counts}</span>}
       </div>
       <div className="flex shrink-0 items-center gap-1">

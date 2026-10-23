@@ -17,7 +17,7 @@ import { StudentExamTime } from "./time";
 export async function StudentExamList({ academy, page }: { academy: StudentExamAcademy; page: number }) {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">Exams</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Exams</h1>
       <Content academy={academy} page={page} />
     </main>
   );

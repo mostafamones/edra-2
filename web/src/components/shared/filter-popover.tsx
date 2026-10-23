@@ -67,9 +67,9 @@ export function FilterPopover({ fields, children, iconOnly = false }: { fields: 
           </div>
         )}
       </PopoverAnchor>
-      <PopoverContent align="end" className="w-72 gap-3 font-(family-name:--font-figtree)">
+      <PopoverContent align="end" className="w-72 gap-3">
         <div className="flex items-center justify-between mb-2">
-          <p className="font-(family-name:--font-poppins) text-sm font-semibold">Filters</p>
+          <p className="font-heading text-sm font-semibold">Filters</p>
           <Button variant="ghost" size="sm" className="-mr-2 h-7 text-muted-foreground" disabled={active === 0}
             onClick={() => { for (const field of fields) field.onChange(field.defaultValue); }}>
             <HugeiconsIcon icon={Cancel01Icon} />Reset

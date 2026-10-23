@@ -33,7 +33,7 @@ export function AccountSettings() {
   return (
     <main className="page-shell min-w-0">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-        <h1 className="font-heading text-2xl font-bold tracking-tight">Account</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Account</h1>
         {error ? (
           <Alert variant="destructive">
             <IconAlertCircle aria-hidden="true" />

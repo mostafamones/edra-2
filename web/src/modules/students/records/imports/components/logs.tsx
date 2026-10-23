@@ -32,7 +32,7 @@ function Logs({ academyId }: { academyId: string }) {
   return <main className="page-shell min-w-0">
     <Button variant="ghost" size="sm" className="-ml-2 w-fit text-muted-foreground" asChild><Link href={href("/app/students")} ><ArrowLeft />Students</Link></Button>
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <h1 className="font-heading text-2xl font-bold tracking-tight">Import logs</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Import logs</h1>
     </div>
     {query.isError && <div role="alert" className="flex items-center gap-3 text-sm">Couldn’t load import logs.<Button variant="outline" size="sm" onClick={() => void query.refetch()}>Retry</Button></div>}
     {!data && query.isPending ? <Skeleton className="h-72 w-full" /> : data?.logs.length === 0 ? (

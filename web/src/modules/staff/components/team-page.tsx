@@ -23,7 +23,7 @@ function Team({ academy }: { academy: AcademyEntry }) {
   return (
     <main className="page-shell min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-heading text-2xl font-bold tracking-tight">Team</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Team</h1>
       </div>
       <TeamMembers academy={academy} userId={userId} canManage={canManage} />
     </main>
