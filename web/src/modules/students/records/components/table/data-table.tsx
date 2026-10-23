@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { SortDescriptor } from "../../list-params";
 import type { StudentRecordRow } from "../../types";
-import { COLUMN_LABELS, COLUMN_WIDTHS, isDataColumn, RESIZE_STEP } from "../../table/config";
+import { COLUMN_LABELS, COLUMN_WIDTHS, isDataColumn, RESIZE_STEP, SELECT_COLUMN } from "../../table/config";
 import { clampTrade, fitWidths } from "../../table/layout";
 import { HeaderMenu } from "./header-menu";
 
@@ -62,7 +62,7 @@ function PopulatedTable({ table, sorts, onSortsChange, loading, fetching, skelet
   );
 
   return (
-    <div ref={containerRef} className="min-w-0 overflow-hidden rounded-lg border">
+    <div ref={containerRef} className="min-w-0 overflow-hidden font-(family-name:--font-figtree)">
       <Table
         ref={tableRef}
         aria-busy={loading || fetching || undefined}
@@ -74,18 +74,18 @@ function PopulatedTable({ table, sorts, onSortsChange, loading, fetching, skelet
             <col key={column.id} style={available ? { width: widths[index] } : undefined} />
           ))}
         </colgroup>
-        <TableHeader className="bg-muted/40">
+        <TableHeader>
           {table.getHeaderGroups().map((group) => (
-            <TableRow key={group.id} className="hover:bg-transparent">
+            <TableRow key={group.id} className="hover:[&>td]:bg-transparent">
               {group.headers.map((header, index) => {
                 const next = group.headers[index + 1]?.column;
                 return (
                 <TableHead
                   key={header.id}
                   aria-sort={ariaSort(header.column.id, sorts)}
-                  className="relative overflow-visible pl-2"
+                  className={cn("relative overflow-visible pl-2", header.column.id === SELECT_COLUMN && "px-0")}
                 >
-                  <div className="flex min-w-0 items-center">
+                  <div className={cn("flex min-w-0 items-center", header.column.id === SELECT_COLUMN && "justify-center")}>
                     {isDataColumn(header.column.id) ? (
                       <HeaderMenu
                         columnId={header.column.id}
@@ -119,9 +119,11 @@ function PopulatedTable({ table, sorts, onSortsChange, loading, fetching, skelet
         {loading ? (
           <TableBody>
             {Array.from({ length: skeletonRows }, (_, index) => (
-              <TableRow key={index} className="hover:bg-transparent">
+              <TableRow key={index} className="hover:[&>td]:bg-transparent">
                 {columns.map((column) => (
-                  <TableCell key={column.id} className={cn("h-11", isDataColumn(column.id) ? "pl-4" : "pl-2")}><Skeleton className="h-4 w-3/4" /></TableCell>
+                  <TableCell key={column.id} className={cn("h-12", isDataColumn(column.id) ? "pl-4" : "pl-2", column.id === SELECT_COLUMN && "px-0")}>
+                    <Skeleton className={column.id === SELECT_COLUMN ? "mx-auto size-4 rounded-[4px]" : "h-4 w-3/4"} />
+                  </TableCell>
                 ))}
               </TableRow>
             ))}
@@ -157,7 +159,7 @@ const Body = memo(function Body({ rows, fetching, isSelected }: BodyProps) {
       {rows.map((row) => (
         <TableRow key={row.id} data-state={isSelected(row.id) ? "selected" : undefined}>
           {row.getVisibleCells().map((cell) => (
-            <TableCell key={cell.id} className={cn("h-11 min-w-0 overflow-hidden", isDataColumn(cell.column.id) ? "pl-4" : "pl-2", cell.column.id === "name" && "text-left")}>
+            <TableCell key={cell.id} className={cn("h-12 min-w-0 overflow-hidden", isDataColumn(cell.column.id) ? "pl-4" : "pl-2", cell.column.id === "name" && "text-left", cell.column.id === SELECT_COLUMN && "px-0")}>
               {flexRender(cell.column.columnDef.cell, cell.getContext())}
             </TableCell>
           ))}
@@ -277,7 +279,7 @@ function ResizeHandle({ column, next, table, width, scale, guideHeight, onResize
         aria-hidden="true"
         className={cn(
           "w-px transition-colors group-hover/resize:w-0.5 group-hover/resize:bg-primary/70 group-focus-visible/resize:w-0.5 group-focus-visible/resize:bg-primary",
-          drag ? "w-0.5 bg-primary" : "h-full bg-border",
+          drag ? "w-0.5 bg-primary" : "h-1/2 self-center bg-border",
         )}
         style={drag ? { height: guideHeight } : undefined}
       />

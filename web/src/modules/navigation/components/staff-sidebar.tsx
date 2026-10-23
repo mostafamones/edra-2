@@ -2,9 +2,13 @@
 import { usePortalPath, useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
-import { IconArrowLeft as ArrowLeft, IconChevronRight as ChevronRight } from "@tabler/icons-react";
+import { useState, type ComponentProps } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowLeft02Icon, AssignmentsIcon, Building03Icon, Calendar03Icon, FolderLibraryIcon, Home07Icon, Message01Icon, Search01Icon, StudentsIcon, TeachingIcon, Task01Icon, Ticket01Icon, UserCircleIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Sidebar,
   SidebarContent,
@@ -13,6 +17,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -27,16 +32,16 @@ import {
   canViewStaffItem,
   findStaffItem,
   NAV_ICONS,
-  STAFF_MANAGEMENT_GROUPS,
+  STAFF_MANAGEMENT_NAV,
   STAFF_WORKSPACE_SECTIONS,
-  type NavIcon,
+  type ManagementEntry,
   type NavItem,
   type StaffRole,
 } from "../manifest";
 import { AcademySwitcher } from "./academy-switcher";
-import { AccountMenu } from "./account-menu";
 import { useSectionOpenState } from "./open-state";
 import { QuickCreate } from "./quick-create";
+import { PortalFooter } from "./portal-footer";
 
 function pageFor(href: string): NavItem {
   const item = findStaffItem(href);
@@ -48,14 +53,22 @@ function activeFor(pathname: string, href: string) {
   return pathname === href || (href !== "/app" && href !== "/app/manage" && pathname.startsWith(`${href}/`));
 }
 
-function StaffLink({ item, pathname, closeMobile }: { item: NavItem; pathname: string; closeMobile: () => void }) {
+type WorkspaceIcon = ComponentProps<typeof HugeiconsIcon>["icon"];
+
+function StaffLink({ item, icon, pathname, closeMobile }: {
+  item: NavItem;
+  icon?: WorkspaceIcon;
+  pathname: string;
+  closeMobile: () => void;
+}) {
   const href = useCanonicalHref();
   const Icon = NAV_ICONS[item.icon];
+  const active = activeFor(pathname, item.href) || (item.href === "/app/students" && pathname.startsWith("/app/groups"));
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild tooltip={item.label} isActive={activeFor(pathname, item.href)}>
+      <SidebarMenuButton asChild tooltip={item.label} isActive={active} className={icon ? "text-sidebar-foreground/75" : undefined}>
         <Link href={href(item.href)} onClick={closeMobile} aria-current={pathname === item.href ? "page" : undefined}>
-          <Icon aria-hidden="true" />
+          {icon ? <HugeiconsIcon icon={icon} strokeWidth={1.5} aria-hidden="true" /> : <Icon aria-hidden="true" />}
           <span>{item.label}</span>
         </Link>
       </SidebarMenuButton>
@@ -63,9 +76,15 @@ function StaffLink({ item, pathname, closeMobile }: { item: NavItem; pathname: s
   );
 }
 
+const workspaceIcons: Record<string, WorkspaceIcon> = {
+  Teaching: TeachingIcon,
+  Content: FolderLibraryIcon,
+  Assessments: AssignmentsIcon,
+};
+
 function WorkspaceSection({ label, icon, items, pathname, closeMobile, sidebarOpen, expandSidebar, savedOpen, onToggle }: {
   label: string;
-  icon: NavIcon;
+  icon: WorkspaceIcon;
   items: NavItem[];
   pathname: string;
   closeMobile: () => void;
@@ -75,7 +94,6 @@ function WorkspaceSection({ label, icon, items, pathname, closeMobile, sidebarOp
   onToggle: (open: boolean) => void;
 }) {
   const href = useCanonicalHref();
-  const Icon = NAV_ICONS[icon];
   const active = items.some((item) => activeFor(pathname, item.href));
   return (
     <Collapsible
@@ -93,17 +111,17 @@ function WorkspaceSection({ label, icon, items, pathname, closeMobile, sidebarOp
     >
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={label} isActive={active} aria-label={`Toggle ${label} pages`}>
-            <Icon aria-hidden="true" />
+          <SidebarMenuButton tooltip={label} isActive={active} aria-label={`Toggle ${label} pages`} className="text-sidebar-foreground/75">
+            <HugeiconsIcon icon={icon} strokeWidth={1.5} aria-hidden="true" />
             <span>{label}</span>
-            <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" aria-hidden="true" />
+            <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={1.5} className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" aria-hidden="true" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent>
           <SidebarMenuSub>
             {items.map((item) => (
               <SidebarMenuSubItem key={item.href}>
-                <SidebarMenuSubButton asChild isActive={activeFor(pathname, item.href)}>
+                <SidebarMenuSubButton asChild isActive={activeFor(pathname, item.href)} className="text-sidebar-foreground/75">
                   <Link href={href(item.href)} onClick={closeMobile} aria-current={pathname === item.href ? "page" : undefined}>
                     <span>{item.label}</span>
                   </Link>
@@ -129,10 +147,10 @@ function WorkspaceNavigation({ pathname, role, closeMobile, sidebarOpen, expandS
     <>
       <SidebarGroup>
         <SidebarGroupContent className="flex flex-col gap-2">
-          <QuickCreate />
           <SidebarMenu>
-            <StaffLink item={pageFor("/app")} pathname={pathname} closeMobile={closeMobile} />
-            <StaffLink item={pageFor("/app/calendar")} pathname={pathname} closeMobile={closeMobile} />
+            <StaffLink item={pageFor("/app")} icon={Home07Icon} pathname={pathname} closeMobile={closeMobile} />
+            <StaffLink item={pageFor("/app/calendar")} icon={Calendar03Icon} pathname={pathname} closeMobile={closeMobile} />
+            <StaffLink item={pageFor("/app/students")} icon={StudentsIcon} pathname={pathname} closeMobile={closeMobile} />
             {STAFF_WORKSPACE_SECTIONS.map((section) => {
               const items = section.hrefs.map(pageFor).filter((item) => canViewStaffItem(item, role));
               if (!items.length) return null;
@@ -140,7 +158,7 @@ function WorkspaceNavigation({ pathname, role, closeMobile, sidebarOpen, expandS
                 <WorkspaceSection
                   key={section.label}
                   label={section.label}
-                  icon={section.icon}
+                  icon={workspaceIcons[section.label]}
                   items={items}
                   pathname={pathname}
                   closeMobile={closeMobile}
@@ -154,45 +172,53 @@ function WorkspaceNavigation({ pathname, role, closeMobile, sidebarOpen, expandS
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
-      <SidebarGroup className="mt-auto">
-        <SidebarGroupContent>
-          <SidebarMenu>
-            <StaffLink item={pageFor("/app/manage")} pathname={pathname} closeMobile={closeMobile} />
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
     </>
   );
 }
 
-function ManagementNavigation({ pathname, role, closeMobile }: { pathname: string; role: StaffRole | null; closeMobile: () => void }) {
+const managementIcons: Record<string, WorkspaceIcon> = {
+  "/app/manage/academy": Building03Icon,
+  "/app/manage/team": UserGroupIcon,
+  "/app/manage/bookings": Task01Icon,
+  "/app/manage/access": Ticket01Icon,
+  "/app/manage/messages": Message01Icon,
+  "/app/manage/account": UserCircleIcon,
+};
+
+/** An entry matches by its own label or by the pages it covers, so "Structure" finds General. */
+function matchesQuery(entry: ManagementEntry, query: string) {
+  const labels = [entry.label, ...(entry.also ?? []).map((href) => findStaffItem(href)?.label ?? "")];
+  return labels.some((label) => label.toLowerCase().includes(query));
+}
+
+function ManagementNavigation({ pathname, role, closeMobile, query }: { pathname: string; role: StaffRole | null; closeMobile: () => void; query: string }) {
   const href = useCanonicalHref();
+  const needle = query.trim().toLowerCase();
+  const visible = STAFF_MANAGEMENT_NAV.flatMap((group) => group.items).filter((entry) => canViewStaffItem(pageFor(entry.href), role) && matchesQuery(entry, needle));
+  if (needle && visible.length === 0) return <p role="status" className="px-3 py-6 text-center text-sm text-sidebar-foreground/75 group-data-[collapsible=icon]:hidden">No results</p>;
   return (
     <>
-      <SidebarGroup>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Back to workspace">
-                <Link href={href("/app")} onClick={closeMobile}>
-                  <ArrowLeft aria-hidden="true" />
-                  <span>Back to workspace</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <StaffLink item={pageFor("/app/manage")} pathname={pathname} closeMobile={closeMobile} />
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-      {STAFF_MANAGEMENT_GROUPS.map((group) => {
-        const items = group.hrefs.map(pageFor).filter((item) => canViewStaffItem(item, role));
-        if (!items.length) return null;
+      {STAFF_MANAGEMENT_NAV.map((group) => {
+        const entries = group.items.filter((entry) => visible.includes(entry));
+        if (!entries.length) return null;
         return (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {items.map((item) => <StaffLink key={item.href} item={item} pathname={pathname} closeMobile={closeMobile} />)}
+                {entries.map((entry) => {
+                  const active = [entry.href, ...(entry.also ?? [])].some((target) => activeFor(pathname, target));
+                  return (
+                    <SidebarMenuItem key={entry.href}>
+                      <SidebarMenuButton asChild tooltip={entry.label} isActive={active} className="text-sidebar-foreground/75">
+                        <Link href={href(entry.href)} onClick={closeMobile} aria-current={active ? "page" : undefined}>
+                          <HugeiconsIcon icon={managementIcons[entry.href]} strokeWidth={1.5} aria-hidden="true" />
+                          <span>{entry.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -202,26 +228,62 @@ function ManagementNavigation({ pathname, role, closeMobile }: { pathname: strin
   );
 }
 
+/** Management footer: sits where the workspace footer's Manage button is, so the two read as replacing each other. */
+function BackFooter({ closeMobile }: { closeMobile: () => void }) {
+  const href = useCanonicalHref();
+  return (
+    <div className="flex rounded-lg px-1 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+      <Button asChild variant="ghost" className="h-9 w-full justify-start gap-1 px-2 text-sidebar-foreground/75 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0" aria-label="Back">
+        <Link href={href("/app")} onClick={closeMobile}>
+          <HugeiconsIcon icon={ArrowLeft02Icon} size={20} strokeWidth={1.5} aria-hidden="true" />
+          <span className="group-data-[collapsible=icon]:hidden">Back</span>
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
 export function StaffSidebar() {
   const pathname = usePortalPath("staff");
   const { activeAcademy } = useAuth();
   const { isMobile, open, setOpen, setOpenMobile } = useSidebar();
   const role = activeAcademy?.role ?? null;
   const management = pathname === "/app/manage" || pathname.startsWith("/app/manage/");
+  const [query, setQuery] = useState("");
   const closeMobile = () => setOpenMobile(false);
   const expandSidebar = () => { if (!open) setOpen(true); };
 
   return (
-    <Sidebar collapsible="icon" variant="inset">
-      <SidebarHeader><AcademySwitcher /></SidebarHeader>
-      <SidebarContent className={open ? "px-1" : ""}>
+    <Sidebar collapsible="icon" variant="inset" className="group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]">
+      <SidebarHeader>
+        <AcademySwitcher />
+        {management && (
+          <div className="relative mt-2 px-1 group-data-[collapsible=icon]:hidden">
+            <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={1.5} aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sidebar-foreground/75" />
+            <SidebarInput type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search" aria-label="Search management"
+              className="border-border! pl-8 text-sm placeholder:text-sidebar-foreground/75 md:text-sm" />
+          </div>
+        )}
+        {!management && (
+          <div className="flex items-center gap-1 px-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:px-0 mt-2">
+            <Button type="button" variant="outline" size="sm" aria-label="Command Menu"
+              className="min-w-0 flex-1 justify-start border-border! text-sidebar-foreground/75 group-data-[collapsible=icon]:hidden">
+              <span className="truncate group-data-[collapsible=icon]:hidden font-normal">Search</span>
+              <Kbd className="ml-auto group-data-[collapsible=icon]:ml-0">⌘K</Kbd>
+            </Button>
+            <QuickCreate />
+          </div>
+        )}
+      </SidebarHeader>
+      <SidebarContent className={open || isMobile ? "px-1" : ""}>
         {management ? (
-          <ManagementNavigation pathname={pathname} role={role} closeMobile={closeMobile} />
+          <ManagementNavigation pathname={pathname} role={role} closeMobile={closeMobile} query={query} />
         ) : (
           <WorkspaceNavigation pathname={pathname} role={role} closeMobile={closeMobile} sidebarOpen={open || isMobile} expandSidebar={expandSidebar} />
         )}
       </SidebarContent>
-      <SidebarFooter><AccountMenu portal="staff" /></SidebarFooter>
+      <SidebarFooter>{management ? <BackFooter closeMobile={closeMobile} /> : <PortalFooter />}</SidebarFooter>
     </Sidebar>
   );
 }

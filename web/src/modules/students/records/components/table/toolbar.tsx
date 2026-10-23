@@ -1,7 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { IconSearch as SearchIcon, IconX as X } from "@tabler/icons-react";
 
 import { FilterPopover, type FilterField } from "@/components/shared/filter-popover";
 import { Badge } from "@/components/ui/badge";
@@ -113,7 +114,7 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
       onChange: (value) => onFiltersChange({ group: value === ALL ? null : value }),
     },
     {
-      id: "type", label: "Student type", value: params.participationType ?? ALL, defaultValue: ALL,
+      id: "type", label: "Participation", value: params.participationType ?? ALL, defaultValue: ALL,
       options: [{ value: ALL, label: "All types" }, ...PARTICIPATION_TYPES.map((type) => ({ value: type, label: PARTICIPATION_LABELS[type] }))],
       onChange: (value) => onFiltersChange({ participationType: isParticipationType(value) ? value : null }),
     },
@@ -156,7 +157,7 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
             value={searchValue}
             onChange={(event) => setDraft(event.target.value)}
           />
-          <InputGroupAddon><SearchIcon /></InputGroupAddon>
+          <InputGroupAddon><HugeiconsIcon icon={Search01Icon} /></InputGroupAddon>
           {searchValue.length > 0 && (
             <InputGroupAddon align="inline-end">
               <InputGroupButton
@@ -165,7 +166,7 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
                 aria-label="Clear search"
                 onClick={clearSearch}
               >
-                <X className="size-3.5" aria-hidden="true" />
+                <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" aria-hidden="true" />
               </InputGroupButton>
             </InputGroupAddon>
           )}
@@ -181,7 +182,7 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
             <Badge key={filter.key} variant="secondary" className="h-7 max-w-full gap-1 pr-1 pl-2.5 font-normal">
               <span className="truncate">{filter.label}</span>
               <Button variant="ghost" size="icon-xs" className="size-5 rounded-full" onClick={filter.clear} aria-label={`Remove filter ${filter.label}`}>
-                <X />
+                <HugeiconsIcon icon={Cancel01Icon} />
               </Button>
             </Badge>
           ))}

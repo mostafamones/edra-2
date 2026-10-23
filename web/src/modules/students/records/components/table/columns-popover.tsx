@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowUp01Icon, Cancel01Icon, DragDropVerticalIcon, Layout3ColumnIcon } from "@hugeicons/core-free-icons";
 import {
   closestCenter, DndContext, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
@@ -12,9 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { ALWAYS_VISIBLE, COLUMN_LABELS, type DataColumnId } from "../../table/config";
 import { moveColumn } from "../../table/preferences";
-import { IconChevronDown, IconChevronUp, IconColumns, IconColumns2, IconColumns3, IconGripVertical, IconRotate } from "@tabler/icons-react";
 
 type Props = {
   order: DataColumnId[];
@@ -48,18 +50,16 @@ export function ColumnsPopover({ order, visibility, onOrderChange, onVisibilityC
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="icon" aria-label={hidden > 0 ? `Columns, ${hidden} hidden` : "Columns"}><IconColumns3 /></Button>
+            <Button variant="outline" size="icon" aria-label={hidden > 0 ? `Columns, ${hidden} hidden` : "Columns"}><HugeiconsIcon icon={Layout3ColumnIcon} /></Button>
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent>Columns</TooltipContent>
       </Tooltip>
-      <PopoverContent align="end" className="w-80 p-0 gap-0">
-        <div className="flex items-center justify-between px-4 pt-4">
-          <div>
-            <p className="font-medium">Columns</p>
-          </div>
-          <Button variant="ghost" size="sm" className="-mr-2 h-7" disabled={!customized} onClick={onReset}>
-            Reset
+      <PopoverContent align="end" className="w-72 gap-0 p-0 font-(family-name:--font-figtree)">
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <p className="font-(family-name:--font-poppins) text-sm font-semibold">Columns</p>
+          <Button variant="ghost" size="sm" className="-mr-2 h-7 text-muted-foreground" disabled={!customized} onClick={onReset}>
+            <HugeiconsIcon icon={Cancel01Icon} />Reset
           </Button>
         </div>
         <DndContext
@@ -77,7 +77,7 @@ export function ColumnsPopover({ order, visibility, onOrderChange, onVisibilityC
           }}
         >
           <SortableContext items={order} strategy={verticalListSortingStrategy}>
-            <ul className="max-h-[60vh] overflow-y-auto p-2" aria-label="Column order">
+            <ul className="flex max-h-[60vh] flex-col gap-0.5 overflow-y-auto px-2 pb-2" aria-label="Column order">
               {order.map((id, index) => (
                 <ColumnItem
                   key={id}
@@ -116,7 +116,7 @@ function ColumnItem({ id, visible, first, last, onVisibleChange, onMove }: ItemP
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-1 rounded-md px-1 py-1 ${isDragging ? "relative z-10 bg-muted shadow-sm" : "hover:bg-muted/50"}`}
+      className={cn("group/column flex h-9 items-center gap-1 rounded-md pr-2 pl-1", isDragging ? "relative z-10 bg-muted shadow-sm" : "hover:bg-muted/60 focus-within:bg-muted/60")}
     >
       <button
         type="button"
@@ -124,25 +124,23 @@ function ColumnItem({ id, visible, first, last, onVisibleChange, onMove }: ItemP
         {...attributes}
         {...listeners}
         aria-label={`Reorder ${COLUMN_LABELS[id]}`}
-        className="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing"
+        className="flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing"
       >
-        <IconGripVertical className="size-4" />
+        <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
       </button>
-      <Checkbox
-        id={checkboxId}
-        checked={visible}
-        disabled={locked}
-        onCheckedChange={(checked) => onVisibleChange(checked === true)}
-      />
-      <label htmlFor={checkboxId} className={`min-w-0 flex-1 truncate px-1.5 text-sm ${visible ? "" : "text-muted-foreground"}`}>
+      <label htmlFor={checkboxId} className={cn("min-w-0 flex-1 truncate px-1 text-sm", !visible && "text-muted-foreground")}>
         {COLUMN_LABELS[id]}
       </label>
-      <Button variant="ghost" size="icon-xs" disabled={first} onClick={() => onMove(-1)} aria-label={`Move ${COLUMN_LABELS[id]} left`}>
-        <IconChevronUp />
-      </Button>
-      <Button variant="ghost" size="icon-xs" disabled={last} onClick={() => onMove(1)} aria-label={`Move ${COLUMN_LABELS[id]} right`}>
-        <IconChevronDown />
-      </Button>
+      {/* The move buttons stay in the tab order and appear on focus, so keyboard users can still reorder without dragging. */}
+      <div className="flex opacity-0 transition-opacity group-hover/column:opacity-100 group-focus-within/column:opacity-100">
+        <Button variant="ghost" size="icon-xs" disabled={first} onClick={() => onMove(-1)} aria-label={`Move ${COLUMN_LABELS[id]} left`}>
+          <HugeiconsIcon icon={ArrowUp01Icon} />
+        </Button>
+        <Button variant="ghost" size="icon-xs" disabled={last} onClick={() => onMove(1)} aria-label={`Move ${COLUMN_LABELS[id]} right`}>
+          <HugeiconsIcon icon={ArrowDown01Icon} />
+        </Button>
+      </div>
+      <Checkbox id={checkboxId} checked={visible} disabled={locked} onCheckedChange={(checked) => onVisibleChange(checked === true)} className="ml-1" />
     </li>
   );
 }

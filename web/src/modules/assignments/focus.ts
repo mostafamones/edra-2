@@ -23,13 +23,13 @@ export function focusTarget(assignment: Assignment, focus: Pick<MarkFocus, "kind
   return null;
 }
 
-/** The student's score on the focused part or question, or null while it has no question-by-question mark. */
+/** The student's score on the focused part (fast marks included) or question, or null while it has none. */
 export function focusScore(student: StudentWork, focus: Pick<MarkFocus, "kind" | "id">): number | null {
   if (focus.kind === "question") {
     const answer = student.answers.find((entry) => entry.questionId === focus.id);
     return answer ? Number(answer.score) : null;
   }
-  const mark = student.marks.find((entry) => entry.partId === focus.id && entry.kind === "mark" && entry.fromAnswers);
+  const mark = student.marks.find((entry) => entry.partId === focus.id && entry.kind === "mark");
   return mark ? Number(mark.score) : null;
 }
 

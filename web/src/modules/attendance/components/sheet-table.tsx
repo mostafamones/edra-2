@@ -56,7 +56,7 @@ export function SheetTable({ total, rows, editable, pending, selected, onSelect,
   return (
     <div className="overflow-x-auto">
       <Table>
-        <TableHeader className="bg-muted/30">
+        <TableHeader>
           <TableRow>
             {editable && (
               <TableHead className="w-10 pl-4">

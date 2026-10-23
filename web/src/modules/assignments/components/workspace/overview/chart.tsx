@@ -39,7 +39,7 @@ function BarTooltip({ active, payload }: { active?: boolean; payload?: { payload
 }
 
 /**
- * Average marks per part or per question, from marks entered question by question. Selecting a bar
+ * Average marks per part (fast marks included) or per question (answers only). Selecting a bar
  * opens the students who lost marks on it.
  */
 export function MarkAnalytics({ assignment, onSelect }: { assignment: Assignment; onSelect: (target: Pick<MarkFocus, "kind" | "id">) => void }) {
@@ -71,7 +71,7 @@ export function MarkAnalytics({ assignment, onSelect }: { assignment: Assignment
             <EmptyHeader className="gap-1">
               <EmptyMedia variant="icon"><IconChartBar aria-hidden="true" /></EmptyMedia>
               <EmptyTitle>No marks by {grouping === "questions" ? "question" : "part"} yet</EmptyTitle>
-              <EmptyDescription>Enter students’ answers question by question to see which {grouping} were easy and which lost the most marks.</EmptyDescription>
+              <EmptyDescription>{grouping === "parts" ? "Mark students" : "Enter students’ answers question by question"} to see which {grouping} were easy and which lost the most marks.</EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (

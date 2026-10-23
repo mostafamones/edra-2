@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { IconArrowLeft, IconChevronLeft, IconChevronRight, IconFileCertificate } from "@tabler/icons-react";
+import { IconArrowRight, IconCalendarEvent, IconChevronLeft, IconChevronRight, IconFileCertificate } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { studentAcademyPath } from "@/lib/routing";
 
@@ -10,18 +11,13 @@ import { listMyExams } from "../data";
 import { STUDENT_EXAM_PAGE_SIZE, type StudentExamAcademy, type StudentExamSummary } from "../types";
 import { StudentExamNotice } from "./notice";
 import { StudentExamStatus } from "./status";
-import { StudentExamTime, formatDuration } from "./time";
+import { StudentExamTime } from "./time";
 
 /** Exams page of one connected academy: discoverable exams with status and timing, paginated. */
 export async function StudentExamList({ academy, page }: { academy: StudentExamAcademy; page: number }) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <div className="flex flex-col items-start gap-2">
-        <Button variant="ghost" size="sm" className="-ml-2" asChild>
-          <Link href={studentAcademyPath(academy.slug)}><IconArrowLeft aria-hidden="true" />{academy.name}</Link>
-        </Button>
-        <h1 className="text-2xl font-semibold tracking-tight">Exams</h1>
-      </div>
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
+      <h1 className="font-heading text-2xl font-semibold tracking-tight">Exams</h1>
       <Content academy={academy} page={page} />
     </main>
   );
@@ -47,9 +43,20 @@ async function Content({ academy, page }: { academy: StudentExamAcademy; page: n
           </EmptyHeader>
         </Empty>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {items.map((exam) => <ExamItem key={exam.examId} academySlug={academy.slug} exam={exam} />)}
-        </ul>
+        SECTIONS.map((section) => {
+          const exams = items.filter((exam) => section.actions.includes(exam.action));
+          if (exams.length === 0) return null;
+          return (
+            <section key={section.title} aria-labelledby={`exams-${section.id}`} className="flex flex-col gap-3">
+              <h2 id={`exams-${section.id}`} className="text-sm font-medium text-muted-foreground">
+                {section.title} <span className="tabular-nums">{exams.length}</span>
+              </h2>
+              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {exams.map((exam) => <ExamItem key={exam.examId} academySlug={academy.slug} exam={exam} />)}
+              </ul>
+            </section>
+          );
+        })
       )}
       {pages > 1 && (
         <nav aria-label="Exam pages" className="flex items-center justify-between gap-2 text-sm">
@@ -62,17 +69,42 @@ async function Content({ academy, page }: { academy: StudentExamAcademy; page: n
   );
 }
 
+type Action = StudentExamSummary["action"];
+// Every action belongs to exactly one section; the server's order is kept inside each.
+const SECTIONS: { id: string; title: string; actions: Action[] }[] = [
+  { id: "now", title: "Available now", actions: ["start", "resume"] },
+  { id: "upcoming", title: "Upcoming", actions: ["not_yet_open"] },
+  { id: "past", title: "Past", actions: ["submitted", "no_new_starts", "ineligible", "unavailable"] },
+];
+
+const CALLS: Partial<Record<StudentExamSummary["action"], string>> = { start: "Start exam", resume: "Resume exam" };
+
 function ExamItem({ academySlug, exam }: { academySlug: string; exam: StudentExamSummary }) {
+  const call = CALLS[exam.action];
   return (
-    <li>
-      <Card className="relative flex-row items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring">
-        <div className="flex min-w-0 flex-col gap-1">
-          <Link href={studentAcademyPath(academySlug, `exams/${exam.examId}`)} className="truncate font-medium outline-none after:absolute after:inset-0">
+    <li className="min-w-0">
+      <Card className={cn(
+        "group relative h-full gap-0 py-0 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring",
+        call && "ring-1 ring-primary/40",
+      )}>
+        <div className="flex flex-1 flex-col gap-4 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className={cn("flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground", call && "bg-primary/15 text-primary")}>
+              <IconFileCertificate className="size-5" aria-hidden="true" />
+            </div>
+            <StudentExamStatus action={exam.action} />
+          </div>
+          <Link href={studentAcademyPath(academySlug, `exams/${exam.examId}`)}
+            className="line-clamp-2 font-heading text-base font-semibold leading-snug outline-none after:absolute after:inset-0">
             {exam.title}
           </Link>
-          <Timing exam={exam} />
+          <div className="mt-auto flex flex-col gap-1.5 text-sm text-muted-foreground"><Timing exam={exam} /></div>
         </div>
-        <StudentExamStatus action={exam.action} />
+        {call && (
+          <div className="flex items-center justify-between border-t px-5 py-3 text-sm font-medium text-primary">
+            {call}<IconArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+          </div>
+        )}
       </Card>
     </li>
   );
@@ -91,11 +123,11 @@ function moment(exam: StudentExamSummary): [string, string] | null {
 
 function Timing({ exam }: { exam: StudentExamSummary }) {
   const at = moment(exam);
-  const parts = [
-    at && <span key="at">{at[0]} <StudentExamTime value={at[1]} /></span>,
-    exam.timeLimitMinutes !== null && <span key="duration">{formatDuration(exam.timeLimitMinutes)}</span>,
-  ].filter(Boolean);
-  return <p className="flex flex-wrap gap-x-3 text-sm text-muted-foreground">{parts}</p>;
+  return (
+    <>
+      {at && <span className="flex items-center gap-1.5"><IconCalendarEvent className="size-4" aria-hidden="true" />{at[0]} <StudentExamTime value={at[1]} /></span>}
+    </>
+  );
 }
 
 function PageLink({ academySlug, page, disabled, children }: { academySlug: string; page: number; disabled: boolean; children: React.ReactNode }) {

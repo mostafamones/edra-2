@@ -7570,6 +7570,7 @@ export type Database = {
         }
         Returns: Json
       }
+      is_staff_account: { Args: never; Returns: boolean }
       list_assignment_marks: {
         Args: {
           p_academy_id: string

@@ -1,15 +1,17 @@
-import { studentHref } from "@/lib/routing";
+import { staffEntryHref, studentHref } from "@/lib/routing";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { StudentJoinPrompt, StudentOnboarding } from "@/modules/onboarding";
 import { studentOnboardingCopy } from "@/modules/onboarding/copy/student";
+import { isStaffAccount } from "@/modules/staff/server";
 import { getStudentProfile, listMyStudentAcademies, pendingStudentInviteToken } from "@/modules/students/server";
 
 export default async function StudentOnboardingPage() {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims) redirect("/auth/login?next=/onboarding/student");
+  if (await isStaffAccount()) redirect(staffEntryHref());
 
   const { data: profile, error } = await getStudentProfile(auth.claims.sub);
   if (error) {

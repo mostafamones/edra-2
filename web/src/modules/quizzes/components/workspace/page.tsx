@@ -1,10 +1,11 @@
 "use client";
 
-import { IconClock, IconUsersGroup } from "@tabler/icons-react";
+import { IconClock } from "@tabler/icons-react";
 
-import { useAudienceNames, describeAudience } from "@/components/shared/assessment/workspace/names";
+import { useAudienceNames } from "@/components/shared/assessment/workspace/names";
+import { AudienceFact } from "@/components/shared/assessment/workspace/audience";
 import { AssessmentWorkspacePage } from "@/components/shared/assessment/workspace/page";
-import { WorkspaceView } from "@/components/shared/assessment/workspace/view";
+import { WorkspaceMenu, WorkspaceView } from "@/components/shared/assessment/workspace/view";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatScore } from "@/lib/score";
@@ -50,7 +51,7 @@ function Workspace({ academy, quiz }: { academy: AcademyEntry; quiz: Quiz }) {
       )}
       meta={(
         <>
-          <span className="flex items-center gap-1.5"><IconUsersGroup className="size-4" aria-hidden="true" />{describeAudience(quiz, names)}</span>
+          <AudienceFact value={quiz} names={names} />
           <span className="flex items-center gap-1.5"><IconClock className="size-4" aria-hidden="true" />{quiz.timeLimitMinutes ? `${quiz.timeLimitMinutes} min timer` : "Untimed"}</span>
           <span className="tabular-nums">
             {formatScore(quiz.effectiveMaxScore)} marks{quiz.effectiveMaxScore !== quiz.maxScore ? ` (of ${formatScore(quiz.maxScore)} authored)` : ""}
@@ -58,11 +59,12 @@ function Workspace({ academy, quiz }: { academy: AcademyEntry; quiz: Quiz }) {
         </>
       )}
       mark={permissions.mark ? <QuizMarking academy={academy} quiz={quiz} /> : undefined}
-      canEdit={permissions.edit}
+      canEdit={permissions.edit} editInMenu={!permissions.editStructure}
       archive={permissions.archive ? <ArchiveQuiz quiz={quiz} /> : undefined}
-      more={(
+      more={(edit) => (
         <>
           {permissions.availability && <AvailabilityDialog key={quiz.version} quiz={quiz} />}
+          {edit && <WorkspaceMenu>{edit}</WorkspaceMenu>}
         </>
       )}
       yearOpen={quiz.yearOpen} archived={quiz.archivedAt !== null} ready={quiz.ready}

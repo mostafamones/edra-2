@@ -161,6 +161,11 @@
   }
 }
 
+/* Font trial: sidebars only (desktop and the mobile sheet); the academy name uses Poppins. Arabic falls back as in the page font. */
+[data-slot="sidebar"] {
+  font-family: var(--font-figtree), var(--font-arabic-fallback), sans-serif;
+}
+
 /* Sonner sets its own font stack, which skips the Arabic fallback; toasts follow the page font. */
 body [data-sonner-toaster],
 body [data-sonner-toast] {

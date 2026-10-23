@@ -25,10 +25,10 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
   const homeLabel = "Home";
   const item = portal === "staff" ? findStaffItem(pathname) : findStudentItem(pathname);
   const parent = portal === "staff" ? parentHref(pathname) : undefined;
-  const parentItem = parent && parent !== homeHref ? findStaffItem(parent) : undefined;
   const inManagement = portal === "staff" && pathname.startsWith("/app/manage/");
-  const managementItem = inManagement ? findStaffItem("/app/manage") : undefined;
-  const title = override ?? item?.label ?? (portal === "staff" && pathname === "/app/students/import" ? "Review Import" : portal === "staff" && pathname === "/app/students/imports" ? "Import logs" : portal === "staff" && /^\/app\/schedules\/[^/]+\/edit$/.test(pathname) ? "Edit schedule" : homeLabel);
+  const parentItem = parent && parent !== homeHref && !inManagement ? findStaffItem(parent) : undefined;
+  const studentPage = portal === "student" ? /^\/learn\/(?:academy\/)?[^/]+\/exams(\/[^/]+)?$/.exec(pathname) : null;
+  const title = override ?? item?.label ?? (studentPage ? (studentPage[1] ? "Exam" : "Exams") : portal === "staff" && pathname === "/app/students/import" ? "Review Import" : portal === "staff" && pathname === "/app/students/imports" ? "Import logs" : portal === "staff" && /^\/app\/schedules\/[^/]+\/edit$/.test(pathname) ? "Edit schedule" : homeLabel);
 
   return (
     <header className="sticky top-0 z-20 flex h-[var(--header-height,4rem)] shrink-0 items-center gap-2 border-b border-border bg-background px-4">
@@ -38,7 +38,7 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
         className={`h-6 rounded-full mr-2 ${portal === "student" ? "hidden md:block" : ""}`}
         style={{ alignSelf: "center" }}
       />
-      <Breadcrumb>
+      <Breadcrumb className="font-(family-name:--font-poppins)">
         <BreadcrumbList>
           {pathname !== homeHref ? (
             <>
@@ -48,15 +48,7 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
               <BreadcrumbSeparator />
             </>
           ) : null}
-          {managementItem ? (
-            <>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild><Link href={href(managementItem.href)}>{managementItem.label}</Link></BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-            </>
-          ) : null}
-          {parentItem && parentItem.href !== managementItem?.href ? (
+          {parentItem ? (
             <>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild><Link href={href(parentItem.href)}>{parentItem.label}</Link></BreadcrumbLink>

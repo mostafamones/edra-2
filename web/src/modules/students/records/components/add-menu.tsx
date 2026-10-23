@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, DatabaseImportIcon, LeftToRightListBulletIcon, Link01Icon, UserAdd01Icon, UserCheck01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import Link from "next/link";
-import { IconChevronDown, IconDatabaseImport, IconLink, IconList, IconUserPlus, IconUserShare } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,20 +22,20 @@ export function AddStudentMenu({ academyId, canImport }: { academyId: string; ca
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button><IconUserPlus />Add student<IconChevronDown /></Button>
+          <Button><HugeiconsIcon icon={UserAdd01Icon} />Add student<HugeiconsIcon icon={ArrowDown01Icon} /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
           <DropdownMenuItem asChild>
-            <Link href={href("/app/students/new")}><IconUserPlus />Add a student</Link>
+            <Link href={href("/app/students/new")}><HugeiconsIcon icon={UserAdd01Icon} />Add a student</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href={href("/app/manage/student-enrollment")}><IconUserShare />Invite student<IconLink className="ml-auto text-muted-foreground" /></Link>
+            <Link href={href("/app/manage/academy/enrollment")}><HugeiconsIcon icon={UserCheck01Icon} />Invite student<HugeiconsIcon icon={Link01Icon} className="ml-auto text-muted-foreground" /></Link>
           </DropdownMenuItem>
           {canImport && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger><IconDatabaseImport />Import</DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger><HugeiconsIcon icon={DatabaseImportIcon} />Import</DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-44">
                   <DropdownMenuLabel>New Import</DropdownMenuLabel>
                   <DropdownMenuItem onSelect={() => setFormat("csv")}>CSV</DropdownMenuItem>
@@ -42,7 +43,7 @@ export function AddStudentMenu({ academyId, canImport }: { academyId: string; ca
                   <DropdownMenuItem onSelect={() => setFormat("xlsx")}>Excel (.xlsx)</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href={href("/app/students/imports")}><IconList />View logs</Link>
+                    <Link href={href("/app/students/imports")}><HugeiconsIcon icon={LeftToRightListBulletIcon} />View logs</Link>
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>

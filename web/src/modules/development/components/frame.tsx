@@ -88,7 +88,7 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
             </div>
           </div>
           <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-50 rounded-md border-2 border-primary" />
-          <style>{`[data-slot=sidebar-container]{top:var(--edra-preview-bar,0px);height:calc(100svh - var(--edra-preview-bar,0px))}[data-slot=sidebar-wrapper]{min-height:calc(100svh - var(--edra-preview-bar,0px))}`}</style>
+          <style>{`[data-slot=sidebar-container]{top:var(--edra-preview-bar,0px);height:calc(100svh - var(--edra-preview-bar,0px))}[data-slot=sidebar-wrapper]{height:calc(100svh - var(--edra-preview-bar,0px));min-height:0}`}</style>
         </>
       )}
       {children}

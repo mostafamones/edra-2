@@ -28,7 +28,7 @@ export async function fetchTeamMembers(academyId: string, signal?: AbortSignal):
   // Read every page so the Data API's row limit cannot silently hide part of the team.
   for (let offset = 0; ; offset += batchSize) {
     let request = createClient().from("academy_memberships")
-      .select("user_id, role, created_at, suspended_at, profiles!academy_memberships_user_id_fkey(full_name, display_name, phone)")
+      .select("user_id, role, created_at, suspended_at, profiles!academy_memberships_user_id_fkey(full_name, display_name, phone, avatar_path)")
       .eq("academy_id", academyId)
       .order("user_id")
       .range(offset, offset + batchSize - 1);
@@ -39,7 +39,17 @@ export async function fetchTeamMembers(academyId: string, signal?: AbortSignal):
     members.push(...rows);
     if (rows.length < batchSize) break;
   }
+  await attachAvatarUrls(members);
   return sortTeamMembers(members);
+}
+
+/** Private bucket: teammates read avatars through signed URLs; a failure just leaves initials. */
+async function attachAvatarUrls(members: TeamMember[]) {
+  const paths = members.flatMap((member) => member.profiles.avatar_path ?? []);
+  if (paths.length === 0) return;
+  const { data } = await createClient().storage.from("avatars").createSignedUrls(paths, 60 * 60);
+  const urls = new Map(data?.flatMap((entry) => entry.path && entry.signedUrl ? [[entry.path, entry.signedUrl] as const] : []));
+  for (const member of members) member.avatarUrl = urls.get(member.profiles.avatar_path ?? "");
 }
 
 /** Owner first, then Head Admins, Admins and Instructors, each by name. */

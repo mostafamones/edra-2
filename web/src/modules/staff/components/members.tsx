@@ -8,7 +8,7 @@ import type { AcademyEntry } from "@/modules/academies";
 import { accountName } from "@/modules/account/contract";
 import { FilterPopover } from "@/components/shared/filter-popover";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -114,7 +114,7 @@ export function TeamMembers({ academy, userId, canManage }: {
               <li key={member.user_id} className="min-w-0">
                 <Card size="sm" className="h-full gap-0 rounded-lg py-0 transition-colors hover:bg-muted/30">
                   <div className="flex h-20 items-center gap-3 px-4">
-                    <Avatar size="lg" aria-hidden="true" className={suspended ? "opacity-60" : undefined}><AvatarFallback>{initials}</AvatarFallback></Avatar>
+                    <Avatar size="lg" aria-hidden="true" className={suspended ? "opacity-60" : undefined}><AvatarImage src={member.avatarUrl} alt="" /><AvatarFallback>{initials}</AvatarFallback></Avatar>
                     <div className="min-w-0 flex-1">
                       <h3 dir="auto" className="truncate font-medium text-foreground">
                         {name}{member.user_id === userId && <span className="ml-1.5 text-xs font-normal text-muted-foreground">You</span>}

@@ -8,13 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type Row = { recordId: string; fullName: string; studentCode: string | null };
 
 type Props<R extends Row> = {
-  /** Why nothing can be marked yet: the button stays, disabled, with this as its tooltip. */
-  disabled?: string;
+  /** Nothing can be marked yet: the Mark button is hidden. */
+  unavailable?: boolean;
   roster: { isPending: boolean; isError: boolean; rows: R[] };
   /** What the student's row says on the right: a total, or where their marking stands. */
   summary: (row: R) => ReactNode;
@@ -29,7 +28,7 @@ const inStudentList = (target: EventTarget | null) => target instanceof Element 
  * The marking flow every assessment shares: find a student by name or code, enter their marks, save,
  * and the search is ready for the next student.
  */
-export function MarkingSheet<R extends Row>({ disabled, roster, summary, form }: Props<R>) {
+export function MarkingSheet<R extends Row>({ unavailable, roster, summary, form }: Props<R>) {
   const [open, setOpen] = useState(false);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [typed, setTyped] = useState("");
@@ -43,19 +42,12 @@ export function MarkingSheet<R extends Row>({ disabled, roster, summary, form }:
     setRound((value) => value + 1);
   }
 
+  if (unavailable) return null;
   return (
     <MarkingGuard>{(request) => <Sheet open={open} onOpenChange={(value) => { if (value) setOpen(true); else request(() => { setOpen(false); next(); }); }}>
-      {disabled ? (
-        <Tooltip>
-          {/* A disabled button gets no hover or focus, so the tooltip hangs on a wrapper. */}
-          <TooltipTrigger asChild><span tabIndex={0}><Button variant="outline" disabled><IconChecklist />Mark</Button></span></TooltipTrigger>
-          <TooltipContent>{disabled}</TooltipContent>
-        </Tooltip>
-      ) : (
-        <SheetTrigger asChild>
-          <Button variant="outline"><IconChecklist />Mark</Button>
-        </SheetTrigger>
-      )}
+      <SheetTrigger asChild>
+        <Button variant="outline"><IconChecklist />Mark</Button>
+      </SheetTrigger>
       <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
         onInteractOutside={(event) => { if (inStudentList(event.target)) event.preventDefault(); }}>
         <SheetHeader className="gap-3">

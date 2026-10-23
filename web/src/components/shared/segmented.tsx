@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import { cn } from "cn";
 
@@ -16,24 +16,43 @@ type Props<T extends string> = {
   disabled?: boolean;
   /** Stretch to the container width with equally sized segments. */
   fill?: boolean;
-  /** Draw a border around the switch. */
-  bordered?: boolean;
   className?: string;
 };
 
-/** A compact two-way switch for mutually exclusive choices; the selected segment is highlighted. */
-export function Segmented<T extends string>({ label, value, options, onChange, disabled, fill, bordered, className }: Props<T>) {
+/** A compact switch for mutually exclusive choices; a pill slides under the selected segment. */
+export function Segmented<T extends string>({ label, value, options, onChange, disabled, fill, className }: Props<T>) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [thumb, setThumb] = useState<{ left: number; width: number } | null>(null);
+
+  // Measure the checked segment so the pill follows it, including when labels or the container resize.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const place = () => {
+      const item = root.querySelector<HTMLElement>("[role=radio][data-state=checked]");
+      setThumb(item ? { left: item.offsetLeft, width: item.offsetWidth } : null);
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [value, options]);
+
   return (
-    <RadioGroupPrimitive.Root value={value} onValueChange={(next) => onChange(next as T)} aria-label={label} disabled={disabled}
-      className={cn("inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5", bordered && "border", fill ? "flex w-full" : "w-fit", className)}>
+    <RadioGroupPrimitive.Root ref={rootRef} value={value} onValueChange={(next) => onChange(next as T)} aria-label={label} disabled={disabled}
+      className={cn("relative inline-flex h-8 items-center rounded-lg bg-muted/70 p-0.5 dark:bg-muted/40", fill ? "flex w-full" : "w-fit", className)}>
+      {thumb && (
+        <span aria-hidden="true" style={{ left: thumb.left, width: thumb.width }}
+          className="pointer-events-none absolute inset-y-0.5 rounded-md bg-background shadow-xs transition-[left,width] duration-200 ease-out motion-reduce:transition-none dark:bg-input/60" />
+      )}
       {options.map((option) => {
         const item = (
           <RadioGroupPrimitive.Item value={option.value} aria-label={option.hint}
-            className={cn("rounded-md px-3 py-1 text-sm font-medium text-muted-foreground transition-all outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 aria-checked:bg-background aria-checked:text-foreground aria-checked:shadow-sm", fill && "flex-1")}>
+            className={cn("relative flex h-full items-center justify-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-checked:text-foreground", fill && "flex-1")}>
             {option.label}
           </RadioGroupPrimitive.Item>
         );
-        if (!option.hint) return <span key={option.value} className={fill ? "flex flex-1" : undefined}>{item}</span>;
+        if (!option.hint) return <span key={option.value} className={cn("flex h-full", fill && "flex-1")}>{item}</span>;
         return (
           <Tooltip key={option.value}>
             <TooltipTrigger asChild>{item}</TooltipTrigger>

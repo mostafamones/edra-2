@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AlertCircleIcon, ArrowRight02Icon, Rotate01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { IconAlertCircle, IconArrowRight, IconRotate } from "@tabler/icons-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -177,7 +178,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
         {tooMany ? (
           <Alert variant="destructive">
-            <IconAlertCircle />
+            <HugeiconsIcon icon={AlertCircleIcon} />
             <AlertTitle>Too many students selected</AlertTitle>
             <AlertDescription>Change the group of at most {MAX_GROUP_CHANGE} students at a time. Clear some of the selection and try again.</AlertDescription>
           </Alert>
@@ -205,7 +206,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
 
             {preview.isError && (
               <Alert variant="destructive">
-                <IconAlertCircle />
+                <HugeiconsIcon icon={AlertCircleIcon} />
                 <AlertTitle>Couldn’t load the selected students</AlertTitle>
                 <AlertDescription className="flex flex-wrap items-center gap-3">
                   {preview.error.message}
@@ -216,7 +217,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
 
             {data && blocked && (
               <Alert variant="destructive">
-                <IconAlertCircle />
+                <HugeiconsIcon icon={AlertCircleIcon} />
                 <AlertTitle>Some selected students can’t be changed</AlertTitle>
                 <AlertDescription className="flex flex-col items-start gap-3">
                   <ul className="list-disc pl-4">
@@ -227,7 +228,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
                   </ul>
                   {reloadable && (
                     <Button variant="outline" size="sm" onClick={() => onReloadSelection(data.rows)} disabled={saving}>
-                      <IconRotate />Reload selection
+                      <HugeiconsIcon icon={Rotate01Icon} />Reload selection
                     </Button>
                   )}
                 </AlertDescription>
@@ -236,8 +237,8 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
 
             <div className="min-w-0 overflow-hidden rounded-lg border">
               <Table className="table-fixed" aria-busy={preview.isFetching || undefined}>
-                <TableHeader className="bg-muted/40">
-                  <TableRow className="hover:bg-transparent">
+                <TableHeader>
+                  <TableRow className="hover:[&>td]:bg-transparent">
                     <TableHead className="w-[34%] pl-4 text-left">Student</TableHead>
                     <TableHead className="pl-4">Current → proposed</TableHead>
                     <TableHead className="w-36 pl-4">Status</TableHead>
@@ -245,7 +246,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
                 </TableHeader>
                 <TableBody>
                   {!data ? Array.from({ length: 6 }, (_, index) => (
-                    <TableRow key={index} className="hover:bg-transparent">
+                    <TableRow key={index} className="hover:[&>td]:bg-transparent">
                       {[0, 1, 2].map((cell) => <TableCell key={cell} className="h-11 pl-4"><Skeleton className="h-4 w-3/4" /></TableCell>)}
                     </TableRow>
                   )) : pageRows.map((row) => (
@@ -259,7 +260,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
                             <CellText text={placement(row)} className="text-muted-foreground">{placement(row)}</CellText>
                             {destination !== undefined && (
                               <>
-                                <IconArrowRight className="size-3.5 shrink-0 text-muted-foreground" aria-label="to" />
+                                <HugeiconsIcon icon={ArrowRight02Icon} className="size-3.5 shrink-0 text-muted-foreground" aria-label="to" />
                                 <span className="shrink-0">{destinationName}</span>
                               </>
                             )}

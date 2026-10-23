@@ -9,6 +9,16 @@ import { parseJoinResponse, type StaffJoinState } from "./types";
 export { PENDING_STAFF_INVITE_COOKIE, clearPendingStaffInvite, pendingStaffInviteCookie } from "./pending";
 export { isStaffInviteToken } from "./link";
 
+/**
+ * Whether the signed-in account belongs to any academy as staff, suspended memberships included.
+ * Staff accounts never use the student portal; callers send them to the staff platform.
+ */
+export async function isStaffAccount(): Promise<boolean> {
+  const { data, error } = await (await createClient()).rpc("is_staff_account");
+  if (error) throw error;
+  return data === true;
+}
+
 /** Read-only preview of the pending invitation for the signed-in account. Never consumes it. */
 export async function getStaffJoinState(): Promise<StaffJoinState> {
   const token = (await cookies()).get(PENDING_STAFF_INVITE_COOKIE)?.value;

@@ -15,6 +15,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAttemptKey } from "@/lib/attempt-key";
+import { useStudentCodeSettings } from "@/modules/students/codes/use-settings";
 import { StudentsPagination } from "./pagination";
 
 const PAGE_SIZE = 10;
@@ -51,6 +52,8 @@ export type AnnounceSpec<R> = {
 };
 
 type Props<R extends StudentRow> = {
+  /** The Code column shows only while the academy issues student codes. */
+  academyId: string;
   query: { isPending: boolean; isError: boolean; isFetching: boolean; refetch: () => unknown };
   rows: R[] | undefined;
   filters: (rows: R[]) => FilterSpec<R>[];
@@ -79,8 +82,9 @@ type Props<R extends StudentRow> = {
  * results. Types supply the columns, the statuses to filter by and how announcing is run.
  */
 export function StudentsTable<R extends StudentRow>(props: Props<R>) {
-  const { query, rows: all, filters, sort, scope, toolbar, badges, columns, actions, announce, emptyText, noMatchText, onClear } = props;
+  const { academyId, query, rows: all, filters, sort, scope, toolbar, badges, columns, actions, announce, emptyText, noMatchText, onClear } = props;
   const attempt = useAttemptKey();
+  const showCodes = useStudentCodeSettings(academyId).data?.enabled ?? false;
   const [search, setSearch] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
   const [order, setOrder] = useState(sort?.defaultValue ?? "");
@@ -212,7 +216,7 @@ export function StudentsTable<R extends StudentRow>(props: Props<R>) {
           <EmptyHeader className="gap-1">
             <EmptyMedia variant="icon"><IconSearchOff aria-hidden="true" /></EmptyMedia>
             <EmptyTitle>No matching students</EmptyTitle>
-            <EmptyDescription>{filtering ? (noMatchText ?? "No student matches this search and filter.") : "Try a different name or code."}</EmptyDescription>
+            <EmptyDescription>{filtering ? (noMatchText ?? "No student matches this search and filter.") : showCodes ? "Try a different name or code." : "Try a different name."}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent><Button size="sm" variant="outline" onClick={clearAll}>Clear search and filters</Button></EmptyContent>
         </Empty>
@@ -231,7 +235,7 @@ export function StudentsTable<R extends StudentRow>(props: Props<R>) {
                       })} />
                   </TableHead>
                 )}
-                <TableHead className="w-28">Code</TableHead>
+                {showCodes && <TableHead className="w-28">Code</TableHead>}
                 <TableHead>Student</TableHead>
                 {columns.map((column) => <TableHead key={column.id} className={column.className}>{column.head}</TableHead>)}
                 {actions && <TableHead className="w-32"><span className="sr-only">Actions</span></TableHead>}
@@ -246,7 +250,7 @@ export function StudentsTable<R extends StudentRow>(props: Props<R>) {
                         onCheckedChange={(on) => toggle(row.recordId, on === true)} />
                     </TableCell>
                   )}
-                  <TableCell className="font-mono text-muted-foreground">{row.studentCode ?? "—"}</TableCell>
+                  {showCodes && <TableCell className="font-mono text-muted-foreground">{row.studentCode ?? "—"}</TableCell>}
                   <TableCell>
                     <span className="font-medium">{row.fullName}</span>
                     {badges?.(row)}

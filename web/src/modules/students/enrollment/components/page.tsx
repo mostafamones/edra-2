@@ -63,11 +63,11 @@ function StudentEnrollment({ academy }: { academy: AcademyEntry }) {
 
   const settings = query.data;
   return (
-    <main className="page-shell min-w-0">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <section className="min-w-0">
+      <div className="flex w-full flex-col gap-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="font-heading text-2xl font-bold tracking-tight">Student enrollment</h1>
+            <h2 className="font-heading text-2xl font-bold tracking-tight">Student enrollment</h2>
             <p className="text-sm text-muted-foreground">Share one link so students can join the academy online.</p>
           </div>
           {settings?.canManage && (
@@ -128,6 +128,6 @@ function StudentEnrollment({ academy }: { academy: AcademyEntry }) {
           </Card>
         )}
       </div>
-    </main>
+    </section>
   );
 }

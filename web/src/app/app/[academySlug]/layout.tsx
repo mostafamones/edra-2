@@ -34,7 +34,8 @@ export default async function AcademyLayout({ children, params }: {
         style={{ "--sidebar-width": "calc(var(--spacing) * 68)", "--header-height": "calc(var(--spacing) * 16)" } as React.CSSProperties}>
         <StaffSidebar />
         <BreadcrumbTitleProvider>
-          <SidebarInset className="min-h-0 overflow-y-auto overscroll-none">
+          {/* Icon collapse keeps its gap, so the inset needs no extra left margin; this keeps the rail's padding even on both sides. */}
+          <SidebarInset className="min-h-0 overflow-y-auto overscroll-none md:peer-data-[collapsible=icon]:ml-0!">
             <PortalHeader portal="staff" />
             <div className="flex flex-1 flex-col">{children}</div>
           </SidebarInset>

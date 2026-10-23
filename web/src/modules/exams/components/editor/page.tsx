@@ -12,6 +12,7 @@ import { examPermissions } from "../../permissions";
 import { loadExam, examQueryKey } from "../../queries";
 import type { Exam } from "../../types";
 import { ExamForm } from "./form";
+import { ExamScoring } from "../workspace/scoring";
 
 /** `/app/exams/new`: any staff member may create and prepare a exam. */
 export function NewExamPage() {
@@ -39,7 +40,7 @@ function EditContent({ academy, examId }: { academy: AcademyEntry; examId: strin
 function FormPage({ title, academy, exam }: { title: string; academy: AcademyEntry; exam?: Exam }) {
   return (
     <AssessmentFormPage noun="exam" route="exams" title={title} entity={exam}>
-      {(handlers) => <ExamForm academy={academy} exam={exam} {...handlers} />}
+      {(handlers) => <div className="flex flex-col gap-8"><ExamForm academy={academy} exam={exam} {...handlers} />{exam && <ExamScoring exam={exam} role={academy.role} />}</div>}
     </AssessmentFormPage>
   );
 }

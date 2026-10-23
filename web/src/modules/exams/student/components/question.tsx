@@ -5,9 +5,9 @@ import { IconAlertTriangle, IconX } from "@tabler/icons-react";
 import { RichText } from "@/components/shared/assessment/images/text";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 import type { Answer } from "../answering/drafts";
 import type { StudentExamQuestion } from "../types";
@@ -25,43 +25,52 @@ type Props = {
 
 const letter = (index: number) => String.fromCharCode(65 + index);
 
-/** Clicking an image chip inside a choice opens the viewer without selecting the choice. */
-function keepImageClicks(event: React.MouseEvent) {
-  if ((event.target as HTMLElement).closest("[data-image-id]")) event.preventDefault();
-}
-
 /** One question: authored text and images, then choices (Question Sheet) or a text answer (Written Work). */
 export function StudentExamQuestionView({ question, part, value, conflict, editable, onChange, onResolve }: Props) {
   const heading = `question-${question.id}`;
   return (
     <section aria-labelledby={heading} className="flex flex-col gap-5">
-      {part && (
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium text-muted-foreground">{part.title}</p>
-          {part.instructions && <p className="whitespace-pre-wrap text-sm">{part.instructions}</p>}
-        </div>
-      )}
+      {part?.instructions && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{part.instructions}</p>}
       <div className="flex flex-col gap-2">
-        <h2 id={heading} className="text-lg font-semibold">Question {question.number}</h2>
+        <h2 id={heading} className="sr-only">Question {question.number}</h2>
         {question.prompt && <div className="whitespace-pre-wrap leading-7"><RichText value={question.prompt} /></div>}
       </div>
+      <Separator />
       {conflict && <Conflict question={question} saved={conflict} disabled={!editable} onResolve={onResolve} />}
       {question.kind === "question_sheet" ? (
         <div className="flex flex-col gap-2">
-          <RadioGroup value={value.choiceId ?? ""} disabled={!editable} aria-labelledby={heading}
-            onValueChange={(choiceId) => onChange({ choiceId, text: null })} className="gap-2">
-            {question.choices.map((choice, index) => (
-              <FieldLabel key={choice.id} htmlFor={`choice-${choice.id}`} onClick={keepImageClicks}>
-                <Field orientation="horizontal">
-                  <RadioGroupItem value={choice.id} id={`choice-${choice.id}`} />
-                  <span className="font-medium tabular-nums">{letter(index)}.</span>
-                  <span className="min-w-0 flex-1 whitespace-pre-wrap"><RichText value={choice.label} /></span>
-                </Field>
-              </FieldLabel>
-            ))}
-          </RadioGroup>
+          <div role="radiogroup" aria-labelledby={heading} className="flex flex-col gap-2" onKeyDown={(event) => {
+            // As in the answer-sheet editor: typing a choice letter picks it.
+            if (!editable || event.metaKey || event.ctrlKey || event.altKey || event.key.length !== 1) return;
+            const chosen = question.choices[event.key.toUpperCase().charCodeAt(0) - 65];
+            if (!chosen) return;
+            event.preventDefault();
+            onChange({ choiceId: chosen.id, text: null });
+            document.getElementById(`choice-key-${chosen.id}`)?.focus();
+          }}>
+            {question.choices.map((choice, index) => {
+              const selected = value.choiceId === choice.id;
+              const pick = () => { if (editable) onChange({ choiceId: choice.id, text: null }); };
+              return (
+                <div key={choice.id} className="flex items-start gap-2">
+                  <Button type="button" role="radio" aria-checked={selected} id={`choice-key-${choice.id}`}
+                    aria-labelledby={`choice-key-${choice.id} choice-text-${choice.id}`} disabled={!editable}
+                    variant={selected ? "default" : "outline"} size="icon" className="shrink-0 font-semibold disabled:opacity-100" onClick={pick}>
+                    {letter(index)}
+                  </Button>
+                  {/* The letter is the keyboard control; the text is a larger pointer target for the same choice. */}
+                  <div id={`choice-text-${choice.id}`} onClick={(event) => { if (!(event.target as HTMLElement).closest("[data-image-id]")) pick(); }}
+                    className={cn("min-h-9 flex-1 rounded-md border px-3 py-1.5 text-sm leading-6 whitespace-pre-wrap transition-colors",
+                      editable && "cursor-pointer hover:bg-muted/50", selected && "border-primary/60 bg-primary/5")}>
+                    <RichText value={choice.label} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
           {value.choiceId && editable && (
-            <Button type="button" variant="ghost" size="sm" className="self-start" onClick={() => onChange({ choiceId: null, text: null })}>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onChange({ choiceId: null, text: null })}
+              className="self-end text-destructive hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/20">
               <IconX aria-hidden="true" />Clear answer
             </Button>
           )}

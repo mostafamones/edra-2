@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconCalendarDue, IconUsersGroup } from "@tabler/icons-react";
+import { IconCalendarDue } from "@tabler/icons-react";
 
 import { AssessmentWorkspacePage } from "@/components/shared/assessment/workspace/page";
 import { WorkspaceView } from "@/components/shared/assessment/workspace/view";
@@ -15,11 +15,11 @@ import { assignmentQueryKey, loadAssignment } from "../../queries";
 import type { Assignment } from "../../types";
 import { AssignmentMarking } from "../marking/sheet";
 import { AUDIENCE_LABELS, STATE_BADGE, STATE_LABELS } from "../shared/labels";
-import { AssignmentScoring } from "./scoring";
 import { LifecycleActions } from "./lifecycle";
 import { AssignmentOverview } from "./overview/content";
 import { AssignmentStudents } from "./students/list";
-import { describeAudience, useAudienceNames } from "@/components/shared/assessment/workspace/names";
+import { useAudienceNames } from "@/components/shared/assessment/workspace/names";
+import { AudienceFact } from "@/components/shared/assessment/workspace/audience";
 
 /**
  * `/app/assignments/<id>`: one workspace for an assignment: a header (title, state, audience, due date,
@@ -45,10 +45,7 @@ function Workspace({ academy, assignment }: { academy: AcademyEntry; assignment:
       badge={<Badge variant={STATE_BADGE[assignment.state]}>{STATE_LABELS[assignment.state]}</Badge>}
       meta={(
         <>
-          <span className="flex items-center gap-1.5">
-            <IconUsersGroup className="size-4" aria-hidden="true" />
-            {describeAudience(assignment, names)}<span className="text-muted-foreground/70">· {AUDIENCE_LABELS[assignment.audience]}</span>
-          </span>
+          <AudienceFact value={assignment} names={names} suffix={<span className="text-muted-foreground/70">· {AUDIENCE_LABELS[assignment.audience]}</span>} />
           {assignment.dueAt ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -64,14 +61,14 @@ function Workspace({ academy, assignment }: { academy: AcademyEntry; assignment:
         </>
       )}
       mark={permissions.mark ? <AssignmentMarking assignment={assignment} manager={isManager(academy.role)} /> : undefined}
-      canEdit={permissions.edit}
-      more={<LifecycleActions assignment={assignment} permissions={permissions} />}
+      canEdit={permissions.edit} editInMenu={!permissions.editStructure}
+      more={(edit) => <LifecycleActions assignment={assignment} permissions={permissions} edit={edit} />}
       yearOpen={assignment.yearOpen} archived={assignment.state === "archived"} ready={assignment.ready}
       setup="Finish every part’s questions and marks before recording work or marking. Nothing needs to be published."
-      studentCount={`${assignment.currentRequiredCount ?? assignment.recipientCount} required · ${assignment.optionalEligibleCount ?? 0} optional`}
+      studentCount={String((assignment.currentRequiredCount ?? assignment.recipientCount) + (assignment.optionalEligibleCount ?? 0))}
       overview={({ showStudents }) => (
-        <div className="flex flex-col gap-4"><AssignmentOverview assignment={assignment} onViewStudents={showStudents}
-          onSelectBar={(target) => { setFocus({ ...target, outcome: "lost" }); showStudents(); }} /><AssignmentScoring assignment={assignment} role={academy.role} /></div>
+        <AssignmentOverview assignment={assignment} onViewStudents={showStudents}
+          onSelectBar={(target) => { setFocus({ ...target, outcome: "lost" }); showStudents(); }} />
       )}
       students={<AssignmentStudents academy={academy} assignment={assignment} focus={focus} onFocusChange={setFocus} />}
     />

@@ -12,6 +12,7 @@ import { quizPermissions } from "../../permissions";
 import { loadQuiz, quizQueryKey } from "../../queries";
 import type { Quiz } from "../../types";
 import { QuizForm } from "./form";
+import { QuizScoring } from "../workspace/scoring";
 
 /** `/app/quizzes/new`: any staff member may create and prepare a quiz. */
 export function NewQuizPage() {
@@ -39,7 +40,7 @@ function EditContent({ academy, quizId }: { academy: AcademyEntry; quizId: strin
 function FormPage({ title, academy, quiz }: { title: string; academy: AcademyEntry; quiz?: Quiz }) {
   return (
     <AssessmentFormPage noun="quiz" route="quizzes" title={title} entity={quiz}>
-      {(handlers) => <QuizForm academy={academy} quiz={quiz} {...handlers} />}
+      {(handlers) => <div className="flex flex-col gap-8"><QuizForm academy={academy} quiz={quiz} {...handlers} />{quiz && <QuizScoring quiz={quiz} role={academy.role} />}</div>}
     </AssessmentFormPage>
   );
 }
