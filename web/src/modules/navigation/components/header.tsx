@@ -14,6 +14,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useBreadcrumbOverride } from "@/components/shared/breadcrumb-title";
+import { HEADER_ACTIONS_ID } from "@/components/shared/header-actions";
 
 import { findStaffItem, findStudentItem, parentHref } from "../manifest";
 
@@ -59,6 +60,7 @@ export function PortalHeader({ portal }: { portal: "staff" | "student" }) {
           <BreadcrumbItem><BreadcrumbPage className="font-semibold">{title}</BreadcrumbPage></BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+      <div id={HEADER_ACTIONS_ID} className="ml-auto flex items-center gap-2" />
     </header>
   );
 }

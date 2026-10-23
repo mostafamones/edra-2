@@ -124,14 +124,14 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
   if (params.status !== "active") {
     active.push({ key: "status", label: params.status === "archived" ? "Archived" : "Active and archived", clear: () => onFiltersChange({ status: "active" }) });
   }
-  if (params.levelId) active.push({ key: "level", label: `Level: ${levelName(params.levelId)}`, clear: () => onFiltersChange({ levelId: null, track: null }) });
+  if (params.levelId) active.push({ key: "level", label: `${levelName(params.levelId)}`, clear: () => onFiltersChange({ levelId: null, track: null }) });
   if (params.track) {
     const name = params.track === NONE ? "No track" : trackById.get(params.track)?.name ?? "Unknown track";
-    active.push({ key: "track", label: `Track: ${name}`, clear: () => onFiltersChange({ track: null }) });
+    active.push({ key: "track", label: `${name}`, clear: () => onFiltersChange({ track: null }) });
   }
   if (params.group) {
     const name = params.group === NONE ? "Unassigned" : groupById.get(params.group)?.name ?? "Unknown group";
-    active.push({ key: "group", label: `Group: ${name}`, clear: () => onFiltersChange({ group: null }) });
+    active.push({ key: "group", label: `${name}`, clear: () => onFiltersChange({ group: null }) });
   }
   if (params.participationType) {
     active.push({ key: "type", label: PARTICIPATION_LABELS[params.participationType], clear: () => onFiltersChange({ participationType: null }) });
@@ -144,51 +144,49 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <InputGroup className="sm:max-w-sm">
-          <InputGroupInput
-            ref={searchRef}
-            type="search"
-            className="[&::-webkit-search-cancel-button]:appearance-none"
-            placeholder={codesEnabled ? "Search names, phones, codes, levels, groups" : "Search names, phones, levels, groups"}
-            aria-label="Search students"
-            maxLength={MAX_SEARCH_LENGTH}
-            value={searchValue}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-          <InputGroupAddon><HugeiconsIcon icon={Search01Icon} /></InputGroupAddon>
-          {searchValue.length > 0 && (
-            <InputGroupAddon align="inline-end">
-              <InputGroupButton
-                size="icon-xs"
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
-                onClick={clearSearch}
-              >
-                <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" aria-hidden="true" />
-              </InputGroupButton>
-            </InputGroupAddon>
-          )}
-        </InputGroup>
-        <div className="flex gap-2 sm:ml-auto">
-          <FilterPopover fields={fields} iconOnly>{children}</FilterPopover>
-          {actions}
-        </div>
-      </div>
-      {active.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5" aria-label="Active filters">
-          {active.map((filter) => (
-            <Badge key={filter.key} variant="secondary" className="h-7 max-w-full gap-1 pr-1 pl-2.5 font-normal">
-              <span className="truncate">{filter.label}</span>
-              <Button variant="ghost" size="icon-xs" className="size-5 rounded-full" onClick={filter.clear} aria-label={`Remove filter ${filter.label}`}>
-                <HugeiconsIcon icon={Cancel01Icon} />
-              </Button>
-            </Badge>
-          ))}
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+      <InputGroup className="shrink-0 sm:w-sm">
+        <InputGroupInput
+          ref={searchRef}
+          type="search"
+          className="[&::-webkit-search-cancel-button]:appearance-none"
+          placeholder={"Search students..."}
+          aria-label="Search students"
+          maxLength={MAX_SEARCH_LENGTH}
+          value={searchValue}
+          onChange={(event) => setDraft(event.target.value)}
+        />
+        <InputGroupAddon><HugeiconsIcon icon={Search01Icon} /></InputGroupAddon>
+        {searchValue.length > 0 && (
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              size="icon-xs"
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Clear search"
+              onClick={clearSearch}
+            >
+              <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" aria-hidden="true" />
+            </InputGroupButton>
+          </InputGroupAddon>
+        )}
+      </InputGroup>
+      <div className="flex min-h-9 min-w-0 flex-1 flex-wrap items-center gap-1.5" aria-label="Active filters">
+        {active.map((filter) => (
+          <Badge key={filter.key} variant="outline" className="h-7 max-w-full gap-1 rounded-md pr-1 pl-2.5 font-normal">
+            <span className="truncate">{filter.label}</span>
+            <Button variant="ghost" size="icon-xs" className="size-5 rounded-sm" onClick={filter.clear} aria-label={`Remove filter ${filter.label}`}>
+              <HugeiconsIcon icon={Cancel01Icon} />
+            </Button>
+          </Badge>
+        ))}
+        {active.length > 1 && (
           <Button variant="ghost" size="sm" className="h-7 text-muted-foreground" onClick={clearAll}>Clear all</Button>
-        </div>
-      )}
+        )}
+      </div>
+      <div className="flex shrink-0 gap-2">
+        <FilterPopover fields={fields} iconOnly>{children}</FilterPopover>
+        {actions}
+      </div>
     </div>
   );
 }

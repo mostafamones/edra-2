@@ -14,3 +14,4 @@ export {
 } from "./queries";
 export type { AcademicYear, Group, GroupDependencies, Level, Track } from "./queries";
 export { groupInputSchema } from "./validation";
+export { GroupsBoard } from "./components/board";

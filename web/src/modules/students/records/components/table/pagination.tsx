@@ -26,7 +26,7 @@ export function StudentsPagination({ pageIndex, pageSize, total, onPageChange, o
   const atEnd = pageIndex >= pageCount - 1;
 
   return (
-    <nav aria-label="Student pages" className="flex flex-col-reverse gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+    <nav aria-label="Student pages" className="-mt-1 flex flex-col-reverse gap-3 px-2 text-sm sm:flex-row sm:items-center sm:justify-between">
       <p className="text-muted-foreground" aria-live="polite">
         {total === 0 ? "No students" : <>Showing <span className="tabular-nums text-foreground">{number.format(first)}–{number.format(last)}</span> of <span className="tabular-nums text-foreground">{number.format(total)}</span></>}
       </p>
