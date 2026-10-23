@@ -4,7 +4,7 @@ import { useState } from "react";
 import { IconLoader2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { useAcademyScope } from "@/modules/auth";
 
 import { saveStudentCodeSettings } from "../actions";
@@ -18,7 +18,7 @@ type Props = {
   onStale: () => void;
 };
 
-/** Off/On control that saves immediately. Formats and codes are kept either way. */
+/** On/off switch that saves immediately. Formats and codes are kept either way. */
 export function StudentCodesToggle({ academyId, settings, onSaved, onStale }: Props) {
   const isCurrentAcademy = useAcademyScope();
   const [saving, setSaving] = useState(false);
@@ -38,7 +38,7 @@ export function StudentCodesToggle({ academyId, settings, onSaved, onStale }: Pr
       if (!result.ok) {
         if (result.code === "stale_settings") onStale();
         toast.error(result.code === "validation"
-          ? "Save a format below before turning student codes on."
+          ? "Save a format in the student code settings before turning codes on."
           : result.message);
         return;
       }
@@ -54,12 +54,7 @@ export function StudentCodesToggle({ academyId, settings, onSaved, onStale }: Pr
   return (
     <div className="flex items-center gap-2">
       {saving && <IconLoader2 aria-hidden="true" className="size-4 animate-spin text-muted-foreground" />}
-      <Tabs value={settings.enabled ? "on" : "off"} onValueChange={(value) => void change(value === "on")}>
-        <TabsList aria-label="Student codes" className="h-9">
-          <TabsTrigger value="off" disabled={saving} className="min-w-14 px-3 data-[state=active]:bg-background">Off</TabsTrigger>
-          <TabsTrigger value="on" disabled={saving} className="min-w-14 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">On</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <Switch id="student-codes-enabled" checked={settings.enabled} disabled={saving} onCheckedChange={(next) => void change(next)} />
     </div>
   );
 }

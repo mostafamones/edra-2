@@ -2,24 +2,31 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconAlertCircle, IconCopy } from "@tabler/icons-react";
+import { IconAlertCircle, IconCheck, IconCopy, IconRefresh } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
+import { SettingsGroup } from "@/components/shared/settings-group";
+import { SettingsRow as Row } from "@/components/shared/settings-row";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import type { AcademyEntry } from "@/modules/academies";
 import { AcademyGate } from "@/modules/auth";
 import { copyInvitationLink } from "@/modules/staff";
 
+import { StudentCodesRow } from "../../codes/components/page";
 import { getStudentEnrollmentSettings, setStudentInvite, updateStudentEnrollmentSettings } from "../actions";
 import type { EnrollmentSettings } from "../types";
 
-/** Manage → Student enrollment: every staff role can copy the link; managers turn it on, replace or turn it off. */
+/** General → Enrollment: every staff role can copy the link; managers open enrollment, reset the link, and configure student codes. */
 export function StudentEnrollmentPage() {
   return <AcademyGate>{(academy) => <StudentEnrollment academy={academy} />}</AcademyGate>;
 }
@@ -27,7 +34,7 @@ export function StudentEnrollmentPage() {
 type Result = Awaited<ReturnType<typeof getStudentEnrollmentSettings>>;
 
 function StudentEnrollment({ academy }: { academy: AcademyEntry }) {
-  useBreadcrumbTitle("Student enrollment");
+  useBreadcrumbTitle("Students");
   const queryClient = useQueryClient();
   const key = ["student-enrollment", academy.id] as const;
   const query = useQuery({
@@ -51,83 +58,91 @@ function StudentEnrollment({ academy }: { academy: AcademyEntry }) {
     onError: (error) => toast.error(error.message === "forbidden" ? "You don’t have permission to do that." : "Couldn’t save the change. Try again."),
   });
   const [linkBox, setLinkBox] = useState<HTMLElement | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   async function copy(link: string) {
     try {
       await copyInvitationLink(link, linkBox!);
-      toast.success("Invite link copied");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error("Couldn’t copy the link. Select it and copy it manually.");
     }
   }
 
   const settings = query.data;
+  const busy = change.isPending;
   return (
-    <section className="min-w-0">
-      <div className="flex w-full flex-col gap-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h2 className="font-heading text-2xl font-bold tracking-tight">Student enrollment</h2>
-            <p className="text-sm text-muted-foreground">Share one link so students can join the academy online.</p>
-          </div>
-          {settings?.canManage && (
-            <Tabs value={settings.enrollmentOpen ? "on" : "off"}
-              onValueChange={(value) => change.mutate({ action: () => updateStudentEnrollmentSettings(academy.id, { enrollmentOpen: value === "on" }) })}>
-              <TabsList aria-label="Accept new students" className="h-9">
-                <TabsTrigger value="off" disabled={change.isPending} className="min-w-14 px-3 data-[state=active]:bg-background">Off</TabsTrigger>
-                <TabsTrigger value="on" disabled={change.isPending} className="min-w-14 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">On</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
-        </div>
+    <section className="flex min-w-0 flex-col gap-10">
+      {query.isPending && <Skeleton className="h-36 w-full" />}
+      {query.isError && (
+        <Alert variant="destructive">
+          <IconAlertCircle aria-hidden="true" />
+          <AlertTitle>Couldn’t load the invite link</AlertTitle>
+          <AlertDescription>
+            Check your connection and try again.
+            <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => void query.refetch()}>Try again</Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {query.isPending && <Skeleton className="h-48 w-full" />}
-        {query.isError && (
-          <Alert variant="destructive">
-            <IconAlertCircle aria-hidden="true" />
-            <AlertTitle>Couldn’t load the invite link</AlertTitle>
-            <AlertDescription>
-              Check your connection and try again.
-              <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => void query.refetch()}>Try again</Button>
-            </AlertDescription>
-          </Alert>
-        )}
+      {settings && (
+        <SettingsGroup title="Enrollment">
+          <Row id="enrollment-open" title="Accept new students" description="Let students join the academy online with the invite link.">
+            {settings.canManage ? (
+              <Switch id="enrollment-open" checked={settings.enrollmentOpen} disabled={busy}
+                onCheckedChange={(open) => change.mutate({ action: () => updateStudentEnrollmentSettings(academy.id, { enrollmentOpen: open }) })} />
+            ) : (
+              <Badge variant={settings.enrollmentOpen ? "default" : "secondary"}>{settings.enrollmentOpen ? "On" : "Off"}</Badge>
+            )}
+          </Row>
 
-        {settings && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Invite link</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
+          <Row id="invite-link" title="Invite link" description="Share this link with students.">
+            <div ref={setLinkBox} className="flex min-w-0 items-center gap-1">
               {settings.link ? (
-                <div ref={setLinkBox} className="flex gap-2">
-                  <Input readOnly value={settings.link} aria-label="Student invite link" onFocus={(event) => event.currentTarget.select()} />
-                  <Button type="button" variant="outline" onClick={() => void copy(settings.link!)}><IconCopy />Copy</Button>
-                </div>
-              ) : (
-                <p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
-                  {settings.canManage ? "The invite link is off." : "There’s no invite link yet. Ask an admin to create one."}
-                </p>
-              )}
-
-              {settings.canManage && (
                 <>
-                  <div className="flex flex-wrap justify-end gap-2">
-                    {settings.link && (
-                      <Button type="button" variant="outline" disabled={change.isPending}
-                        onClick={() => change.mutate({ action: () => setStudentInvite(academy.id, false), success: "Invite link turned off" })}>Turn off link</Button>
-                    )}
-                    <Button type="button" disabled={change.isPending}
-                      onClick={() => change.mutate({ action: () => setStudentInvite(academy.id, true), success: settings.link ? "Invite link replaced" : "Invite link created" })}>
-                      {settings.link ? "Replace link" : "Create link"}
-                    </Button>
-                  </div>
+                  {settings.canManage && (
+                    <Button type="button" variant="ghost" size="icon-sm" aria-label="Reset invite link" disabled={busy} onClick={() => setConfirmReset(true)}><IconRefresh className="text-muted-foreground!" /></Button>
+                  )}
+                  <InputGroup className="h-8 w-92 border-transparent bg-muted/60 shadow-none dark:bg-muted/60">
+                    <InputGroupInput id="invite-link" readOnly dir="ltr" value={decodeURIComponent(settings.link.slice(settings.link.lastIndexOf("/") + 1))} className="text-muted-foreground"
+                      onFocus={(event) => event.currentTarget.select()} />
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton size="xs" className="text-foreground!" aria-label={copied ? "Copied" : "Copy invite link"} onClick={() => void copy(settings.link!)}>
+                        {copied ? <><IconCheck /> Copied</> : <><IconCopy /> Copy</>}
+                      </InputGroupButton>
+                    </InputGroupAddon>
+                  </InputGroup>
                 </>
+              ) : settings.canManage ? (
+                <Button type="button" variant="outline" size="sm" disabled={busy}
+                  onClick={() => change.mutate({ action: () => setStudentInvite(academy.id, true), success: "Invite link created" })}>Create link</Button>
+              ) : (
+                <span className="text-sm text-muted-foreground">No link yet. Ask an admin to create one.</span>
               )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
+          </Row>
+        </SettingsGroup>
+      )}
+      {settings && (
+        <SettingsGroup title="Student codes">
+          <StudentCodesRow academy={academy} />
+        </SettingsGroup>
+      )}
+      <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset the invite link?</AlertDialogTitle>
+            <AlertDialogDescription>The current link stops working right away. Share the new link with students who haven’t joined yet.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive"
+              onClick={() => change.mutate({ action: () => setStudentInvite(academy.id, true), success: "Invite link reset" })}>Reset link</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

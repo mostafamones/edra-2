@@ -1,20 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { IconChevronDown, IconInfoCircle, IconListNumbers, IconRefresh } from "@tabler/icons-react";
+import { IconInfoCircle, IconListNumbers, IconRefresh } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { useAcademyScope } from "@/modules/auth";
 
 import { saveStudentCodeSettings } from "../actions";
@@ -47,7 +44,6 @@ export function StudentCodeSettingsEditor({ academyId, settings, levels, onSaved
   const [error, setError] = useState("");
   const [stale, setStale] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
 
   const levelEntries = (source: Record<string, string>) =>
     levels.flatMap(({ levelId }) => source[levelId]?.trim() ? [{ levelId, pattern: source[levelId] }] : []);
@@ -122,127 +118,111 @@ export function StudentCodeSettingsEditor({ academyId, settings, levels, onSaved
   }
 
   return (
-    <form onSubmit={submit} noValidate>
-      <p className="text-muted-foreground font-medium pb-1">Formats</p>
-      <Card aria-disabled={!settings.enabled} className={cn("transition-opacity", !settings.enabled && "opacity-50")}>
-        <Collapsible open={helpOpen} onOpenChange={setHelpOpen} className="contents">
-          <CardContent className="flex flex-col gap-6">
-            <fieldset disabled={saving || !settings.enabled} className="m-0 flex min-w-0 flex-col gap-6 border-0 p-0">
-              <Tabs value={mode} onValueChange={(value) => { setMode(value as Mode); setFieldErrors({}); }}>
-                <TabsList className="w-full">
-                  <TabsTrigger value="academy">Whole academy</TabsTrigger>
-                  <TabsTrigger value="levels" disabled={levels.length === 0}>Per level</TabsTrigger>
-                </TabsList>
-              </Tabs>
+    <form onSubmit={submit} noValidate className="flex flex-col gap-5">
+      <div className="flex h-8 items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-base font-semibold">Formats</h3>
+          <FormatHint />
+        </div>
+        <Tabs value={mode} onValueChange={(value) => { setMode(value as Mode); setFieldErrors({}); }}>
+          <TabsList className="h-8">
+            <TabsTrigger value="academy" disabled={saving || !settings.enabled}>Whole academy</TabsTrigger>
+            <TabsTrigger value="levels" disabled={saving || !settings.enabled || levels.length === 0}>Per level</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
-              {mode === "academy" ? (
-                <Field data-invalid={Boolean(fieldErrors.defaultPattern)} className="gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <FieldLabel htmlFor="student-codes-default">Format</FieldLabel>
-                    <FormatHint />
+      <fieldset disabled={saving || !settings.enabled} className="m-0 min-w-0 border-0 p-0">
+        {mode === "academy" ? (
+          <Field data-invalid={Boolean(fieldErrors.defaultPattern)} className="gap-2">
+            <FieldLabel htmlFor="student-codes-default" className="sr-only">Code format</FieldLabel>
+            <Input
+              id="student-codes-default"
+              value={defaultPattern}
+              onChange={(event) => { setDefaultPattern(event.target.value); clearField("defaultPattern"); }}
+              placeholder="####"
+              maxLength={40}
+              autoComplete="off"
+              spellCheck={false}
+              className="font-mono"
+              aria-invalid={Boolean(fieldErrors.defaultPattern)}
+            />
+            {fieldErrors.defaultPattern ? <FieldError>{fieldErrors.defaultPattern}</FieldError> : <PatternExamples pattern={defaultPattern} />}
+          </Field>
+        ) : levels.length === 0 ? (
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon"><IconListNumbers aria-hidden="true" /></EmptyMedia>
+              <EmptyTitle>No levels yet</EmptyTitle>
+              <EmptyDescription>Add levels in Academic structure first.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {levels.map(({ levelId, name, students }) => {
+              const key = `level:${levelId}`;
+              const value = overrides[levelId] ?? "";
+              return (
+                <Field key={levelId} data-invalid={Boolean(fieldErrors[key])} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] items-start gap-x-4 gap-y-1">
+                  <div className="flex h-10 min-w-0 flex-col justify-center">
+                    <FieldLabel htmlFor={`student-codes-${levelId}`} className="truncate leading-tight">{name}</FieldLabel>
+                    {students !== undefined && (
+                      <span className="text-xs leading-tight text-muted-foreground">
+                        {students.toLocaleString("en")} {students === 1 ? "student" : "students"}
+                      </span>
+                    )}
                   </div>
-                  <Input
-                    id="student-codes-default"
-                    value={defaultPattern}
-                    onChange={(event) => { setDefaultPattern(event.target.value); clearField("defaultPattern"); }}
-                    placeholder="####"
-                    maxLength={40}
-                    autoComplete="off"
-                    spellCheck={false}
-                    className="font-mono"
-                    aria-invalid={Boolean(fieldErrors.defaultPattern)}
-                  />
-                  {fieldErrors.defaultPattern ? <FieldError>{fieldErrors.defaultPattern}</FieldError> : <PatternExamples pattern={defaultPattern} />}
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <InputGroup>
+                      <InputGroupInput
+                        id={`student-codes-${levelId}`}
+                        value={value}
+                        onChange={(event) => { setOverrides((current) => ({ ...current, [levelId]: event.target.value })); clearField(key); }}
+                        placeholder="ST2###"
+                        maxLength={40}
+                        autoComplete="off"
+                        spellCheck={false}
+                        className="font-mono"
+                        aria-invalid={Boolean(fieldErrors[key])}
+                      />
+                      {!fieldErrors[key] && value.trim() && (
+                        <InputGroupAddon align="inline-end"><PatternExamples pattern={value} inline /></InputGroupAddon>
+                      )}
+                    </InputGroup>
+                    {fieldErrors[key] && <FieldError>{fieldErrors[key]}</FieldError>}
+                  </div>
                 </Field>
-              ) : levels.length === 0 ? (
-                <Empty className="border">
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon"><IconListNumbers aria-hidden="true" /></EmptyMedia>
-                    <EmptyTitle>No levels yet</EmptyTitle>
-                    <EmptyDescription>Add levels in Academic structure first.</EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {levels.map(({ levelId, name, students }) => {
-                    const key = `level:${levelId}`;
-                    const value = overrides[levelId] ?? "";
-                    return (
-                      <Field key={levelId} data-invalid={Boolean(fieldErrors[key])} className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.6fr)] items-start gap-x-4 gap-y-1">
-                        <div className="flex h-9 flex-col justify-center">
-                          <FieldLabel htmlFor={`student-codes-${levelId}`} className="leading-tight">{name}</FieldLabel>
-                          {students !== undefined && (
-                            <span className="text-xs leading-tight text-muted-foreground">
-                              {students.toLocaleString("en")} {students === 1 ? "student" : "students"}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <InputGroup>
-                            <InputGroupInput
-                              id={`student-codes-${levelId}`}
-                              value={value}
-                              onChange={(event) => { setOverrides((current) => ({ ...current, [levelId]: event.target.value })); clearField(key); }}
-                              placeholder="ST2###"
-                              maxLength={40}
-                              autoComplete="off"
-                              spellCheck={false}
-                              className="font-mono"
-                              aria-invalid={Boolean(fieldErrors[key])}
-                            />
-                            {!fieldErrors[key] && value.trim() && (
-                              <InputGroupAddon align="inline-end"><PatternExamples pattern={value} inline /></InputGroupAddon>
-                            )}
-                          </InputGroup>
-                          {fieldErrors[key] && <FieldError>{fieldErrors[key]}</FieldError>}
-                        </div>
-                      </Field>
-                    );
-                  })}
-                </div>
-              )}
-            </fieldset>
+              );
+            })}
+          </div>
+        )}
+      </fieldset>
 
-            {stale && (
-              <Alert variant="destructive">
-                <AlertTitle>These settings changed elsewhere</AlertTitle>
-                <AlertDescription>Someone else saved first, so your changes weren’t saved. Reloading discards your edits.</AlertDescription>
-                <div className="col-start-2 mt-2">
-                  <Button type="button" variant="outline" size="sm" onClick={onReload}>
-                    <IconRefresh aria-hidden="true" data-icon="inline-start" />Reload settings
-                  </Button>
-                </div>
-              </Alert>
-            )}
-            {error && <FieldError>{error}</FieldError>}
-          </CardContent>
-          <CardFooter className="justify-between gap-2">
-            <CollapsibleTrigger asChild>
-              <Button type="button" variant="ghost" size="sm" className="text-muted-foreground">
-                How formats work
-                <IconChevronDown aria-hidden="true" data-icon="inline-end" className={helpOpen ? "rotate-180" : undefined} />
-              </Button>
-            </CollapsibleTrigger>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={discard} disabled={!dirty || saving || !settings.enabled}>Discard</Button>
-              <Button type="submit" disabled={!dirty || saving || stale || !settings.enabled}>{saving ? "Saving…" : "Save"}</Button>
-            </div>
-          </CardFooter>
-          <CollapsibleContent className="px-6 pb-2">
-            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
-                <li>Optional text (letters, digits, hyphens), then 1–8 <span className="font-mono">#</span> for the number.</li>
-                <li><span className="font-mono">####</span> gives 0001, 0002, …; <span className="font-mono">ST2###</span> gives ST2001, ST2002, ….</li>
-                <li>Examples are illustrations only and don’t reserve codes.</li>
-              </ul>
-            </CollapsibleContent>
-        </Collapsible>
-      </Card>
+      {stale && (
+        <Alert variant="destructive">
+          <AlertTitle>These settings changed elsewhere</AlertTitle>
+          <AlertDescription>Someone else saved first, so your changes weren’t saved. Reloading discards your edits.</AlertDescription>
+          <div className="col-start-2 mt-2">
+            <Button type="button" variant="outline" size="sm" onClick={onReload}>
+              <IconRefresh aria-hidden="true" data-icon="inline-start" />Reload settings
+            </Button>
+          </div>
+        </Alert>
+      )}
+      {error && <FieldError>{error}</FieldError>}
+
+      {dirty && (
+        <div className="flex justify-end gap-2 animate-in fade-in-0">
+          <Button type="button" variant="destructive" onClick={discard} disabled={saving || !settings.enabled}>Discard</Button>
+          <Button type="submit" disabled={saving || stale || !settings.enabled}>{saving ? "Saving…" : "Save formats"}</Button>
+        </div>
+      )}
     </form>
   );
 }
 
 function FormatHint() {
-  return <Hint label="About formats">Text, then # for the number. #### gives 0001, 0002; ST2### gives ST2001.</Hint>;
+  return <Hint label="About formats">Optional text, then 1–8 # for the number. #### gives 0001, 0002; ST2### gives ST2001. Examples don’t reserve codes.</Hint>;
 }
 
 function Hint({ label, children }: { label: string; children: React.ReactNode }) {

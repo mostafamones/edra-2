@@ -2,15 +2,19 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { IconAlertCircle } from "@tabler/icons-react";
+import { IconAlertCircle, IconChevronRight } from "@tabler/icons-react";
 
-import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
+import { FILLED_INPUTS } from "@/components/shared/filled-inputs";
+import { SettingsRow } from "@/components/shared/settings-row";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { AcademyEntry } from "@/modules/academies";
-import { AcademyGate, useAuth } from "@/modules/auth";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/modules/auth";
 import { loadStructure, structureQueryKey } from "@/modules/groups";
 import { studentsRootKey } from "../../records/queries";
 
@@ -23,13 +27,10 @@ import { RetiredStudentCodes } from "./retired";
 import { StudentCodesToggle } from "./toggle";
 import { StudentCodeSettingsSummary } from "./summary";
 
-/** Manage → Student codes: activation, formats, bulk generation, and retired codes. */
-export function StudentCodesPage() {
-  return <AcademyGate>{(academy) => <StudentCodes academy={academy} />}</AcademyGate>;
-}
-
-function StudentCodes({ academy }: { academy: AcademyEntry }) {
-  useBreadcrumbTitle("Student codes");
+/** Settings rows: the on/off switch, a sheet for formats and bulk generation, and a sheet for retired codes. */
+export function StudentCodesRow({ academy }: { academy: AcademyEntry }) {
+  const [open, setOpen] = useState(false);
+  const [retiredOpen, setRetiredOpen] = useState(false);
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const settingsKey = studentCodeQueryKeys.settings(user?.id ?? "", academy.id);
@@ -95,41 +96,74 @@ function StudentCodes({ academy }: { academy: AcademyEntry }) {
     );
   }
 
+  const settings = settingsQuery.data;
   return (
-    <section className="min-w-0">
-      <div className="flex w-full flex-col gap-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h2 className="font-heading text-2xl font-bold tracking-tight">Student codes</h2>
-            <p className="text-sm text-muted-foreground">Optional short codes to identify students.</p>
-          </div>
-          {settingsQuery.data && (canConfigure ? (
-            <StudentCodesToggle
-              academyId={academy.id}
-              settings={settingsQuery.data}
-              onSaved={(saved) => {
-                queryClient.setQueryData(settingsKey, saved);
-                void queryClient.invalidateQueries({ queryKey: [...studentsRootKey(academy.id), "list"] });
-              }}
-              onStale={() => { void queryClient.invalidateQueries({ queryKey: settingsKey }); }}
-            />
-          ) : (
-            <Badge variant={settingsQuery.data.enabled ? "default" : "secondary"}>{settingsQuery.data.enabled ? "On" : "Off"}</Badge>
-          ))}
-        </div>
-        {body}
-        {settingsQuery.data && structureQuery.data && (
-          <BulkStudentCodes
+    <>
+      <SettingsRow id="student-codes-enabled" title="Use student codes" description="Give each student a short code to identify them in attendance and records.">
+        {!settings ? <Skeleton className="h-5 w-8 rounded-full" /> : canConfigure ? (
+          <StudentCodesToggle
             academyId={academy.id}
-            enabled={settingsQuery.data.enabled}
-            settingsVersion={settingsQuery.data.version}
-            levels={structureQuery.data.levels.map((level) => ({ levelId: level.level_id, name: structureQuery.data.levelNames[level.level_id] ?? level.level_id }))}
+            settings={settings}
+            onSaved={(saved) => {
+              queryClient.setQueryData(settingsKey, saved);
+              void queryClient.invalidateQueries({ queryKey: [...studentsRootKey(academy.id), "list"] });
+            }}
+            onStale={() => { void queryClient.invalidateQueries({ queryKey: settingsKey }); }}
           />
+        ) : (
+          <Badge variant={settings.enabled ? "default" : "secondary"}>{settings.enabled ? "On" : "Off"}</Badge>
         )}
-        {structureQuery.data && (
-          <RetiredStudentCodes academyId={academy.id} levelNames={structureQuery.data.levelNames} />
+      </SettingsRow>
+      <SettingsRow title="Code formats" description="Set code formats and generate codes in bulk.">
+        {settings?.enabled ? (
+          <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(true)}>Manage<IconChevronRight data-icon="inline-end" /></Button>
+        ) : (
+          <Tooltip>
+            {/* Disabled buttons don't receive pointer or focus events, so the wrapper carries the tooltip. */}
+            <TooltipTrigger asChild>
+              <span tabIndex={0} className="inline-flex rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+                <Button type="button" variant="ghost" size="sm" disabled>Manage<IconChevronRight data-icon="inline-end" /></Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Turn on student codes to manage them.</TooltipContent>
+          </Tooltip>
         )}
-      </div>
-    </section>
+      </SettingsRow>
+      <SettingsRow title="Retired codes" description="Codes that were replaced or removed and can’t be reused.">
+        <Button type="button" variant="ghost" size="sm" onClick={() => setRetiredOpen(true)}>View<IconChevronRight data-icon="inline-end" /></Button>
+      </SettingsRow>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="right" className={cn("gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl", FILLED_INPUTS)}>
+          <SheetHeader className="shrink-0 border-b px-6 py-5 pr-16">
+            <SheetTitle className="text-xl">Code formats</SheetTitle>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col divide-y overflow-y-auto [&>*]:px-6 [&>*]:py-6">
+            <div>{body}</div>
+            {settings && structureQuery.data && (
+              <BulkStudentCodes
+                academyId={academy.id}
+                enabled={settings.enabled}
+                settingsVersion={settings.version}
+                levels={structureQuery.data.levels.map((level) => ({ levelId: level.level_id, name: structureQuery.data.levelNames[level.level_id] ?? level.level_id }))}
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+      <Sheet open={retiredOpen} onOpenChange={setRetiredOpen}>
+        <SheetContent side="right" className={cn("gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl", FILLED_INPUTS)}>
+          <SheetHeader className="shrink-0 border-b px-6 py-5 pr-16">
+            <SheetTitle className="text-xl">Retired codes</SheetTitle>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5">
+            {structureQuery.data ? (
+              <RetiredStudentCodes academyId={academy.id} levelNames={structureQuery.data.levelNames} />
+            ) : (
+              <Skeleton className="h-40 w-full" />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

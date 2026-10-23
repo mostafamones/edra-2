@@ -13,7 +13,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
   Combobox, ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxContent, ComboboxEmpty, ComboboxItem,
   ComboboxList, ComboboxValue, useComboboxAnchor,
@@ -213,70 +212,69 @@ export function BulkStudentCodes({ academyId, enabled, settingsVersion, levels }
     summary = <div className={cn("transition-opacity", !current && "opacity-60")}><Summary preview={preview} levelNames={levelNames} /></div>;
   }
 
+  const numberingLabel = [
+    startText.trim() ? `From ${startText.trim()}` : "Continue",
+    stepText.trim() && stepText.trim() !== "1" ? `+${stepText.trim()}` : null,
+    parity !== "any" ? PARITY_LABELS[parity] : null,
+  ].filter(Boolean).join(" · ");
+
   return (
-    <div>
-      <p className="text-muted-foreground font-medium pb-1">Bulk generation</p>
-      <Card aria-disabled={!enabled} className={cn("transition-opacity", !enabled && "opacity-50")}>
-        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="contents">
-        <CardContent className="flex flex-col gap-6">
-          <fieldset disabled={!enabled || running} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0">
-            <Tabs value={mode} onValueChange={(value) => changeScope(() => setMode(value as GenerationMode))}>
-              <TabsList className="w-full">
-                {(Object.keys(MODE_LABELS) as GenerationMode[]).map((value) => (
-                  <TabsTrigger key={value} value={value}>{MODE_LABELS[value]}</TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-            {mode === "levels" && (
-              <ScopePicker
-                label="Levels"
-                placeholder="Choose levels"
-                items={levelOptions}
-                value={levelIds}
-                disabled={!enabled || running}
-                onChange={(next) => changeScope(() => setLevelIds(next))}
-              />
-            )}
-            {mode === "groups" && (
-              groupsQuery.isError ? (
-                <FieldError>Couldn’t load groups. Check your connection and try again.</FieldError>
-              ) : (
-                <ScopePicker
-                  label="Groups"
-                  placeholder={groupsQuery.isPending ? "Loading groups…" : "Choose groups"}
-                  items={groupOptions}
-                  value={groupIds}
-                  disabled={!enabled || running || groupsQuery.isPending}
-                  onChange={(next) => changeScope(() => setGroupIds(next))}
-                />
-              )
-            )}
-            </fieldset>
+    <div className="flex flex-col gap-5">
+      <h3 className="flex h-8 items-center text-base font-semibold">Generate codes</h3>
 
-            {summary}
+      <fieldset disabled={!enabled || running} className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
+        <legend className="mb-2 text-sm font-medium">Students without a code</legend>
+        <Tabs value={mode} onValueChange={(value) => changeScope(() => setMode(value as GenerationMode))}>
+          <TabsList className="w-full">
+            {(Object.keys(MODE_LABELS) as GenerationMode[]).map((value) => (
+              <TabsTrigger key={value} value={value}>{MODE_LABELS[value]}</TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        {mode === "levels" && (
+          <ScopePicker
+            label="Levels"
+            placeholder="Choose levels"
+            items={levelOptions}
+            value={levelIds}
+            disabled={!enabled || running}
+            onChange={(next) => changeScope(() => setLevelIds(next))}
+          />
+        )}
+        {mode === "groups" && (
+          groupsQuery.isError ? (
+            <FieldError>Couldn’t load groups. Check your connection and try again.</FieldError>
+          ) : (
+            <ScopePicker
+              label="Groups"
+              placeholder={groupsQuery.isPending ? "Loading groups…" : "Choose groups"}
+              items={groupOptions}
+              value={groupIds}
+              disabled={!enabled || running || groupsQuery.isPending}
+              onChange={(next) => changeScope(() => setGroupIds(next))}
+            />
+          )
+        )}
+      </fieldset>
 
-          {error && <FieldError>{error}</FieldError>}
-        </CardContent>
-        <CardFooter className="justify-between gap-2">
-          <CollapsibleTrigger asChild>
-            <Button type="button" variant="ghost" size="sm" className=" text-muted-foreground" disabled={!enabled}>
-              Advanced
-              <IconChevronDown aria-hidden="true" data-icon="inline-end" className={advancedOpen ? "rotate-180" : undefined} />
-            </Button>
-          </CollapsibleTrigger>
-          <Button type="button" disabled={!enabled || running || blocked} onClick={() => { setError(""); setConfirming(true); }}>
-            {preview && preview.missing > 0
-              ? `Generate ${preview.missing.toLocaleString("en")} ${preview.missing === 1 ? "code" : "codes"}`
-              : "Generate codes"}
-          </Button>
-        </CardFooter>
-        <CollapsibleContent className="px-4 pb-2">
+      <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="flex flex-col gap-4">
+        <CollapsibleTrigger asChild>
+          <button type="button" disabled={!enabled}
+            className="flex h-10 w-full items-center justify-between gap-3 rounded-md bg-muted/60 px-3 text-left text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50">
+            Numbering
+            <span className="flex items-center gap-2 font-normal text-muted-foreground">
+              {numberingLabel}
+              <IconChevronDown aria-hidden="true" className={cn("size-4 transition-transform", advancedOpen && "rotate-180")} />
+            </span>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
           <fieldset disabled={!enabled || running} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field data-invalid={Boolean(optionErrors.start)} className="gap-2">
                 <FieldLabel htmlFor="bulk-start">Start from</FieldLabel>
                 <Input
-                  id="bulk-start" inputMode="numeric" placeholder="Continue after the last code" className="font-mono"
+                  id="bulk-start" inputMode="numeric" placeholder="After the last code" className="font-mono"
                   value={startText} aria-invalid={Boolean(optionErrors.start)}
                   onChange={(event) => changeScope(() => setStartText(event.target.value))}
                 />
@@ -285,7 +283,7 @@ export function BulkStudentCodes({ academyId, enabled, settingsVersion, levels }
               <Field data-invalid={Boolean(optionErrors.step)} className="gap-2">
                 <FieldLabel htmlFor="bulk-step">Increment</FieldLabel>
                 <NumberInput
-                  id="bulk-step" inputMode="numeric"  className="font-mono"
+                  id="bulk-step" inputMode="numeric" className="font-mono"
                   value={stepText} aria-invalid={Boolean(optionErrors.step)}
                   onChange={(event) => changeScope(() => setStepText(event.target.value))}
                 />
@@ -304,8 +302,16 @@ export function BulkStudentCodes({ academyId, enabled, settingsVersion, levels }
             </Field>
           </fieldset>
         </CollapsibleContent>
-        </Collapsible>
-      </Card>
+      </Collapsible>
+
+      {summary}
+      {error && <FieldError>{error}</FieldError>}
+
+      <Button type="button" className="w-full" disabled={!enabled || running || blocked} onClick={() => { setError(""); setConfirming(true); }}>
+        {preview && preview.missing > 0
+          ? `Generate ${preview.missing.toLocaleString("en")} ${preview.missing === 1 ? "code" : "codes"}`
+          : "Generate codes"}
+      </Button>
 
       <AlertDialog open={confirming} onOpenChange={(open) => { if (!open && !running) { setConfirming(false); setUnknown(null); } }}>
         <AlertDialogContent>
@@ -343,7 +349,7 @@ function Summary({ preview, levelNames }: { preview: GenerationPreview; levelNam
           {preview.targets === 0 ? "No active students here." : "Every student here already has a code."}
         </p>
       ) : (
-        <ul className="flex flex-col divide-y rounded-md border">
+        <ul className="flex flex-col divide-y divide-border/60 overflow-hidden rounded-md border">
           {preview.patterns.map((pattern) => {
             const short = pattern.available < pattern.missing;
             return (
@@ -420,7 +426,8 @@ function ScopePicker({ label, placeholder, items, value, disabled, onChange }: {
           )}
         </ComboboxValue>
       </ComboboxChips>
-      <ComboboxContent anchor={anchor}>
+      {/* Opens in a modal sheet, which disables pointer events outside itself. */}
+      <ComboboxContent anchor={anchor} className="pointer-events-auto">
         <ComboboxEmpty>No matches.</ComboboxEmpty>
         <ComboboxList>
           {(option: Option) => (

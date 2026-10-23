@@ -121,7 +121,6 @@ export function RetiredStudentCodes({ academyId, levelNames }: Props) {
 
   return (
     <div>
-    <p className="text-muted-foreground font-medium pb-1">Retired codes</p>
       <Card>
         <CardContent className="flex flex-col gap-4">
           {(data?.total ?? 0) > 0 || search ? (

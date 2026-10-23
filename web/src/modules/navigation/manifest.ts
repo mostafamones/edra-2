@@ -78,7 +78,7 @@ export const STAFF_MANAGEMENT_NAV: readonly { label: string; items: readonly Man
   {
     label: "Academy",
     items: [
-      { label: "General", href: "/app/manage/academy", also: ["/app/manage/academy/structure", "/app/manage/academy/enrollment", "/app/manage/academy/codes"] },
+      { label: "General", href: "/app/manage/academy", also: ["/app/manage/academy/structure", "/app/manage/academy/enrollment"] },
       { label: "Team", href: "/app/manage/team" },
       { label: "Bookings", href: "/app/manage/bookings", also: ["/app/manage/bookings/review"] },
     ],
@@ -373,11 +373,6 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
                 "Role-aware setup controls for programs and groups.",
               ],
             },
-          },
-          {
-            label: "Student codes",
-            href: "/app/manage/academy/codes",
-            icon: "studentCodes",
           },
           {
             label: "Student enrollment",
