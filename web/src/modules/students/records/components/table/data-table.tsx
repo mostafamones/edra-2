@@ -62,7 +62,7 @@ function PopulatedTable({ table, sorts, onSortsChange, loading, fetching, skelet
   );
 
   return (
-    <div ref={containerRef} className="min-w-0 overflow-hidden font-(family-name:--font-figtree)">
+    <div ref={containerRef} className="min-w-0 overflow-hidden">
       <Table
         ref={tableRef}
         aria-busy={loading || fetching || undefined}

@@ -55,9 +55,9 @@ export function ColumnsPopover({ order, visibility, onOrderChange, onVisibilityC
         </TooltipTrigger>
         <TooltipContent>Columns</TooltipContent>
       </Tooltip>
-      <PopoverContent align="end" className="w-72 gap-0 p-0 font-(family-name:--font-figtree)">
+      <PopoverContent align="end" className="w-72 gap-0 p-0">
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <p className="font-(family-name:--font-poppins) text-sm font-semibold">Columns</p>
+          <p className="font-heading text-sm font-semibold">Columns</p>
           <Button variant="ghost" size="sm" className="-mr-2 h-7 text-muted-foreground" disabled={!customized} onClick={onReset}>
             <HugeiconsIcon icon={Cancel01Icon} />Reset
           </Button>

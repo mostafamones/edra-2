@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AlertCircleIcon, Archive02Icon, SearchRemoveIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AlertCircleIcon, Archive02Icon, SearchRemoveIcon, SidebarRightIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useCanonicalHref } from "@/modules/navigation";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -11,14 +11,16 @@ import {
 } from "@tanstack/react-table";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { HeaderActions } from "@/components/shared/header-actions";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AcademyGate, useAuth } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
-import { groupListQueryKey, loadGroups, loadStructure, structureQueryKey } from "@/modules/groups";
+import { GroupsBoard, groupListQueryKey, loadGroups, loadStructure, structureQueryKey } from "@/modules/groups";
 import {
-  clampPageIndex, DEFAULT_PAGE_SIZE, isFiltering, type PageSize, type SortDescriptor, type StudentListParams,
+  clampPageIndex, DEFAULT_PAGE_SIZE, isFiltering, NONE, type PageSize, type SortDescriptor, type StudentListParams,
 } from "../list-params";
 import { canArchiveStudentRecords, canChangeStudentGroups, canImportStudents } from "../permissions";
 import { fetchStudentList, studentListQueryKey } from "../queries";
@@ -72,6 +74,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [archiveRequest, setArchiveRequest] = useState<ArchiveRequest | null>(null);
   const [groupChange, setGroupChange] = useState<RecordVersion[] | null>(null);
+  const [groupsOpen, setGroupsOpen] = useState(false);
 
   const listQuery = useQuery({
     queryKey: studentListQueryKey(academyId, params),
@@ -206,83 +209,74 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   }
 
   return (
-    <main className="page-shell min-w-0">
-      <div className="flex items-baseline gap-3">
-        <h1 className="font-heading text-2xl font-bold tracking-tight">Students</h1>
-        {list && list.academicYearId && (
-          <span className="text-sm tabular-nums text-muted-foreground">{list.total} {params.status === "archived" ? "archived" : params.status === "all" ? "total" : "active"}</span>
-        )}
-      </div>
-
-      <StudentsToolbar
-        params={params}
-        onSearch={onSearch}
-        codesEnabled={codesEnabled}
-        onFiltersChange={onFiltersChange}
-        levels={structureQuery.data?.levels ?? []}
-        levelNames={structureQuery.data?.levelNames ?? {}}
-        tracks={structureQuery.data?.tracks ?? []}
-        groups={groupsQuery.data?.groups ?? []}
-        actions={
+    <div className="flex flex-1">
+      <main className="page-shell min-w-0">
+        <HeaderActions>
           <AddStudentMenu academyId={academyId} canImport={canImportStudents(academy.role)} />
-        }
-      >
-        <ColumnsPopover
-          order={codesEnabled ? preferences.order : preferences.order.filter((id) => id !== CODE_COLUMN)}
-          visibility={preferences.visibility}
-          customized={customized}
-          onOrderChange={(order) => updatePreferences((current) => ({
-            ...current,
-            // While codes are off the column is hidden from the popover; keep its saved position.
-            order: codesEnabled ? order : withColumnAt(order, CODE_COLUMN, current.order.indexOf(CODE_COLUMN)),
-          }))}
-          onVisibilityChange={(id, visible) => updatePreferences((current) => ({ ...current, visibility: { ...current.visibility, [id]: visible } }))}
-          onReset={() => updatePreferences((current) => ({ ...defaultLayout(), pageSize: current.pageSize }))}
-        />
-      </StudentsToolbar>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" aria-label="Groups" aria-pressed={groupsOpen} onClick={() => setGroupsOpen((open) => !open)}>
+                <HugeiconsIcon icon={SidebarRightIcon} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Groups</TooltipContent>
+          </Tooltip>
+        </HeaderActions>
 
-      {listQuery.isError && (
-        <Alert variant="destructive">
-          <HugeiconsIcon icon={AlertCircleIcon} />
-          <AlertTitle>{list ? "Couldn’t refresh students" : "Couldn’t load students"}</AlertTitle>
-          <AlertDescription className="flex flex-wrap items-center gap-3">
-            {list ? "Showing the last loaded results." : "Check your connection and try again."}
-            <Button variant="outline" size="sm" onClick={() => void listQuery.refetch()} disabled={listQuery.isFetching}>
-              {listQuery.isFetching ? "Retrying…" : "Retry"}
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
+        <StudentsToolbar
+          params={params}
+          onSearch={onSearch}
+          codesEnabled={codesEnabled}
+          onFiltersChange={onFiltersChange}
+          levels={structureQuery.data?.levels ?? []}
+          levelNames={structureQuery.data?.levelNames ?? {}}
+          tracks={structureQuery.data?.tracks ?? []}
+          groups={groupsQuery.data?.groups ?? []}
+        >
+          <ColumnsPopover
+            order={codesEnabled ? preferences.order : preferences.order.filter((id) => id !== CODE_COLUMN)}
+            visibility={preferences.visibility}
+            customized={customized}
+            onOrderChange={(order) => updatePreferences((current) => ({
+              ...current,
+              // While codes are off the column is hidden from the popover; keep its saved position.
+              order: codesEnabled ? order : withColumnAt(order, CODE_COLUMN, current.order.indexOf(CODE_COLUMN)),
+            }))}
+            onVisibilityChange={(id, visible) => updatePreferences((current) => ({ ...current, visibility: { ...current.visibility, [id]: visible } }))}
+            onReset={() => updatePreferences((current) => ({ ...defaultLayout(), pageSize: current.pageSize }))}
+          />
+        </StudentsToolbar>
 
-      {noYear ? (
-        <Alert>
-          <HugeiconsIcon icon={AlertCircleIcon} />
-          <AlertTitle>No active academic year</AlertTitle>
-          <AlertDescription>Student records belong to an academic year. Open one for this academy to start adding students.</AlertDescription>
-        </Alert>
-      ) : noStudents ? (
-        <Empty className="min-h-64 rounded-xl border border-dashed border-border bg-card/20 py-20">
-          <EmptyHeader className="gap-1">
-            <EmptyMedia variant="icon"><HugeiconsIcon icon={UserGroupIcon} aria-hidden="true" /></EmptyMedia>
-            <EmptyTitle className="text-xl font-semibold">No students yet</EmptyTitle>
-            <EmptyDescription className="leading-[1.4em]">Add students to this academic year to start tracking their placement.</EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent><Button size="sm" asChild><Link href={href("/app/students/new")} ><HugeiconsIcon icon={Add01Icon} />Add student</Link></Button></EmptyContent>
-        </Empty>
-      ) : (
-        <>
-          {canManage && selectedCount > 0 && (
-            <BulkBar
-              selected={selectedCount}
-              archivable={archivable.length}
-              restorable={restorable.length}
-              onArchive={() => setArchiveRequest({ archive: true, records: archivable })}
-              onRestore={() => setArchiveRequest({ archive: false, records: restorable })}
-              onChangeGroup={() => setGroupChange(Object.entries(selection).map(([id, value]) => ({ id, version: value.version })))}
-              onClear={() => setSelection({})}
-            />
-          )}
+        {listQuery.isError && (
+          <Alert variant="destructive">
+            <HugeiconsIcon icon={AlertCircleIcon} />
+            <AlertTitle>{list ? "Couldn’t refresh students" : "Couldn’t load students"}</AlertTitle>
+            <AlertDescription className="flex flex-wrap items-center gap-3">
+              {list ? "Showing the last loaded results." : "Check your connection and try again."}
+              <Button variant="outline" size="sm" onClick={() => void listQuery.refetch()} disabled={listQuery.isFetching}>
+                {listQuery.isFetching ? "Retrying…" : "Retry"}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
+        {noYear ? (
+          <Alert>
+            <HugeiconsIcon icon={AlertCircleIcon} />
+            <AlertTitle>No active academic year</AlertTitle>
+            <AlertDescription>Student records belong to an academic year. Open one for this academy to start adding students.</AlertDescription>
+          </Alert>
+        ) : noStudents ? (
+          <Empty className="min-h-64 rounded-xl border border-dashed border-border bg-card/20 py-20">
+            <EmptyHeader className="gap-1">
+              <EmptyMedia variant="icon"><HugeiconsIcon icon={UserGroupIcon} aria-hidden="true" /></EmptyMedia>
+              <EmptyTitle className="text-xl font-semibold">No students yet</EmptyTitle>
+              <EmptyDescription className="leading-[1.4em]">Add students to this academic year to start tracking their placement.</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent><Button size="sm" asChild><Link href={href("/app/students/new")} ><HugeiconsIcon icon={Add01Icon} />Add student</Link></Button></EmptyContent>
+          </Empty>
+        ) : (
+          <>
           {!listQuery.isError || list ? (
             <StudentsDataTable
               table={table}
@@ -329,37 +323,68 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
               onPageSizeChange={onPageSizeChange}
             />
           )}
-        </>
-      )}
 
-      <StudentCodeDialog academy={academy} target={codeTarget} onClose={() => setCodeTarget(null)} />
-      <StudentEditSheet academy={academy} recordId={editingId} onClose={() => setEditingId(null)} />
-      {canChangeStudentGroups(academy.role) && (
-        <GroupChangeSheet
+          {canManage && selectedCount > 0 && (
+            <BulkBar
+              selected={selectedCount}
+              archivable={archivable.length}
+              restorable={restorable.length}
+              onArchive={() => setArchiveRequest({ archive: true, records: archivable })}
+              onRestore={() => setArchiveRequest({ archive: false, records: restorable })}
+              onChangeGroup={() => setGroupChange(Object.entries(selection).map(([id, value]) => ({ id, version: value.version })))}
+              onClear={() => setSelection({})}
+            />
+          )}
+          </>
+        )}
+
+        <StudentCodeDialog academy={academy} target={codeTarget} onClose={() => setCodeTarget(null)} />
+        <StudentEditSheet academy={academy} recordId={editingId} onClose={() => setEditingId(null)} />
+        {canChangeStudentGroups(academy.role) && (
+          <GroupChangeSheet
+            academyId={academyId}
+            academicYearId={list?.academicYearId ?? null}
+            records={groupChange}
+            groups={groupsQuery.data?.groups ?? []}
+            onClose={() => setGroupChange(null)}
+            onDone={deselect}
+            onReloadSelection={onReloadSelection}
+          />
+        )}
+        <ArchiveDialog
           academyId={academyId}
           academicYearId={list?.academicYearId ?? null}
-          records={groupChange}
-          groups={groupsQuery.data?.groups ?? []}
-          onClose={() => setGroupChange(null)}
+          request={archiveRequest}
+          onClose={() => setArchiveRequest(null)}
           onDone={deselect}
-          onReloadSelection={onReloadSelection}
         />
+      </main>
+      {groupsOpen && (
+        <aside aria-label="Groups" className="w-72 shrink-0 border-l animate-in fade-in slide-in-from-right-4 duration-200">
+          {/* Matches the page's padding and section gap so the title row lines up with the students toolbar. */}
+          <div className="sticky top-(--header-height,4rem) flex max-h-[calc(100svh-var(--header-height,4rem))] flex-col gap-(--page-section-gap) overflow-y-auto px-6 py-(--page-padding-y)">
+            <GroupsBoard
+              academy={academy}
+              compact
+              title={<h2 className="font-semibold">Groups</h2>}
+              selectedId={params.group}
+              // Clicking the shown group again clears the filter; a group outside the level or track filter replaces them.
+              onOpen={(group) => onFiltersChange(params.group === group.id ? { group: null } : {
+                group: group.id,
+                ...(params.levelId && params.levelId !== group.level_id ? { levelId: null, track: null } : {}),
+                ...(params.track && params.track !== (group.track_id ?? NONE) ? { track: null } : {}),
+              })}
+            />
+          </div>
+        </aside>
       )}
-      <ArchiveDialog
-        academyId={academyId}
-        academicYearId={list?.academicYearId ?? null}
-        request={archiveRequest}
-        onClose={() => setArchiveRequest(null)}
-        onDone={deselect}
-      />
-    </main>
+    </div>
   );
 }
 
 function PageSkeleton() {
   return (
     <main role="status" aria-label="Loading students" className="page-shell">
-      <Skeleton className="h-8 w-40" />
       <Skeleton className="h-9 w-full max-w-sm" />
       <Skeleton className="h-96 w-full rounded-lg" />
     </main>

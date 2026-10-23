@@ -9,7 +9,7 @@ export function WorkHistory({ quiz, detail }: { quiz: Quiz; detail: StudentDetai
   if (detail.publications.length === 0 && detail.departures.length === 0) return null;
   return (
     <section aria-labelledby="work-history" className="flex flex-col gap-3">
-      <h3 id="work-history" className="font-heading font-semibold">History</h3>
+      <h3 id="work-history" className="font-semibold">History</h3>
       {detail.departures.length > 0 && (
         <p className="text-sm text-muted-foreground">
           Left the online quiz at {detail.departures.map((at, index) => <span key={at}>{index > 0 ? ", " : ""}<QuizTime value={at} /></span>)}.

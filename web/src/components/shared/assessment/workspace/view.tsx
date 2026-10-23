@@ -58,7 +58,7 @@ export function WorkspaceView(props: Props) {
       <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         <div className="flex min-w-0 flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="font-heading text-2xl font-bold tracking-tight break-words">{title}</h1>
+            <h1 className="text-2xl font-bold tracking-tight break-words">{title}</h1>
             {badge}
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">{meta}</div>

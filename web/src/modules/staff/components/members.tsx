@@ -68,7 +68,7 @@ export function TeamMembers({ academy, userId, canManage }: {
   return (
     <section aria-labelledby="team-members-heading" className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <h2 id="team-members-heading" className="font-heading text-lg font-semibold">
+        <h2 id="team-members-heading" className="text-lg font-semibold">
           {showMembers ? "Members" : "Invitations"}
           {(showMembers ? query.data : invitations.data) ? <span className="ml-2 text-sm font-normal text-muted-foreground">{showMembers ? members.length : invitationRows.length}</span> : null}
         </h2>

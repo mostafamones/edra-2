@@ -76,7 +76,7 @@ function SessionsContent({ academy, startOpen }: { academy: AcademyEntry; startO
   return (
     <main className="page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-heading text-2xl font-bold tracking-tight">Sessions</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Sessions</h1>
         {startButton}
       </div>
       <StartSessionDialog academyId={academy.id} open={dialogOpen} onOpenChange={onDialogChange} liveBySchedule={liveBySchedule} />

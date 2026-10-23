@@ -22,7 +22,7 @@ export type { StudentRecordInput } from "./records/validation";
 export { changeStudentCode, generateStudentCodes, previewStudentCodeGeneration, saveStudentCodeSettings } from "./codes/actions";
 export { StudentCodeDialog } from "./codes/components/dialog";
 export type { CodeTarget } from "./codes/components/dialog";
-export { StudentCodesPage } from "./codes/components/page";
+export { StudentCodesRow } from "./codes/components/page";
 export {
   exampleStudentCodes, formatStudentCode, normalizeStudentCode, parseStudentCodePattern, STUDENT_CODE_MAX_LENGTH,
 } from "./codes/pattern";

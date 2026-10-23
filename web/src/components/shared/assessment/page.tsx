@@ -35,7 +35,7 @@ export function AssessmentFormPage<E extends { id: string }>({ noun, route, titl
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
-      <h1 className="mb-8 font-heading text-2xl font-semibold">{title}</h1>
+      <h1 className="mb-8 text-2xl font-semibold">{title}</h1>
       {children({
         onSaved: (saved) => router.push(href(`/app/${route}/${saved.id}`)),
         onCancel: () => { if (status.dirty || status.saving || status.uncertain) setConfirming(true); else leave(); },

@@ -9,8 +9,7 @@ import { useCanonicalHref, usePortalPath } from "../use-routing";
 const TABS = [
   { label: "Profile", href: "/app/manage/academy" },
   { label: "Structure", href: "/app/manage/academy/structure" },
-  { label: "Enrollment", href: "/app/manage/academy/enrollment" },
-  { label: "Student codes", href: "/app/manage/academy/codes" },
+  { label: "Students", href: "/app/manage/academy/enrollment" },
 ] as const;
 
 /** The General page's sections. Each tab is a link to its own page, so back, refresh and shared links work. */

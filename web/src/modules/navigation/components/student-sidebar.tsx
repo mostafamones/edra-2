@@ -55,7 +55,7 @@ export function StudentSidebar({ academies = [] }: { academies?: StudentSidebarA
   return (
     <Sidebar collapsible="icon" variant="inset" className="group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]">
       <SidebarHeader>
-        <Link href={href("/learn")} onClick={closeMobile} className="flex h-12 items-center gap-2 rounded-md px-2 font-(family-name:--font-poppins) text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+        <Link href={href("/learn")} onClick={closeMobile} className="flex h-12 items-center gap-2 rounded-md px-2 font-heading text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
             <GraduationCap className="size-4" aria-hidden="true" />
           </span>

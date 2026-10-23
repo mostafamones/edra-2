@@ -55,7 +55,7 @@ export function ReviewStep({ title, instructions, facts, parts, status, onEditDe
       <Card className="gap-0 py-0">
         <div className="flex items-start justify-between gap-4 p-5">
           <div className="min-w-0">
-            <h2 className="truncate font-heading text-xl font-semibold">{title}</h2>
+            <h2 className="truncate text-xl font-semibold">{title}</h2>
             {instructions && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{instructions}</p>}
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={onEditDetails}><IconPencil />Edit</Button>

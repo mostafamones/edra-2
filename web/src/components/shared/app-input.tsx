@@ -7,7 +7,6 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ButtonGroup } from "@/components/ui/button-group";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 
@@ -215,13 +214,12 @@ export const NumberInput = React.forwardRef<HTMLInputElement, AppInputProps & { 
             {asterisk && <span className="text-destructive -ml-1.5">*</span>}
           </Label>
         )}
-        <ButtonGroup
+        <InputGroup
           className={cn(
             variant === "sm" ? "h-6" : variant === "md" ? "h-8" : variant === "lg" ? "h-10" : variant === "xl" ? "h-12" : "h-9", "w-full",
-            error && "border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive"
           )}
         >
-          <Input
+          <InputGroupInput
             ref={innerRef}
             type="number"
             min={min}
@@ -243,35 +241,31 @@ export const NumberInput = React.forwardRef<HTMLInputElement, AppInputProps & { 
             {...props}
             id={inputId}
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="aspect-square h-full min-w-10"
-            disabled={disabled}
-            aria-label="Decrease value"
-            onClick={(event) => {
-              event.preventDefault();
-              clampAndStep(-1);
-            }}
-          >
-            <IconMinus className="size-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="aspect-square h-full min-w-10"
-            disabled={disabled}
-            aria-label="Increase value"
-            onClick={(event) => {
-              event.preventDefault();
-              clampAndStep(1);
-            }}
-          >
-            <IconPlus className="size-3.5" />
-          </Button>
-        </ButtonGroup>
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              size="icon-xs"
+              disabled={disabled}
+              aria-label="Decrease value"
+              onClick={(event) => {
+                event.preventDefault();
+                clampAndStep(-1);
+              }}
+            >
+              <IconMinus className="size-3.5" />
+            </InputGroupButton>
+            <InputGroupButton
+              size="icon-xs"
+              disabled={disabled}
+              aria-label="Increase value"
+              onClick={(event) => {
+                event.preventDefault();
+                clampAndStep(1);
+              }}
+            >
+              <IconPlus className="size-3.5" />
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
         {error && <span id={errorId} role="alert" className="text-xs text-destructive">{error}</span>}
       </div>
     );

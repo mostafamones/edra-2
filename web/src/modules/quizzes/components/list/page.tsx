@@ -73,7 +73,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
 
   return (
     <main className="page-shell">
-      <h1 className="font-heading text-2xl font-bold tracking-tight">Quizzes</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Quizzes</h1>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <InputGroup className="sm:max-w-sm">
