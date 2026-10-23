@@ -55,7 +55,7 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 
 ## Icons
 
-- Use Tabler for every application UI icon, including navigation, actions, status indicators and loading indicators. Web uses `@tabler/icons-react`; the SwiftUI iOS app uses bundled native-compatible assets derived from Tabler icons, with source/version attribution. Do not use the React DOM icon package in native code.
-- Brand logos are an exception to the Tabler requirement. Use official brand assets and their brand colors by default, such as the multicolor Google logo for Google sign-in. Use a monochrome, filled or other variant only when explicitly specified. Brand assets do not need to fit a Tabler icon component type.
-- Do not introduce or retain Lucide or other general UI icon libraries in application source. Use Tabler icon types for ordinary UI icon component contracts.
+- Use Hugeicons for every application UI icon, including navigation, actions, status indicators and loading indicators. Use a stroke width of `1.5` for application icons. Web uses `@hugeicons/react` with `@hugeicons/core-free-icons`; the SwiftUI iOS app uses bundled native-compatible assets derived from Hugeicons, with source/version/license attribution. Do not use the React DOM icon package in native code.
+- Brand logos are an exception to the Hugeicons requirement. Use official brand assets and their brand colors by default, such as the multicolor Google logo for Google sign-in. Use a monochrome, filled or other variant only when explicitly specified. Brand assets do not need to fit a Hugeicons icon contract.
+- Do not introduce or retain Tabler, Lucide or other general UI icon libraries in application source. Use Hugeicons-compatible types for ordinary UI icon contracts.
 - Preserve the web shadcn rules in `web/AGENTS.md` and the native UI boundaries in `mobile/AGENTS.md`; the icon requirement does not authorize manual edits to protected primitives or design-system configuration.
