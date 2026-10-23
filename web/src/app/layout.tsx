@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { ROUTE_HEADER } from "@/lib/routing";
-import { Geist, Geist_Mono, Noto_Sans_Arabic, Nunito_Sans } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_Arabic, Figtree, Nunito_Sans, Poppins } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/modules/auth";
@@ -28,6 +28,17 @@ const notoSansArabic = Noto_Sans_Arabic({
   subsets: ["arabic"],
 });
 
+const figtree = Figtree({
+  variable: "--font-figtree",
+  subsets: ["latin"],
+});
+
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
@@ -48,7 +59,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, notoSansArabic.variable, nunitoSansHeading.variable)}
+      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, notoSansArabic.variable, nunitoSansHeading.variable, poppins.variable, figtree.variable)}
     >
       <body suppressHydrationWarning className="flex min-h-full flex-col">
         <ThemeProvider>

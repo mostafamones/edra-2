@@ -96,11 +96,11 @@ function StudentCodes({ academy }: { academy: AcademyEntry }) {
   }
 
   return (
-    <main className="page-shell min-w-0">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <section className="min-w-0">
+      <div className="flex w-full flex-col gap-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="font-heading text-2xl font-bold tracking-tight">Student codes</h1>
+            <h2 className="font-heading text-2xl font-bold tracking-tight">Student codes</h2>
             <p className="text-sm text-muted-foreground">Optional short codes to identify students.</p>
           </div>
           {settingsQuery.data && (canConfigure ? (
@@ -130,6 +130,6 @@ function StudentCodes({ academy }: { academy: AcademyEntry }) {
           <RetiredStudentCodes academyId={academy.id} levelNames={structureQuery.data.levelNames} />
         )}
       </div>
-    </main>
+    </section>
   );
 }

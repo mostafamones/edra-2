@@ -67,17 +67,30 @@ export type StaffNavSection = {
 
 export const STAFF_WORKSPACE_SECTIONS: readonly (StaffNavSection & { icon: NavIcon })[] = [
   { label: "Teaching", icon: "schedules", hrefs: ["/app/schedules", "/app/attendance"] },
-  { label: "Students", icon: "students", hrefs: ["/app/students", "/app/groups"] },
   { label: "Content", icon: "content", hrefs: ["/app/content", "/app/releases"] },
-  { label: "Assessments", icon: "assignments", hrefs: ["/app/assignments", "/app/quizzes", "/app/exams", "/app/marking", "/app/results"] },
+  { label: "Assessments", icon: "assignments", hrefs: ["/app/assignments", "/app/quizzes", "/app/exams"] },
 ];
 
-export const STAFF_MANAGEMENT_GROUPS: readonly StaffNavSection[] = [
-  { label: "Personal", hrefs: ["/app/manage/account"] },
-  { label: "Intake", hrefs: ["/app/manage/bookings", "/app/manage/bookings/review"] },
-  { label: "Access & delivery", hrefs: ["/app/manage/access", "/app/manage/messages"] },
-  { label: "Academy", hrefs: ["/app/manage/academy", "/app/manage/structure", "/app/manage/student-codes", "/app/manage/student-enrollment", "/app/manage/team"] },
-  { label: "Services", hrefs: ["/app/manage/notifications", "/app/manage/integrations"] },
+export type ManagementEntry = { label: string; href: string; also?: readonly string[] };
+
+/** Management sidebar entries; `also` lists the pages that keep the entry active. Visibility follows each page's roles. */
+export const STAFF_MANAGEMENT_NAV: readonly { label: string; items: readonly ManagementEntry[] }[] = [
+  {
+    label: "Academy",
+    items: [
+      { label: "General", href: "/app/manage/academy", also: ["/app/manage/academy/structure", "/app/manage/academy/enrollment", "/app/manage/academy/codes"] },
+      { label: "Team", href: "/app/manage/team" },
+      { label: "Bookings", href: "/app/manage/bookings", also: ["/app/manage/bookings/review"] },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { label: "Access & coupons", href: "/app/manage/access" },
+      { label: "Messaging", href: "/app/manage/messages", also: ["/app/manage/notifications", "/app/manage/integrations"] },
+    ],
+  },
+  { label: "Personal", items: [{ label: "Profile", href: "/app/manage/account" }] },
 ];
 
 export const STAFF_GROUPS: readonly NavGroup[] = [
@@ -349,7 +362,7 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
           },
           {
             label: "Academic structure",
-            href: "/app/manage/structure",
+            href: "/app/manage/academy/structure",
             icon: "structure",
             preview: {
               title: "Academic structure",
@@ -363,12 +376,12 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
           },
           {
             label: "Student codes",
-            href: "/app/manage/student-codes",
+            href: "/app/manage/academy/codes",
             icon: "studentCodes",
           },
           {
             label: "Student enrollment",
-            href: "/app/manage/student-enrollment",
+            href: "/app/manage/academy/enrollment",
             icon: "studentEnrollment",
           },
           {
