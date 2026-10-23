@@ -1,6 +1,7 @@
 "use client";
 
-import { IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight } from "@tabler/icons-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, ArrowLeftDoubleIcon, ArrowRight01Icon, ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PAGE_SIZES, type PageSize } from "../../list-params";
@@ -41,10 +42,10 @@ export function StudentsPagination({ pageIndex, pageSize, total, onPageChange, o
         </div>
         <span className="tabular-nums text-muted-foreground">Page {number.format(pageIndex + 1)} of {number.format(pageCount)}</span>
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(0)} disabled={disabled || atStart} aria-label="First page"><IconChevronsLeft /></Button>
-          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageIndex - 1)} disabled={disabled || atStart} aria-label="Previous page"><IconChevronLeft /></Button>
-          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageIndex + 1)} disabled={disabled || atEnd} aria-label="Next page"><IconChevronRight /></Button>
-          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageCount - 1)} disabled={disabled || atEnd} aria-label="Last page"><IconChevronsRight /></Button>
+          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(0)} disabled={disabled || atStart} aria-label="First page"><HugeiconsIcon icon={ArrowLeftDoubleIcon} /></Button>
+          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageIndex - 1)} disabled={disabled || atStart} aria-label="Previous page"><HugeiconsIcon icon={ArrowLeft01Icon} /></Button>
+          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageIndex + 1)} disabled={disabled || atEnd} aria-label="Next page"><HugeiconsIcon icon={ArrowRight01Icon} /></Button>
+          <Button variant="outline" size="icon-sm" onClick={() => onPageChange(pageCount - 1)} disabled={disabled || atEnd} aria-label="Last page"><HugeiconsIcon icon={ArrowRightDoubleIcon} /></Button>
         </div>
       </div>
     </nav>

@@ -122,8 +122,8 @@ export function ImportRowsTable({ rows, loading, fetching, mode, rowWord, select
           {showStatus && <col style={{ width: "10rem" }} />}
           {onEdit && <col style={{ width: "5rem" }} />}
         </colgroup>
-        <TableHeader className="bg-muted/40">
-          <TableRow className="hover:bg-transparent">
+        <TableHeader>
+          <TableRow className="hover:[&>td]:bg-transparent">
             {selectable && <TableHead className="pl-4"><Checkbox aria-label="Select visible entries" checked={allSelected ? true : someSelected ? "indeterminate" : false} disabled={disabled || loading || fetching || !rows.length} onCheckedChange={(checked) => toggle(rows.map((row) => row.ordinal), checked === true)} /></TableHead>}
             {visible.map((column) => <TableHead key={column.field} className="pl-4">{column.header}</TableHead>)}
             {showStatus && <TableHead className="pl-4">Status</TableHead>}
@@ -132,7 +132,7 @@ export function ImportRowsTable({ rows, loading, fetching, mode, rowWord, select
         </TableHeader>
         <TableBody className={fetching && !loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
           {loading ? Array.from({ length: 8 }, (_, index) => (
-            <TableRow key={index} className="hover:bg-transparent">
+            <TableRow key={index} className="hover:[&>td]:bg-transparent">
               {Array.from({ length: columnCount }, (_, cell) => (
                 <TableCell key={cell} className="h-11 pl-4"><Skeleton className="h-4 w-3/4" /></TableCell>
               ))}

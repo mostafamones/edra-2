@@ -126,7 +126,7 @@ export function PartEditor({ config, locked, index, stash, onSelect, onClose, to
       type={(
         <Field className="w-auto">
           <FieldLabel>Type</FieldLabel>
-          <Segmented label="Part type" value={part.kind} disabled={locked} onChange={changeKind} bordered className="h-9"
+          <Segmented label="Part type" value={part.kind} disabled={locked} onChange={changeKind} className="h-9"
             options={config.kinds.map((value) => ({ value: value.value, label: value.label, hint: value.hint }))} />
         </Field>
       )}

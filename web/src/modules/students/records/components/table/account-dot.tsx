@@ -1,6 +1,7 @@
 "use client";
 
-import { IconCircleFilled } from "@tabler/icons-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CircleIcon } from "@hugeicons/core-free-icons";
 import { cn } from "cn";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -26,7 +27,7 @@ export function AccountDot({ state }: { state: OnlineAccount }) {
             tabIndex={0}
             className="inline-flex shrink-0 rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            <IconCircleFilled aria-hidden="true" className={cn("size-2", state === "suspended" ? "text-destructive" : "text-primary")} />
+            <HugeiconsIcon icon={CircleIcon} aria-hidden="true" className={cn("size-2", state === "suspended" ? "text-destructive" : "text-primary")} />
           </span>
         </TooltipTrigger>
         <TooltipContent>{label}</TooltipContent>

@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Archive02Icon, IdentityCardIcon, MoreHorizontalIcon, PencilEdit02Icon, RestoreBinIcon, UserIdVerificationIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { IconArchive, IconDots, IconEye, IconId, IconPencil, IconRestore, IconUserScan } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,7 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
           checked={options.isSelected(row.id)}
           onCheckedChange={(checked) => options.onToggleRow(row.original, checked === true)}
           aria-label={`Select ${row.original.fullName}`}
+          className="mx-auto"
         />
       ),
     });
@@ -133,24 +135,24 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label={`Actions for ${row.original.fullName}`}>
-              <IconDots />
+              <HugeiconsIcon icon={MoreHorizontalIcon} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuItem onSelect={() => options.onOpen(row.original)}>
-              {archived ? <><IconEye />View</> : <><IconPencil />Edit</>}
+              {archived ? <><HugeiconsIcon icon={ViewIcon} />View</> : <><HugeiconsIcon icon={PencilEdit02Icon} />Edit</>}
             </DropdownMenuItem>
             {options.onCode && !archived && (
-              <DropdownMenuItem onSelect={() => options.onCode?.(row.original)}><IconId />Student code</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => options.onCode?.(row.original)}><HugeiconsIcon icon={IdentityCardIcon} />Student code</DropdownMenuItem>
             )}
-            {view && <DropdownMenuItem onSelect={view}><IconUserScan />View as student</DropdownMenuItem>}
+            {view && <DropdownMenuItem onSelect={view}><HugeiconsIcon icon={UserIdVerificationIcon} />View as student</DropdownMenuItem>}
             {options.canManage && (
               <>
                 <DropdownMenuSeparator />
                 {archived ? (
-                  <DropdownMenuItem onSelect={() => options.onArchive(row.original, false)}><IconRestore />Restore</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => options.onArchive(row.original, false)}><HugeiconsIcon icon={RestoreBinIcon} />Restore</DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem variant="destructive" onSelect={() => options.onArchive(row.original, true)}><IconArchive />Archive</DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive" onSelect={() => options.onArchive(row.original, true)}><HugeiconsIcon icon={Archive02Icon} />Archive</DropdownMenuItem>
                 )}
               </>
             )}

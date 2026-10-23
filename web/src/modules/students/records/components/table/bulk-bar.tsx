@@ -1,7 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Archive02Icon, Cancel01Icon, FolderEditIcon, RestoreBinIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { IconArchive, IconFolderCog, IconFolderShare, IconFolderUser, IconRestore, IconX } from "@tabler/icons-react";
 
 type Props = {
   selected: number;
@@ -21,18 +22,18 @@ export function BulkBar({ selected, archivable, restorable, onArchive, onRestore
     <div role="region" aria-label="Selected students" className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
       <span className="font-medium tabular-nums" aria-live="polite">{selected} selected</span>
       <div className="ml-auto flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={onClear}><IconX />Clear</Button>
+        <Button variant="ghost" size="sm" onClick={onClear}><HugeiconsIcon icon={Cancel01Icon} />Clear</Button>
         <Button variant="outline" size="sm" onClick={onChangeGroup}>
-          <IconFolderCog />Change group
+          <HugeiconsIcon icon={FolderEditIcon} />Change group
         </Button>
         {archivable > 0 && (
           <Button variant="outline" size="sm" onClick={onArchive}>
-            <IconArchive />Archive ({archivable})
+            <HugeiconsIcon icon={Archive02Icon} />Archive ({archivable})
           </Button>
         )}
         {restorable > 0 && (
           <Button variant="outline" size="sm" onClick={onRestore}>
-            <IconRestore />Restore ({restorable})
+            <HugeiconsIcon icon={RestoreBinIcon} />Restore ({restorable})
           </Button>
         )}
       </div>

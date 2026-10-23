@@ -16,7 +16,7 @@ export const COLUMN_LABELS: Record<DataColumnId, string> = {
   level: "Level",
   track: "Track",
   group: "Group",
-  participationType: "Student type",
+  participationType: "Participation",
   status: "Status",
   createdAt: "Created",
 };

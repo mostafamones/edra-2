@@ -1,4 +1,6 @@
 "use client";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, AlertCircleIcon, Archive02Icon, SearchRemoveIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useCanonicalHref } from "@/modules/navigation";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -7,7 +9,6 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   getCoreRowModel, useReactTable, type ColumnSizingState, type Updater, type VisibilityState,
 } from "@tanstack/react-table";
-import { IconAlertCircle as AlertCircle, IconArchive as Archive, IconPlus as Plus, IconSearchOff as SearchX, IconUsersGroup as UsersRound } from "@tabler/icons-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -242,7 +243,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
 
       {listQuery.isError && (
         <Alert variant="destructive">
-          <AlertCircle />
+          <HugeiconsIcon icon={AlertCircleIcon} />
           <AlertTitle>{list ? "Couldn’t refresh students" : "Couldn’t load students"}</AlertTitle>
           <AlertDescription className="flex flex-wrap items-center gap-3">
             {list ? "Showing the last loaded results." : "Check your connection and try again."}
@@ -255,18 +256,18 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
 
       {noYear ? (
         <Alert>
-          <AlertCircle />
+          <HugeiconsIcon icon={AlertCircleIcon} />
           <AlertTitle>No active academic year</AlertTitle>
           <AlertDescription>Student records belong to an academic year. Open one for this academy to start adding students.</AlertDescription>
         </Alert>
       ) : noStudents ? (
         <Empty className="min-h-64 rounded-xl border border-dashed border-border bg-card/20 py-20">
           <EmptyHeader className="gap-1">
-            <EmptyMedia variant="icon"><UsersRound aria-hidden="true" /></EmptyMedia>
+            <EmptyMedia variant="icon"><HugeiconsIcon icon={UserGroupIcon} aria-hidden="true" /></EmptyMedia>
             <EmptyTitle className="text-xl font-semibold">No students yet</EmptyTitle>
             <EmptyDescription className="leading-[1.4em]">Add students to this academic year to start tracking their placement.</EmptyDescription>
           </EmptyHeader>
-          <EmptyContent><Button size="sm" asChild><Link href={href("/app/students/new")} ><Plus />Add student</Link></Button></EmptyContent>
+          <EmptyContent><Button size="sm" asChild><Link href={href("/app/students/new")} ><HugeiconsIcon icon={Add01Icon} />Add student</Link></Button></EmptyContent>
         </Empty>
       ) : (
         <>
@@ -294,7 +295,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
               empty={filtering ? (
                 <Empty className="min-h-48 rounded-lg border py-14">
                   <EmptyHeader className="gap-1">
-                    <EmptyMedia variant="icon"><SearchX aria-hidden="true" /></EmptyMedia>
+                    <EmptyMedia variant="icon"><HugeiconsIcon icon={SearchRemoveIcon} aria-hidden="true" /></EmptyMedia>
                     <EmptyTitle>No matching students</EmptyTitle>
                     <EmptyDescription>Try a different search, or clear the search and filters to see every active student.</EmptyDescription>
                   </EmptyHeader>
@@ -307,7 +308,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
               ) : (
                 <Empty className="min-h-48 rounded-lg border py-14">
                   <EmptyHeader className="gap-1">
-                    <EmptyMedia variant="icon"><Archive aria-hidden="true" /></EmptyMedia>
+                    <EmptyMedia variant="icon"><HugeiconsIcon icon={Archive02Icon} aria-hidden="true" /></EmptyMedia>
                     <EmptyTitle>No active students</EmptyTitle>
                     <EmptyDescription>Every student in this academic year is archived.</EmptyDescription>
                   </EmptyHeader>

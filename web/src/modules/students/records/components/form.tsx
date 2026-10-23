@@ -1,12 +1,13 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AlertCircleIcon, Rotate01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { IconAlertCircle, IconRotate } from "@tabler/icons-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -56,7 +57,7 @@ export function StudentRecordForm(props: Props) {
     return (
       <div className={padded}>
         <Alert variant="destructive">
-          <IconAlertCircle />
+          <HugeiconsIcon icon={AlertCircleIcon} />
           <AlertTitle>Couldn’t load the student form</AlertTitle>
           <AlertDescription className="flex flex-col items-start gap-3">
             <span>The academic year, levels, or groups failed to load.</span>
@@ -76,7 +77,7 @@ export function StudentRecordForm(props: Props) {
     return (
       <div className={padded}>
         <Alert>
-          <IconAlertCircle />
+          <HugeiconsIcon icon={AlertCircleIcon} />
           <AlertTitle>No active academic year</AlertTitle>
           <AlertDescription>Student records belong to an academic year. Open one for this academy to add students.</AlertDescription>
         </Alert>
@@ -196,14 +197,14 @@ function StudentFields({
 
           {failure && (
             <Alert variant="destructive">
-              <IconAlertCircle />
+              <HugeiconsIcon icon={AlertCircleIcon} />
               <AlertTitle>Couldn’t save the student</AlertTitle>
               <AlertDescription className="flex flex-col items-start gap-3">
                 <span>{failure.message}</span>
                 {failure.code === "stale_record" && onReload && (
                   <>
                     <span>Your changes are still here. Reload to see the latest version; your unsaved edits will be replaced.</span>
-                    <Button type="button" variant="outline" size="sm" onClick={onReload}><IconRotate />Reload latest</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={onReload}><HugeiconsIcon icon={Rotate01Icon} />Reload latest</Button>
                   </>
                 )}
               </AlertDescription>

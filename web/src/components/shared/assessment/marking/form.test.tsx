@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MarksForm } from "./form";
 import { StudentMarkSheet } from "./student";
@@ -10,6 +10,13 @@ import type { MarkPart, SaveOutcome, SavePayload } from "./types";
 const parts: MarkPart[] = [{ id: "part", title: "Written", position: 1, maxScore: "5", entry: "manual", questions: [{ id: "q", position: 1, maxScore: "5", choices: [] }] }];
 const baseline = (score = "", version = "1", basis = scoringBasis(parts, 1)) => ({ version, basis, snapshot: markSnapshot(parts, { q: score }, "") });
 const student = { recordId: "record", fullName: "Student One", studentCode: null, groupName: null };
+// jsdom does not provide the browser observer used by the segmented control.
+beforeAll(() => vi.stubGlobal("ResizeObserver", class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}));
+afterAll(() => vi.unstubAllGlobals());
 afterEach(cleanup);
 
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>((yes) => { resolve = yes; }); return { promise, resolve }; }
