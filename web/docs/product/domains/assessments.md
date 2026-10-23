@@ -192,6 +192,28 @@ For quizzes and exams whose final submission can be fully graded automatically, 
 
 The exam-specific student web flow is confirmed in the following section. These controls do not change the separation between received work, private marking and official results.
 
+## Student web quiz flow — EDRA-82
+
+Confirmed during owner shaping, 2026-10-23: each connected academy has a student Quizzes page covering standalone and eligible attached quizzes. Published units also link to their attached quizzes through the same quiz flow. Reuse the unit browsing/detail integration rather than creating a second unit browser. Normal account, academy/year, audience, publication, suspension and quiz availability rules still apply.
+
+Starting, saving and explicitly submitting an attached quiz require a current or expired, unrevoked explanation entitlement for its published unit. Current video access is not required; published-unit visibility alone is insufficient. Standalone quizzes do not require unit entitlement. These participation gates do not prevent authoritative deadline/departure settlement of already saved work under the quiz rules.
+
+Show one question at a time with Previous/Next and a numbered navigator. Students may revisit questions; skip excluded questions without renumbering or deleting their historical answers. The existing first-departure warning logs the current question and advances to the next non-excluded question; the second departure finally submits saved work.
+
+Online Written Work supports typed answers plus PDF/photo uploads, with at most two files per Written Work question and 8 MB per file. A question may have text, files or both. Automatic timer, departure-limit or actual-closure finalization preserves server-accepted work; unfinished uploads must not delay finalization or add files to an already accepted submission.
+
+Quizzes do not require fullscreen. Count a departure when the active quiz becomes hidden through tab/app switching or minimizing, or on a detected refresh/page close. Visible window-focus loss alone does not count. Correlate lifecycle signals from the same departure instead of counting them separately. Browser lifecycle detection is best effort; network loss or an unreported crash alone must not invent a departure. A warning preserves answers and the original cutoff; returning after the second-departure finalization cannot reopen work.
+
+Only one tab/device may actively answer an attempt. A second editor is blocked while the first is active, with no takeover action. Legitimate refresh/reconnect recovery after the previous editor is gone resumes the same attempt and retains its original timer/cutoff and departure count. Enforce editor ownership on trusted answer/upload/submission operations.
+
+Autosave choices and typed answers, retain pending changes locally across refresh for the authenticated account and attempt, reconcile them against the latest acknowledged work, and retry before cutoff while authorized. Clearly distinguish pending local edits from server-saved work. Do not overwrite newer acknowledged answers, replay another account's pending data or extend the original cutoff. Only server-accepted answers and completed, acknowledged uploads count at finalization.
+
+Submit quiz opens explicit confirmation with a warning about unanswered questions; blanks do not prevent submission. Before explicit submission, acknowledge pending answer saves and either complete the pending uploads or let the student explicitly cancel those uploads. Cancellation must not silently discard an already acknowledged answer/file. A running timer/cutoff remains authoritative during confirmation and uploading; automatic finalization never waits for pending work.
+
+After final submission, show the receipt and officially published total/max and feedback only, without submitted-answer review before solution qualification. Once solutions qualify at actual closure under the existing online/physical rules, add review of the winning immutable submission's answers and files, correct/model answers and eligible answer videos. Do not reveal a losing online draft when physical work won. Student results remain total-only, without per-part/per-question mark breakdowns or private/unannounced corrections, including after solution release.
+
+EDRA-82 includes actual protected quiz answer-video access and playback through the existing media system, alongside key/model/text solutions. Publication, academic-year, suspension and answer-revocation rules still apply. Earned answer access is distinct from explanation entitlement expiry; eligibility for or receipt of a quiz is not early access to solutions. These are agreed product requirements, not implemented or deployed capabilities.
+
 ## Student web exam flow — EDRA-83
 
 Confirmed during owner shaping: deliver standalone exams first, independently of content-unit delivery. Content-attached exam access remains a separate coordinated integration. These are approved product requirements, not a statement of implementation or deployment.

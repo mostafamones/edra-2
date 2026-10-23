@@ -14,10 +14,11 @@ info:
     Student account linking and online-access suspension exist in the students module. Creating,
     editing, closing and reopening assignments and recording work status are staff web actions for now.
 
-    **Current source contract.** Source-checked on 2026-10-18; deployment/cloud state is not asserted.
+    **Current source contract.** Introductory scope reconciled on 2026-10-23; deployment/cloud state is not asserted.
     Active assignments do not require a Publish action. Head Admin has the Owner/Admin assignment
-    authority; a suspended staff member has none in that academy. Optional late eligibility and
-    exclusions are described in the module README; online submission is not part of this contract.
+    authority; a suspended staff member has none in that academy. Current staff source includes required-cohort
+    provenance and optional late eligibility, plus controlled key corrections/exclusions through staff web actions.
+    The delivered student cookie-session flow remains separate from this staff bearer contract.
 
     **Rules.** An assignment has parts, each with its own maximum; the assignment maximum is their sum.
     A student has at most one result. Scores are decimal **strings** with at most two fractional digits

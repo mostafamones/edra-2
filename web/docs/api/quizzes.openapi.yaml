@@ -20,6 +20,14 @@ info:
     alone does not reveal material. No student HTTP route or answering UI is delivered here. Client
     annual record ids or phones are never ownership. Source behavior is not a deployment assertion.
 
+    **Shaped student delivery (2026-10-23, not implemented by this staff API).** EDRA-82 includes
+    standalone/attached discovery, attached participation with current or expired unrevoked unit entitlement,
+    one active editor without takeover, autosave recovery and Written Work text plus at most two PDF/photo
+    files per question, 8 MB each. It adds question-aware departures without fullscreen and immutable
+    file acceptance for every finalization reason. Student receipt/official total/feedback precedes
+    qualified winning-answer review and actual answer-video playback. The confirmed product quiz-flow
+    section governs this separate student web implementation; it does not add bearer paths here.
+
     **Rules.** A quiz has ordered Question Sheet (choices, one correct, scored automatically) and
     Written Work (staff-marked) parts; Answer Sheet parts do not exist. Scores are decimal **strings**
     with at most two fractional digits; unsupported precision is rejected, never rounded. A blank
@@ -31,7 +39,8 @@ info:
     `deadline_at` and `actual_closes_at`; at that cutoff its saved answers are submitted (`timer` when
     the deadline is at or before actual closure, otherwise `window_closed`). A second departure submits
     with `departure`. `submitted_at` is the effective time; `processed_at` when the database settled it.
-    A database worker settles deadlines every 30 seconds and every read settles due work first. Physical
+    A database worker settles deadlines every 30 seconds; detail/student reads settle due work first.
+    Paginated list reads remain read-only and report pending processing. Physical
     confirmation stops at actual closure. Nothing reopens after actual closure.
 
     **Acceptance.** Online and physical drafts may coexist; the first online final submission or
