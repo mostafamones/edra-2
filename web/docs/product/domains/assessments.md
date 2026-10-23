@@ -52,26 +52,6 @@ Each part has a marking scheme specifying marks per question. The effective part
 
 Multiple-choice answers can be marked automatically. Work needing judgment is marked by staff. Staff can refer to model answers, answer documents and solution videos while reviewing work.
 
-## Student web assignment flow — EDRA-81
-
-Confirmed by the owner, 2026-10-22: students work through one assignment part at a time, with all questions in that part shown together and a part navigator. Visual design follows the existing application conventions until a separate design direction is agreed.
-
-Written Work accepts PDFs and photos, with up to 20 files per part and a maximum of 8 MB per file. There is no additional separately configured part-total limit. The first student release does not add a typed Written Work response.
-
-Each connected academy has a student Assignments page covering eligible standalone and attached assignments. Published units also provide entry to their attached assignments, reusing the unit browsing/detail flow. Listing or opening an assignment does not save a draft or select the online work source. Normal account, academy/year, placement, publication and submission rules apply.
-
-Attached assignment saving and submission require a current or expired, unrevoked explanation entitlement for the attached published unit. Current video access is not required, and unit visibility alone is insufficient. Revoked entitlement does not qualify; expiry must not be treated as revocation. Normal suspension and eligibility checks still apply. Standalone assignments do not require unit entitlement.
-
-Online drafts autosave. Preserve pending choice answers locally across refresh for the authenticated student and assignment, and retry after reconnection without overwriting newer acknowledged work. Clearly distinguish pending local changes from server-acknowledged saves. Files must finish uploading successfully before final submission; retaining a pending answer does not imply retaining or successfully uploading a selected local file.
-
-Only one tab/device may actively edit an assignment for a student. Provide an explicit Switch device action. Switching transfers editing authority to the new editor and fences the previous editor's saves, uploads/attachment changes and final submission; it must not overwrite newer acknowledged work. Recovery retains the same draft. Assignment work has no timer, fullscreen requirement or departure penalty.
-
-Students may finally submit with blank choice answers, after a warning about the blanks. Each Written Work part requires at least one successfully uploaded file. Files belong to the whole part; staff use those files to mark its numbered items. Upload failure or an upload still in progress must not be presented as successfully received work.
-
-After final submission, the student page shows the submission receipt and, when officially announced, the total and feedback. Do not provide submitted-work review or a per-part/per-question marks breakdown. Private marks and unannounced corrections remain hidden. Assignment answer-video qualification remains separate: accepted online submission qualifies immediately; physical work qualifies when its complete result is announced.
-
-EDRA-81 includes actually authorizing and playing eligible assignment answer videos through the existing media system, not only recording qualification. All associated answer videos unlock together under the assignment rules. Earned answer access is separate from current explanation access and retains its existing year, suspension, publication and revocation rules. It does not enable submitted-work review. These confirmed requirements do not assert implementation.
-
 ## Locked structure and question exclusions
 
 For assignments, quizzes and exams, once student answering or staff answer/mark entry begins, the assessment's question and part structure is locked. Staff cannot add, remove or replace questions, change part types, or rewrite question/answer content through an ordinary edit. Scoring corrections use a controlled correction flow rather than structural editing. A mistaken correct-answer key can be corrected without changing question text, choices or student answers. These correction and exclusion rules apply to all three assessment types. The backend recalculates affected scores from the stored answers using the corrected key; instructors do not need to reopen and manually remark each student's work. Staff marking views use the corrected key.
@@ -147,6 +127,36 @@ Active assignments targeting a removed track become level-wide; closed assignmen
 Owners, Head Admins, Admins and Instructors may prepare assignments, record work, mark, add feedback and announce complete results.
 
 Owners, Head Admins and Admins manage submission availability and archival. Locked structure applies to all roles. Only Owners, Head Admins and Admins may correct the shared answer key or exclude questions after work has begun, for assignments, quizzes and exams. Instructors retain ordinary marking and announcement permissions, including announcing complete recalculated corrections; they cannot change the shared answer key or exclusion rules. No role may bypass scoring maxima, result completeness or history-preservation rules.
+
+## Student web assignment flow — EDRA-81
+
+Confirmed during owner shaping, 2026-10-22, with conflict and photo-format decisions settled 2026-10-23. These are approved product requirements, not a statement of deployment.
+
+### Discovery and authority
+
+Each connected academy's student area has an Assignments page and assignment detail pages. List standalone assignments and assignments attached to a published content unit the student's placement matches; attached assignments are also reachable from that unit. Unpublished unit attachments are not exposed, and a working attachment does not change a standalone assignment's access. Listing or opening an assignment does not create a draft, select the online work source or start any timer, and exposes metadata and action state only.
+
+Saving or submitting attached work requires a current or expired, unrevoked explanation grant for that unit; current playable explanation access is not required. A revoked current grant does not fall back to an older grant. Standalone assignments have no unit-access requirement. Ordinary session authority, linked unsuspended annual participation, the open academic year, the assignment's current audience, readiness, closure and source/result locks are enforced at the trusted boundary. Optional late eligibility and placement exits follow the rules above. In-person students submit online only when the academy's manager setting enables it (off by default); their participation type is unchanged.
+
+### Answering and drafts
+
+Show the instructions and one part at a time with all of that part's questions, and a part navigator. Question Sheet parts show authored prompts, choices and images; Answer Sheet parts show question numbers and choice letters. Written Work parts accept files only. Excluded questions are skipped without renumbering. No keys, correctness or private marks are shown while drafting.
+
+Choices autosave. Distinguish pending, saving, saved and failed states. Pending choices and an uncertain save stay on the device for the signed-in account, annual record and assignment until the server acknowledges them, and recover after refresh. Local data never bypasses closure, revocation, suspension, source locks or year closure, and is cleared on sign-out, account change and final submission.
+
+Only one tab or device edits at a time. A second one sees that the assignment is open elsewhere and may explicitly continue there, which moves editing authority and stops the earlier editor's writes. Pending work from a stale editor is never replayed automatically under the new editor. When this device's unsaved choices differ from newer saved work, each affected question shows both answers with "Use saved answer" and "Use this device's answer"; choices that match are dropped. Unresolved differences stay on the device until resolved, sign-out or final submission, and block final submission.
+
+### Written Work files
+
+Each Written Work part accepts up to 20 files of up to 8 MB each: PDF, JPEG, PNG, WebP and HEIC/HEIF photos. Files are checked by their content, not their name or browser type. Uploads show individual progress and failures with retry and remove; only files the server has accepted count. A file whose upload did not finish must be removed or selected again. Accepted files stay private; staff open them from the marking view through short-lived links, with PDF, JPEG, PNG and WebP previewed in the browser and HEIC/HEIF downloaded.
+
+### Submission, results and answer videos
+
+One Submit assignment action opens a confirmation with the unanswered-question count and late status. Blank choices are allowed. Every Written Work part needs at least one accepted file, and unfinished uploads and unresolved answer differences must be dealt with first. Submission is one atomic, retry-safe operation; a lost response recovers the receipt without reopening editing.
+
+After submission the student sees the receipt (submission time, late status) and, once announced, the official total, maximum and feedback, without submitted answers, files or per-part marks. Fully automatic work announces its result immediately; work with Written Work waits for staff review and announcement.
+
+An accepted online submission unlocks the assignment's answer videos immediately; physical work unlocks them when its complete result is announced. Answer videos stay available after explanation access expires. Owners, Head Admins and Admins may revoke answer access for invalid qualifying work and restore it while that work remains valid, each with a reason kept in history.
 
 ## Quizzes and exams
 

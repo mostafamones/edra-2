@@ -13,9 +13,13 @@ import { saveStudentMarks } from "../../actions";
 import { markParts, savedAnswers, toAnswerChanges } from "../../answers";
 import { assignmentQueryKey, loadAssignment, assignmentsRootKey } from "../../queries";
 import type { Assignment, StudentWork } from "../../types";
+import { AnswerAccess } from "./answer-access";
+import { ReceivedFiles } from "./received";
 
 type Props = {
   assignment: Assignment;
+  /** Owner/Head Admin/Admin: may revoke or restore answer access. */
+  manager: boolean;
   student: StudentWork;
   onChanged: (student: StudentWork) => void;
   /** Called after marks were saved (not on a conflict). */
@@ -26,7 +30,7 @@ type Props = {
  * One student's marks: typed parts are entered question by question or fast-marked with a part total.
  * Work is recorded as received by the first mark. Its draft survives refreshes for the same academy, assessment and annual record.
  */
-export function AssignmentMarks({ assignment, student, onChanged, onSaved }: Props) {
+export function AssignmentMarks({ assignment, manager, student, onChanged, onSaved }: Props) {
   const queryClient = useQueryClient();
   const isCurrentAcademy = useAcademyScope();
   const attempt = useAttemptKey();
@@ -65,5 +69,5 @@ export function AssignmentMarks({ assignment, student, onChanged, onSaved }: Pro
     return { ok: true, saved: true, baseline: baselineFor(result.student) };
   }
 
-  return <MarksForm parts={parts} baseline={baselineFor(student)} feedback={student.feedback} fast={{ saved: student.marks }} onSave={save} onDone={onSaved} />;
+  return <div className="flex flex-col gap-4"><ReceivedFiles assignment={assignment} recordId={student.recordId} /><AnswerAccess assignment={assignment} recordId={student.recordId} manager={manager} /><MarksForm parts={parts} baseline={baselineFor(student)} feedback={student.feedback} fast={{ saved: student.marks }} onSave={save} onDone={onSaved} /></div>;
 }

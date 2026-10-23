@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { AcademyEntry } from "@/modules/academies";
 import { formatAcademyDateTime } from "../../due";
 import type { MarkFocus } from "../../focus";
-import { assignmentPermissions } from "../../permissions";
+import { assignmentPermissions, isManager } from "../../permissions";
 import { assignmentQueryKey, loadAssignment } from "../../queries";
 import type { Assignment } from "../../types";
 import { AssignmentMarking } from "../marking/sheet";
@@ -63,7 +63,7 @@ function Workspace({ academy, assignment }: { academy: AcademyEntry; assignment:
           )}
         </>
       )}
-      mark={permissions.mark ? <AssignmentMarking assignment={assignment} /> : undefined}
+      mark={permissions.mark ? <AssignmentMarking assignment={assignment} manager={isManager(academy.role)} /> : undefined}
       canEdit={permissions.edit}
       more={<LifecycleActions assignment={assignment} permissions={permissions} />}
       yearOpen={assignment.yearOpen} archived={assignment.state === "archived"} ready={assignment.ready}

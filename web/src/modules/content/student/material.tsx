@@ -19,7 +19,8 @@ export function StudentMaterial({ academyId, unitId, itemId, title, expiresAt }:
   }
   useEffect(() => {
     if (!opened || !material) return;
-    const grantEnd = expiresAt ? Math.floor(new Date(expiresAt).getTime() / 1000) : material.expires;
+    // Earned answer videos (expiresAt null) have no grant end: playback permission keeps renewing.
+    const grantEnd = expiresAt ? Math.floor(new Date(expiresAt).getTime() / 1000) : Infinity;
     const renew = material.kind === "video" && material.expires < grantEnd;
     const delay = Math.max(1000, material.expires * 1000 - Date.now() - (renew ? 30000 : -100));
     let stopped = false;

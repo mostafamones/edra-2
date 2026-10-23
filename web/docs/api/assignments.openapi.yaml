@@ -9,17 +9,16 @@ info:
     It shares authentication, idempotency, response, throttling, student-code, and CORS conventions
     with `sessions-attendance.openapi.yaml`; only what differs is stated here.
 
-    **Not in this contract yet.** Student submissions, student-facing reads, file
-    upload handlers, and private submission attachments are not provided by this staff API.
-    Student account linking and suspension exist in the enrollment domain; they do not themselves
-    provide assignment submission authority. Creating, editing, closing and reopening assignments and recording
-    work status are staff web actions for now.
+    **Not in this contract.** Student reads, drafts, Written Work uploads and submissions are a
+    cookie-session web flow (EDRA-81; see the assignments module README), not a bearer API scope.
+    Student account linking and online-access suspension exist in the students module. Creating,
+    editing, closing and reopening assignments and recording work status are staff web actions for now.
 
-    **Current source contract.** Introductory scope reconciled on 2026-10-22; deployment/cloud state is not asserted.
+    **Current source contract.** Introductory scope reconciled on 2026-10-23; deployment/cloud state is not asserted.
     Active assignments do not require a Publish action. Head Admin has the Owner/Admin assignment
     authority; a suspended staff member has none in that academy. Current staff source includes required-cohort
     provenance and optional late eligibility, plus controlled key corrections/exclusions through staff web actions.
-    Student submission delivery remains the separate EDRA-81 scope.
+    The delivered student cookie-session flow remains separate from this staff bearer contract.
 
     **Rules.** An assignment has parts, each with its own maximum; the assignment maximum is their sum.
     A student has at most one result. Scores are decimal **strings** with at most two fractional digits

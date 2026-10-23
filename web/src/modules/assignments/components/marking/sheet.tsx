@@ -9,14 +9,14 @@ import { AssignmentMarks } from "./form";
 const STATE_LABELS: Record<StudentWork["marking"], string> = { unmarked: "Not marked", partial: "Partly marked", complete: "Marked" };
 
 /** The marking flow of the assignment, on the shared sheet. */
-export function AssignmentMarking({ assignment }: { assignment: Assignment }) {
+export function AssignmentMarking({ assignment, manager }: { assignment: Assignment; manager: boolean }) {
   const { query, replace } = useMarks(assignment);
   return (
     <MarkingSheet
       roster={{ isPending: query.isPending, isError: query.isError, rows: query.data?.students ?? [] }}
       summary={(row) => (row.total === null ? STATE_LABELS[row.marking] : `${formatScore(row.total)} / ${formatScore(assignment.maxScore)}`)}
       form={(student, { onSaved }) => (
-        <AssignmentMarks key={student.recordId} assignment={assignment} student={student} onChanged={replace} onSaved={onSaved} />
+        <AssignmentMarks key={student.recordId} assignment={assignment} manager={manager} student={student} onChanged={replace} onSaved={onSaved} />
       )}
     />
   );
