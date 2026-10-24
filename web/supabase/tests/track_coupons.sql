@@ -9,9 +9,9 @@ insert into learning_ids(name) values('owner'),('instructor'),('student'),('seco
 grant select on learning_ids to authenticated;
 create function pg_temp.lid(label text) returns uuid language sql as $$ select id from pg_temp.learning_ids where name=label $$;
 create function pg_temp.lact(label text) returns void language plpgsql as $$ begin
-  perform set_config('request.jwt.claims','',true);
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',pg_temp.lid(label),'role','authenticated','session_id',pg_temp.lid(label),'amr',jsonb_build_array(jsonb_build_object('method','password','timestamp',1)))::text,true);
   perform set_config('edra.verified_session','',true);
-  perform set_config('request.jwt.claim.sub',pg_temp.lid(label)::text,true);
+  perform set_config('request.jwt.claim.sub','',true);
 end $$;
 create function pg_temp.lcheck(ok boolean,label text) returns void language plpgsql as $$ begin if ok is not true then raise exception 'Learning access assertion: %',label; end if; end $$;
 create function pg_temp.lerror(statement text,expected text) returns void language plpgsql as $$
@@ -24,6 +24,7 @@ begin
 end $$;
 
 insert into auth.users(id) select id from learning_ids where name in ('owner','instructor','student','second','wrong-level','outsider');
+insert into auth.sessions(id,user_id,created_at,updated_at) select id,id,now(),now() from learning_ids where name in ('owner','instructor','student','second','wrong-level','outsider');
 insert into public.academies(id,name,slug,icon,subject,created_by) values
   (pg_temp.lid('academy'),'Learning access tests','learning-'||pg_temp.lid('academy'),'school','Math',pg_temp.lid('owner')),
   (pg_temp.lid('other-academy'),'Other learning','learn-b-'||pg_temp.lid('other-academy'),'school','Math',pg_temp.lid('outsider'));
@@ -109,6 +110,14 @@ select pg_temp.lact('student');
 select pg_temp.lerror(format('select public.get_content_coupon_options(%L)',pg_temp.lid('academy')),'forbidden');
 reset role;
 select pg_temp.lcheck(not exists(select 1 from public.content_coupon_redemptions where coupon_id in (select id from coupons)),'failed attempts consumed no coupons');
+-- Publication validation rejects scope mismatches, self-dependencies and cycles.
+select pg_temp.lact('owner');
+insert into learning_ids(name,id) select 'dependent-assignment',public.create_content_assessment(pg_temp.lid('academy'),pg_temp.lid('second-unit'),(select version from public.content_units where id=pg_temp.lid('second-unit')),'assignment','Follow-up homework');
+select public.change_content_unit(pg_temp.lid('academy'),pg_temp.lid('second-unit'),(select version from public.content_units where id=pg_temp.lid('second-unit')),'publish');
+select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','unit',jsonb_build_object('prerequisites',jsonb_build_array(jsonb_build_object('unitId',pg_temp.lid('second-unit'),'kind','assignment','assessmentId',pg_temp.lid('dependent-assignment'))))),'prerequisite_cycle');
+select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','unit',jsonb_build_object('prerequisites',jsonb_build_array(jsonb_build_object('unitId',pg_temp.lid('unit'),'kind','assignment','assessmentId',pg_temp.lid('assignment'))))),'invalid_prerequisite');
+select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','track-unit',jsonb_build_object('couponTypeId',pg_temp.lid('regular'))),'coupon_type_mismatch');
+select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','third-unit',jsonb_build_object('prerequisites',jsonb_build_array(jsonb_build_object('unitId',gen_random_uuid(),'kind','assignment','assessmentId',pg_temp.lid('assignment'))))),'invalid_prerequisite');
 -- A saved/draft quiz work row is not an official submission.
 insert into public.quiz_work(quiz_id,annual_student_record_id,academy_id,academic_year_id)
  values(pg_temp.lid('quiz'),pg_temp.lid('record-student'),pg_temp.lid('academy'),pg_temp.lid('year'));

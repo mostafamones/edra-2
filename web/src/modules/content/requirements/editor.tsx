@@ -17,6 +17,7 @@ export function UnitRequirements({ academyId, unitId, userId, document, onChange
     return result;
   } });
   const selected = document.prerequisites ?? [];
+  const unavailable = selected.filter(requirement => !query.data?.units.some(unit => unit.id === requirement.unitId && unit.assessments?.some(assessment => assessment.kind === requirement.kind && assessment.id === requirement.assessmentId)));
   return <section className="space-y-4 rounded-xl border bg-card p-4">
     <h2 className="text-base font-semibold">Access requirements</h2>
     {query.isLoading ? <Skeleton className="h-20 w-full" /> : query.isError ? <p role="alert" className="text-sm text-destructive">{query.error.message}</p> : <>
@@ -25,7 +26,10 @@ export function UnitRequirements({ academyId, unitId, userId, document, onChange
         const checked = selected.some(r => r.unitId === unit.id && r.kind === assessment.kind && r.assessmentId === assessment.id);
         const id = `prerequisite-${unit.id}-${assessment.kind}-${assessment.id}`;
         return <div key={id} className="flex items-center gap-2"><Checkbox id={id} disabled={disabled} checked={checked} onCheckedChange={value => onChange({ ...document, prerequisites: value === true ? [...selected, { unitId: unit.id, kind: assessment.kind, assessmentId: assessment.id }] : selected.filter(r => !(r.unitId === unit.id && r.kind === assessment.kind && r.assessmentId === assessment.id)) })} /><Label htmlFor={id}>{assessment.title}</Label></div>;
-      })}</fieldset>)}{!query.data?.units.some(unit => unit.assessments?.length) && <p className="text-sm text-muted-foreground">No prerequisite assessments</p>}</div>
+      })}</fieldset>)}{unavailable.map(requirement => {
+        const id = `unavailable-${requirement.unitId}-${requirement.kind}-${requirement.assessmentId}`;
+        return <div key={id} className="flex items-center gap-2"><Checkbox id={id} checked disabled={disabled} onCheckedChange={() => onChange({ ...document, prerequisites: selected.filter(item => item !== requirement) })} /><Label htmlFor={id}>Unavailable prerequisite · {requirement.kind}</Label></div>;
+      })}{!selected.length && !query.data?.units.some(unit => unit.assessments?.length) && <p className="text-sm text-muted-foreground">No prerequisite assessments</p>}</div>
     </>}
   </section>;
 }
