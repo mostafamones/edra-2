@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { IconLoader2 } from "@tabler/icons-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { toast } from "sonner";
 
@@ -119,13 +120,13 @@ export function ContactChange({ purpose, label, current, resumed, onChanged }: P
 
   if (step.kind === "idle") {
     return (
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2 px-6 py-5">
+        <div className="flex items-center justify-between gap-6">
+          <div className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-medium">{label}</span>
-            <span dir="ltr" className="text-start text-sm tabular-nums text-muted-foreground">{displayPhone(current)}</span>
+            <MaskedPhone phone={displayPhone(current)} />
           </div>
-          <Button variant="outline" onClick={() => { setError(null); setStep({ kind: "entry" }); }}>Change</Button>
+          <Button variant="outline" size="sm" onClick={() => { setError(null); setStep({ kind: "entry" }); }}>Change</Button>
         </div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </div>
@@ -134,15 +135,15 @@ export function ContactChange({ purpose, label, current, resumed, onChanged }: P
 
   if (step.kind === "entry") {
     return (
-      <form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); void start(); }} noValidate>
-        <PhoneInput label={`New ${label.toLowerCase()}`} id={`${purpose}-new`} value={phone} autoFocus
+      <form className="flex flex-col gap-4 px-6 py-5" onSubmit={(event) => { event.preventDefault(); void start(); }} noValidate>
+        <PhoneInput containerClassName="max-w-sm" label={`New ${label.toLowerCase()}`} id={`${purpose}-new`} value={phone} autoFocus
           onChange={(event) => setPhone(event.target.value)} disabled={busy} error={error ?? undefined} />
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={busy || !phone.trim()}>
-            {busy && <IconLoader2 className="animate-spin" aria-hidden="true" />}
+          <Button type="submit" size="sm" disabled={busy || !phone.trim()}>
+            {busy && <HugeiconsIcon icon={Loading03Icon} strokeWidth={1.5} className="animate-spin" aria-hidden="true" />}
             Send code
           </Button>
-          <Button type="button" variant="ghost" onClick={() => restart(null)} disabled={busy}>Cancel</Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => restart(null)} disabled={busy}>Cancel</Button>
         </div>
       </form>
     );
@@ -153,15 +154,15 @@ export function ContactChange({ purpose, label, current, resumed, onChanged }: P
   if (target.stage === "verified") {
     // Both numbers are proven; only the commit remains (for example after a lost response).
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 px-6 py-5">
         <p className="text-sm">Both numbers verified. New number: <span dir="ltr" className="tabular-nums">{displayPhone(target.newPhone)}</span></p>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => run(() => completeContactChange(target.id), finish)} disabled={busy}>
-            {busy && <IconLoader2 className="animate-spin" aria-hidden="true" />}
+          <Button size="sm" onClick={() => run(() => completeContactChange(target.id), finish)} disabled={busy}>
+            {busy && <HugeiconsIcon icon={Loading03Icon} strokeWidth={1.5} className="animate-spin" aria-hidden="true" />}
             Save new number
           </Button>
-          <Button variant="ghost" onClick={cancel} disabled={busy}>Cancel</Button>
+          <Button variant="ghost" size="sm" onClick={cancel} disabled={busy}>Cancel</Button>
         </div>
       </div>
     );
@@ -169,8 +170,11 @@ export function ContactChange({ purpose, label, current, resumed, onChanged }: P
 
   const which = target.stage === "old" ? "current" : "new";
   return (
-    <form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); void verify(target); }} noValidate>
-      <p className="text-sm font-medium">{target.stage === "old" ? "Step 1 of 2: current number" : "Step 2 of 2: new number"}</p>
+    <form className="flex flex-col gap-4 px-6 py-5" onSubmit={(event) => { event.preventDefault(); void verify(target); }} noValidate>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-sm font-medium">{label}</span>
+        <span className="text-xs text-muted-foreground">{target.stage === "old" ? "Step 1 of 2: current number" : "Step 2 of 2: new number"}</span>
+      </div>
       {target.codeSent ? (
         <div className="flex flex-col gap-2">
           <Label htmlFor={id}>Code sent to your {which} number •••• {target.recipientLast4}</Label>
@@ -185,17 +189,37 @@ export function ContactChange({ purpose, label, current, resumed, onChanged }: P
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="flex flex-wrap gap-2">
         {target.codeSent && (
-          <Button type="submit" disabled={busy || code.length !== 6}>
-            {busy && <IconLoader2 className="animate-spin" aria-hidden="true" />}
+          <Button type="submit" size="sm" disabled={busy || code.length !== 6}>
+            {busy && <HugeiconsIcon icon={Loading03Icon} strokeWidth={1.5} className="animate-spin" aria-hidden="true" />}
             Verify
           </Button>
         )}
-        <Button type="button" variant={target.codeSent ? "outline" : "default"} disabled={busy || resendSeconds > 0}
+        <Button type="button" size="sm" variant={target.codeSent ? "outline" : "default"} disabled={busy || resendSeconds > 0}
           onClick={() => run(() => resendContactCode(target.id), ({ operation: next }) => show(next))}>
           {target.codeSent ? "Resend code" : "Send code"}{resendSeconds > 0 ? ` (${resendSeconds}s)` : ""}
         </Button>
-        <Button type="button" variant="ghost" onClick={cancel} disabled={busy}>Cancel</Button>
+        <Button type="button" variant="ghost" size="sm" onClick={cancel} disabled={busy}>Cancel</Button>
       </div>
     </form>
+  );
+}
+
+/** Shows only the last two digits; blurs on hover and toggles the full number on click. */
+function MaskedPhone({ phone }: { phone: string }) {
+  const [revealed, setRevealed] = useState(false);
+  const digits = phone.replace(/\D/g, "").length;
+  let seen = 0;
+  const masked = phone.replace(/\d/g, (digit) => (++seen > digits - 2 ? digit : "•"));
+  return (
+    <button
+      type="button"
+      dir="ltr"
+      aria-pressed={revealed}
+      aria-label={revealed ? `${phone}, hide number` : "Show number"}
+      onClick={() => setRevealed((value) => !value)}
+      className="w-fit rounded-sm text-start text-sm tabular-nums text-muted-foreground outline-none transition-[filter] hover:blur-[1.5px] focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      {revealed ? phone : masked}
+    </button>
   );
 }

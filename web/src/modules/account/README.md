@@ -45,6 +45,10 @@ Storage and rules are in `account_contact_changes` (migration `20261018210000`):
 
 The trigger also refuses Auth's own phone change API (`updateUser({ phone })` with `phone_change` verification) and dashboard or administrator edits of a confirmed phone, so the old-number proof cannot be skipped through Auth. Phones that were never confirmed are not guarded. If the old number is unreachable, the change cannot be completed in settings; the future support process will need its own deliberate path through this guard.
 
+## Account deletion
+
+`AccountDeletion` confirms with the typed phrase `delete my account` (checked again by `deleteAccount`). The action removes the caller's avatar objects, then calls `delete_my_account` (migration `20261025140000`). Academy history references `profiles` without cascading, so the account is anonymized, not removed: memberships, student profile and pending contact/password operations are deleted; the profile becomes "Deleted user" with no display name, phone or picture; the Auth user loses phone, email, password, metadata and identities, is banned and every session is deleted. The phone guard admits only this erasure. Owners are refused until they transfer their academies. Academy-owned student records keep the academy's copy of the name and phones.
+
 ## Not implemented
 
 Native settings, a support path for unreachable old numbers, avatar originals or re-cropping without re-selecting the source, and Auth-wide enforcement of the code: a signed-in session can still call Auth's own password update directly, as before this feature.

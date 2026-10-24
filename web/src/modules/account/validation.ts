@@ -20,3 +20,6 @@ export type ProfileInput = z.output<typeof profileSchema>;
 export function accountName(profile: { full_name: string | null; display_name: string | null } | null | undefined) {
   return profile?.display_name?.trim() || profile?.full_name?.trim() || null;
 }
+
+/** The phrase typed to confirm account deletion. */
+export const DELETE_CONFIRMATION = "delete my account";

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { IconLoader2 } from "@tabler/icons-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { toast } from "sonner";
 import type { z } from "zod";
@@ -105,12 +106,15 @@ export function PasswordChange() {
 
   if (step.kind === "idle") {
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2 px-6 py-5">
+        <div className="flex items-center justify-between gap-6">
+          <span className="text-sm font-medium">Password</span>
+          <Button variant="outline" size="sm" onClick={request} disabled={busy || resendSeconds > 0}>
+            {busy && <HugeiconsIcon icon={Loading03Icon} strokeWidth={1.5} className="animate-spin" aria-hidden="true" />}
+            {resendSeconds > 0 ? `Change password (${resendSeconds}s)` : "Change password"}
+          </Button>
+        </div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <Button variant="outline" className="self-start" onClick={request} disabled={busy || resendSeconds > 0}>
-          {busy && <IconLoader2 className="animate-spin" aria-hidden="true" />}
-          {resendSeconds > 0 ? `Change password (${resendSeconds}s)` : "Change password"}
-        </Button>
       </div>
     );
   }
@@ -118,7 +122,7 @@ export function PasswordChange() {
   if (step.kind === "code") {
     const { challenge } = step;
     return (
-      <form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); void verify(challenge); }} noValidate>
+      <form className="flex flex-col gap-4 px-6 py-5" onSubmit={(event) => { event.preventDefault(); void verify(challenge); }} noValidate>
         <div className="flex flex-col gap-2">
           <Label htmlFor="password-code">Code sent to •••• {challenge.phoneLast4}</Label>
           <InputOTP id="password-code" maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={code} onChange={setCode} autoFocus
@@ -130,14 +134,14 @@ export function PasswordChange() {
         </div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={busy || code.length !== 6}>
-            {busy && <IconLoader2 className="animate-spin" aria-hidden="true" />}
+          <Button type="submit" size="sm" disabled={busy || code.length !== 6}>
+            {busy && <HugeiconsIcon icon={Loading03Icon} strokeWidth={1.5} className="animate-spin" aria-hidden="true" />}
             Verify
           </Button>
-          <Button type="button" variant="outline" onClick={request} disabled={busy || resendSeconds > 0}>
+          <Button type="button" variant="outline" size="sm" onClick={request} disabled={busy || resendSeconds > 0}>
             {resendSeconds > 0 ? `Resend code (${resendSeconds}s)` : "Resend code"}
           </Button>
-          <Button type="button" variant="ghost" onClick={cancel} disabled={busy}>Cancel</Button>
+          <Button type="button" variant="ghost" size="sm" onClick={cancel} disabled={busy}>Cancel</Button>
         </div>
       </form>
     );
@@ -146,16 +150,16 @@ export function PasswordChange() {
   const { challenge } = step;
   const pending = form.formState.isSubmitting;
   return (
-    <form className="flex flex-col gap-4" onSubmit={form.handleSubmit((values) => complete(challenge, values))} noValidate>
-      <TextInput label="New password" type="password" autoComplete="new-password" autoFocus required error={form.formState.errors.password?.message} {...form.register("password")} />
-      <TextInput label="Confirm new password" type="password" autoComplete="new-password" required error={form.formState.errors.confirmPassword?.message} {...form.register("confirmPassword")} />
+    <form className="flex flex-col gap-4 px-6 py-5" onSubmit={form.handleSubmit((values) => complete(challenge, values))} noValidate>
+      <TextInput containerClassName="max-w-sm" label="New password" type="password" autoComplete="new-password" autoFocus required error={form.formState.errors.password?.message} {...form.register("password")} />
+      <TextInput containerClassName="max-w-sm" label="Confirm new password" type="password" autoComplete="new-password" required error={form.formState.errors.confirmPassword?.message} {...form.register("confirmPassword")} />
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={pending}>
-          {pending && <IconLoader2 className="animate-spin" aria-hidden="true" />}
+        <Button type="submit" size="sm" disabled={pending}>
+          {pending && <HugeiconsIcon icon={Loading03Icon} strokeWidth={1.5} className="animate-spin" aria-hidden="true" />}
           Update password
         </Button>
-        <Button type="button" variant="ghost" onClick={cancel} disabled={pending}>Cancel</Button>
+        <Button type="button" variant="ghost" size="sm" onClick={cancel} disabled={pending}>Cancel</Button>
       </div>
     </form>
   );

@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { cookieAuthority, type Authority } from "../../lib/supabase/authority";
 
 import { encodeAvatar } from "./image";
-import { profileSchema } from "./validation";
+import { DELETE_CONFIRMATION, profileSchema } from "./validation";
 
 export type ProfileResult =
   | { ok: true; fullName: string; displayName: string | null }
@@ -130,4 +130,34 @@ export async function removeAvatar(expected: string | null): Promise<AvatarResul
   const result = await finalize(authority, null, expected);
   if (result.ok) await reconcile(authority, null);
   return result.ok ? { ok: true, avatarPath: null } : { ok: false, message: result.message, avatarPath: result.avatarPath };
+}
+
+/**
+ * Erases the caller's picture, then anonymizes the account (`delete_my_account`): personal data and
+ * sign-in identity are erased and every session ends; academy history keeps the "Deleted user" row.
+ */
+export async function deleteAccount(confirmation: unknown): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (typeof confirmation !== "string" || confirmation.trim().toLowerCase() !== DELETE_CONFIRMATION) {
+    return { ok: false, message: `Type “${DELETE_CONFIRMATION}” to confirm.` };
+  }
+  const authority = await cookieAuthority();
+  if (!authority) return { ok: false, message: SIGNED_OUT };
+  const { db, userId } = authority;
+  // Refuse owners before removing their picture; the RPC repeats this check transactionally.
+  const { data: owned, error: ownershipError } = await db.from("academy_memberships")
+    .select("academy_id").eq("user_id", userId).eq("role", "owner").limit(1);
+  if (ownershipError) return { ok: false, message: "Couldn’t delete your account. Try again." };
+  if (owned?.length) return { ok: false, message: "Transfer or delete the academies you own first." };
+  const { data: objects, error: listError } = await db.storage.from(BUCKET).list(userId, { limit: 100 });
+  const removal = objects?.length ? await db.storage.from(BUCKET).remove(objects.map((object) => `${userId}/${object.name}`)) : null;
+  if (listError || removal?.error) return { ok: false, message: "Couldn’t delete your account. Try again." };
+  const { error } = await db.rpc("delete_my_account");
+  if (error) {
+    return { ok: false, message: error.message === "owner_must_transfer"
+      ? "Transfer or delete the academies you own first."
+      : "Couldn’t delete your account. Try again." };
+  }
+  // The sessions are already gone server-side; this only clears the cookies.
+  await db.auth.signOut({ scope: "local" });
+  return { ok: true };
 }

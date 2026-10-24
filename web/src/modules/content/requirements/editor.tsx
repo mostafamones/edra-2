@@ -18,8 +18,7 @@ export function UnitRequirements({ academyId, unitId, userId, document, onChange
   } });
   const selected = document.prerequisites ?? [];
   const unavailable = selected.filter(requirement => !query.data?.units.some(unit => unit.id === requirement.unitId && unit.assessments?.some(assessment => assessment.kind === requirement.kind && assessment.id === requirement.assessmentId)));
-  return <section className="space-y-4 rounded-xl border bg-card p-4">
-    <h2 className="text-base font-semibold">Access requirements</h2>
+  return <section aria-label="Access requirements" className="space-y-4">
     {query.isLoading ? <Skeleton className="h-20 w-full" /> : query.isError ? <p role="alert" className="text-sm text-destructive">{query.error.message}</p> : <>
       <div className="space-y-2"><Label htmlFor="unit-coupon-type">Coupon type</Label><Select disabled={disabled} value={document.couponTypeId ?? "none"} onValueChange={value => onChange({ ...document, couponTypeId: value === "none" ? null : value })}><SelectTrigger id="unit-coupon-type" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No coupon type</SelectItem>{query.data?.types.map(type => <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-3"><h3 className="text-sm font-medium">Required submissions</h3>{query.data?.units.filter(unit => unit.assessments?.length).map(unit => <fieldset key={unit.id} className="space-y-2 rounded-lg border p-3"><legend className="px-1 text-sm font-medium">{unit.title}</legend>{unit.assessments?.map(assessment => {

@@ -32,8 +32,7 @@ export function UnitAccessPanel({ academyId, academySlug, unitId, userId }: { ac
   if (query.isPending) return <Skeleton role="status" aria-label="Loading access" className="h-56 rounded-xl" />;
   if (query.isError) return <Alert variant="destructive"><HugeiconsIcon icon={AlertCircleIcon} strokeWidth={1.5} /><AlertTitle>Couldn’t load student access</AlertTitle><AlertDescription className="flex flex-wrap items-center gap-3">{query.error.message}<Button variant="outline" size="sm" onClick={() => query.refetch()}>Retry access</Button></AlertDescription></Alert>;
   const workspace = query.data;
-  return <section aria-labelledby="access-title" className="space-y-3">
-    <h2 id="access-title" className="px-1 text-base font-semibold">Student access</h2>
+  return <section aria-label="Student access" className="space-y-3">
     <Tabs value={tab} onValueChange={setTab} className="gap-4">
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
         <TabsList variant="line" className="min-w-0 flex-1 justify-start border-b">

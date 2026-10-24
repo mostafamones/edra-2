@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { IconLoader2, IconZoomIn, IconZoomOut } from "@tabler/icons-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading03Icon, ZoomInAreaIcon, ZoomOutAreaIcon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -133,7 +134,7 @@ export function CropDialog({ source, saving, onCancel, onSave }: {
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_0_9999px_rgb(0_0_0/0.55)] ring-2 ring-white/80" />
         </div>
         <div className="flex items-center gap-3">
-          <IconZoomOut className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <HugeiconsIcon icon={ZoomOutAreaIcon} strokeWidth={1.5} className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <Slider
             // The shadcn slider forwards no label to its thumb, which Radix renders after mount; name it.
             ref={(node: HTMLSpanElement | null) => {
@@ -146,13 +147,13 @@ export function CropDialog({ source, saving, onCancel, onSave }: {
             onValueChange={([value]) => changeZoom(value)}
             disabled={saving}
           />
-          <IconZoomIn className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <HugeiconsIcon icon={ZoomInAreaIcon} strokeWidth={1.5} className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         </div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <DialogFooter>
           <Button variant="outline" onClick={onCancel} disabled={saving}>Cancel</Button>
           <Button onClick={save} disabled={saving || !source}>
-            {saving && <IconLoader2 className="animate-spin" aria-hidden="true" />}
+            {saving && <HugeiconsIcon icon={Loading03Icon} strokeWidth={1.5} className="animate-spin" aria-hidden="true" />}
             Save
           </Button>
         </DialogFooter>
