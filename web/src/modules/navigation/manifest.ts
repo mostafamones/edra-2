@@ -86,7 +86,7 @@ export const STAFF_MANAGEMENT_NAV: readonly { label: string; items: readonly Man
   {
     label: "Operations",
     items: [
-      { label: "Access & coupons", href: "/app/manage/access" },
+      { label: "Coupons", href: "/app/manage/access" },
       { label: "Messaging", href: "/app/manage/messages", also: ["/app/manage/notifications", "/app/manage/integrations"] },
     ],
   },
@@ -320,7 +320,7 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         },
       },
       {
-        label: "Access and coupons",
+        label: "Coupons",
         href: "/app/manage/access",
         icon: "access",
         roles: MANAGERS,

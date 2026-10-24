@@ -23,6 +23,9 @@ export async function contentCaller(academyId: string) {
 export function contentError(error: { message?: string } | null) {
   if (!error) return;
   const messages: Record<string, string> = {
+    coupon_type_mismatch: "Choose a coupon type from this unit’s academic scope.",
+    invalid_prerequisite: "Choose assignments or quizzes from another published unit in this academic scope.",
+    prerequisite_cycle: "These prerequisites would create a circular dependency.",
     asset_in_use: "This video is still used by a saved draft or published history. Remove it from drafts and save first. Published videos must be preserved.", asset_deleting: "This video is being permanently deleted and cannot be attached.",
     forbidden: "You do not have permission to make this change.", content_conflict: "Someone changed this unit. Reload it before saving again.", year_closed: "This academic year is closed. Its content is read-only.", archived: "Restore this unit before editing it.", explanation_required: "Add at least one ready explanation video before publishing.", assets_not_ready: "Wait until every attached upload is ready before publishing.", incompatible_assessment: "The assessment must belong to this academy/year and fit the entire program audience.", assessment_already_attached: "This assessment already belongs to another unit. Copy it instead.", attachment_locked: "This assessment has recorded work and cannot be detached or moved.", published_source_required: "Choose a published unit to copy.", answer_requires_assessment: "Attach the assessment before adding its answer video.", invalid_asset: "This file is not available to this unit.", validation: "Check the unit fields and materials.",
   };

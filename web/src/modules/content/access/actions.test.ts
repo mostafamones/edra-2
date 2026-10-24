@@ -51,11 +51,16 @@ describe("student material authority", () => {
 });
 it("normalizes a unit code and preserves the retry request without accepting a duration override", async () => {
   mocks.rpc.mockResolvedValue({ error: { message: "code_used" }, data: null });
-  await redeemUnitCode({ academyId, unitId, requestId, code: "ABCD-ABCD ABCDABCDABCDABCDABCDABCD", duration: 90 });
-  expect(mocks.rpc).toHaveBeenCalledWith("redeem_content_code", { p_academy_id: academyId, p_unit_id: unitId, p_request_id: requestId, p_code: "abcdabcdabcdabcdabcdabcdabcdabcd" });
+  await redeemUnitCode({ academyId, unitId, requestId, code: "ab7k-9m3r", duration: 90 });
+  expect(mocks.rpc).toHaveBeenCalledWith("redeem_content_coupon", { p_academy_id: academyId, p_unit_id: unitId, p_request_id: requestId, p_code: "AB7K9M3R" });
 });
 it("binds a staff confirmation to the reviewed grant and publication", async () => {
   mocks.rpc.mockResolvedValue({ error: { message: "content_conflict" }, data: null });
   expect(await grantUnitAccess({ academyId, unitId, requestId, recordId, expectedGrantId: null, expectedRevision: 3 })).toMatchObject({ ok: false, message: expect.stringContaining("changed") });
   expect(mocks.rpc).toHaveBeenCalledWith("confirm_content_access", { p_academy_id: academyId, p_unit_id: unitId, p_record_id: recordId, p_request_id: requestId, p_expected_grant_id: null, p_expected_revision: 3 });
+});
+it("reports returned coupon denials without treating them as a successful grant", async () => {
+  mocks.rpc.mockResolvedValue({ error: null, data: { error: "prerequisites_required" } });
+  expect(await redeemUnitCode({ academyId, unitId, requestId, code: "ab7k-9m3r" })).toEqual({ ok: false, message: "Submit all required prerequisite assessments first." });
+  expect(mocks.rpc).toHaveBeenCalledWith("redeem_content_coupon", { p_academy_id: academyId, p_unit_id: unitId, p_request_id: requestId, p_code: "AB7K9M3R" });
 });

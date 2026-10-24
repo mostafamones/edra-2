@@ -4,7 +4,7 @@ import { contentCaller, contentResult } from "../data";
 import { mediaAdmin } from "../media";
 import { playbackToken } from "@/lib/video/mux";
 import { learningCaller, readAccessHistory, readAccessWorkspace, readLearningList, readLearningUnit } from "./data";
-import { generatedCodesSchema, grantReceiptSchema, learningError, materialSchema, redeemInput, requestInput, staffGrantInput, unitInput } from "./types";
+import { grantReceiptSchema, learningError, materialSchema, redeemInput, requestInput, staffGrantInput, unitInput } from "./types";
 
 export async function loadAccessWorkspace(value: unknown) { return contentResult(() => readAccessWorkspace(value)); }
 export async function loadAccessHistory(value: unknown) { return contentResult(() => readAccessHistory(value)); }
@@ -28,28 +28,14 @@ export async function revokeUnitAccess(value: unknown) {
     learningError(error);
   });
 }
-export async function generateUnitCodes(value: unknown) {
-  return contentResult(async () => {
-    const input = requestInput.extend({ quantity: z.number().int().min(1).max(1000) }).parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { data, error } = await db.rpc("generate_content_codes", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_request_id: input.requestId, p_quantity: input.quantity });
-    learningError(error); return generatedCodesSchema.parse(data);
-  });
-}
-export async function revokeUnitCode(value: unknown) {
-  return contentResult(async () => {
-    const input = requestInput.extend({ codeId: z.guid() }).parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { error } = await db.rpc("revoke_content_code", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_code_id: input.codeId, p_request_id: input.requestId });
-    learningError(error);
-  });
-}
 export async function redeemUnitCode(value: unknown) {
   return contentResult(async () => {
     const input = redeemInput.parse(value);
     const { db } = await learningCaller();
-    const { data, error } = await db.rpc("redeem_content_code", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_code: input.code, p_request_id: input.requestId });
-    learningError(error); return grantReceiptSchema.parse(data);
+    const { data, error } = await db.rpc("redeem_content_coupon", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_code: input.code, p_request_id: input.requestId });
+    learningError(error);
+    if (data && typeof data === "object" && "error" in data && typeof data.error === "string") learningError({ message: data.error });
+    return grantReceiptSchema.parse(data);
   });
 }
 export async function extendMyUnitAccess(value: unknown) {

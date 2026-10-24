@@ -1,4 +1,5 @@
 export { ContentWorkspacePage } from "./components/workspace";
+export { CouponsPage } from "./coupons/page";
 export { ContentEditorPage } from "./components/editor";
 export { ContentTaughtSection } from "./teaching/section";
 export { taughtRootKey } from "./teaching/types";

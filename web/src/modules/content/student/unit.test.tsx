@@ -9,7 +9,7 @@ vi.mock("@/modules/auth", () => ({ useAuth: mocks.auth }));
 vi.mock("./material", () => ({ StudentMaterial: () => <button>Open protected material</button> }));
 import { StudentLearningUnit } from "./unit";
 const userId = "student", academyId = "academy";
-function unit(): LearningUnit { return { id: "unit", title: "Revision lesson", description: "", accessDays: 7, extensionAvailable: true,
+function unit(): LearningUnit { return { id: "unit", title: "Revision lesson", description: "", accessDays: 7, extensionAvailable: true, prerequisites: [], prerequisitesMet: true, couponType: null,
   access: { status: "locked", expiresAt: null, grantId: null }, items: [{ id: "material", kind: "document", title: "Notes", available: false, assessmentKind: null }] }; }
 function open(initial = unit()) {
   mocks.loadLearningUnit.mockResolvedValue({ ok: true, value: { userId, unit: initial } });
@@ -18,6 +18,24 @@ function open(initial = unit()) {
 }
 beforeEach(() => { vi.clearAllMocks(); mocks.auth.mockReturnValue({ user: { id: userId }, loading: false }); });
 afterEach(cleanup);
+it("shows unmet requirements and disables coupon redemption and self-extension", async () => {
+  const initial = unit(); initial.prerequisitesMet = false;
+  initial.prerequisites = [{ unitId: "previous", assessmentId: "homework", kind: "assignment", unitTitle: "Previous lesson", title: "Homework", submitted: false }];
+  initial.access = { status: "expired", expiresAt: "2026-10-20T12:00:00Z", grantId: "grant" };
+  open(initial);
+  expect(await screen.findByRole("link", { name: "Previous lesson · Homework" })).toBeTruthy();
+  expect((screen.getByLabelText("Coupon") as HTMLInputElement).disabled).toBe(true);
+  expect((screen.getByRole("button", { name: "Redeem coupon" }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole("button", { name: "Use 48-hour extension" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(mocks.redeemUnitCode).not.toHaveBeenCalled();
+});
+it("keeps already-authorized material available when prerequisites subsequently change", async () => {
+  const initial = unit(); initial.prerequisitesMet = false;
+  initial.access = { status: "active", expiresAt: "2026-11-20T12:00:00Z", grantId: "grant" };
+  initial.items[0].available = true;
+  open(initial);
+  expect(await screen.findByRole("button", { name: "Open protected material" })).toBeTruthy();
+});
 it("keeps locked document metadata visible without opening protected material or offering an initial extension", async () => {
   open(); await screen.findByText("Notes");
   expect(screen.queryByRole("button", { name: "Open protected material" })).toBeNull();
@@ -25,14 +43,14 @@ it("keeps locked document metadata visible without opening protected material or
 });
 it("retains the code and request identity when redemption must be retried", async () => {
   mocks.redeemUnitCode.mockResolvedValue({ ok: false, message: "Please retry." }); open();
-  fireEvent.change(await screen.findByLabelText("Unit code"), { target: { value: "ABCD-ABCD ABCDABCDABCDABCDABCDABCD" } });
-  fireEvent.click(screen.getByRole("button", { name: "Redeem code" }));
+  fireEvent.change(await screen.findByLabelText("Coupon"), { target: { value: "AB7K-9M3R" } });
+  fireEvent.click(screen.getByRole("button", { name: "Redeem coupon" }));
   await screen.findByRole("alert");
-  fireEvent.click(screen.getByRole("button", { name: "Redeem code" }));
+  fireEvent.click(screen.getByRole("button", { name: "Redeem coupon" }));
   await waitFor(() => expect(mocks.redeemUnitCode).toHaveBeenCalledTimes(2));
   expect(mocks.redeemUnitCode.mock.calls[0][0]).toEqual(mocks.redeemUnitCode.mock.calls[1][0]);
-  expect(mocks.redeemUnitCode.mock.calls[0][0].code).toBe("abcdabcdabcdabcdabcdabcdabcdabcd");
-  expect((screen.getByLabelText("Unit code") as HTMLInputElement).value).toContain("ABCD");
+  expect(mocks.redeemUnitCode.mock.calls[0][0].code).toBe("AB7K9M3R");
+  expect((screen.getByLabelText("Coupon") as HTMLInputElement).value).toContain("AB7K");
 });
 it("offers the annual extension only on expired access while the allowance remains", async () => {
   const initial = unit(); initial.access = { status: "expired", expiresAt: "2026-10-20T12:00:00Z", grantId: "grant" }; open(initial);
@@ -41,6 +59,6 @@ it("offers the annual extension only on expired access while the allowance remai
 it("does not show another account's cached learning unit", () => {
   mocks.auth.mockReturnValue({ user: { id: "different-student" }, loading: false }); open();
   expect(screen.queryByText("Revision lesson")).toBeNull();
-  expect(screen.queryByLabelText("Unit code")).toBeNull();
+  expect(screen.queryByLabelText("Coupon")).toBeNull();
   expect(mocks.loadLearningUnit).not.toHaveBeenCalled();
 });

@@ -4,7 +4,7 @@ do $$ begin
   if (select count(*) from edra_db_test.target)<>1 or not exists(select 1 from edra_db_test.target where name like 'edra-db-check-%') then raise exception 'Isolated Edra test target required'; end if;
 end $$;
 create temporary table learning_ids(name text primary key,id uuid not null default gen_random_uuid());
-insert into learning_ids(name) values('owner'),('instructor'),('student'),('second'),('wrong-level'),('outsider'),('academy'),('other-academy'),('unit'),('second-unit'),('third-unit'),('draft'),('track-unit'),('track'),('request'),('batch'),('redeem'),('extension'),('revoke'),('allowance');
+insert into learning_ids(name) values('owner'),('instructor'),('student'),('second'),('wrong-level'),('outsider'),('academy'),('other-academy'),('unit'),('second-unit'),('third-unit'),('draft'),('track-unit'),('track'),('request'),('batch'),('redeem'),('extension'),('revoke'),('allowance'),('coupon-type');
 grant select on learning_ids to authenticated;
 create function pg_temp.lid(label text) returns uuid language sql as $$ select id from pg_temp.learning_ids where name=label $$;
 create function pg_temp.lact(label text) returns void language plpgsql as $$ begin
@@ -69,7 +69,7 @@ do $$ declare page jsonb; unit jsonb; item_id uuid; begin
   item_id:=(unit->'items'->0->>'id')::uuid;
   perform pg_temp.lerror(format('select public.authorize_content_material(%L,%L,%L)',pg_temp.lid('academy'),pg_temp.lid('unit'),item_id),'access_required');
   perform pg_temp.lerror(format('select public.extend_my_content_access(%L,%L,%L)',pg_temp.lid('academy'),pg_temp.lid('unit'),gen_random_uuid()),'previous_access_required');
-  perform pg_temp.lerror(format('select public.generate_content_codes(%L,%L,%L,1)',pg_temp.lid('academy'),pg_temp.lid('unit'),gen_random_uuid()),'forbidden');
+  perform pg_temp.lerror(format('select public.generate_content_coupons(%L,%L,1,%L)',pg_temp.lid('academy'),pg_temp.lid('unit'),gen_random_uuid()),'forbidden');
   perform pg_temp.lerror(format('select public.issue_content_access(%L,%L,%L,%L)',pg_temp.lid('academy'),pg_temp.lid('unit'),pg_temp.lid('record-student'),gen_random_uuid()),'forbidden');
 end $$;
 select pg_temp.lact('instructor');
@@ -87,8 +87,9 @@ do $$ declare first_result jsonb; retry jsonb; extended jsonb; before_expiry tim
   before_expiry:=(first_result->>'expiresAt')::timestamptz;
   extended:=public.issue_content_access(pg_temp.lid('academy'),pg_temp.lid('unit'),pg_temp.lid('record-student'),pg_temp.lid('extension'),48);
   perform pg_temp.lcheck((extended->>'expiresAt')::timestamptz=before_expiry+interval '48 hours','staff extension preserves remaining time');
-  perform public.generate_content_codes(pg_temp.lid('academy'),pg_temp.lid('second-unit'),pg_temp.lid('batch'),3);
-  perform pg_temp.lcheck(jsonb_array_length(public.generate_content_codes(pg_temp.lid('academy'),pg_temp.lid('second-unit'),pg_temp.lid('batch'),3)->'codes')=3,'code generation retry');
+  perform public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('second-unit')),'Standard',pg_temp.lid('coupon-type'));
+  perform public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('coupon-type'),3,pg_temp.lid('batch'));
+  perform pg_temp.lcheck(jsonb_array_length(public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('coupon-type'),3,pg_temp.lid('batch'))->'codes')=3,'code generation retry');
 end $$;
 select pg_temp.lact('student');
 do $$ declare unit jsonb; item_id uuid; begin
@@ -103,26 +104,26 @@ reset role;
 select pg_temp.lact('owner');
 do $$ declare doc jsonb; begin
   select draft into doc from public.content_units where id=pg_temp.lid('second-unit');
-  perform public.save_content_unit(pg_temp.lid('academy'),pg_temp.lid('second-unit'),3,doc||jsonb_build_object('accessDays',45));
+  perform public.save_content_unit(pg_temp.lid('academy'),pg_temp.lid('second-unit'),3,doc||jsonb_build_object('accessDays',45,'couponTypeId',pg_temp.lid('coupon-type')));
   perform public.change_content_unit(pg_temp.lid('academy'),pg_temp.lid('second-unit'),4,'publish');
 end $$;
 create temporary table learning_codes(code text,id uuid);
-insert into learning_codes select code,id from public.content_access_codes where batch_id=pg_temp.lid('batch') order by id;
+insert into learning_codes select code,id from public.content_coupons where batch_id=pg_temp.lid('batch') order by id;
 grant select on learning_codes to authenticated;
 set local role authenticated;
 select pg_temp.lact('student');
 do $$ declare code_value text; result jsonb; begin
   select code into code_value from learning_codes order by id limit 1;
-  result:=public.redeem_content_code(pg_temp.lid('academy'),pg_temp.lid('second-unit'),upper(code_value),pg_temp.lid('redeem'));
-  perform pg_temp.lcheck(result=public.redeem_content_code(pg_temp.lid('academy'),pg_temp.lid('second-unit'),code_value,pg_temp.lid('redeem')),'redemption retry preserves original time');
+  result:=public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('second-unit'),upper(code_value),pg_temp.lid('redeem'));
+  perform pg_temp.lcheck(result=public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('second-unit'),code_value,pg_temp.lid('redeem')),'redemption retry preserves original time');
   perform pg_temp.lcheck(abs(extract(epoch from ((result->>'expiresAt')::timestamptz-(result->>'issuedAt')::timestamptz))-3888000)<1,'redemption uses newly published 45-day default');
   select code into code_value from learning_codes order by id offset 1 limit 1;
-  perform pg_temp.lerror(format('select public.redeem_content_code(%L,%L,%L,%L)',pg_temp.lid('academy'),pg_temp.lid('second-unit'),code_value,gen_random_uuid()),'code_used');
+  perform pg_temp.lcheck(public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('second-unit'),code_value,gen_random_uuid())->>'error'='code_used','second coupon for same unit rejected');
 end $$;
 select pg_temp.lact('second');
 do $$ declare code_value text; begin
   select code into code_value from learning_codes order by id limit 1;
-  perform pg_temp.lerror(format('select public.redeem_content_code(%L,%L,%L,%L)',pg_temp.lid('academy'),pg_temp.lid('second-unit'),code_value,gen_random_uuid()),'code_used');
+  perform pg_temp.lcheck(public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('second-unit'),code_value,gen_random_uuid())->>'error'='code_unavailable','used coupon rejected');
 end $$;
 select pg_temp.lact('owner');
 select public.revoke_content_access(pg_temp.lid('academy'),pg_temp.lid('unit'),pg_temp.lid('record-student'),pg_temp.lid('revoke'),'Invalid access',pg_temp.lid('extension'));
@@ -156,7 +157,7 @@ do $$ declare result jsonb; begin
 end $$;
 reset role;
 do $$ begin
-  perform pg_temp.lcheck(not has_table_privilege('authenticated','public.content_access_codes','SELECT'),'raw codes are RPC-only');
+  perform pg_temp.lcheck(not has_table_privilege('authenticated','public.content_coupons','SELECT'),'raw codes are RPC-only');
   perform pg_temp.lcheck(not has_function_privilege('authenticated','edra_private.learning_issue(uuid,uuid,jsonb,uuid,uuid,text,bigint)','EXECUTE'),'private issuer inaccessible');
   perform pg_temp.lerror(format('update public.content_access_grants set expires_at=now() where id=%L',pg_temp.lid('request')),'history_protected');
 end $$;
