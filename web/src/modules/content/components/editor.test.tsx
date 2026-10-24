@@ -46,7 +46,8 @@ afterEach(cleanup);
 
 describe("published unit maintenance", () => {
   it("lets the author change duration in the draft without offering publication", async () => {
-    open(detail());
+    const data = detail(); data.unit.draft.accessDays = 44;
+    open(data);
     const duration = await screen.findByLabelText("Access duration (days)");
     expect((duration as HTMLInputElement).disabled).toBe(false);
     expect(screen.queryByRole("button", { name: "Publish changes" })).toBeNull();
@@ -63,8 +64,8 @@ describe("published unit maintenance", () => {
 
   it("keeps another instructor's unit read-only", async () => {
     open({ ...detail(), userId: "other-instructor" });
-    const duration = await screen.findByLabelText("Access duration (days)");
-    expect((duration as HTMLInputElement).disabled).toBe(true);
+    const duration = await screen.findByLabelText("Access duration");
+    expect((duration as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Submit for review" })).toBeNull();
   });
@@ -73,7 +74,7 @@ describe("published unit maintenance", () => {
     const data = detail();
     data.program.academic_years.closed_at = "2026-10-21T00:00:00Z";
     open(data);
-    expect((await screen.findByLabelText("Access duration (days)") as HTMLInputElement).disabled).toBe(true);
+    expect((await screen.findByLabelText("Access duration") as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: "Submit for review" })).toBeNull();
   });
 

@@ -87,7 +87,7 @@ do $$ declare first_result jsonb; retry jsonb; extended jsonb; before_expiry tim
   before_expiry:=(first_result->>'expiresAt')::timestamptz;
   extended:=public.issue_content_access(pg_temp.lid('academy'),pg_temp.lid('unit'),pg_temp.lid('record-student'),pg_temp.lid('extension'),48);
   perform pg_temp.lcheck((extended->>'expiresAt')::timestamptz=before_expiry+interval '48 hours','staff extension preserves remaining time');
-  perform public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('second-unit')),'Regular',pg_temp.lid('coupon-type'));
+  perform public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('second-unit')),'Standard',pg_temp.lid('coupon-type'));
   perform public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('coupon-type'),3,pg_temp.lid('batch'));
   perform pg_temp.lcheck(jsonb_array_length(public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('coupon-type'),3,pg_temp.lid('batch'))->'codes')=3,'code generation retry');
 end $$;

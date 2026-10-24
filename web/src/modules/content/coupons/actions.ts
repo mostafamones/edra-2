@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { contentCaller, contentResult } from "../data";
 import { learningError } from "../access/types";
-import { couponBatchSchema, couponOptionsSchema, couponPageSchema } from "./types";
+import { couponBatchSchema, couponOptionsSchema, couponPageSchema, prefixSchema } from "./types";
 
 const academyInput = z.object({ academyId: z.guid() });
 const requestInput = academyInput.extend({ requestId: z.guid() });
@@ -30,11 +30,20 @@ export async function loadCoupons(value: unknown) {
 
 export async function createCouponType(value: unknown) {
   return contentResult(async () => {
-    const input = requestInput.extend({ programId: z.guid(), name: z.string().trim().min(1).max(80) }).parse(value);
+    const input = requestInput.extend({ programId: z.guid(), name: z.string().trim().min(1).max(80), prefix: prefixSchema, allTracks: z.boolean() }).parse(value);
     const { db } = await contentCaller(input.academyId);
-    const { data, error } = await db.rpc("create_content_coupon_type", { p_academy_id: input.academyId, p_program_id: input.programId, p_name: input.name, p_request_id: input.requestId });
+    const { data, error } = await db.rpc("create_content_coupon_type", { p_academy_id: input.academyId, p_program_id: input.programId, p_name: input.name, p_request_id: input.requestId, p_prefix: input.prefix, p_all_tracks: input.allTracks });
     learningError(error);
     return z.object({ id: z.guid() }).parse(data);
+  });
+}
+
+export async function changeCouponPrefix(value: unknown) {
+  return contentResult(async () => {
+    const input = requestInput.extend({ typeId: z.guid(), prefix: prefixSchema }).parse(value);
+    const { db } = await contentCaller(input.academyId);
+    const { error } = await db.rpc("change_content_coupon_prefix", { p_academy_id: input.academyId, p_type_id: input.typeId, p_prefix: input.prefix, p_request_id: input.requestId });
+    learningError(error);
   });
 }
 

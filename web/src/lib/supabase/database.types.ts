@@ -2491,6 +2491,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          prefix: string
           quantity: number
           type_id: string
         }
@@ -2499,6 +2500,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id: string
+          prefix?: string
           quantity: number
           type_id: string
         }
@@ -2507,6 +2509,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          prefix?: string
           quantity?: number
           type_id?: string
         }
@@ -2584,33 +2587,42 @@ export type Database = {
         Row: {
           academic_year_id: string
           academy_id: string
+          all_tracks: boolean
           created_at: string
           created_by: string
           id: string
+          is_default: boolean
           level_id: string
           name: string
+          prefix: string
           program_id: string
           track_id: string | null
         }
         Insert: {
           academic_year_id: string
           academy_id: string
+          all_tracks?: boolean
           created_at?: string
           created_by: string
           id?: string
+          is_default?: boolean
           level_id: string
           name: string
+          prefix?: string
           program_id: string
           track_id?: string | null
         }
         Update: {
           academic_year_id?: string
           academy_id?: string
+          all_tracks?: boolean
           created_at?: string
           created_by?: string
           id?: string
+          is_default?: boolean
           level_id?: string
           name?: string
+          prefix?: string
           program_id?: string
           track_id?: string | null
         }
@@ -7037,6 +7049,15 @@ export type Database = {
         }
         Returns: Json
       }
+      change_content_coupon_prefix: {
+        Args: {
+          p_academy_id: string
+          p_prefix: string
+          p_request_id: string
+          p_type_id: string
+        }
+        Returns: Json
+      }
       change_content_unit: {
         Args: {
           p_academy_id: string
@@ -7307,7 +7328,9 @@ export type Database = {
       create_content_coupon_type: {
         Args: {
           p_academy_id: string
+          p_all_tracks?: boolean
           p_name: string
+          p_prefix?: string
           p_program_id: string
           p_request_id: string
         }

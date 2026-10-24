@@ -65,9 +65,9 @@ insert into learning_ids(name) values('regular'),('revision'),('track-type'),('b
 insert into learning_ids(name,id) select 'assignment',public.create_content_assessment(pg_temp.lid('academy'),pg_temp.lid('unit'),3,'assignment','Required homework');
 insert into learning_ids(name,id) select 'quiz',public.create_content_assessment(pg_temp.lid('academy'),pg_temp.lid('unit'),4,'quiz','Required quiz');
 select public.change_content_unit(pg_temp.lid('academy'),pg_temp.lid('unit'),5,'publish');
-select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('unit')),'Regular',pg_temp.lid('regular'));
+select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('unit')),'Standard',pg_temp.lid('regular'));
 select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('unit')),'Revision',pg_temp.lid('revision'));
-select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('track-unit')),'Regular',pg_temp.lid('track-type'));
+select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('track-unit')),'Standard',pg_temp.lid('track-type'));
 select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('regular'),3,pg_temp.lid('batch-regular'));
 select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('revision'),1,pg_temp.lid('batch-revision'));
 select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('track-type'),1,pg_temp.lid('batch-track'));

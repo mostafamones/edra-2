@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COUPON_PATTERN, normalizeCoupon } from "../coupons/types";
+import { REDEMPTION_PATTERN, normalizeCoupon } from "../coupons/types";
 
 export const accessSchema = z.object({ status: z.enum(["locked", "active", "expired", "revoked"]), expiresAt: z.string().nullable(), grantId: z.guid().nullable() });
 export type LearningAccess = z.infer<typeof accessSchema>;
@@ -28,7 +28,7 @@ export const learningUnitSchema = z.object({
 export type LearningUnit = z.infer<typeof learningUnitSchema>;
 export const materialSchema = z.object({ kind: z.enum(["video", "document"]), playbackId: z.string().nullable(), storagePath: z.string().nullable(), expiresAt: z.string() });
 export function normalizeUnitCode(value: string) { return normalizeCoupon(value); }
-export function isValidAccessCode(value: string) { return COUPON_PATTERN.test(value); }
+export function isValidAccessCode(value: string) { return REDEMPTION_PATTERN.test(value); }
 export const redeemInput = requestInput.extend({ code: z.string().max(100).transform(normalizeUnitCode).refine(isValidAccessCode, "Enter a valid coupon.") });
 export function learningDate(value: string | null) { return value ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Cairo" }).format(new Date(value)) : "—"; }
 

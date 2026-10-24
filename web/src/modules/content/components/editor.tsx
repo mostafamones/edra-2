@@ -27,6 +27,7 @@ import { ReuseMaterial } from "./reuse";
 import { UploadedFiles } from "./uploads";
 import { UnitAccessPanel } from "../access/manager";
 import { UnitRequirements } from "../requirements/editor";
+import { AccessDuration } from "./duration";
 
 export function ContentEditorPage({ unitId }: { unitId: string }) { return <AcademyGate>{academy => <Editor academy={academy} unitId={unitId} />}</AcademyGate>; }
 function Editor({ academy, unitId }: { academy: AcademyEntry; unitId: string }) {
@@ -133,7 +134,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
           <FieldGroup className="gap-4 p-4">
             <Field><FieldLabel htmlFor="content-title">Title</FieldLabel><Input id="content-title" dir="auto" maxLength={200} value={document.title} disabled={disabled} onChange={e => setDocument({ ...document, title: e.target.value })} /></Field>
             <Field><FieldLabel htmlFor="content-description">Description</FieldLabel><Textarea id="content-description" dir="auto" className="min-h-24" maxLength={10000} value={document.description} disabled={disabled} onChange={e => setDocument({ ...document, description: e.target.value })} /></Field>
-            <Field><FieldLabel htmlFor="content-access-days">Access duration (days)</FieldLabel><Input id="content-access-days" type="number" min={1} max={2147483647} step={1} value={Number.isNaN(document.accessDays) ? "" : document.accessDays} disabled={disabled} onChange={e => setDocument({ ...document, accessDays: e.target.valueAsNumber })} /></Field>
+            <AccessDuration value={document.accessDays} disabled={disabled} onChange={accessDays => setDocument({ ...document, accessDays })} />
           </FieldGroup>
         </Panel>
         <UnitRequirements academyId={academy.id} unitId={unit.id} userId={data.userId} document={document} onChange={setDocument} disabled={disabled} />
