@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { IconCalendar, IconCheck, IconCopy, IconDots, IconMailPlus, IconUser, IconX } from "@tabler/icons-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, Copy01Icon, MailAdd01Icon, MoreHorizontalIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
+import { cn } from "cn";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +17,7 @@ import type { InvitationRow } from "../types";
 
 const COPIED_HOLD_MS = 4000;
 
-/** A faded team card for someone who hasn't joined yet. Copy runs in the background and shows a copied state. */
+/** An invitation card; settled (accepted, revoked or expired) invitations are faded. Copy runs in the background and shows a copied state. */
 export function InvitationCard({ row, onRevoke }: {
   row: InvitationRow;
   onRevoke: (row: InvitationRow) => void;
@@ -51,33 +53,34 @@ export function InvitationCard({ row, onRevoke }: {
     : row.status === "revoked" && row.revokedAt ? row.revokedAt : row.expiresAt;
 
   return (
-    <Card size="sm" className="h-full gap-0 rounded-lg border-dashed py-0">
-      <div className="flex h-20 items-center gap-3 px-4">
-        <div className="flex min-w-0 flex-1 items-center gap-3 opacity-60">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <IconMailPlus className="size-4" aria-hidden="true" />
-          </div>
-          <h3 dir="ltr" className="truncate font-medium tabular-nums text-foreground">{row.phone}</h3>
+    <Card size="sm" className="relative h-full items-center gap-0 rounded-xl border-dashed px-4 pt-7 pb-3 text-center">
+      {row.canManage && live && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" className="absolute top-2 right-2 text-muted-foreground" aria-label={`Actions for ${row.phone}`}>
+              <HugeiconsIcon icon={MoreHorizontalIcon} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem disabled={copied} onClick={(event) => void copyLink(event.currentTarget)} onSelect={(event) => event.preventDefault()}>
+              {copied ? <HugeiconsIcon icon={Tick02Icon} className="text-emerald-500!" /> : <HugeiconsIcon icon={Copy01Icon} />}
+              {copied ? "Copied" : "Copy link"}
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onSelect={() => onRevoke(row)}><HugeiconsIcon icon={Cancel01Icon} />Revoke</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+      <div className={cn("flex w-full min-w-0 flex-1 flex-col items-center", !live && "opacity-60")}>
+        {!live && <Badge variant="outline" className="absolute top-3 left-3">{STATUS_LABELS[row.status]}</Badge>}
+        <div className="flex size-20 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <HugeiconsIcon icon={MailAdd01Icon} className="size-7" aria-hidden="true" />
         </div>
-        <Badge variant="secondary" className="opacity-60">{live ? ROLE_LABELS[row.role] : STATUS_LABELS[row.status]}</Badge>
-        {row.canManage && live && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" className="-mr-1.5 text-muted-foreground" aria-label={`Actions for ${row.phone}`}><IconDots /></Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled={copied} onClick={(event) => void copyLink(event.currentTarget)} onSelect={(event) => event.preventDefault()}>
-                {copied ? <IconCheck className="text-emerald-500! group-hover/dropdown-menu-item:text-emerald-500! group-focus/dropdown-menu-item:text-emerald-500! group-data-highlighted/dropdown-menu-item:text-emerald-500!" /> : <IconCopy />}
-                {copied ? "Copied" : "Copy link"}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive! hover:text-destructive! focus:text-destructive! data-highlighted:text-destructive! **:text-destructive! hover:**:text-destructive! focus:**:text-destructive! data-highlighted:**:text-destructive!" onSelect={() => onRevoke(row)}><IconX />Revoke</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-      <div className="mt-auto space-y-1.5 border-t px-4 py-3 text-xs text-muted-foreground opacity-60">
-        <p className="flex items-center gap-2"><IconUser className="size-3.5 shrink-0" aria-hidden="true" /><span dir="auto" className="truncate">Invited by {row.createdByName ?? "—"}</span></p>
-        <p className="flex items-center gap-2"><IconCalendar className="size-3.5 shrink-0" aria-hidden="true" />{live || row.status === "expired" ? "Expires" : "Updated"} {formatDate(lastChange)}</p>
+        <h3 dir="ltr" className="mt-4 w-full truncate text-base font-semibold tabular-nums text-foreground">{row.phone}</h3>
+        <p className="mt-0.5 text-sm text-muted-foreground">{ROLE_LABELS[row.role]}</p>
+        <div className="mt-5 grid w-full min-w-0 gap-0.5 border-t pt-3 text-xs text-muted-foreground">
+          <p dir="auto" className="truncate">Invited by {row.createdByName ?? "—"}</p>
+          <p>{live || row.status === "expired" ? "Expires" : "Updated"} {formatDate(lastChange)}</p>
+        </div>
       </div>
     </Card>
   );

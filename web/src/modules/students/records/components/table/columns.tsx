@@ -3,11 +3,13 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Archive02Icon, IdentityCardIcon, MoreHorizontalIcon, PencilEdit02Icon, RestoreBinIcon, UserIdVerificationIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useState } from "react";
 import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -35,6 +37,33 @@ export type ColumnOptions = {
   /** Current code per record id for the rows on this page; the column is hidden while codes are off. */
   codes: Record<string, string>;
 };
+
+const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
+
+/** The staff record name; when a linked account's own name differs, the cell blurs on hover and swaps names on click. */
+function NameToggle({ recordName, accountName }: { recordName: string; accountName: string | null }) {
+  const [showAccount, setShowAccount] = useState(false);
+  if (!accountName || sameName(accountName, recordName)) return <CellText text={recordName} className="font-medium">{recordName}</CellText>;
+  const name = showAccount ? accountName : recordName;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-pressed={showAccount}
+          onClick={() => setShowAccount((value) => !value)}
+          className="block min-w-0 truncate rounded-sm text-start font-medium text-foreground outline-none transition-[filter] hover:blur-[2px] focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          {name}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-sm break-words">
+        <span dir="auto" className="block">{name}</span>
+        <span className="block opacity-70">{showAccount ? "Account name · Click to show record name" : "Record name · Click to show account name"}</span>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 const muted = (text: string, label: string) => (
   <span className="text-muted-foreground" aria-label={label}>{text}</span>
@@ -85,13 +114,7 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
     data("name", ({ row }) => (
       // dir="auto" puts the dot after the name in its reading direction, including Arabic names.
       <div dir="auto" className="inline-flex max-w-full min-w-0 items-center gap-1.5 align-middle">
-        <button
-          type="button"
-          onClick={() => options.onOpen(row.original)}
-          className="min-w-0 rounded-sm text-start font-medium text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          <CellText text={row.original.fullName}>{row.original.fullName}</CellText>
-        </button>
+        <NameToggle recordName={row.original.fullName} accountName={row.original.accountName} />
         <AccountDot state={row.original.onlineAccount} />
       </div>
     )),

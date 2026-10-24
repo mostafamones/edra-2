@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { IconTrash } from "@tabler/icons-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Delete02Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { permanentlyDeleteVideo } from "../media-actions";
@@ -18,7 +19,7 @@ export function DeleteVideo({ academyId, assetId, name, disabled, pending, onDel
     finally { setBusy(false); }
   }
   return <><AlertDialog open={open} onOpenChange={value => { if (!busy) { setOpen(value); setError(""); } }}>
-    <AlertDialogTrigger asChild><Button variant="destructive" size="sm" disabled={disabled || busy}><IconTrash />{pending ? "Retry deletion" : "Delete permanently"}</Button></AlertDialogTrigger>
+    <AlertDialogTrigger asChild><Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" disabled={disabled || busy}><HugeiconsIcon icon={Delete02Icon} aria-hidden="true" />{pending ? "Retry deletion" : "Delete"}</Button></AlertDialogTrigger>
     <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Permanently delete this video?</AlertDialogTitle><AlertDialogDescription>Delete “{name}” from Edra and Mux. This cannot be undone. Videos still used by saved units or published history cannot be deleted.</AlertDialogDescription></AlertDialogHeader>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <AlertDialogFooter><AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" disabled={busy} onClick={event => { event.preventDefault(); void remove(); }}>{busy ? "Deleting…" : "Delete from Edra and Mux"}</AlertDialogAction></AlertDialogFooter>

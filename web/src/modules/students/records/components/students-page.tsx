@@ -36,7 +36,7 @@ import { fetchStudentCodes, studentCodeQueryKeys } from "../../codes/queries";
 import { useStudentCodeSettings } from "../../codes/use-settings";
 import { StudentEditSheet } from "./edit-sheet";
 import { useViewAsStudent } from "@/modules/development";
-import { GroupChangeSheet } from "./group-sheet";
+import { GroupChangeDialog } from "./group-dialog";
 import { AddStudentMenu } from "./add-menu";
 import { BulkBar } from "./table/bulk-bar";
 import { buildColumns } from "./table/columns";
@@ -341,7 +341,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
         <StudentCodeDialog academy={academy} target={codeTarget} onClose={() => setCodeTarget(null)} />
         <StudentEditSheet academy={academy} recordId={editingId} onClose={() => setEditingId(null)} />
         {canChangeStudentGroups(academy.role) && (
-          <GroupChangeSheet
+          <GroupChangeDialog
             academyId={academyId}
             academicYearId={list?.academicYearId ?? null}
             records={groupChange}

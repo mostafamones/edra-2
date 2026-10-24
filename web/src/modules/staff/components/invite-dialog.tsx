@@ -2,7 +2,8 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { IconUserPlus } from "@tabler/icons-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
 import { PhoneInput } from "@/components/shared/app-input";
@@ -86,7 +87,7 @@ export function InviteDialog({ academy, userId }: { academy: AcademyEntry; userI
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!submitting) reset(next); }}>
-      <DialogTrigger asChild><Button><IconUserPlus aria-hidden="true" />Invite staff</Button></DialogTrigger>
+      <DialogTrigger asChild><Button><HugeiconsIcon icon={UserAdd01Icon} aria-hidden="true" />Invite staff</Button></DialogTrigger>
       <DialogContent className="sm:max-w-md">
           <form onSubmit={(event) => void submit(event)} className="grid gap-5" noValidate>
             <DialogHeader>

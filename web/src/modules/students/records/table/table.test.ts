@@ -74,7 +74,7 @@ const row = (id: string, version = 1, archived = false): StudentRecordRow => ({
   id, academyStudentProfileId: `p-${id}`, fullName: id, studentPhone: "+201012345678", parentPhone: "+201112223333",
   levelId: "preparatory-3", levelName: "Third Preparatory", trackId: null, trackName: null, primaryGroupId: null, groupName: null,
   participationType: "in_person", archivedAt: archived ? "2030-10-01T00:00:00Z" : null,
-  createdAt: "2030-09-01T00:00:00Z", updatedAt: "2030-09-01T00:00:00Z", version, onlineAccount: "not_connected",
+  createdAt: "2030-09-01T00:00:00Z", updatedAt: "2030-09-01T00:00:00Z", version, onlineAccount: "not_connected", accountName: null,
 });
 
 describe("selection", () => {

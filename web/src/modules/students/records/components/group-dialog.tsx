@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, ArrowRight02Icon, Rotate01Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, Rotate01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -11,21 +11,15 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAcademyScope } from "@/modules/auth";
 import { groupDependencyQueryKey, type Group } from "@/modules/groups";
 import { previewStudentGroupChange, setStudentRecordsGroup } from "../actions";
-import type { PageSize } from "../list-params";
 import { studentsRootKey } from "../queries";
-import type { GroupChangePreview, GroupChangeProblem, GroupChangeRow, RecordVersion, StudentListResult } from "../types";
-import { CellText } from "./table/cell-text";
-import { StudentsPagination } from "./table/pagination";
+import type { GroupChangePreview, GroupChangeRow, RecordVersion, StudentListResult } from "../types";
 
 export const MAX_GROUP_CHANGE = 500;
 const UNASSIGNED = "__unassigned__";
@@ -33,7 +27,7 @@ const UNASSIGNED = "__unassigned__";
 type Props = {
   academyId: string;
   academicYearId: string | null;
-  /** The selected records; null closes the sheet. */
+  /** The selected records; null closes the dialog. */
   records: RecordVersion[] | null;
   /** The year's active groups. */
   groups: Group[];
@@ -46,24 +40,16 @@ type Props = {
 
 const students = (count: number) => `${count.toLocaleString("en")} ${count === 1 ? "student" : "students"}`;
 
-const PROBLEMS: Record<GroupChangeProblem, string> = {
-  missing: "No longer exists",
-  stale: "Changed since selected",
-  archived: "Archived",
-  incompatible: "Different level or track",
-};
-
 /** Moves selected students to one group, or removes their group, after a fresh preview. */
-export function GroupChangeSheet({ academyId, academicYearId, records, groups, onClose, onDone, onReloadSelection }: Props) {
+export function GroupChangeDialog({ academyId, academicYearId, records, groups, onClose, onDone, onReloadSelection }: Props) {
   const [saving, setSaving] = useState(false);
   return (
-    <Sheet open={Boolean(records)} onOpenChange={(open) => { if (!open && !saving) onClose(); }}>
-      <SheetContent
-        side="right"
-        showCloseButton={!saving}
+    <Dialog open={Boolean(records)} onOpenChange={(open) => { if (!open && !saving) onClose(); }}>
+      <DialogContent
+        showCloseButton={false}
         onEscapeKeyDown={(event) => { if (saving) event.preventDefault(); }}
         onPointerDownOutside={(event) => { if (saving) event.preventDefault(); }}
-        className="gap-0 overflow-hidden p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl"
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
       >
         {records && academicYearId && (
           <Body
@@ -77,8 +63,8 @@ export function GroupChangeSheet({ academyId, academicYearId, records, groups, o
             onSavingChange={setSaving}
           />
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -95,8 +81,6 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
   const [destination, setDestination] = useState<string | null | undefined>(undefined);
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState<PageSize>(20);
   const tooMany = records.length > MAX_GROUP_CHANGE;
   const scope = { academyId, academicYearId };
 
@@ -118,14 +102,13 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
     ? groups.filter((group) => group.level_id === data.program?.levelId && (group.track_id === null || group.track_id === data.program?.trackId))
     : [];
   const destinationName = destination === null ? "Unassigned" : data?.destination?.name ?? "";
-  const pageRows = data?.rows.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize) ?? [];
 
   function setSavingState(next: boolean) {
     setSaving(next);
     onSavingChange(next);
   }
 
-  /** Optimistic: the lists show the new group and the sheet closes at once; a failure restores them. */
+  /** Optimistic: the lists show the new group and the dialog closes at once; a failure restores them. */
   async function apply() {
     if (!data || destination === undefined) return;
     const targetAcademyId = academyId;
@@ -171,14 +154,14 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
   const reloadable = data && (data.problems.stale > 0 || data.problems.missing > 0);
   return (
     <>
-      <SheetHeader className="shrink-0 border-b px-6 py-5 pr-16">
-        <SheetTitle className="text-xl">Change group</SheetTitle>
-        <SheetDescription>{students(records.length)} selected. Only the group changes; level, track, type, names, and phones stay the same.</SheetDescription>
-      </SheetHeader>
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
+      <DialogHeader>
+        <DialogTitle>Change group</DialogTitle>
+        <DialogDescription className="sr-only">{students(records.length)} selected</DialogDescription>
+      </DialogHeader>
+      <div className="flex min-w-0 flex-col gap-4" aria-busy={preview.isFetching || undefined}>
         {tooMany ? (
           <Alert variant="destructive">
-            <HugeiconsIcon icon={AlertCircleIcon} />
+            <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={1.5} />
             <AlertTitle>Too many students selected</AlertTitle>
             <AlertDescription>Change the group of at most {MAX_GROUP_CHANGE} students at a time. Clear some of the selection and try again.</AlertDescription>
           </Alert>
@@ -189,7 +172,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
               <Select
                 value={destination === undefined ? "" : destination ?? UNASSIGNED}
                 disabled={saving || !data}
-                onValueChange={(value) => { setDestination(value === UNASSIGNED ? null : value); setPageIndex(0); }}
+                onValueChange={(value) => setDestination(value === UNASSIGNED ? null : value)}
               >
                 <SelectTrigger id="bulk-group-destination" className="w-full"><SelectValue placeholder="Choose a group" /></SelectTrigger>
                 <SelectContent>
@@ -197,16 +180,11 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
                   {options.map((group) => <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <FieldDescription>
-                {data && !data.program
-                  ? "The selected students are in different levels, so they can only be removed from their groups. Select students from one level to move them into a group."
-                  : "Level-wide groups, and groups for the selected students’ track, in their level. Group capacity isn’t checked here."}
-              </FieldDescription>
             </Field>
 
             {preview.isError && (
               <Alert variant="destructive">
-                <HugeiconsIcon icon={AlertCircleIcon} />
+                <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={1.5} />
                 <AlertTitle>Couldn’t load the selected students</AlertTitle>
                 <AlertDescription className="flex flex-wrap items-center gap-3">
                   {preview.error.message}
@@ -217,7 +195,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
 
             {data && blocked && (
               <Alert variant="destructive">
-                <HugeiconsIcon icon={AlertCircleIcon} />
+                <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={1.5} />
                 <AlertTitle>Some selected students can’t be changed</AlertTitle>
                 <AlertDescription className="flex flex-col items-start gap-3">
                   <ul className="list-disc pl-4">
@@ -228,68 +206,23 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
                   </ul>
                   {reloadable && (
                     <Button variant="outline" size="sm" onClick={() => onReloadSelection(data.rows)} disabled={saving}>
-                      <HugeiconsIcon icon={Rotate01Icon} />Reload selection
+                      <HugeiconsIcon icon={Rotate01Icon} strokeWidth={1.5} />Reload selection
                     </Button>
                   )}
                 </AlertDescription>
               </Alert>
             )}
-
-            <div className="min-w-0 overflow-hidden rounded-lg border">
-              <Table className="table-fixed" aria-busy={preview.isFetching || undefined}>
-                <TableHeader>
-                  <TableRow className="hover:[&>td]:bg-transparent">
-                    <TableHead className="w-[34%] pl-4 text-left">Student</TableHead>
-                    <TableHead className="pl-4">Current → proposed</TableHead>
-                    <TableHead className="w-36 pl-4">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {!data ? Array.from({ length: 6 }, (_, index) => (
-                    <TableRow key={index} className="hover:[&>td]:bg-transparent">
-                      {[0, 1, 2].map((cell) => <TableCell key={cell} className="h-11 pl-4"><Skeleton className="h-4 w-3/4" /></TableCell>)}
-                    </TableRow>
-                  )) : pageRows.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="h-11 min-w-0 pl-4 text-left font-medium">
-                        <CellText text={row.fullName ?? "Unknown student"}>{row.fullName ?? "Unknown student"}</CellText>
-                      </TableCell>
-                      <TableCell className="min-w-0 pl-4">
-                        {row.levelName ? (
-                          <span className="flex min-w-0 items-center gap-1.5 text-sm">
-                            <CellText text={placement(row)} className="text-muted-foreground">{placement(row)}</CellText>
-                            {destination !== undefined && (
-                              <>
-                                <HugeiconsIcon icon={ArrowRight02Icon} className="size-3.5 shrink-0 text-muted-foreground" aria-label="to" />
-                                <span className="shrink-0">{destinationName}</span>
-                              </>
-                            )}
-                          </span>
-                        ) : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="pl-4">
-                        {row.problem ? <Badge variant="destructive">{PROBLEMS[row.problem]}</Badge>
-                          : destination === undefined ? <span className="text-muted-foreground">—</span>
-                            : row.changes ? <Badge variant="outline" className="border-primary/30 text-primary">Changes</Badge>
-                              : <Badge variant="secondary">No change</Badge>}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            {data && data.rows.length > pageSize && (
-              <StudentsPagination pageIndex={pageIndex} pageSize={pageSize} total={data.rows.length}
-                onPageChange={setPageIndex} onPageSizeChange={(size) => { setPageSize(size); setPageIndex(0); }} />
-            )}
           </>
         )}
       </div>
-      <div className="flex shrink-0 flex-col gap-3 border-t bg-popover px-6 py-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground" aria-live="polite">
-          {data && destination !== undefined && !blocked && `${students(data.changed)} will change${data.unchanged > 0 ? `; ${data.unchanged.toLocaleString("en")} already ${destination === null ? "unassigned" : "in this group"}` : ""}.`}
+          {preview.isPending && !tooMany ? "Loading selected students…"
+            : data && destination !== undefined && !blocked
+              ? `${students(data.changed)} will change${data.unchanged > 0 ? `; ${data.unchanged.toLocaleString("en")} already ${destination === null ? "unassigned" : "in this group"}` : ""}.`
+              : `${students(records.length)} selected`}
         </p>
-        <div className="flex gap-2 sm:ml-auto">
+        <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
           <Button
             onClick={() => setConfirming(true)}
@@ -297,7 +230,7 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
           >
             {destination === null ? "Remove from group" : "Change group"}
           </Button>
-        </div>
+        </DialogFooter>
       </div>
 
       <AlertDialog open={confirming} onOpenChange={(open) => { if (!saving) setConfirming(open); }}>
@@ -324,6 +257,3 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
     </>
   );
 }
-
-const placement = (row: GroupChangeRow) =>
-  [row.levelName, row.trackName, row.currentGroupName ?? "Unassigned"].filter(Boolean).join(" · ");

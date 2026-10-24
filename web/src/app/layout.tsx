@@ -20,11 +20,15 @@ const notoSansArabic = Noto_Sans_Arabic({
 const figtree = Figtree({
   variable: "--font-figtree",
   subsets: ["latin"],
+  // The generated Arial fallback has Arabic glyphs and would draw Arabic before Noto Sans Arabic.
+  adjustFontFallback: false,
 });
 
 const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
+  // The generated Arial fallback has Arabic glyphs and would draw Arabic before Noto Sans Arabic.
+  adjustFontFallback: false,
   weight: ["400", "500", "600", "700"],
 });
 

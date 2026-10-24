@@ -42,7 +42,7 @@ Authenticated users can only `select` the tables (through RLS). Every write goes
 
 ## Bulk group changes
 
-`Change group` in the selection bar opens a sheet that reads the selected records fresh (`previewStudentGroupChange`); the selection itself only holds versions. `set_student_records_group` takes up to 500 records with their versions and either one destination group or `null` (Unassigned). It locks the records in id order and the destination group, and rejects the whole selection if any record is missing, stale, archived, or (for a group) outside the group's level, or outside its track when the group is track-specific. Only `primary_group_id` changes; records already in the target are reported as unchanged. Removing a group may span programs. Capacity is not checked.
+`Change group` in the selection bar opens a compact modal that reads the selected records fresh (`previewStudentGroupChange`); the selection itself only holds versions. `set_student_records_group` takes up to 500 records with their versions and either one destination group or `null` (Unassigned). It locks the records in id order and the destination group, and rejects the whole selection if any record is missing, stale, archived, or (for a group) outside the group's level, or outside its track when the group is track-specific. Only `primary_group_id` changes; records already in the target are reported as unchanged. Removing a group may span programs. Capacity is not checked.
 
 ## Importing
 

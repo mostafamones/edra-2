@@ -53,6 +53,7 @@ const listRowSchema = z.object({
   updated_at: z.string(),
   version: z.number().int(),
   online_account: z.enum(["not_connected", "connected", "suspended"]),
+  account_name: z.string().nullable(),
 });
 const listResponseSchema = z.object({ rows: z.array(listRowSchema), total: z.number().int().nonnegative() });
 
@@ -74,6 +75,7 @@ const toRow = (row: z.infer<typeof listRowSchema>): StudentRecordRow => ({
   updatedAt: row.updated_at,
   version: row.version,
   onlineAccount: row.online_account,
+  accountName: row.account_name,
 });
 
 /** One page of the academy's records for its open academic year. */
