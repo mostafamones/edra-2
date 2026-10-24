@@ -1,8 +1,8 @@
 "use client";
 import { newUuid } from "@/lib/uuid";
 import { useEffect, useRef, useState } from "react";
-import { IconUpload } from "@tabler/icons-react";
-import { Input } from "@/components/ui/input";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { RefreshIcon, Upload04Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
@@ -45,10 +45,17 @@ export function MaterialUploader({ academyId, unitId, kind, disabled, onUploaded
     } catch (e) { if (mounted.current) setError(e instanceof Error ? e.message : "Upload failed. Retry it."); }
     finally { if (mounted.current) { setBusy(false); onBusy(false); } }
   }
-  return <div className="space-y-2">
-    <Input aria-label={kind === "video" ? "Upload video" : "Upload document"} type="file" disabled={disabled || busy} accept={kind === "video" ? "video/*" : DOCUMENT_TYPES.join(",")} onChange={event => { const file = event.target.files?.[0]; if (file) void upload(file, newUuid()); event.target.value = ""; }} />
-    <p className="text-xs text-muted-foreground">{kind === "video" ? "Uploads directly to Mux. Wait for processing before publishing." : "Private files, up to 25 MB. Students never receive a public storage URL."}</p>
-    {busy && <div role="status" className="space-y-1"><Progress value={progress} /><p className="text-xs">{progress < 100 ? `Uploading ${progress}%` : "Finishing upload…"}</p></div>}
-    {error && <div role="alert"><p className="text-sm text-destructive">{error}</p>{pending && <Button variant="outline" size="sm" disabled={busy || disabled} onClick={() => upload(pending.file, pending.id)}><IconUpload />Retry upload</Button>}</div>}
+  const label = kind === "video" ? "Upload video" : "Upload document";
+  const pick = (file?: File) => { if (file && !disabled && !busy) void upload(file, newUuid()); };
+  return <div className="space-y-3">
+    <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); pick(event.dataTransfer.files[0]); }}
+      className={`flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/30 px-4 py-8 text-center transition-colors focus-within:ring-[3px] focus-within:ring-ring/50 ${disabled || busy ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-muted/60"}`}>
+      <HugeiconsIcon icon={Upload04Icon} className="size-6 text-muted-foreground" aria-hidden="true" />
+      <span className="text-sm font-medium">{label}</span>
+      <span className="text-xs text-muted-foreground">{kind === "video" ? "Up to 2 GB" : "PDF, document, presentation or image · up to 25 MB"}</span>
+      <input aria-label={label} type="file" className="sr-only" disabled={disabled || busy} accept={kind === "video" ? "video/*" : DOCUMENT_TYPES.join(",")} onChange={event => { pick(event.target.files?.[0]); event.target.value = ""; }} />
+    </label>
+    {busy && <div role="status" className="space-y-1"><Progress value={progress} /><p className="text-xs text-muted-foreground">{progress < 100 ? `Uploading ${progress}%` : "Finishing upload…"}</p></div>}
+    {error && <div role="alert" className="flex flex-wrap items-center gap-2"><p className="text-sm text-destructive">{error}</p>{pending && <Button variant="outline" size="sm" disabled={busy || disabled} onClick={() => upload(pending.file, pending.id)}><HugeiconsIcon icon={RefreshIcon} aria-hidden="true" />Retry upload</Button>}</div>}
   </div>;
 }
