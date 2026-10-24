@@ -30,6 +30,7 @@ import { UploadedFiles } from "./uploads";
 import { UnitAccessPanel } from "../access/manager";
 import { UnitRequirements } from "../requirements/editor";
 import { AccessDuration } from "./duration";
+import { VersionHistory } from "./history";
 
 export function ContentEditorPage({ unitId }: { unitId: string }) { return <AcademyGate>{academy => <Editor academy={academy} unitId={unitId} />}</AcademyGate>; }
 function Editor({ academy, unitId }: { academy: AcademyEntry; unitId: string }) {
@@ -100,6 +101,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
   }
   const setItems = (items: ContentItem[]) => setDocument({ ...document, items });
   const actions = <>
+    {data.revisions.length > 0 && <VersionHistory revisions={data.revisions} live={unit.state !== "archived"} />}
     {editable && <Button variant={canManage && unit.state !== "archived" ? "outline" : "default"} disabled={disabled || !dirty || !document.title.trim()} onClick={() => perform("save")}><HugeiconsIcon icon={FloppyDiskIcon} strokeWidth={1.5} aria-hidden="true" />{busy ? "Saving…" : "Save draft"}</Button>}
     {editable && <Button variant="outline" disabled={disabled || dirty} onClick={() => perform("submit")}><HugeiconsIcon icon={SentIcon} strokeWidth={1.5} aria-hidden="true" />Submit for review</Button>}
     {canManage && unit.state !== "archived" && <Button disabled={disabled} onClick={() => perform("publish")}><HugeiconsIcon icon={Tick02Icon} strokeWidth={1.5} aria-hidden="true" />{unit.published_revision ? "Publish changes" : "Publish unit"}</Button>}
@@ -160,20 +162,11 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
         </div>
       </TabsContent>
       <TabsContent value="review" forceMount className={panel}>
-        <div className="grid max-w-4xl items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="max-w-2xl">
           <Panel title="Feedback">
             {data.feedback.length > 0 && <ol className="divide-y divide-border/60">{data.feedback.map(f => <li key={f.id} className="flex gap-3 px-4 py-4"><span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><HugeiconsIcon icon={Message01Icon} strokeWidth={1.5} className="size-4" aria-hidden="true" /></span><div className="min-w-0 flex-1 space-y-1"><p className="text-xs text-muted-foreground tabular-nums">{new Date(f.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p><p dir="auto" className="whitespace-pre-wrap text-sm leading-relaxed">{f.body}</p></div></li>)}</ol>}
             {!data.feedback.length && !(data.manager && editable) && <p className="px-4 py-6 text-center text-sm text-muted-foreground">No feedback yet.</p>}
             {data.manager && editable && <div className="space-y-3 border-t border-border/60 bg-muted/20 p-4 first:border-t-0"><Textarea aria-label="Feedback" dir="auto" className="min-h-24 bg-background dark:bg-input/30" value={feedback} maxLength={5000} disabled={busy} onChange={e => setFeedback(e.target.value)} /><div className="flex flex-wrap justify-end gap-2"><Button size="sm" variant="outline" disabled={disabled || dirty || !feedback.trim()} onClick={() => perform("feedback")}>Send feedback</Button><Button size="sm" variant="outline" disabled={disabled || dirty || !feedback.trim()} onClick={() => perform("request_changes")}>Request changes</Button></div></div>}
-          </Panel>
-          <Panel title="Publication history" count={data.revisions.length}>
-            {data.revisions.length > 0
-              ? <ol className="p-4">{data.revisions.map((r, index) => <li key={r.revision} className="relative flex gap-3 pb-4 last:pb-0">
-                {index < data.revisions.length - 1 && <span className="absolute top-4 bottom-0 left-[5px] w-px bg-border" aria-hidden="true" />}
-                <span className={`relative mt-1 size-[11px] shrink-0 rounded-full border-2 ${index === 0 ? "border-primary bg-primary" : "border-border bg-card"}`} aria-hidden="true" />
-                <div className="flex min-w-0 flex-1 items-center justify-between gap-2 text-sm"><span className="flex items-center gap-2 font-medium">Version {r.revision}{index === 0 && unit.state !== "archived" && <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">Live</Badge>}</span><span className="text-xs text-muted-foreground tabular-nums">{new Date(r.published_at).toLocaleDateString(undefined, { dateStyle: "medium" })}</span></div>
-              </li>)}</ol>
-              : <p className="px-4 py-6 text-center text-sm text-muted-foreground">Not published yet.</p>}
           </Panel>
         </div>
       </TabsContent>
