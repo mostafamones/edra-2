@@ -2596,6 +2596,7 @@ export type Database = {
           name: string
           prefix: string
           program_id: string
+          retired: boolean
           track_id: string | null
         }
         Insert: {
@@ -2610,6 +2611,7 @@ export type Database = {
           name: string
           prefix?: string
           program_id: string
+          retired?: boolean
           track_id?: string | null
         }
         Update: {
@@ -2624,6 +2626,7 @@ export type Database = {
           name?: string
           prefix?: string
           program_id?: string
+          retired?: boolean
           track_id?: string | null
         }
         Relationships: [
@@ -7068,6 +7071,17 @@ export type Database = {
         }
         Returns: number
       }
+      change_default_coupon_prefix: {
+        Args: {
+          p_academy_id: string
+          p_level_id: string
+          p_prefix: string
+          p_request_id: string
+          p_track_id: string
+          p_year_id: string
+        }
+        Returns: Json
+      }
       change_staff_member_role: {
         Args: {
           p_academy_id: string
@@ -7382,6 +7396,19 @@ export type Database = {
         }
         Returns: string
       }
+      create_scoped_coupon_type: {
+        Args: {
+          p_academy_id: string
+          p_all_tracks: boolean
+          p_level_id: string
+          p_name: string
+          p_prefix: string
+          p_request_id: string
+          p_track_id: string
+          p_year_id: string
+        }
+        Returns: Json
+      }
       create_staff_invitation: {
         Args: {
           p_academy_id: string
@@ -7546,6 +7573,17 @@ export type Database = {
         }
         Returns: Json
       }
+      generate_default_coupons: {
+        Args: {
+          p_academy_id: string
+          p_level_id: string
+          p_quantity: number
+          p_request_id: string
+          p_track_id: string
+          p_year_id: string
+        }
+        Returns: Json
+      }
       generate_student_codes: {
         Args: {
           p_academy_id: string
@@ -7662,6 +7700,19 @@ export type Database = {
       }
       get_quiz_student: {
         Args: { p_academy_id: string; p_quiz_id: string; p_record_id: string }
+        Returns: Json
+      }
+      get_scoped_content_coupons: {
+        Args: {
+          p_academy_id: string
+          p_level_id: string
+          p_offset?: number
+          p_search?: string
+          p_status?: string
+          p_track_id: string
+          p_type_id?: string
+          p_year_id: string
+        }
         Returns: Json
       }
       get_session: {

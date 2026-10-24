@@ -21,7 +21,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { unwrapContent } from "../types";
 import { learningDate } from "../access/types";
 import { changeCouponPrefix, createCouponType, generateCoupons, loadCouponOptions, loadCoupons, revokeCoupon } from "./actions";
-import { formatCoupon, matchesScope, scopeLabel } from "./types";
+import { availableCouponTypes, formatCoupon, scopeLabel } from "./types";
 
 export function CouponsPage() {
   const { user } = useAuth();
@@ -55,10 +55,10 @@ function CouponWorkspace({ academy }: { academy: AcademyEntry }) {
     return result;
   } });
   const scope = options.data?.programs.find(p => p.id === programId) ?? options.data?.programs.find(p => !p.closed) ?? options.data?.programs[0];
-  const types = options.data?.types.filter(t => scope && matchesScope(t, scope)) ?? [];
+  const types = scope ? availableCouponTypes(options.data?.types ?? [], scope) : [];
   const selectedType = types.find(t => typeId === "default" ? t.isDefault : t.id === typeId);
   const codes = useQuery({ queryKey: [...rootKey, "codes", scope?.id, selectedType?.id, status, search, page], enabled: Boolean(user && scope), queryFn: async () => {
-    const result = unwrapContent(await loadCoupons({ academyId: academy.id, programId: scope!.id, typeId: selectedType?.id ?? null, status, search, page }));
+    const result = unwrapContent(await loadCoupons({ academyId: academy.id, yearId: scope!.yearId, levelId: scope!.levelId, trackId: scope!.trackId, typeId: selectedType?.virtual ? null : selectedType?.id ?? null, status, search, page }));
     if (result.userId !== user?.id) throw new Error("Your account changed. Reload this page.");
     return result;
   } });
@@ -72,16 +72,16 @@ function CouponWorkspace({ academy }: { academy: AcademyEntry }) {
     setBusy(true); setError(""); setNotice("");
     try {
       if (kind === "type") {
-        const result = unwrapContent(await createCouponType({ academyId: academy.id, programId: scope.id, name: typeName, prefix: typePrefix, allTracks: !scope.trackId || allTracks, requestId: requestId(`type:${scope.id}:${typeName.trim()}:${typePrefix}:${!scope.trackId || allTracks}`) }));
+        const result = unwrapContent(await createCouponType({ academyId: academy.id, yearId: scope.yearId, levelId: scope.levelId, trackId: scope.trackId, name: typeName, prefix: typePrefix, allTracks: !scope.trackId || allTracks, requestId: requestId(`type:${scope.id}:${typeName.trim()}:${typePrefix}:${!scope.trackId || allTracks}`) }));
         setTypeId(result.id); setTypeName(""); setTypePrefix(""); setNotice("Coupon type created.");
       } else if (kind === "prefix") {
         if (!selectedType) throw new Error("Choose a coupon type.");
         const prefix = editedPrefix ?? selectedType.prefix;
-        unwrapContent(await changeCouponPrefix({ academyId: academy.id, typeId: selectedType.id, prefix, requestId: requestId(`prefix:${selectedType.id}:${prefix}`) }));
+        unwrapContent(await changeCouponPrefix({ academyId: academy.id, yearId: scope.yearId, levelId: scope.levelId, trackId: scope.trackId, typeId: selectedType.virtual ? null : selectedType.id, prefix, requestId: requestId(`prefix:${selectedType.id}:${prefix}`) }));
         setEditedPrefix(null); setNotice("Prefix updated.");
       } else if (kind === "generate") {
         if (!selectedType) throw new Error("Choose a coupon type.");
-        const result = unwrapContent(await generateCoupons({ academyId: academy.id, typeId: selectedType.id, quantity: Number(quantity), requestId: requestId(`generate:${selectedType.id}:${quantity}`) }));
+        const result = unwrapContent(await generateCoupons({ academyId: academy.id, yearId: scope.yearId, levelId: scope.levelId, trackId: scope.trackId, typeId: selectedType.virtual ? null : selectedType.id, quantity: Number(quantity), requestId: requestId(`generate:${selectedType.id}:${quantity}`) }));
         setGenerated(result.codes.map(c => formatCoupon(c.code, c.prefix))); setPage(0); setStatus("all"); setSearch(""); setNotice(`${result.codes.length} coupon${result.codes.length === 1 ? "" : "s"} generated.`);
       } else if (revoking) {
         unwrapContent(await revokeCoupon({ academyId: academy.id, couponId: revoking, requestId: requestId(`revoke:${revoking}`) }));
@@ -105,7 +105,7 @@ function CouponWorkspace({ academy }: { academy: AcademyEntry }) {
   const queryError = options.error ?? codes.error;
   return <main ref={container} className="page-shell min-w-0">
     <div className="flex items-center justify-between gap-3"><h1 className="text-2xl font-semibold">Coupons</h1><Button variant="outline" size="icon" aria-label="Refresh coupons" onClick={() => refresh()}><HugeiconsIcon icon={RefreshIcon} strokeWidth={1.5} /></Button></div>
-    {options.isLoading ? <Skeleton className="h-32 w-full" /> : !scope ? <Empty className="border"><EmptyHeader><EmptyTitle>No content scopes</EmptyTitle></EmptyHeader></Empty> : <>
+    {options.isLoading ? <Skeleton className="h-32 w-full" /> : !scope ? <Empty className="border"><EmptyHeader><EmptyTitle>No academic scopes</EmptyTitle></EmptyHeader></Empty> : <>
       <div className="grid gap-4 rounded-xl border bg-card p-4 sm:grid-cols-2">
         <div className="space-y-2"><Label htmlFor="coupon-scope">Academic scope</Label><Select value={scope.id} onValueChange={value => { setProgramId(value); setTypeId("default"); setEditedPrefix(null); setPage(0); setGenerated([]); }}><SelectTrigger id="coupon-scope" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{options.data?.programs.map(p => <SelectItem key={p.id} value={p.id}>{scopeLabel(p)}{p.closed ? " · Closed" : ""}</SelectItem>)}</SelectContent></Select></div>
         <div className="space-y-2"><Label htmlFor="coupon-type">Coupon type</Label><Select value={selectedType?.id ?? "all"} onValueChange={value => { setTypeId(value === "all" ? "" : value); setEditedPrefix(null); setPage(0); setGenerated([]); }}><SelectTrigger id="coupon-type" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All types</SelectItem>{types.map(t => <SelectItem key={t.id} value={t.id}>{t.name} · {t.prefix}{t.allTracks ? " · All tracks" : ""}{t.isDefault ? " · Default" : ""}</SelectItem>)}</SelectContent></Select></div>

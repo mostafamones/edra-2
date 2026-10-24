@@ -19,7 +19,7 @@ it("replaces the whole table with an empty state and keeps generation controls",
   open(); expect(await screen.findByText("No coupons")).toBeTruthy();
   expect(screen.queryByRole("table")).toBeNull();
   expect(screen.getByLabelText("Number of coupons")).toBeTruthy();
-  expect((screen.getByRole("button", { name: "Generate coupons" }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole("button", { name: "Generate coupons" }) as HTMLButtonElement).disabled).toBe(false);
 });
 it("creates a type in the chosen scope and retains generation request identity on retry", async () => {
   mocks.createCouponType.mockImplementation(async () => {
@@ -30,6 +30,7 @@ it("creates a type in the chosen scope and retains generation request identity o
   open(); fireEvent.change(await screen.findByLabelText("New type"), { target: { value: "Revision" } });
   fireEvent.change(screen.getByLabelText("Prefix"), { target: { value: "REV" } });
   fireEvent.click(screen.getByRole("button", { name: "Create type" }));
+  await screen.findByText("Coupon type created.");
   await waitFor(() => expect((screen.getByRole("button", { name: "Generate coupons" }) as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(screen.getByRole("button", { name: "Generate coupons" }));
   await screen.findByText("Retry generation.");
@@ -37,6 +38,12 @@ it("creates a type in the chosen scope and retains generation request identity o
   await waitFor(() => expect(mocks.generateCoupons).toHaveBeenCalledTimes(2));
   expect(mocks.generateCoupons.mock.calls[0][0]).toEqual(mocks.generateCoupons.mock.calls[1][0]);
   expect(mocks.generateCoupons.mock.calls[0][0]).toMatchObject({ academyId: "academy", typeId: "type", quantity: 1 });
+});
+it("can generate default coupons for a scope that has no content or saved types", async () => {
+  mocks.generateCoupons.mockResolvedValue({ ok: false, message: "Retry generation." });
+  open();
+  fireEvent.click(await screen.findByRole("button", { name: "Generate coupons" }));
+  await waitFor(() => expect(mocks.generateCoupons).toHaveBeenCalledWith(expect.objectContaining({ academyId: "academy", yearId: "year", levelId: "grade", trackId: "science", typeId: null, quantity: 1 })));
 });
 it("does not display coupons returned for a different account", async () => {
   mocks.loadCoupons.mockResolvedValue({ ok: true, value: { userId: "other", manager: true, hasMore: false, codes: [{ id: "coupon", code: "AB7K9M3R" }] } });

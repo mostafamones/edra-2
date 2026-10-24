@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { couponInput, formatCoupon, matchesScope } from "./types";
+import { availableCouponTypes, couponInput, formatCoupon, matchesScope } from "./types";
 import { redeemInput } from "../access/types";
 
 it("accepts hand-entered coupons and excludes ambiguous characters and legacy codes", () => {
@@ -21,4 +21,7 @@ it("matches the immutable academic scope, including exact optional track", () =>
   expect(matchesScope({ ...type, trackId: null, allTracks: true, levelId: "other" }, scope)).toBe(false);
   expect(matchesScope({ ...type, yearId: "previous" }, scope)).toBe(false);
   expect(matchesScope({ ...type, levelId: "other" }, scope)).toBe(false);
+  expect(availableCouponTypes([], scope)).toEqual([expect.objectContaining({ name: "Regular", isDefault: true, allTracks: true, virtual: true })]);
+  expect(availableCouponTypes([{ ...type, trackId: null, allTracks: true }], scope)).toHaveLength(1);
+  expect(availableCouponTypes([], { ...scope, closed: true })).toHaveLength(0);
 });
