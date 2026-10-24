@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { availableCouponTypes, couponInput, formatCoupon, matchesScope } from "./types";
+import { availableCouponTypes, couponInput, couponOptionsSchema, formatCoupon, matchesScope } from "./types";
 import { redeemInput } from "../access/types";
 
 it("accepts hand-entered coupons and excludes ambiguous characters and legacy codes", () => {
@@ -11,6 +11,16 @@ it("accepts hand-entered coupons and excludes ambiguous characters and legacy co
     expect(couponInput.safeParse(value).success).toBe(false);
   }
   expect(redeemInput.safeParse({ academyId: crypto.randomUUID(), unitId: crypto.randomUUID(), requestId: crypto.randomUUID(), code: "abcdabcdabcdabcdabcdabcdabcdabcd" }).success).toBe(false);
+});
+it("accepts academy-wide types without inventing a grade or program", () => {
+  const yearId = crypto.randomUUID(), id = crypto.randomUUID();
+  const scope = { id: crypto.randomUUID(), yearId, year: 2026, closed: false, levelId: "grade", level: "Grade", trackId: crypto.randomUUID(), track: "Science" };
+  const parsed = couponOptionsSchema.parse({ programs: [scope], types: [{ id, yearId, programId: null, levelId: null, trackId: null, name: "Regular", prefix: "REG", isDefault: true, allTracks: true }] });
+  expect(matchesScope(parsed.types[0], scope)).toBe(true);
+  expect(matchesScope(parsed.types[0], { ...scope, yearId: crypto.randomUUID() })).toBe(false);
+  expect(availableCouponTypes(parsed.types, scope)).toHaveLength(1);
+  const gradeDefault = { ...parsed.types[0], id: crypto.randomUUID(), levelId: scope.levelId, programId: crypto.randomUUID() };
+  expect(availableCouponTypes([parsed.types[0], gradeDefault], scope)[0]).toEqual(gradeDefault);
 });
 it("matches the immutable academic scope, including exact optional track", () => {
   const scope = { id: "program", yearId: "year", year: 2026, closed: false, levelId: "grade", level: "Grade", trackId: "science", track: "Science" };

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
@@ -57,7 +58,7 @@ function CouponWorkspace({ academy }: { academy: AcademyEntry }) {
   const scope = options.data?.programs.find(p => p.id === programId) ?? options.data?.programs.find(p => !p.closed) ?? options.data?.programs[0];
   const types = scope ? availableCouponTypes(options.data?.types ?? [], scope) : [];
   const selectedType = types.find(t => typeId === "default" ? t.isDefault : t.id === typeId);
-  const codes = useQuery({ queryKey: [...rootKey, "codes", scope?.id, selectedType?.id, status, search, page], enabled: Boolean(user && scope), queryFn: async () => {
+  const codes = useQuery({ queryKey: [...rootKey, "codes", scope?.id, selectedType?.id, status, search, page], enabled: Boolean(user && scope && !options.isError), queryFn: async () => {
     const result = unwrapContent(await loadCoupons({ academyId: academy.id, yearId: scope!.yearId, levelId: scope!.levelId, trackId: scope!.trackId, typeId: selectedType?.virtual ? null : selectedType?.id ?? null, status, search, page }));
     if (result.userId !== user?.id) throw new Error("Your account changed. Reload this page.");
     return result;
@@ -102,13 +103,13 @@ function CouponWorkspace({ academy }: { academy: AcademyEntry }) {
     const url = URL.createObjectURL(blob); const link = document.createElement("a");
     link.href = url; link.download = "coupons.csv"; link.click(); URL.revokeObjectURL(url);
   }
-  const queryError = options.error ?? codes.error;
+  const queryError = options.isError ? null : codes.error;
   return <main ref={container} className="page-shell min-w-0">
     <div className="flex items-center justify-between gap-3"><h1 className="text-2xl font-semibold">Coupons</h1><Button variant="outline" size="icon" aria-label="Refresh coupons" onClick={() => refresh()}><HugeiconsIcon icon={RefreshIcon} strokeWidth={1.5} /></Button></div>
-    {options.isLoading ? <Skeleton className="h-32 w-full" /> : !scope ? <Empty className="border"><EmptyHeader><EmptyTitle>No academic scopes</EmptyTitle></EmptyHeader></Empty> : <>
+    {options.isLoading ? <Skeleton className="h-32 w-full" /> : options.isError ? <Alert variant="destructive" role="alert"><AlertTitle>Couldn’t load coupons</AlertTitle><AlertDescription>{options.error.message}<Button variant="outline" size="sm" disabled={options.isFetching} onClick={() => options.refetch()}>Retry</Button></AlertDescription></Alert> : !scope ? <Empty className="border"><EmptyHeader><EmptyTitle>No academic scopes</EmptyTitle></EmptyHeader></Empty> : <>
       <div className="grid gap-4 rounded-xl border bg-card p-4 sm:grid-cols-2">
         <div className="space-y-2"><Label htmlFor="coupon-scope">Academic scope</Label><Select value={scope.id} onValueChange={value => { setProgramId(value); setTypeId("default"); setEditedPrefix(null); setPage(0); setGenerated([]); }}><SelectTrigger id="coupon-scope" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{options.data?.programs.map(p => <SelectItem key={p.id} value={p.id}>{scopeLabel(p)}{p.closed ? " · Closed" : ""}</SelectItem>)}</SelectContent></Select></div>
-        <div className="space-y-2"><Label htmlFor="coupon-type">Coupon type</Label><Select value={selectedType?.id ?? "all"} onValueChange={value => { setTypeId(value === "all" ? "" : value); setEditedPrefix(null); setPage(0); setGenerated([]); }}><SelectTrigger id="coupon-type" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All types</SelectItem>{types.map(t => <SelectItem key={t.id} value={t.id}>{t.name} · {t.prefix}{t.allTracks ? " · All tracks" : ""}{t.isDefault ? " · Default" : ""}</SelectItem>)}</SelectContent></Select></div>
+        <div className="space-y-2"><Label htmlFor="coupon-type">Coupon type</Label><Select value={selectedType?.id ?? "all"} onValueChange={value => { setTypeId(value === "all" ? "" : value); setEditedPrefix(null); setPage(0); setGenerated([]); }}><SelectTrigger id="coupon-type" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All types</SelectItem>{types.map(t => <SelectItem key={t.id} value={t.id}>{t.name} · {t.prefix}{t.levelId === null ? " · All grades" : t.allTracks ? " · All tracks" : ""}{t.isDefault ? " · Default" : ""}</SelectItem>)}</SelectContent></Select></div>
         <form className="flex flex-wrap items-end gap-2" onSubmit={e => { e.preventDefault(); void mutate("type"); }}><div className="flex-1 space-y-2"><Label htmlFor="coupon-type-name">New type</Label><Input id="coupon-type-name" maxLength={80} value={typeName} disabled={busy || scope.closed} onChange={e => setTypeName(e.target.value)} /></div><div className="w-24 space-y-2"><Label htmlFor="new-type-prefix">Prefix</Label><Input id="new-type-prefix" maxLength={4} value={typePrefix} disabled={busy || scope.closed} onChange={e => setTypePrefix(e.target.value.toUpperCase())} /></div><Button type="submit" variant="outline" disabled={busy || scope.closed || !typeName.trim() || !/^[A-Z]{2,4}$/.test(typePrefix)}>Create type</Button><div className="flex w-full items-center gap-2"><Checkbox id="coupon-all-tracks" disabled={busy || scope.closed || !scope.trackId} checked={!scope.trackId || allTracks} onCheckedChange={value => setAllTracks(value === true)} /><Label htmlFor="coupon-all-tracks">All tracks in this grade</Label></div></form>
         <form className="flex items-end gap-2" onSubmit={e => { e.preventDefault(); void mutate("generate"); }}><div className="flex-1 space-y-2"><Label htmlFor="coupon-quantity">Number of coupons</Label><Input id="coupon-quantity" type="number" min={1} max={1000} value={quantity} disabled={busy || scope.closed} onChange={e => setQuantity(e.target.value)} /></div><Button type="submit" disabled={busy || scope.closed || !selectedType}>Generate coupons</Button></form>
       </div>

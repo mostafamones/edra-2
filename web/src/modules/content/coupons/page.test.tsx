@@ -15,6 +15,23 @@ beforeEach(() => {
   mocks.loadCoupons.mockResolvedValue({ ok: true, value: { userId: "staff", manager: true, codes: [], hasMore: false } });
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+it("shows a retryable loading error instead of claiming the academy has no scopes", async () => {
+  mocks.loadCouponOptions.mockResolvedValueOnce({ ok: false, message: "Could not load coupon settings. Refresh and try again." });
+  open();
+  expect(await screen.findByRole("alert")).toBeTruthy();
+  expect(screen.queryByText("No academic scopes")).toBeNull();
+  expect(screen.queryByLabelText("New type")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  expect(await screen.findByLabelText("Academic scope")).toBeTruthy();
+});
+it("loads and generates an existing academy-wide type from a grade scope", async () => {
+  mocks.loadCouponOptions.mockResolvedValue({ ok: true, value: { userId: "staff", programs: [scope], types: [{ id: "academy-wide", programId: null, yearId: "year", levelId: null, trackId: null, name: "Regular", prefix: "REG", isDefault: true, allTracks: true }] } });
+  mocks.generateCoupons.mockResolvedValue({ ok: false, message: "Retry generation." });
+  open();
+  fireEvent.click(await screen.findByRole("button", { name: "Generate coupons" }));
+  await waitFor(() => expect(mocks.generateCoupons).toHaveBeenCalledWith(expect.objectContaining({ typeId: "academy-wide", levelId: "grade" })));
+  expect(screen.queryByText("No academic scopes")).toBeNull();
+});
 it("replaces the whole table with an empty state and keeps generation controls", async () => {
   open(); expect(await screen.findByText("No coupons")).toBeTruthy();
   expect(screen.queryByRole("table")).toBeNull();

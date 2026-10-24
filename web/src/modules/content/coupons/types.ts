@@ -8,14 +8,14 @@ export function formatCoupon(value: string, prefix?: string) { const normalized 
 export const couponInput = z.string().max(100).transform(normalizeCoupon).pipe(z.string().regex(REDEMPTION_PATTERN, "Enter a valid coupon."));
 export const couponScopeSchema = z.object({ id: z.guid(), yearId: z.guid(), year: z.number(), closed: z.boolean(), levelId: z.string(), level: z.string(), trackId: z.guid().nullable(), track: z.string().nullable() });
 export type CouponScope = z.infer<typeof couponScopeSchema>;
-export const couponTypeSchema = z.object({ id: z.guid(), programId: z.guid(), yearId: z.guid(), levelId: z.string(), trackId: z.guid().nullable(), name: z.string(), prefix: prefixSchema, isDefault: z.boolean(), allTracks: z.boolean() });
+export const couponTypeSchema = z.object({ id: z.guid(), programId: z.guid().nullable(), yearId: z.guid(), levelId: z.string().nullable(), trackId: z.guid().nullable(), name: z.string(), prefix: prefixSchema, isDefault: z.boolean(), allTracks: z.boolean() });
 export type CouponType = z.infer<typeof couponTypeSchema>;
 export function availableCouponTypes(types: CouponType[], scope: CouponScope): Array<CouponType & { virtual?: boolean }> {
-  const matching: Array<CouponType & { virtual?: boolean }> = types.filter(type => matchesScope(type, scope));
+  const matching: Array<CouponType & { virtual?: boolean }> = types.filter(type => matchesScope(type, scope)).sort((a, b) => Number(a.levelId === null) - Number(b.levelId === null));
   if (!scope.closed && !matching.some(type => type.isDefault)) matching.unshift({ id: scope.id, programId: scope.id, yearId: scope.yearId, levelId: scope.levelId, trackId: null, name: "Regular", prefix: "REG", isDefault: true, allTracks: true, virtual: true });
   return matching;
 }
-export function matchesScope(type: CouponType, scope: CouponScope) { return type.yearId === scope.yearId && type.levelId === scope.levelId && (type.allTracks || type.trackId === scope.trackId); }
+export function matchesScope(type: CouponType, scope: CouponScope) { return type.yearId === scope.yearId && (type.levelId === null || type.levelId === scope.levelId) && (type.allTracks || type.trackId === scope.trackId); }
 export function scopeLabel(scope: CouponScope) { return `${scope.year}–${scope.year + 1} · ${scope.level}${scope.track ? ` · ${scope.track}` : " · Whole grade"}`; }
 export const couponOptionsSchema = z.object({ programs: z.array(couponScopeSchema), types: z.array(couponTypeSchema) });
 export const couponPageSchema = z.object({ manager: z.boolean(), hasMore: z.boolean(), codes: z.array(z.object({
