@@ -11,6 +11,7 @@ vi.mock("../media-actions", () => ({ refreshVideo: vi.fn() }));
 vi.mock("@/modules/auth", () => ({ AcademyGate: ({ children }: { children: (academy: { id: string }) => ReactNode }) => children({ id: "academy" }) }));
 vi.mock("@/modules/navigation", () => ({ useCanonicalHref: () => (href: string) => href }));
 vi.mock("@/components/shared/breadcrumb-title", () => ({ useBreadcrumbTitle: vi.fn() }));
+vi.mock("@/components/shared/header-actions", () => ({ HeaderActions: ({ children }: { children: ReactNode }) => children }));
 vi.mock("./uploader", () => ({ MaterialUploader: () => null }));
 vi.mock("./preview", () => ({ MaterialPreview: () => null }));
 vi.mock("./assessment-picker", () => ({ AssessmentPicker: () => null }));
@@ -44,10 +45,16 @@ beforeEach(() => {
   actions.publishUnitEdits.mockResolvedValue({ ok: true, value: undefined });
 });
 afterEach(cleanup);
+async function selectTab(name: string | RegExp) {
+  const tab = await screen.findByRole("tab", { name });
+  fireEvent.mouseDown(tab, { button: 0, ctrlKey: false });
+  fireEvent.click(tab);
+}
 
 describe("published unit maintenance", () => {
   it("publishes unsaved manager edits in one action without a separate draft save", async () => {
     open({ ...detail(), userId: "manager", manager: true });
+    await selectTab("Settings");
     fireEvent.change(await screen.findByLabelText("Title"), { target: { value: "Updated lesson" } });
     fireEvent.click(screen.getByRole("button", { name: "Publish changes" }));
     await waitFor(() => expect(actions.publishUnitEdits).toHaveBeenCalledWith(expect.objectContaining({ version: 5, document: expect.objectContaining({ title: "Updated lesson" }) })));
@@ -57,6 +64,7 @@ describe("published unit maintenance", () => {
   it("keeps local edits when publication fails", async () => {
     actions.publishUnitEdits.mockResolvedValue({ ok: false, message: "Video is still processing." });
     open({ ...detail(), userId: "manager", manager: true });
+    await selectTab("Settings");
     fireEvent.change(await screen.findByLabelText("Title"), { target: { value: "Keep this edit" } });
     fireEvent.click(screen.getByRole("button", { name: "Publish changes" }));
     await screen.findByText("Video is still processing.");
@@ -73,6 +81,7 @@ describe("published unit maintenance", () => {
   it("lets the author change duration in the draft without offering publication", async () => {
     const data = detail(); data.unit.draft.accessDays = 44;
     open(data);
+    await selectTab("Settings");
     const duration = await screen.findByLabelText("Access duration (days)");
     expect((duration as HTMLInputElement).disabled).toBe(false);
     expect(screen.queryByRole("button", { name: "Publish changes" })).toBeNull();
@@ -89,6 +98,7 @@ describe("published unit maintenance", () => {
 
   it("keeps another instructor's unit read-only", async () => {
     open({ ...detail(), userId: "other-instructor" });
+    await selectTab("Settings");
     const duration = await screen.findByLabelText("Access duration");
     expect((duration as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
@@ -99,12 +109,14 @@ describe("published unit maintenance", () => {
     const data = detail();
     data.program.academic_years.closed_at = "2026-10-21T00:00:00Z";
     open(data);
+    await selectTab("Settings");
     expect((await screen.findByLabelText("Access duration") as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: "Submit for review" })).toBeNull();
   });
 
   it("lets a manager request changes to published material without publishing it", async () => {
     open({ ...detail(), userId: "manager", manager: true });
+    await selectTab(/^Review/);
     fireEvent.change(await screen.findByLabelText("Feedback"), { target: { value: "Please check the revision." } });
     fireEvent.click(screen.getByRole("button", { name: "Request changes" }));
     await waitFor(() => expect(actions.changeUnit).toHaveBeenCalledWith(expect.objectContaining({ action: "request_changes", feedback: "Please check the revision." })));
