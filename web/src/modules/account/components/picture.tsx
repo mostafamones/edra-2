@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { IconLoader2, IconPhotoUp, IconTrash } from "@tabler/icons-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Delete02Icon, ImageUploadIcon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -98,23 +99,23 @@ export function ProfilePicture({ userId, profile, name, avatarUrl }: {
 
   const busy = saving || removing;
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2 px-6 py-5">
       <div className="flex items-center gap-4">
-        <Avatar className="size-20">
+        <Avatar className="size-16">
           {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-          <AvatarFallback className="text-2xl">{name?.slice(0, 1).toUpperCase() || "E"}</AvatarFallback>
+          <AvatarFallback className="text-xl">{name?.slice(0, 1).toUpperCase() || "E"}</AvatarFallback>
         </Avatar>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => input.current?.click()} disabled={busy}>
-            <IconPhotoUp aria-hidden="true" />
-            {profile.avatarPath ? "Change picture" : "Upload picture"}
-          </Button>
+        <span dir="auto" className="min-w-0 flex-1 truncate font-medium">{name}</span>
+        <div className="flex shrink-0 items-center gap-1">
           {profile.avatarPath && (
-            <Button variant="ghost" onClick={remove} disabled={busy}>
-              {removing ? <IconLoader2 className="animate-spin" aria-hidden="true" /> : <IconTrash aria-hidden="true" />}
-              Remove
+            <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label="Remove picture" onClick={remove} disabled={busy}>
+              <HugeiconsIcon icon={removing ? Loading03Icon : Delete02Icon} strokeWidth={1.5} className={removing ? "animate-spin" : undefined} aria-hidden="true" />
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={() => input.current?.click()} disabled={busy}>
+            <HugeiconsIcon icon={ImageUploadIcon} strokeWidth={1.5} aria-hidden="true" />
+            {profile.avatarPath ? "Change picture" : "Upload picture"}
+          </Button>
         </div>
         <input
           ref={input}

@@ -7440,6 +7440,7 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: number
       }
+      delete_my_account: { Args: never; Returns: undefined }
       delete_session: {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: undefined

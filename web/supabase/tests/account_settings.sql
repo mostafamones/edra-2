@@ -211,4 +211,36 @@ begin
   perform pg_temp.check(public.verify_account_password_challenge(me, s1, c1, good) = 'session_inactive', 'signed-out session');
 end $$;
 
+-- Account deletion: owners are refused; others are anonymized, signed out and banned while the
+-- profile row stays for attribution.
+insert into public.academies (id, name, slug, icon, subject, created_by) values
+  ('9adddddd-dddd-4ddd-8ddd-dddddddddddd', 'Deletion Academy', 'deletion-academy', 'school', 'Math', '9a222222-2222-4222-8222-222222222222');
+insert into public.academy_memberships (academy_id, user_id, role, created_by) values
+  ('9adddddd-dddd-4ddd-8ddd-dddddddddddd', '9a222222-2222-4222-8222-222222222222', 'owner', '9a222222-2222-4222-8222-222222222222');
+insert into auth.users (id, phone, phone_confirmed_at, raw_user_meta_data) values
+  ('9a333333-3333-4333-8333-333333333333', '201290000003', now(), '{"full_name":"Leaving Person"}');
+insert into auth.sessions (id, user_id, created_at, updated_at) values
+  ('9b333333-3333-4333-8333-333333333333', '9a333333-3333-4333-8333-333333333333', now(), now());
+insert into public.academy_memberships (academy_id, user_id, role, created_by) values
+  ('9adddddd-dddd-4ddd-8ddd-dddddddddddd', '9a333333-3333-4333-8333-333333333333', 'instructor', '9a222222-2222-4222-8222-222222222222');
+do $$
+declare
+  owner constant uuid := '9a222222-2222-4222-8222-222222222222';
+  other constant uuid := '9a333333-3333-4333-8333-333333333333';
+begin
+  perform pg_temp.check(not has_function_privilege('anon', 'public.delete_my_account()', 'execute'), 'anon cannot delete');
+  perform pg_temp.act(owner, '9b222222-2222-4222-8222-222222222222');
+  set local role authenticated;
+  perform pg_temp.check(pg_temp.fails('select public.delete_my_account()'), 'owner refused');
+  reset role;
+  perform pg_temp.act(other, '9b333333-3333-4333-8333-333333333333');
+  set local role authenticated;
+  perform public.delete_my_account();
+  reset role;
+  perform pg_temp.check((select full_name = 'Deleted user' and display_name is null and phone is null and avatar_path is null from public.profiles where id = other), 'profile anonymized');
+  perform pg_temp.check((select phone is null and banned_until = 'infinity' and raw_user_meta_data = '{}'::jsonb from auth.users where id = other), 'auth identity erased');
+  perform pg_temp.check(not exists (select 1 from auth.sessions where user_id = other), 'sessions revoked');
+  perform pg_temp.check(not exists (select 1 from public.academy_memberships where user_id = other), 'memberships removed');
+end $$;
+
 rollback;
