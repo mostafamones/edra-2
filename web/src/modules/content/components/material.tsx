@@ -20,7 +20,7 @@ export function MaterialRow({ academyId, item, asset, first, last, disabled, onT
   onTitle: (title: string) => void; onMove: (delta: number) => void; onRemove: () => void; onRefresh: () => Promise<void>;
 }) {
   const href = useCanonicalHref();
-  return <li className="flex items-center gap-3 px-3 py-3">
+  return <li className="flex items-center gap-3 px-4 py-3">
     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><HugeiconsIcon icon={ICONS[item.kind]} className="size-4.5" aria-hidden="true" /></span>
     <div className="min-w-0 flex-1 space-y-1">
       <Input aria-label="Material title" dir="auto" className="h-8" value={item.title} maxLength={250} disabled={disabled} onChange={e => onTitle(e.target.value)} />

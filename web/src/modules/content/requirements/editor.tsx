@@ -1,12 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Label } from "@/components/ui/label";
+import { SettingsGroup } from "@/components/shared/settings-group";
+import { SettingsRow } from "@/components/shared/settings-row";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { loadRequirementOptions } from "./actions";
 import { unwrapContent, type ContentDocument } from "../types";
+
+type Requirement = NonNullable<ContentDocument["prerequisites"]>[number];
 
 export function UnitRequirements({ academyId, unitId, userId, document, onChange, disabled }: {
   academyId: string; unitId: string; userId: string; document: ContentDocument; onChange: (document: ContentDocument) => void; disabled: boolean;
@@ -18,17 +21,21 @@ export function UnitRequirements({ academyId, unitId, userId, document, onChange
   } });
   const selected = document.prerequisites ?? [];
   const unavailable = selected.filter(requirement => !query.data?.units.some(unit => unit.id === requirement.unitId && unit.assessments?.some(assessment => assessment.kind === requirement.kind && assessment.id === requirement.assessmentId)));
-  return <section aria-label="Access requirements" className="space-y-4">
-    {query.isLoading ? <Skeleton className="h-20 w-full" /> : query.isError ? <p role="alert" className="text-sm text-destructive">{query.error.message}</p> : <>
-      <div className="space-y-2"><Label htmlFor="unit-coupon-type">Coupon type</Label><Select disabled={disabled} value={document.couponTypeId ?? "none"} onValueChange={value => onChange({ ...document, couponTypeId: value === "none" ? null : value })}><SelectTrigger id="unit-coupon-type" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No coupon type</SelectItem>{query.data?.types.map(type => <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>)}</SelectContent></Select></div>
-      <div className="space-y-3"><h3 className="text-sm font-medium">Required submissions</h3>{query.data?.units.filter(unit => unit.assessments?.length).map(unit => <fieldset key={unit.id} className="space-y-2 rounded-lg border p-3"><legend className="px-1 text-sm font-medium">{unit.title}</legend>{unit.assessments?.map(assessment => {
-        const checked = selected.some(r => r.unitId === unit.id && r.kind === assessment.kind && r.assessmentId === assessment.id);
-        const id = `prerequisite-${unit.id}-${assessment.kind}-${assessment.id}`;
-        return <div key={id} className="flex items-center gap-2"><Checkbox id={id} disabled={disabled} checked={checked} onCheckedChange={value => onChange({ ...document, prerequisites: value === true ? [...selected, { unitId: unit.id, kind: assessment.kind, assessmentId: assessment.id }] : selected.filter(r => !(r.unitId === unit.id && r.kind === assessment.kind && r.assessmentId === assessment.id)) })} /><Label htmlFor={id}>{assessment.title}</Label></div>;
-      })}</fieldset>)}{unavailable.map(requirement => {
-        const id = `unavailable-${requirement.unitId}-${requirement.kind}-${requirement.assessmentId}`;
-        return <div key={id} className="flex items-center gap-2"><Checkbox id={id} checked disabled={disabled} onCheckedChange={() => onChange({ ...document, prerequisites: selected.filter(item => item !== requirement) })} /><Label htmlFor={id}>Unavailable prerequisite · {requirement.kind}</Label></div>;
-      })}{!selected.length && !query.data?.units.some(unit => unit.assessments?.length) && <p className="text-sm text-muted-foreground">No prerequisite assessments</p>}</div>
+  const row = (id: string, title: string, checked: boolean, toggle: (value: boolean) => void) => <SettingsRow key={id} id={id} title={title}><Checkbox id={id} disabled={disabled} checked={checked} onCheckedChange={value => toggle(value === true)} /></SettingsRow>;
+  return <SettingsGroup title="Requirements">
+    {query.isLoading ? <div className="px-6 py-5"><Skeleton className="h-20 w-full" /></div> : query.isError ? <p role="alert" className="px-6 py-5 text-sm text-destructive">{query.error.message}</p> : <>
+      <SettingsRow id="unit-coupon-type" title="Coupon type"><Select disabled={disabled} value={document.couponTypeId ?? "none"} onValueChange={value => onChange({ ...document, couponTypeId: value === "none" ? null : value })}><SelectTrigger id="unit-coupon-type" size="sm" className="w-48"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No coupon type</SelectItem>{query.data?.types.map(type => <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>)}</SelectContent></Select></SettingsRow>
+      {query.data?.units.filter(unit => unit.assessments?.length).map(unit => <div key={unit.id} role="group" aria-labelledby={`prerequisite-unit-${unit.id}`} className="divide-y divide-border/60">
+        <h3 id={`prerequisite-unit-${unit.id}`} dir="auto" className="bg-muted/30 px-6 py-2 text-xs font-medium text-muted-foreground">{unit.title}</h3>
+        {unit.assessments?.map(assessment => {
+          const matches = (r: Requirement) => r.unitId === unit.id && r.kind === assessment.kind && r.assessmentId === assessment.id;
+          return row(`prerequisite-${unit.id}-${assessment.kind}-${assessment.id}`, assessment.title, selected.some(matches),
+            value => onChange({ ...document, prerequisites: value ? [...selected, { unitId: unit.id, kind: assessment.kind, assessmentId: assessment.id }] : selected.filter(r => !matches(r)) }));
+        })}
+      </div>)}
+      {unavailable.map(requirement => row(`unavailable-${requirement.unitId}-${requirement.kind}-${requirement.assessmentId}`, `Unavailable prerequisite · ${requirement.kind}`, true,
+        () => onChange({ ...document, prerequisites: selected.filter(item => item !== requirement) })))}
+      {!selected.length && !query.data?.units.some(unit => unit.assessments?.length) && <p className="px-6 py-5 text-sm text-muted-foreground">No prerequisite assessments</p>}
     </>}
-  </section>;
+  </SettingsGroup>;
 }

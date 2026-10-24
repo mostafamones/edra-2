@@ -19,8 +19,8 @@ export function UploadedFiles({ academyId, unitId, assets, items, disabled, dirt
   const pending = unattachedUploads(assets, unitId, items);
   if (!pending.length) return null;
   return <section aria-labelledby="uploaded-files-title" className="space-y-2">
-    <h3 id="uploaded-files-title" className="px-1 text-sm font-semibold">Unattached uploads<span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">{pending.length}</span></h3>
-    <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-dashed bg-card/40">{pending.map(asset => <UploadRow key={asset.id} academyId={academyId} asset={asset} items={items} disabled={disabled} dirty={dirty} onAdd={onAdd} onRefresh={onRefresh} />)}</ul>
+    <h2 id="uploaded-files-title" className="px-2 text-base font-semibold text-foreground/80">Unattached uploads<span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">{pending.length}</span></h2>
+    <ul className="divide-y divide-border/60 overflow-hidden rounded-lg border border-dashed bg-card/40">{pending.map(asset => <UploadRow key={asset.id} academyId={academyId} asset={asset} items={items} disabled={disabled} dirty={dirty} onAdd={onAdd} onRefresh={onRefresh} />)}</ul>
   </section>;
 }
 
@@ -45,7 +45,7 @@ function UploadRow({ academyId, asset, items, disabled, dirty, onAdd, onRefresh 
       ...(asset.kind === "video" && kind === "answer" && assessment ? { assessmentId: assessment.assessmentId, assessmentKind: assessment.assessmentKind } : {}) });
   }
   const status = asset.deletion_token ? "Deletion pending" : asset.status === "failed" ? "Failed, upload again" : asset.status === "uploading" ? "Uploading" : asset.status === "processing" ? "Processing" : null;
-  return <li className="space-y-3 px-3 py-3">
+  return <li className="space-y-3 px-4 py-3">
     <div className="flex items-center gap-3">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><HugeiconsIcon icon={asset.kind === "video" ? Video01Icon : File02Icon} className="size-4.5" aria-hidden="true" /></span>
       <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium" title={asset.name}>{asset.name}</p>

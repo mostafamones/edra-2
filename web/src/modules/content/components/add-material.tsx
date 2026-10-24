@@ -29,7 +29,7 @@ export function AddMaterial({ academyId, unitId, version, items, dirty, disabled
     if (kind === "assessment") return;
     onUploaded({ id: newUuid(), kind, title, assetId, ...(kind === "answer" && answer ? { assessmentKind: answer.assessmentKind, assessmentId: answer.assessmentId } : {}) });
   }
-  return <section aria-label="Add material" className="rounded-xl border bg-card">
+  return <section aria-label="Add material" className="overflow-hidden rounded-lg bg-card">
     <Tabs value={kind} onValueChange={value => { if (!busy) setKind(value as Kind); }} className="gap-0">
       <TabsList variant="line" className="w-full justify-start overflow-x-auto border-b px-3">
         {TABS.map(t => <TabsTrigger key={t.value} value={t.value} disabled={busy && t.value !== kind} className="flex-none">{t.label}</TabsTrigger>)}
