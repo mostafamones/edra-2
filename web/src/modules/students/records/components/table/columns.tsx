@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -37,20 +38,30 @@ export type ColumnOptions = {
   codes: Record<string, string>;
 };
 
-/** The staff record name; linked students' cells blur on hover and swap to the account's own name on click. */
+const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
+
+/** The staff record name; when a linked account's own name differs, the cell blurs on hover and swaps names on click. */
 function NameToggle({ recordName, accountName }: { recordName: string; accountName: string | null }) {
   const [showAccount, setShowAccount] = useState(false);
-  const name = showAccount && accountName ? accountName : recordName;
-  if (!accountName) return <CellText text={recordName} className="font-medium">{recordName}</CellText>;
+  if (!accountName || sameName(accountName, recordName)) return <CellText text={recordName} className="font-medium">{recordName}</CellText>;
+  const name = showAccount ? accountName : recordName;
   return (
-    <button
-      type="button"
-      aria-pressed={showAccount}
-      onClick={() => setShowAccount((value) => !value)}
-      className="min-w-0 rounded-sm text-start font-medium text-foreground outline-none transition-[filter] hover:blur-[2px] focus-visible:ring-3 focus-visible:ring-ring/50"
-    >
-      <CellText text={name}>{name}</CellText>
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-pressed={showAccount}
+          onClick={() => setShowAccount((value) => !value)}
+          className="block min-w-0 truncate rounded-sm text-start font-medium text-foreground outline-none transition-[filter] hover:blur-[2px] focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          {name}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-sm break-words">
+        <span dir="auto" className="block">{name}</span>
+        <span className="block opacity-70">{showAccount ? "Account name · Click to show record name" : "Record name · Click to show account name"}</span>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
