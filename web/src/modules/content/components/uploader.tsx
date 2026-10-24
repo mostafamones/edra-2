@@ -14,7 +14,7 @@ export function MaterialUploader({ academyId, unitId, kind, disabled, onUploaded
   onUploaded: (assetId: string, name: string) => void; onBusy: (busy: boolean) => void;
 }) {
   const [pending, setPending] = useState<{ file: File; id: string } | null>(null);
-  const [busy, setBusy] = useState(false), [progress, setProgress] = useState(0), [error, setError] = useState("");
+  const [dragging, setDragging] = useState(false), [busy, setBusy] = useState(false), [progress, setProgress] = useState(0), [error, setError] = useState("");
   const xhr = useRef<XMLHttpRequest | null>(null), mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; xhr.current?.abort(); }; }, []);
   async function upload(file: File, id: string) {
@@ -48,9 +48,9 @@ export function MaterialUploader({ academyId, unitId, kind, disabled, onUploaded
   const label = kind === "video" ? "Upload video" : "Upload document";
   const pick = (file?: File) => { if (file && !disabled && !busy) void upload(file, newUuid()); };
   return <div className="space-y-3">
-    <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); pick(event.dataTransfer.files[0]); }}
-      className={`flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/30 px-4 py-8 text-center transition-colors focus-within:ring-[3px] focus-within:ring-ring/50 ${disabled || busy ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-muted/60"}`}>
-      <HugeiconsIcon icon={Upload04Icon} className="size-6 text-muted-foreground" aria-hidden="true" />
+    <label onDragOver={event => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={event => { event.preventDefault(); setDragging(false); pick(event.dataTransfer.files[0]); }}
+      className={`group flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-10 text-center transition-colors focus-within:ring-[3px] focus-within:ring-ring/50 ${disabled || busy ? "cursor-not-allowed bg-muted/30 opacity-60" : dragging ? "cursor-copy border-primary bg-primary/5" : "cursor-pointer bg-muted/30 hover:border-foreground/20 hover:bg-muted/60"}`}>
+      <span className="mb-1 flex size-11 items-center justify-center rounded-full border bg-background shadow-xs transition-transform group-hover:-translate-y-0.5"><HugeiconsIcon icon={Upload04Icon} strokeWidth={1.5} className="size-5 text-muted-foreground" aria-hidden="true" /></span>
       <span className="text-sm font-medium">{label}</span>
       <span className="text-xs text-muted-foreground">{kind === "video" ? "Up to 2 GB" : "PDF, document, presentation or image · up to 25 MB"}</span>
       <input aria-label={label} type="file" className="sr-only" disabled={disabled || busy} accept={kind === "video" ? "video/*" : DOCUMENT_TYPES.join(",")} onChange={event => { pick(event.target.files?.[0]); event.target.value = ""; }} />

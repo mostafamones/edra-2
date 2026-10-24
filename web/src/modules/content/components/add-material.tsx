@@ -5,7 +5,9 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ContentItem } from "../types";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { MaterialUploader } from "./uploader";
+import { KIND_ICONS } from "./kind-icon";
 import { AssessmentPicker } from "./assessment-picker";
 
 type Kind = "explanation" | "document" | "answer" | "assessment";
@@ -29,10 +31,10 @@ export function AddMaterial({ academyId, unitId, version, items, dirty, disabled
     if (kind === "assessment") return;
     onUploaded({ id: newUuid(), kind, title, assetId, ...(kind === "answer" && answer ? { assessmentKind: answer.assessmentKind, assessmentId: answer.assessmentId } : {}) });
   }
-  return <section aria-label="Add material" className="overflow-hidden rounded-lg bg-card">
+  return <section aria-label="Add material" className="overflow-hidden rounded-xl border bg-card shadow-xs">
     <Tabs value={kind} onValueChange={value => { if (!busy) setKind(value as Kind); }} className="gap-0">
-      <TabsList variant="line" className="w-full justify-start overflow-x-auto border-b px-3">
-        {TABS.map(t => <TabsTrigger key={t.value} value={t.value} disabled={busy && t.value !== kind} className="flex-none">{t.label}</TabsTrigger>)}
+      <TabsList variant="line" className="w-full justify-start overflow-x-auto border-b bg-muted/30 px-3">
+        {TABS.map(t => <TabsTrigger key={t.value} value={t.value} disabled={busy && t.value !== kind} className="flex-none"><HugeiconsIcon icon={KIND_ICONS[t.value]} strokeWidth={1.5} aria-hidden="true" />{t.label}</TabsTrigger>)}
       </TabsList>
       <TabsContent value={kind} className="space-y-3 p-4">
         {kind === "assessment"
