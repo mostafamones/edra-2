@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
-import { changeUnit, loadUnit, saveUnit } from "../actions";
+import { changeUnit, loadUnit, publishUnitEdits, saveUnit } from "../actions";
 import { refreshVideo } from "../media-actions";
 import type { ContentDetail } from "../data";
 import { canEditUnit, documentSchema, STATE_LABELS, unwrapContent, type ContentDocument, type ContentItem } from "../types";
@@ -76,7 +76,12 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
   async function perform(action: string) {
     setBusy(true); setError("");
     try {
-      if (action === "save") { const parsed = documentSchema.safeParse(document); if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Check the fields."); unwrapContent(await saveUnit({ academyId: academy.id, unitId: unit.id, version: unit.version, document: parsed.data })); }
+      if (action === "save" || (action === "publish" && dirty)) {
+        const parsed = documentSchema.safeParse(document);
+        if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Check the fields.");
+        const input = { academyId: academy.id, unitId: unit.id, version: unit.version, document: parsed.data };
+        unwrapContent(await (action === "publish" ? publishUnitEdits(input) : saveUnit(input)));
+      }
       else {
         if (dirty) throw new Error("Save your edits before this action.");
         unwrapContent(await changeUnit({ academyId: academy.id, unitId: unit.id, version: unit.version, action, feedback }));
@@ -107,7 +112,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
       <div className="flex shrink-0 flex-wrap gap-2">
         {editable && <Button variant={canManage && unit.state !== "archived" ? "outline" : "default"} disabled={disabled || !dirty || !document.title.trim()} onClick={() => perform("save")}><HugeiconsIcon icon={FloppyDiskIcon} aria-hidden="true" />{busy ? "Saving…" : "Save draft"}</Button>}
         {editable && <Button variant="outline" disabled={disabled || dirty} onClick={() => perform("submit")}><HugeiconsIcon icon={SentIcon} aria-hidden="true" />Submit for review</Button>}
-        {canManage && unit.state !== "archived" && <Button disabled={disabled || dirty} onClick={() => perform("publish")}><HugeiconsIcon icon={Tick02Icon} aria-hidden="true" />{unit.published_revision ? "Publish changes" : "Publish unit"}</Button>}
+        {canManage && unit.state !== "archived" && <Button disabled={disabled} onClick={() => perform("publish")}><HugeiconsIcon icon={Tick02Icon} aria-hidden="true" />{unit.published_revision ? "Publish changes" : "Publish unit"}</Button>}
         {canManage && (unit.state === "archived"
           ? <Button variant="outline" disabled={busy} onClick={() => perform("restore")}><HugeiconsIcon icon={ArchiveRestoreIcon} aria-hidden="true" />Restore as draft</Button>
           : <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" aria-label="More actions" disabled={busy || uploading}><HugeiconsIcon icon={MoreHorizontalIcon} /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-fit"><DropdownMenuItem variant="destructive" disabled={dirty} onSelect={() => setArchiving(true)}><HugeiconsIcon icon={Archive02Icon} />Archive unit</DropdownMenuItem></DropdownMenuContent></DropdownMenu>)}

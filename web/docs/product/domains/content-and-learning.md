@@ -70,6 +70,8 @@ Staff may revise draft material. Once students have activity on a release, chang
 
 Confirmed by the owner, 2026-10-16, and extended to instructor-owned units on 2026-10-21: edits to a published unit remain unpublished until a manager explicitly publishes the changes. Saving edits alone does not change what students see. The currently published material remains the student-visible version while edits are being prepared. Publishing changes still obeys assessment locks and academic-history preservation. Editing or replacing material does not reset student access periods.
 
+Confirmed 2026-10-25: managers can publish their current editor changes directly without first pressing Save draft. Save and publication execute atomically with the current version check and all readiness/history validation. Failed publication changes neither the stored draft nor the live snapshot, and the editor retains unsaved changes for correction. The separate Save draft action remains available; instructors still require manager publication.
+
 Archiving a unit removes its published release from active student learning while retaining its records. Managers can archive and restore units. Restoration returns a unit to a draft, not directly to student visibility; a manager must explicitly publish it again under the usual readiness and history rules. This does not authorize deleting stored video assets, resetting access periods or rewriting earlier academic history. Closed-year records remain read-only under the academic-year rules.
 
 When a track is removed, affected content units and their current released audiences become level-wide under the approved track-removal rules. Earlier activity and snapshots retain their historical identity.
