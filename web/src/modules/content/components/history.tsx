@@ -3,7 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Clock01Icon } from "@hugeicons/core-free-icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { FloatingSheet, FloatingSheetContent, FloatingSheetDescription, FloatingSheetHeader, FloatingSheetTitle, FloatingSheetTrigger } from "@/components/ui/floating-sheet";
 import type { ContentDetail } from "../data";
 import { revisionChanges } from "../revisions";
 import { documentSchema } from "../types";
@@ -11,13 +11,13 @@ import { documentSchema } from "../types";
 /** Published versions of a unit, newest first, with who published each one and what it changed. */
 export function VersionHistory({ revisions, live }: { revisions: ContentDetail["revisions"]; live: boolean }) {
   const documents = revisions.map(r => documentSchema.safeParse(r.document));
-  return <Sheet>
-    <SheetTrigger asChild><Button variant="outline"><HugeiconsIcon icon={Clock01Icon} strokeWidth={1.5} aria-hidden="true" />History</Button></SheetTrigger>
-    <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md">
-      <SheetHeader className="border-b">
-        <SheetTitle className="text-lg font-semibold">Version history</SheetTitle>
-        <SheetDescription>{revisions.length} published version{revisions.length === 1 ? "" : "s"}</SheetDescription>
-      </SheetHeader>
+  return <FloatingSheet>
+    <FloatingSheetTrigger asChild><Button variant="outline"><HugeiconsIcon icon={Clock01Icon} strokeWidth={1.5} aria-hidden="true" />History</Button></FloatingSheetTrigger>
+    <FloatingSheetContent className="gap-0">
+      <FloatingSheetHeader className="border-b">
+        <FloatingSheetTitle className="text-lg font-semibold">Version history</FloatingSheetTitle>
+        <FloatingSheetDescription>{revisions.length} published version{revisions.length === 1 ? "" : "s"}</FloatingSheetDescription>
+      </FloatingSheetHeader>
       <ol className="min-h-0 flex-1 overflow-y-auto p-6">
         {revisions.map((revision, index) => {
           const current = documents[index], previous = index === revisions.length - 1 ? null : documents[index + 1];
@@ -39,6 +39,6 @@ export function VersionHistory({ revisions, live }: { revisions: ContentDetail["
           </li>;
         })}
       </ol>
-    </SheetContent>
-  </Sheet>;
+    </FloatingSheetContent>
+  </FloatingSheet>;
 }
