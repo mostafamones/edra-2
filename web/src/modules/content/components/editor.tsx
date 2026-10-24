@@ -26,6 +26,7 @@ import { MaterialRow } from "./material";
 import { ReuseMaterial } from "./reuse";
 import { UploadedFiles } from "./uploads";
 import { UnitAccessPanel } from "../access/manager";
+import { UnitRequirements } from "../requirements/editor";
 
 export function ContentEditorPage({ unitId }: { unitId: string }) { return <AcademyGate>{academy => <Editor academy={academy} unitId={unitId} />}</AcademyGate>; }
 function Editor({ academy, unitId }: { academy: AcademyEntry; unitId: string }) {
@@ -135,6 +136,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
             <Field><FieldLabel htmlFor="content-access-days">Access duration (days)</FieldLabel><Input id="content-access-days" type="number" min={1} max={2147483647} step={1} value={Number.isNaN(document.accessDays) ? "" : document.accessDays} disabled={disabled} onChange={e => setDocument({ ...document, accessDays: e.target.valueAsNumber })} /></Field>
           </FieldGroup>
         </Panel>
+        <UnitRequirements academyId={academy.id} unitId={unit.id} userId={data.userId} document={document} onChange={setDocument} disabled={disabled} />
         <Panel title="Feedback" count={data.feedback.length}>
           {data.feedback.length > 0 && <ol className="divide-y divide-border/60">{data.feedback.map(f => <li key={f.id} className="px-4 py-3"><p dir="auto" className="whitespace-pre-wrap text-sm">{f.body}</p><p className="mt-1 text-xs text-muted-foreground">{new Date(f.created_at).toLocaleString()}</p></li>)}</ol>}
           {!data.feedback.length && !(data.manager && editable) && <p className="px-4 py-3 text-sm text-muted-foreground">No feedback yet.</p>}
@@ -143,7 +145,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
         {data.revisions.length > 0 && <Panel title="Publication history" count={data.revisions.length}><ul className="divide-y divide-border/60">{data.revisions.map(r => <li key={r.revision} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm"><span className="font-medium">Version {r.revision}</span><span className="text-xs text-muted-foreground">{new Date(r.published_at).toLocaleString()}</span></li>)}</ul></Panel>}
       </aside>
     </div>
-    {unit.published_revision > 0 && <UnitAccessPanel academyId={academy.id} unitId={unit.id} userId={data.userId} />}
+    {unit.published_revision > 0 && <UnitAccessPanel academyId={academy.id} academySlug={academy.slug} unitId={unit.id} userId={data.userId} />}
     <AlertDialog open={archiving} onOpenChange={setArchiving}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Archive this unit?</AlertDialogTitle><AlertDialogDescription>It leaves active student learning. Material and history are preserved, and restoring returns it as a draft.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => perform("archive")}>Archive unit</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </main>;
 }

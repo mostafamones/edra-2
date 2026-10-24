@@ -998,7 +998,7 @@ expect_ok c38a "the source archive holding the unit failed"
 expect_rejected c38b "an archived source was newly recorded as taught" content_unavailable
 
 # Learning access races. Use dedicated connected records and published units; no provider files.
-LU1="$(uuid)"; LU2="$(uuid)"; LB="$(uuid)"; LK="$(uuid)"
+LU1="$(uuid)"; LU2="$(uuid)"; LB="$(uuid)"; LK="$(uuid)"; LT="$(uuid)"
 LS1="$(uuid)"; LS2="$(uuid)"
 LR1="$(new_student 'Learning race one' 01088880101 null)"
 LR2="$(new_student 'Learning race two' 01088880102 null)"
@@ -1014,16 +1014,24 @@ insert into public.content_units(id,academy_id,program_id,created_by,state,publi
 insert into public.content_revisions(unit_id,academy_id,revision,document,published_by)
  select id,'$ACADEMY',1,draft,'$ADMIN' from public.content_units where id in ('$LU1','$LU2');
 $as_admin
-select public.generate_content_codes('$ACADEMY','$LU1','$LB',1);
+select public.create_content_coupon_type('$ACADEMY','$CONTENT_PROGRAM','Race coupons','$LT');
+select public.generate_content_coupons('$ACADEMY','$LT',1,'$LB');
+reset role;
+-- Fixture publication is established before the race; application editing is covered by SQL suites.
+update public.content_units set draft=draft||jsonb_build_object('couponTypeId','$LT'::uuid) where id='$LU1';
+alter table public.content_revisions disable trigger user;
+update public.content_revisions set document=document||jsonb_build_object('couponTypeId','$LT'::uuid) where unit_id='$LU1';
+alter table public.content_revisions enable trigger user;
 commit;
 SQL
-LC="$(psqlx -tA -c "select code from public.content_access_codes where batch_id='$LB'")"
-hold l1a l1b "$(as_user "$LS1") select public.redeem_content_code('$ACADEMY','$LU1','$LC',gen_random_uuid());"
-start l1b "$(as_user "$LS2") select public.redeem_content_code('$ACADEMY','$LU1','$LC',gen_random_uuid());"
+LC="$(psqlx -tA -c "select code from public.content_coupons where batch_id='$LB'")"
+hold l1a l1b "$(as_user "$LS1") select public.redeem_content_coupon('$ACADEMY','$LU1','$LC',gen_random_uuid());"
+start l1b "$(as_user "$LS2") select public.redeem_content_coupon('$ACADEMY','$LU1','$LC',gen_random_uuid());"
 wait
 expect_ok l1a "first unit-code redemption failed"
-expect_rejected l1b "one unit code was redeemed concurrently twice" code_used
-psqlx -tA -c "select count(*)=1 from public.content_code_redemptions where code_id=(select id from public.content_access_codes where code='$LC')" | grep -qx t || fail "single-use code duplicated"
+expect_ok l1b "second coupon request failed outside its business denial"
+grep -q code_unavailable "$OUT/l1b" || fail "one coupon was redeemed concurrently twice"
+psqlx -tA -c "select count(*)=1 from public.content_coupon_redemptions where coupon_id=(select id from public.content_coupons where code='$LC')" | grep -qx t || fail "single-use code duplicated"
 
 # A lost-response retry must return the original full grant, even after waiting for its commit.
 hold l2a l2b "$as_admin select public.issue_content_access('$ACADEMY','$LU2','$LR1','$LK');"

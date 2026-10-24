@@ -2271,51 +2271,6 @@ export type Database = {
           },
         ]
       }
-      content_access_codes: {
-        Row: {
-          academy_id: string
-          batch_id: string
-          code: string
-          id: string
-          revoked_at: string | null
-          revoked_by: string | null
-          unit_id: string
-        }
-        Insert: {
-          academy_id: string
-          batch_id: string
-          code: string
-          id?: string
-          revoked_at?: string | null
-          revoked_by?: string | null
-          unit_id: string
-        }
-        Update: {
-          academy_id?: string
-          batch_id?: string
-          code?: string
-          id?: string
-          revoked_at?: string | null
-          revoked_by?: string | null
-          unit_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "content_access_codes_academy_id_unit_id_batch_id_fkey"
-            columns: ["academy_id", "unit_id", "batch_id"]
-            isOneToOne: false
-            referencedRelation: "content_code_batches"
-            referencedColumns: ["academy_id", "unit_id", "id"]
-          },
-          {
-            foreignKeyName: "content_access_codes_revoked_by_fkey"
-            columns: ["revoked_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       content_access_grants: {
         Row: {
           academic_year_id: string
@@ -2530,14 +2485,14 @@ export type Database = {
           },
         ]
       }
-      content_code_batches: {
+      content_coupon_batches: {
         Row: {
           academy_id: string
           created_at: string
           created_by: string
           id: string
           quantity: number
-          unit_id: string
+          type_id: string
         }
         Insert: {
           academy_id: string
@@ -2545,7 +2500,7 @@ export type Database = {
           created_by: string
           id: string
           quantity: number
-          unit_id: string
+          type_id: string
         }
         Update: {
           academy_id?: string
@@ -2553,18 +2508,18 @@ export type Database = {
           created_by?: string
           id?: string
           quantity?: number
-          unit_id?: string
+          type_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "content_code_batches_academy_id_unit_id_fkey"
-            columns: ["academy_id", "unit_id"]
+            foreignKeyName: "content_coupon_batches_academy_id_type_id_fkey"
+            columns: ["academy_id", "type_id"]
             isOneToOne: false
-            referencedRelation: "content_units"
+            referencedRelation: "content_coupon_types"
             referencedColumns: ["academy_id", "id"]
           },
           {
-            foreignKeyName: "content_code_batches_created_by_fkey"
+            foreignKeyName: "content_coupon_batches_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2572,52 +2527,179 @@ export type Database = {
           },
         ]
       }
-      content_code_redemptions: {
+      content_coupon_redemptions: {
         Row: {
           annual_record_id: string
-          code_id: string
+          coupon_id: string
           grant_id: string
+          redeemed_at: string
           unit_id: string
         }
         Insert: {
           annual_record_id: string
-          code_id: string
+          coupon_id: string
           grant_id: string
+          redeemed_at?: string
           unit_id: string
         }
         Update: {
           annual_record_id?: string
-          code_id?: string
+          coupon_id?: string
           grant_id?: string
+          redeemed_at?: string
           unit_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "content_code_redemptions_annual_record_id_fkey"
+            foreignKeyName: "content_coupon_redemptions_annual_record_id_fkey"
             columns: ["annual_record_id"]
             isOneToOne: false
             referencedRelation: "annual_student_records"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "content_code_redemptions_code_id_fkey"
-            columns: ["code_id"]
+            foreignKeyName: "content_coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
             isOneToOne: true
-            referencedRelation: "content_access_codes"
+            referencedRelation: "content_coupons"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "content_code_redemptions_grant_id_fkey"
+            foreignKeyName: "content_coupon_redemptions_grant_id_fkey"
             columns: ["grant_id"]
             isOneToOne: true
             referencedRelation: "content_access_grants"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "content_code_redemptions_unit_id_fkey"
+            foreignKeyName: "content_coupon_redemptions_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "content_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_coupon_types: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          created_at: string
+          created_by: string
+          id: string
+          level_id: string
+          name: string
+          program_id: string
+          track_id: string | null
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          level_id: string
+          name: string
+          program_id: string
+          track_id?: string | null
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          level_id?: string
+          name?: string
+          program_id?: string
+          track_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_coupon_types_academy_id_academic_year_id_fkey"
+            columns: ["academy_id", "academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_coupon_types_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_coupon_types_academy_id_level_id_fkey"
+            columns: ["academy_id", "level_id"]
+            isOneToOne: false
+            referencedRelation: "academy_levels"
+            referencedColumns: ["academy_id", "level_id"]
+          },
+          {
+            foreignKeyName: "content_coupon_types_academy_id_level_id_track_id_fkey"
+            columns: ["academy_id", "level_id", "track_id"]
+            isOneToOne: false
+            referencedRelation: "academy_tracks"
+            referencedColumns: ["academy_id", "level_id", "id"]
+          },
+          {
+            foreignKeyName: "content_coupon_types_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_coupon_types_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "content_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_coupons: {
+        Row: {
+          academy_id: string
+          batch_id: string
+          code: string
+          id: string
+          revoked_at: string | null
+          revoked_by: string | null
+          type_id: string
+        }
+        Insert: {
+          academy_id: string
+          batch_id: string
+          code: string
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          type_id: string
+        }
+        Update: {
+          academy_id?: string
+          batch_id?: string
+          code?: string
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_coupons_academy_id_type_id_batch_id_fkey"
+            columns: ["academy_id", "type_id", "batch_id"]
+            isOneToOne: false
+            referencedRelation: "content_coupon_batches"
+            referencedColumns: ["academy_id", "type_id", "id"]
+          },
+          {
+            foreignKeyName: "content_coupons_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -6922,6 +7004,7 @@ export type Database = {
         Args: { p_topic: string }
         Returns: boolean
       }
+      can_read_avatar_object: { Args: { p_name: string }; Returns: boolean }
       cancel_account_password_challenge: {
         Args: { p_challenge_id: string; p_user_id: string }
         Returns: undefined
@@ -7221,6 +7304,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_content_coupon_type: {
+        Args: {
+          p_academy_id: string
+          p_name: string
+          p_program_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       create_content_unit: {
         Args: {
           p_academy_id: string
@@ -7422,12 +7514,12 @@ export type Database = {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: undefined
       }
-      generate_content_codes: {
+      generate_content_coupons: {
         Args: {
           p_academy_id: string
           p_quantity: number
           p_request_id: string
-          p_unit_id: string
+          p_type_id: string
         }
         Returns: Json
       }
@@ -7469,11 +7561,29 @@ export type Database = {
       get_content_access_workspace: {
         Args: {
           p_academy_id: string
-          p_code_offset?: number
           p_record_offset?: number
           p_search?: string
           p_unit_id: string
         }
+        Returns: Json
+      }
+      get_content_coupon_options: {
+        Args: { p_academy_id: string }
+        Returns: Json
+      }
+      get_content_coupons: {
+        Args: {
+          p_academy_id: string
+          p_offset?: number
+          p_program_id?: string
+          p_search?: string
+          p_status?: string
+          p_type_id?: string
+        }
+        Returns: Json
+      }
+      get_content_requirement_options: {
+        Args: { p_academy_id: string; p_unit_id: string }
         Returns: Json
       }
       get_exam: {
@@ -7493,6 +7603,10 @@ export type Database = {
         Returns: Json
       }
       get_my_content_unit_before_assignments: {
+        Args: { p_academy_id: string; p_unit_id: string }
+        Returns: Json
+      }
+      get_my_content_unit_before_requirements: {
         Args: { p_academy_id: string; p_unit_id: string }
         Returns: Json
       }
@@ -7560,6 +7674,7 @@ export type Database = {
         Returns: boolean
       }
       is_assignment_image_staff: { Args: { p_name: string }; Returns: boolean }
+      is_staff_account: { Args: never; Returns: boolean }
       issue_content_access: {
         Args: {
           p_academy_id: string
@@ -7570,7 +7685,6 @@ export type Database = {
         }
         Returns: Json
       }
-      is_staff_account: { Args: never; Returns: boolean }
       list_assignment_marks: {
         Args: {
           p_academy_id: string
@@ -7964,7 +8078,7 @@ export type Database = {
         Args: { p_event_id: string; p_quiz_id: string }
         Returns: Json
       }
-      redeem_content_code: {
+      redeem_content_coupon: {
         Args: {
           p_academy_id: string
           p_code: string
@@ -8094,12 +8208,11 @@ export type Database = {
         }
         Returns: Json
       }
-      revoke_content_code: {
+      revoke_content_coupon: {
         Args: {
           p_academy_id: string
-          p_code_id: string
+          p_coupon_id: string
           p_request_id: string
-          p_unit_id: string
         }
         Returns: Json
       }
@@ -8905,4 +9018,3 @@ export const Constants = {
     },
   },
 } as const
-

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { COUPON_PATTERN, normalizeCoupon } from "../coupons/types";
 
 export const accessSchema = z.object({ status: z.enum(["locked", "active", "expired", "revoked"]), expiresAt: z.string().nullable(), grantId: z.guid().nullable() });
 export type LearningAccess = z.infer<typeof accessSchema>;
@@ -7,11 +8,9 @@ export const unitInput = z.object({ academyId: z.guid(), unitId: z.guid() });
 export const requestInput = unitInput.extend({ requestId: z.guid() });
 export const staffGrantInput = requestInput.extend({ recordId: z.guid(), expectedGrantId: z.guid().nullable(), expectedRevision: z.number().int().positive(), extensionHours: z.number().int().min(1).max(2147483647).optional() });
 export const grantReceiptSchema = z.object({ grantId: z.guid(), issuedAt: z.string(), expiresAt: z.string(), previousExpiry: z.string().nullable() });
-export const generatedCodesSchema = z.object({ batchId: z.guid(), codes: z.array(z.object({ id: z.guid(), code: z.string().regex(/^[0-9a-f]{32}$/) })) });
 export const workspaceSchema = z.object({
   records: z.array(z.object({ id: z.guid(), name: z.string(), phone: z.string(), connected: z.boolean(), suspended: z.boolean(), access: accessSchema })),
-  recordsHasMore: z.boolean(), codesHasMore: z.boolean(),
-  codes: z.array(z.object({ id: z.guid(), code: z.string(), createdAt: z.string(), redeemed: z.boolean(), revoked: z.boolean() })),
+  recordsHasMore: z.boolean(),
   defaultDays: z.number().int().positive(), publishedRevision: z.number().int().nonnegative(), canIssue: z.boolean(), manager: z.boolean(),
 });
 export type AccessWorkspace = z.infer<typeof workspaceSchema>;
@@ -22,12 +21,15 @@ export const learningListSchema = z.object({ units: z.array(z.object({ id: z.gui
 export type LearningList = z.infer<typeof learningListSchema>;
 export const learningUnitSchema = z.object({
   id: z.guid(), title: z.string(), description: z.string(), accessDays: z.number().int().positive(), access: accessSchema, extensionAvailable: z.boolean(),
+  couponType: z.string().nullable().optional(), prerequisitesMet: z.boolean().default(true),
+  prerequisites: z.array(z.object({ unitId: z.guid(), kind: z.enum(["assignment", "quiz"]), assessmentId: z.guid(), unitTitle: z.string(), title: z.string(), submitted: z.boolean() })).default([]),
   items: z.array(z.object({ id: z.guid(), kind: z.enum(["explanation", "document", "assessment", "answer"]), title: z.string(), available: z.boolean(), assessmentKind: z.enum(["assignment", "quiz", "exam"]).nullable(), assessmentId: z.guid().optional() })),
 });
 export type LearningUnit = z.infer<typeof learningUnitSchema>;
 export const materialSchema = z.object({ kind: z.enum(["video", "document"]), playbackId: z.string().nullable(), storagePath: z.string().nullable(), expiresAt: z.string() });
-export function normalizeUnitCode(value: string) { return value.toLowerCase().replace(/[\s-]/g, ""); }
-export const redeemInput = requestInput.extend({ code: z.string().max(100).transform(normalizeUnitCode).pipe(z.string().regex(/^[0-9a-f]{32}$/, "Enter a valid unit code.")) });
+export function normalizeUnitCode(value: string) { return normalizeCoupon(value); }
+export function isValidAccessCode(value: string) { return COUPON_PATTERN.test(value); }
+export const redeemInput = requestInput.extend({ code: z.string().max(100).transform(normalizeUnitCode).refine(isValidAccessCode, "Enter a valid coupon.") });
 export function learningDate(value: string | null) { return value ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Cairo" }).format(new Date(value)) : "—"; }
 
 export function learningError(error: { message?: string } | null) {
@@ -40,7 +42,11 @@ export function learningError(error: { message?: string } | null) {
     previous_access_required: "This unit needs a previous access grant before it can be extended.",
     access_not_expired: "Your access has not expired yet.", access_revoked: "This access has been revoked.",
     extension_used: "Your academy’s extension for this academic year has already been used.",
-    code_unavailable: "This unit code is not available.", code_used: "This code, or your code allowance for this unit, has already been used.",
+    code_unavailable: "This coupon is not available.", code_used: "This code, or your code allowance for this unit, has already been used.",
+    coupon_type_mismatch: "This coupon does not match this unit’s track and coupon type.",
+    prerequisites_required: "Submit all required prerequisite assessments first.",
+    coupon_rate_limited: "Too many coupon attempts. Try again in ten minutes.",
+    coupon_type_exists: "A coupon type with this name already exists in this scope.",
     access_required: "Active unit access is required.", material_unavailable: "This material is not available.",
     validation: "Check the fields and try again.",
   };

@@ -17,6 +17,7 @@ vi.mock("./assessment-picker", () => ({ AssessmentPicker: () => null }));
 vi.mock("./reuse", () => ({ ReuseMaterial: () => null }));
 vi.mock("./uploads", () => ({ UploadedFiles: () => null }));
 vi.mock("../access/manager", () => ({ UnitAccessPanel: () => null }));
+vi.mock("../requirements/editor", () => ({ UnitRequirements: () => null }));
 
 import { ContentEditorPage } from "./editor";
 

@@ -1,6 +1,6 @@
 # Edra — learning access, coupons and playback
 
-Approved by the owner, 2026-10-11; unit durations, instructor grants, extensions, code redemption and document access updated 2026-10-21.
+Approved by the owner, 2026-10-11; unit access updated 2026-10-21; track/type coupons and prerequisites confirmed 2026-10-24. Product requirements do not imply implemented delivery.
 
 ## Learning access
 
@@ -48,13 +48,27 @@ For quiz and exam solutions, availability closure means actual closure after the
 
 ## Coupons
 
-A unit-access code (also called a coupon in existing delivery issues) grants one eligible student explanation access to one content release, using its default-duration policy above. Codes may be generated together for a release and its eligible level or track audience, and exported for printing or distribution. Code generation has no per-code or per-batch custom-duration override.
+A coupon belongs to an academy, academic year, grade, exact optional track and instructor-defined coupon type. Types can distinguish Regular and Revision material with different prices; this does not introduce a wallet, monetary balance or payment processing. A unit accepts one coupon type from its own scope. A track-specific coupon does not also cover grade-wide units; grades without tracks use their grade-only scope.
+
+Each coupon is used once on one eligible unit the student chooses, using that unit's current published default access duration at redemption. Two coupons can unlock two chosen units. Generate coupons from the academy Coupons page rather than binding each new code to a unit. Code generation has no duration override. Preserve the existing academy staff generation/distribution and manager-only unused-code revocation permissions.
+
+New codes contain eight unambiguous uppercase letters/digits, displayed as `XXXX-XXXX`. Redemption accepts lowercase and ignores spaces and hyphens. Generate unpredictable codes with collision protection and enforce server-side redemption throttling. A denied attempt must not consume a coupon or disclose its owner.
+
+The owner explicitly approved retiring the old unit-specific code system on 2026-10-24, including deleting all old codes and redemption history. Remove its generation/redemption endpoints, code batches, codes, redemption tables and code-operation retry receipts. Existing access grants, revocations and annual extensions remain intact. Academy invitation and student identity codes are separate and unaffected. This supersedes the earlier decision to leave existing codes untouched.
 
 Redemption requires the student's academy access, current-year participation and audience eligibility. Suspended online access prevents redemption. Academy joining invites/codes and unit-access codes are separate workflows: a unit code neither joins an academy nor creates annual participation. The current academy invite flow remains the existing integration; an additional short joining-code interface is not claimed implemented by this requirement.
 
 Each code can be redeemed once and becomes permanently associated with the redeeming annual student record. A student can redeem only one coupon for a release, including after its access has expired. Further access uses extensions or manual grants rather than another coupon.
 
-Owners, Head Admins, Admins and active Instructors may generate and distribute unit-access codes and inspect redemption state. Manager authority to revoke unused codes remains unchanged; this update does not infer instructor code-revocation authority. Students redeem their own codes; staff do not redeem on their behalf or reassign redeemed coupons. Raw codes and exports remain restricted to authorized academy staff and are not exposed through student browsing.
+Owners, Head Admins, Admins and active Instructors may generate and distribute coupons and inspect redemption state. Manager authority to revoke unused codes remains unchanged; this update does not infer instructor code-revocation authority. Students redeem their own codes; staff do not redeem on their behalf or reassign redeemed coupons. Raw codes and exports remain restricted to authorized academy staff and are not exposed through student browsing.
+
+## Unit prerequisites
+
+An instructor selects specific assignments/quizzes from prerequisite units; every selected assessment must have an official submission. Draft answers, merely holding access, or a score threshold do not satisfy this first-version rule. Follow the existing unit ownership and manager-publication workflow: saving working requirements does not change published requirements.
+
+The target unit remains visible with its unmet requirements. Block coupon redemption without consuming the code, and apply the prerequisite gate to every new access source, including staff and attendance grants. There is no manager bypass in this version. Preserve separate assessment-window and answer-material authority.
+
+Publishing new or changed requirements preserves already-active access until its recorded expiry. Subsequent grants, redemptions and extensions use the current published requirements. Preserve publication, submission and access history. Dependencies must remain in compatible academy/year/audience scope; self-dependencies and dependency cycles are invalid.
 
 Revoking an unused code prevents redemption. Removing access already granted by redemption is a separate recorded access action. Period coupons, subscriptions and payment-managed access are outside this MVP flow.
 
