@@ -53,7 +53,7 @@ export function InvitationCard({ row, onRevoke }: {
     : row.status === "revoked" && row.revokedAt ? row.revokedAt : row.expiresAt;
 
   return (
-    <Card size="sm" className="relative h-full items-center gap-3 rounded-xl border-dashed px-4 py-5 text-center">
+    <Card size="sm" className="relative h-full items-center gap-0 rounded-xl border-dashed px-4 pt-7 pb-3 text-center">
       {row.canManage && live && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -70,18 +70,14 @@ export function InvitationCard({ row, onRevoke }: {
           </DropdownMenuContent>
         </DropdownMenu>
       )}
-      <div className={cn("flex w-full min-w-0 flex-1 flex-col items-center gap-3", !live && "opacity-60")}>
-        <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <HugeiconsIcon icon={MailAdd01Icon} className="size-6" aria-hidden="true" />
+      <div className={cn("flex w-full min-w-0 flex-1 flex-col items-center", !live && "opacity-60")}>
+        {!live && <Badge variant="outline" className="absolute top-3 left-3">{STATUS_LABELS[row.status]}</Badge>}
+        <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <HugeiconsIcon icon={MailAdd01Icon} className="size-7" aria-hidden="true" />
         </div>
-        <div className="flex w-full min-w-0 flex-col items-center gap-1.5">
-          <h3 dir="ltr" className="w-full truncate font-medium tabular-nums text-foreground">{row.phone}</h3>
-          <div className="flex flex-wrap justify-center gap-1.5">
-            <Badge variant="secondary">{ROLE_LABELS[row.role]}</Badge>
-            {!live && <Badge variant="outline">{STATUS_LABELS[row.status]}</Badge>}
-          </div>
-        </div>
-        <div className="mt-auto grid w-full min-w-0 gap-0.5 text-xs text-muted-foreground">
+        <h3 dir="ltr" className="mt-4 w-full truncate text-base font-semibold tabular-nums text-foreground">{row.phone}</h3>
+        <p className="mt-0.5 text-sm text-muted-foreground">{ROLE_LABELS[row.role]}</p>
+        <div className="mt-5 grid w-full min-w-0 gap-0.5 border-t pt-3 text-xs text-muted-foreground">
           <p dir="auto" className="truncate">Invited by {row.createdByName ?? "—"}</p>
           <p>{live || row.status === "expired" ? "Expires" : "Updated"} {formatDate(lastChange)}</p>
         </div>

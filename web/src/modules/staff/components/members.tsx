@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  AlertCircleIcon, MailAdd01Icon, MoreHorizontalIcon, SecurityCheckIcon, UserBlock01Icon,
+  AlertCircleIcon, Call02Icon, MailAdd01Icon, MoreHorizontalIcon, SecurityCheckIcon, UserBlock01Icon,
   UserCheck01Icon, UserGroupIcon, UserMinus01Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -86,8 +86,8 @@ export function TeamMembers({ academy, userId, canManage }: {
       {canManage && <HeaderActions><InviteDialog academy={academy} userId={userId} /></HeaderActions>}
       {canManage ? (
         <Tabs value={tab} onValueChange={setTab} className="gap-5">
-          <div className="flex items-center justify-between gap-3 border-b">
-            <TabsList variant="line" className="justify-start">
+          <div className="flex items-center gap-3">
+            <TabsList variant="line" className="min-w-0 flex-1 justify-start border-b">
               <TabsTrigger value="members" className="flex-none">Members<Count value={members.data?.length} /></TabsTrigger>
               <TabsTrigger value="invitations" className="flex-none">Invitations<Count value={invitations.data?.length} /></TabsTrigger>
             </TabsList>
@@ -182,7 +182,7 @@ function MemberCard({ academy, userId, member, onAction }: {
   const suspended = Boolean(member.suspended_at);
   const choices = roleChoices(academy.role, member.role, userId, member.user_id);
   return (
-    <Card size="sm" className="relative h-full items-center gap-3 rounded-xl px-4 py-5 text-center">
+    <Card size="sm" className="relative h-full items-center gap-0 rounded-xl px-4 pt-7 pb-3 text-center">
       {canManageMember(academy.role, member.role, userId, member.user_id) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -207,21 +207,21 @@ function MemberCard({ academy, userId, member, onAction }: {
           </DropdownMenuContent>
         </DropdownMenu>
       )}
-      <Avatar aria-hidden="true" className={cn("size-16", suspended && "opacity-50 grayscale")}>
+      {suspended && <Badge variant="destructive" className="absolute top-3 left-3">Suspended</Badge>}
+      <Avatar aria-hidden="true" className={cn("size-20", suspended && "opacity-50 grayscale")}>
         <AvatarImage src={member.avatarUrl} alt="" />
-        <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+        <AvatarFallback className="text-xl">{initials}</AvatarFallback>
       </Avatar>
-      <div className="flex w-full min-w-0 flex-col items-center gap-1.5">
-        <h3 dir="auto" className="w-full truncate font-medium text-foreground" style={{ fontFamily: "inherit" }}>{name}</h3>
-        <div className="flex flex-wrap justify-center gap-1.5">
-          <Badge variant={member.role === "owner" ? "default" : "secondary"}>{ROLE_LABELS[member.role]}</Badge>
-          {member.user_id === userId && <Badge variant="outline">You</Badge>}
-          {suspended && <Badge variant="destructive">Suspended</Badge>}
-        </div>
+      <div className="mt-4 flex w-full min-w-0 flex-col items-center">
+        <h3 dir="auto" className="w-full truncate text-base font-semibold text-foreground">{name}</h3>
+        <p className={cn("mt-0.5 text-sm", member.role === "owner" ? "text-primary" : "text-muted-foreground")}>
+          {ROLE_LABELS[member.role]}{member.user_id === userId && <span className="text-muted-foreground"> · You</span>}
+        </p>
       </div>
-      <p className="mt-auto text-xs text-muted-foreground">
+      <div className="mt-5 flex w-full items-center justify-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
+        <HugeiconsIcon icon={Call02Icon} className="size-3.5 shrink-0" aria-hidden="true" />
         {member.profiles.phone ? <span dir="ltr" className="tabular-nums">{member.profiles.phone}</span> : "No phone"}
-      </p>
+      </div>
     </Card>
   );
 }
