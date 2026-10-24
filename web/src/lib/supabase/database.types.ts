@@ -2765,6 +2765,7 @@ export type Database = {
         Row: {
           academic_year_id: string
           academy_id: string
+          coupon_prefix: string | null
           id: string
           level_id: string
           original_track_name: string | null
@@ -2773,6 +2774,7 @@ export type Database = {
         Insert: {
           academic_year_id: string
           academy_id: string
+          coupon_prefix?: string | null
           id?: string
           level_id: string
           original_track_name?: string | null
@@ -2781,6 +2783,7 @@ export type Database = {
         Update: {
           academic_year_id?: string
           academy_id?: string
+          coupon_prefix?: string | null
           id?: string
           level_id?: string
           original_track_name?: string | null
@@ -8129,6 +8132,23 @@ export type Database = {
           p_version: number
         }
         Returns: number
+      }
+      update_scoped_coupon_type: {
+        Args: {
+          p_academy_id: string
+          p_level_id: string
+          p_name: string
+          p_prefix: string
+          p_request_id: string
+          p_track_id: string
+          p_type_id: string
+          p_year_id: string
+        }
+        Returns: Json
+      }
+      remove_content_coupon_type: {
+        Args: { p_academy_id: string; p_request_id: string; p_type_id: string }
+        Returns: Json
       }
       record_assignment_work: {
         Args: {

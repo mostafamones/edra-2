@@ -80,7 +80,7 @@ select public.create_scoped_coupon_type(pg_temp.lid('academy'),pg_temp.lid('year
 do $$ declare page jsonb; begin
  page:=public.get_scoped_content_coupons(pg_temp.lid('academy'),pg_temp.lid('year'),'secondary-2',pg_temp.lid('unused-track'));
  perform pg_temp.lcheck(jsonb_array_length(page->'codes')=2,'default generation works before units exist');
- perform pg_temp.lcheck(page->'codes'->0->>'prefix'='REG','prefix change does not rewrite generated codes');
+ perform pg_temp.lcheck(page->'codes'->0->>'prefix'='S2-UNU-REG','prefix change does not rewrite generated codes');
  perform pg_temp.lcheck(jsonb_array_length(public.get_scoped_content_coupons(pg_temp.lid('academy'),pg_temp.lid('year'),'secondary-1',null)->'codes')=0,'grade filter does not leak other-grade codes');
 end $$;
 select pg_temp.lact('student');

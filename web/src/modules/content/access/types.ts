@@ -47,6 +47,8 @@ export function learningError(error: { message?: string } | null) {
     prerequisites_required: "Submit all required prerequisite assessments first.",
     coupon_rate_limited: "Too many coupon attempts. Try again in ten minutes.",
     coupon_type_exists: "A coupon type with this name already exists in this scope.",
+    default_coupon_type: "Default coupon types cannot be removed.",
+  coupon_scope_required: "Choose a whole grade or a specific track for this coupon type.",
     access_required: "Active unit access is required.", material_unavailable: "This material is not available.",
     validation: "Check the fields and try again.",
   };

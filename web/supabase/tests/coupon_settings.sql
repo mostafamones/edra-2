@@ -66,31 +66,33 @@ do $$ declare a uuid; b uuid; t public.content_coupon_types; begin
  select (draft->>'couponTypeId')::uuid into a from public.content_units where id=pg_temp.lid('auto-unit');
  select (draft->>'couponTypeId')::uuid into b from public.content_units where id=pg_temp.lid('other-unit');
  select * into strict t from public.content_coupon_types where id=a;
- perform pg_temp.lcheck(a=b and t.all_tracks and t.is_default and t.track_id is null and t.prefix='REG','new units in different tracks pick the same shared Regular default');
- perform pg_temp.lcheck((select count(*)=1 from public.content_coupon_types where academy_id=pg_temp.lid('academy') and academic_year_id=pg_temp.lid('year') and level_id='secondary-1' and is_default),'one default per grade/year');
+ perform pg_temp.lcheck(a<>b and not t.all_tracks and t.is_default and t.track_id=pg_temp.lid('track') and t.prefix='S1-SCI-REG','new units pick their own track Regular default');
+ perform pg_temp.lcheck((select count(*)=3 from public.content_coupon_types where academy_id=pg_temp.lid('academy') and academic_year_id=pg_temp.lid('year') and level_id='secondary-1' and is_default and not retired),'one default for whole grade and each track');
 end $$;
 set local role authenticated;
 select pg_temp.lact('owner');
-select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('auto-unit')),'Revision shared',pg_temp.lid('shared'),'rev',true);
-select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('auto-unit')),'Scientific only',pg_temp.lid('track-only'),'SCI',false);
+select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('unit')),'Whole grade revision',pg_temp.lid('shared'),'rev',true);
+select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('auto-unit')),'Scientific revision',pg_temp.lid('track-only'),'REV',false);
+select pg_temp.lerror(format('select public.create_content_coupon_type(%L,%L,''Invalid shared'',%L,''BAD'',true)',pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('auto-unit')),gen_random_uuid()),'coupon_scope_required');
 reset role;
 create function pg_temp.settings_save(label text,type_label text) returns void language plpgsql as $$
 declare u public.content_units; begin
  select * into strict u from public.content_units where id=pg_temp.lid(label);
  perform public.save_content_unit(u.academy_id,u.id,u.version,u.draft||jsonb_build_object('couponTypeId',pg_temp.lid(type_label)));
 end $$;
-select pg_temp.settings_save('auto-unit','shared');
-select pg_temp.settings_save('other-unit','shared');
+select pg_temp.lerror('select pg_temp.settings_save(''auto-unit'',''shared'')','coupon_type_mismatch');
+select pg_temp.lerror('select pg_temp.settings_save(''other-unit'',''shared'')','coupon_type_mismatch');
 select pg_temp.lerror('select pg_temp.settings_save(''other-unit'',''track-only'')','coupon_type_mismatch');
-select pg_temp.settings_save('track-unit','shared');
+select pg_temp.settings_save('track-unit','track-only');
 select public.change_content_unit(pg_temp.lid('academy'),pg_temp.lid('track-unit'),(select version from public.content_units where id=pg_temp.lid('track-unit')),'publish');
-select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('shared'),2,pg_temp.lid('old-batch'));
-select public.change_content_coupon_prefix(pg_temp.lid('academy'),pg_temp.lid('shared'),'mock',pg_temp.lid('prefix-request'));
-select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('shared'),1,pg_temp.lid('new-batch'));
-select pg_temp.lcheck((select prefix='REV' from public.content_coupon_batches where id=pg_temp.lid('old-batch')) and (select prefix='MOCK' from public.content_coupon_batches where id=pg_temp.lid('new-batch')),'prefix edit preserves printed batches');
-select pg_temp.lcheck(public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('shared'),2,pg_temp.lid('old-batch'))->'codes'->0->>'prefix'='REV','lost-response generation retry retains original prefix');
-select pg_temp.lcheck(jsonb_array_length(public.get_content_coupons(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('other-unit')))->'codes')=3,'shared coupons listed from another track');
-select pg_temp.lcheck(jsonb_path_exists(public.get_content_coupon_options(pg_temp.lid('academy')),'$.types[*] ? (@.isDefault == true && @.allTracks == true && @.prefix == "REG")'),'options expose shared defaults');
+select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('track-only'),2,pg_temp.lid('old-batch'));
+select public.change_content_coupon_prefix(pg_temp.lid('academy'),pg_temp.lid('track-only'),'mock',pg_temp.lid('prefix-request'));
+select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('track-only'),1,pg_temp.lid('new-batch'));
+select pg_temp.lcheck((select prefix='S1-SCI-REV' from public.content_coupon_batches where id=pg_temp.lid('old-batch')) and (select prefix='S1-SCI-MOCK' from public.content_coupon_batches where id=pg_temp.lid('new-batch')),'prefix edit preserves printed batches');
+select pg_temp.lcheck(public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('track-only'),2,pg_temp.lid('old-batch'))->'codes'->0->>'prefix'='S1-SCI-REV','lost-response generation retry retains original prefix');
+select pg_temp.lcheck(jsonb_array_length(public.get_scoped_content_coupons(pg_temp.lid('academy'),pg_temp.lid('year'),'secondary-1',pg_temp.lid('other-track'))->'codes')=0,'track codes are not listed for another track');
+select pg_temp.lcheck(jsonb_path_exists(public.get_content_coupon_options(pg_temp.lid('academy')),'$.types[*] ? (@.isDefault == true && @.prefix == "S1-SCI-REG")'),'options expose audience defaults');
+select pg_temp.lcheck((select count(*)=count(distinct replace(prefix,'-','')) from public.content_coupon_types where academy_id=pg_temp.lid('academy') and academic_year_id=pg_temp.lid('year') and not retired),'all active printed prefixes distinguish their types');
 -- The student still needs their own eligible track, despite the shared coupon scope.
 update public.annual_student_records set track_id=pg_temp.lid('track') where id in (pg_temp.lid('record-student'),pg_temp.lid('record-second'));
 create temporary table settings_codes as select row_number() over(order by id) as n,code,id from public.content_coupons where batch_id=pg_temp.lid('old-batch');
@@ -99,9 +101,9 @@ set local role authenticated;
 select pg_temp.lact('student');
 do $$ declare code text; result jsonb; begin
  select c.code into code from settings_codes c where n=1;
- result:=public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('track-unit'),'MOCK-'||code,gen_random_uuid());
+ result:=public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('track-unit'),'S1-SCI-MOCK-'||code,gen_random_uuid());
  perform pg_temp.lcheck(result->>'error'='code_unavailable','wrong prefix cannot redeem an old printed code');
- result:=public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('track-unit'),'rev-'||lower(substr(code,1,4))||'- '||lower(substr(code,5)),gen_random_uuid());
+ result:=public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('track-unit'),'s1-sci-rev-'||lower(substr(code,1,4))||'- '||lower(substr(code,5)),gen_random_uuid());
  perform pg_temp.lcheck(result->>'grantId' is not null,'original printed prefix works on selected track unit');
 end $$;
 select pg_temp.lact('second');
@@ -117,4 +119,4 @@ select pg_temp.lerror(format('select public.change_content_coupon_prefix(%L,%L,'
 reset role;
 select pg_temp.lcheck(not has_function_privilege('authenticated','edra_private.default_coupon_type(uuid)','EXECUTE'),'default helper is private');
 rollback;
-select 'Coupon shared defaults and printed prefixes passed' as result;
+select 'Coupon audience defaults and printed prefixes passed' as result;
