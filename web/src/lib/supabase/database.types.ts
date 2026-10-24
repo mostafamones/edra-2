@@ -2592,10 +2592,10 @@ export type Database = {
           created_by: string
           id: string
           is_default: boolean
-          level_id: string
+          level_id: string | null
           name: string
           prefix: string
-          program_id: string
+          program_id: string | null
           retired: boolean
           track_id: string | null
         }
@@ -2607,10 +2607,10 @@ export type Database = {
           created_by: string
           id?: string
           is_default?: boolean
-          level_id: string
+          level_id?: string | null
           name: string
           prefix?: string
-          program_id: string
+          program_id?: string | null
           retired?: boolean
           track_id?: string | null
         }
@@ -2622,10 +2622,10 @@ export type Database = {
           created_by?: string
           id?: string
           is_default?: boolean
-          level_id?: string
+          level_id?: string | null
           name?: string
           prefix?: string
-          program_id?: string
+          program_id?: string | null
           retired?: boolean
           track_id?: string | null
         }
@@ -7032,6 +7032,15 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: undefined
       }
+      change_academy_default_prefix: {
+        Args: {
+          p_academy_id: string
+          p_prefix: string
+          p_request_id: string
+          p_year_id: string
+        }
+        Returns: Json
+      }
       change_assignment_answer_access: {
         Args: {
           p_academy_id: string
@@ -7309,6 +7318,16 @@ export type Database = {
         Returns: number
       }
       create_academy: { Args: { academy_name: string }; Returns: string }
+      create_academy_coupon_type: {
+        Args: {
+          p_academy_id: string
+          p_name: string
+          p_prefix: string
+          p_request_id: string
+          p_year_id: string
+        }
+        Returns: Json
+      }
       create_academy_setup: {
         Args: {
           academy_icon: string
@@ -7440,6 +7459,10 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: number
       }
+      delete_content_coupon_type: {
+        Args: { p_academy_id: string; p_request_id: string; p_type_id: string }
+        Returns: Json
+      }
       delete_my_account: { Args: never; Returns: undefined }
       delete_session: {
         Args: { p_academy_id: string; p_session_id: string }
@@ -7565,6 +7588,15 @@ export type Database = {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: undefined
       }
+      generate_academy_default_coupons: {
+        Args: {
+          p_academy_id: string
+          p_quantity: number
+          p_request_id: string
+          p_year_id: string
+        }
+        Returns: Json
+      }
       generate_content_coupons: {
         Args: {
           p_academy_id: string
@@ -7626,6 +7658,23 @@ export type Database = {
           p_record_offset?: number
           p_search?: string
           p_unit_id: string
+        }
+        Returns: Json
+      }
+      get_content_coupon_batch: {
+        Args: { p_academy_id: string; p_batch_id: string }
+        Returns: Json
+      }
+      get_content_coupon_batches: {
+        Args: {
+          p_academy_id: string
+          p_academy_wide?: boolean
+          p_level_id?: string
+          p_offset?: number
+          p_prefix?: string
+          p_search?: string
+          p_track_id?: string
+          p_year_id?: string
         }
         Returns: Json
       }
@@ -8211,6 +8260,15 @@ export type Database = {
           p_session_id: string
         }
         Returns: number
+      }
+      rename_content_coupon_type: {
+        Args: {
+          p_academy_id: string
+          p_name: string
+          p_request_id: string
+          p_type_id: string
+        }
+        Returns: Json
       }
       renew_my_exam_editor: {
         Args: { p_academy_id: string; p_exam_id: string; p_token: string }

@@ -47,6 +47,7 @@ export function learningError(error: { message?: string } | null) {
     prerequisites_required: "Submit all required prerequisite assessments first.",
     coupon_rate_limited: "Too many coupon attempts. Try again in ten minutes.",
     coupon_type_exists: "A coupon type with this name already exists in this scope.",
+    coupon_type_in_use: "Units still use this coupon type. Change their coupon type first.",
     access_required: "Active unit access is required.", material_unavailable: "This material is not available.",
     validation: "Check the fields and try again.",
   };
