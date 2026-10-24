@@ -72,7 +72,7 @@ export function InvitationCard({ row, onRevoke }: {
       )}
       <div className={cn("flex w-full min-w-0 flex-1 flex-col items-center", !live && "opacity-60")}>
         {!live && <Badge variant="outline" className="absolute top-3 left-3">{STATUS_LABELS[row.status]}</Badge>}
-        <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <div className="flex size-20 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <HugeiconsIcon icon={MailAdd01Icon} className="size-7" aria-hidden="true" />
         </div>
         <h3 dir="ltr" className="mt-4 w-full truncate text-base font-semibold tabular-nums text-foreground">{row.phone}</h3>

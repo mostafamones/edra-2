@@ -182,11 +182,11 @@ function MemberCard({ academy, userId, member, onAction }: {
   const suspended = Boolean(member.suspended_at);
   const choices = roleChoices(academy.role, member.role, userId, member.user_id);
   return (
-    <Card size="sm" className="relative h-full items-center gap-0 rounded-xl px-4 pt-7 pb-3 text-center">
+    <Card size="sm" className="relative h-full items-center gap-0 rounded-xl px-4 pt-6 pb-5 text-center">
       {canManageMember(academy.role, member.role, userId, member.user_id) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="absolute top-2 right-2 text-muted-foreground" aria-label={`Actions for ${name}`}>
+            <Button variant="ghost" size="icon-sm" className="absolute top-3 right-3 text-muted-foreground" aria-label={`Actions for ${name}`}>
               <HugeiconsIcon icon={MoreHorizontalIcon} />
             </Button>
           </DropdownMenuTrigger>
@@ -208,17 +208,17 @@ function MemberCard({ academy, userId, member, onAction }: {
         </DropdownMenu>
       )}
       {suspended && <Badge variant="destructive" className="absolute top-3 left-3">Suspended</Badge>}
-      <Avatar aria-hidden="true" className={cn("size-20", suspended && "opacity-50 grayscale")}>
+      <Avatar shape="squared" aria-hidden="true" className={cn("size-20", suspended && "opacity-50 grayscale")}>
         <AvatarImage src={member.avatarUrl} alt="" />
         <AvatarFallback className="text-xl">{initials}</AvatarFallback>
       </Avatar>
       <div className="mt-4 flex w-full min-w-0 flex-col items-center">
         <h3 dir="auto" className="w-full truncate text-base font-semibold text-foreground">{name}</h3>
-        <p className={cn("mt-0.5 text-sm", member.role === "owner" ? "text-primary" : "text-muted-foreground")}>
+        <p className={cn("text-sm", member.role === "owner" ? "text-primary" : "text-muted-foreground")}>
           {ROLE_LABELS[member.role]}{member.user_id === userId && <span className="text-muted-foreground"> · You</span>}
         </p>
       </div>
-      <div className="mt-5 flex w-full items-center justify-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
+      <div className="flex w-full items-center justify-center gap-1.5 pt-5 text-xs text-muted-foreground">
         <HugeiconsIcon icon={Call02Icon} className="size-3.5 shrink-0" aria-hidden="true" />
         {member.profiles.phone ? <span dir="ltr" className="tabular-nums">{member.profiles.phone}</span> : "No phone"}
       </div>
