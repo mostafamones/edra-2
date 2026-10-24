@@ -208,7 +208,7 @@ function MemberCard({ academy, userId, member, onAction }: {
         </DropdownMenu>
       )}
       {suspended && <Badge variant="destructive" className="absolute top-3 left-3">Suspended</Badge>}
-      <Avatar shape="squared" aria-hidden="true" className={cn("size-20", suspended && "opacity-50 grayscale")}>
+      <Avatar aria-hidden="true" className={cn("size-20", suspended && "opacity-50 grayscale")}>
         <AvatarImage src={member.avatarUrl} alt="" />
         <AvatarFallback className="text-xl">{initials}</AvatarFallback>
       </Avatar>
