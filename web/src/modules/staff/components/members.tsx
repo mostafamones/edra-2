@@ -4,9 +4,11 @@ import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  AlertCircleIcon, Calendar03Icon, Call02Icon, MailAdd01Icon, MoreHorizontalIcon, SecurityCheckIcon, UserBlock01Icon,
+  AlertCircleIcon, MailAdd01Icon, MoreHorizontalIcon, SecurityCheckIcon, UserBlock01Icon,
   UserCheck01Icon, UserGroupIcon, UserMinus01Icon,
 } from "@hugeicons/core-free-icons";
+
+import { cn } from "cn";
 
 import type { AcademyEntry } from "@/modules/academies";
 import { accountName } from "@/modules/account/contract";
@@ -22,12 +24,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import { ROLE_LABELS, formatDate } from "../format";
+import { ROLE_LABELS } from "../format";
 import { fetchAllInvitations, fetchTeamMembers, staffQueryKeys } from "../queries";
 import type { InvitationRow, TeamMember } from "../types";
 import { canManageMember, roleChoices } from "../permissions";
 import type { InvitationStatusFilter } from "../validation";
-import { CardFact } from "./fact";
 import { InvitationCard } from "./invitation-card";
 import { InviteDialog } from "./invite-dialog";
 import { RevokeDialog } from "./revoke-dialog";
@@ -42,7 +43,7 @@ const STATUS_OPTIONS = [
   { value: "all", label: "All" },
 ];
 
-const GRID = "grid gap-3 sm:grid-cols-2 xl:grid-cols-3";
+const GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3";
 
 export function TeamMembers({ academy, userId, canManage }: {
   academy: AcademyEntry;
@@ -69,7 +70,7 @@ export function TeamMembers({ academy, userId, canManage }: {
     <Panel
       query={members}
       label="team members"
-      skeleton="h-32"
+      skeleton="h-48"
       empty={<EmptyState icon={UserGroupIcon} title="No team members found" />}
     >
       {(rows) => rows.map((member) => (
@@ -102,7 +103,7 @@ export function TeamMembers({ academy, userId, canManage }: {
             <Panel
               query={invitations}
               label="invitations"
-              skeleton="h-28"
+              skeleton="h-48"
               empty={(
                 <EmptyState icon={MailAdd01Icon} title={status === "all" ? "No invitations" : `No ${status} invitations`}>
                   {status !== DEFAULT_STATUS && <Button variant="outline" size="sm" onClick={() => setStatus(DEFAULT_STATUS)}>Clear filter</Button>}
@@ -181,55 +182,46 @@ function MemberCard({ academy, userId, member, onAction }: {
   const suspended = Boolean(member.suspended_at);
   const choices = roleChoices(academy.role, member.role, userId, member.user_id);
   return (
-    <Card size="sm" className="h-full gap-4 rounded-xl p-4">
-      <div className="flex items-start gap-3">
-        <Avatar size="lg" aria-hidden="true" className={suspended ? "opacity-50 grayscale" : undefined}>
-          <AvatarImage src={member.avatarUrl} alt="" />
-          <AvatarFallback>{initials}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <h3 dir="auto" className="truncate font-medium text-foreground">
-            {name}{member.user_id === userId && <span className="ml-1.5 text-xs font-normal text-muted-foreground">You</span>}
-          </h3>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge variant={member.role === "owner" ? "default" : "secondary"}>{ROLE_LABELS[member.role]}</Badge>
-            {suspended && <Badge variant="destructive">Suspended</Badge>}
-          </div>
+    <Card size="sm" className="relative h-full items-center gap-3 rounded-xl px-4 py-5 text-center">
+      {canManageMember(academy.role, member.role, userId, member.user_id) && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" className="absolute top-2 right-2 text-muted-foreground" aria-label={`Actions for ${name}`}>
+              <HugeiconsIcon icon={MoreHorizontalIcon} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-fit">
+            {choices.length > 0 && <>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger><HugeiconsIcon icon={SecurityCheckIcon} />Change role</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {choices.map((role) => <DropdownMenuItem key={role} onSelect={() => onAction({ member, kind: "role", role })}>{ROLE_LABELS[role]}</DropdownMenuItem>)}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+            </>}
+            {suspended
+              ? <DropdownMenuItem onSelect={() => onAction({ member, kind: "restore" })}><HugeiconsIcon icon={UserCheck01Icon} />Restore access</DropdownMenuItem>
+              : <DropdownMenuItem onSelect={() => onAction({ member, kind: "suspend" })}><HugeiconsIcon icon={UserBlock01Icon} />Suspend access</DropdownMenuItem>}
+            <DropdownMenuItem variant="destructive" onSelect={() => onAction({ member, kind: "remove" })}><HugeiconsIcon icon={UserMinus01Icon} />Remove</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+      <Avatar aria-hidden="true" className={cn("size-16", suspended && "opacity-50 grayscale")}>
+        <AvatarImage src={member.avatarUrl} alt="" />
+        <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+      </Avatar>
+      <div className="flex w-full min-w-0 flex-col items-center gap-1.5">
+        <h3 dir="auto" className="w-full truncate font-medium text-foreground" style={{ fontFamily: "inherit" }}>{name}</h3>
+        <div className="flex flex-wrap justify-center gap-1.5">
+          <Badge variant={member.role === "owner" ? "default" : "secondary"}>{ROLE_LABELS[member.role]}</Badge>
+          {member.user_id === userId && <Badge variant="outline">You</Badge>}
+          {suspended && <Badge variant="destructive">Suspended</Badge>}
         </div>
-        {canManageMember(academy.role, member.role, userId, member.user_id) && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" className="-mr-1.5 -mt-1 text-muted-foreground" aria-label={`Actions for ${name}`}>
-                <HugeiconsIcon icon={MoreHorizontalIcon} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-fit">
-              {choices.length > 0 && <>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger><HugeiconsIcon icon={SecurityCheckIcon} />Change role</DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    {choices.map((role) => <DropdownMenuItem key={role} onSelect={() => onAction({ member, kind: "role", role })}>{ROLE_LABELS[role]}</DropdownMenuItem>)}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                <DropdownMenuSeparator />
-              </>}
-              {suspended
-                ? <DropdownMenuItem onSelect={() => onAction({ member, kind: "restore" })}><HugeiconsIcon icon={UserCheck01Icon} />Restore access</DropdownMenuItem>
-                : <DropdownMenuItem onSelect={() => onAction({ member, kind: "suspend" })}><HugeiconsIcon icon={UserBlock01Icon} />Suspend access</DropdownMenuItem>}
-              <DropdownMenuItem variant="destructive" onSelect={() => onAction({ member, kind: "remove" })}><HugeiconsIcon icon={UserMinus01Icon} />Remove</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
       </div>
-      <dl className="mt-auto grid gap-1.5 text-xs text-muted-foreground">
-        <CardFact icon={Call02Icon} label="Phone">
-          {member.profiles.phone ? <span dir="ltr" className="tabular-nums">{member.profiles.phone}</span> : "No phone"}
-        </CardFact>
-        <CardFact icon={Calendar03Icon} label="Joined">Joined {formatDate(member.created_at)}</CardFact>
-        {member.suspended_at && (
-          <CardFact icon={UserBlock01Icon} label="Suspended" className="text-destructive">Suspended {formatDate(member.suspended_at)}</CardFact>
-        )}
-      </dl>
+      <p className="mt-auto text-xs text-muted-foreground">
+        {member.profiles.phone ? <span dir="ltr" className="tabular-nums">{member.profiles.phone}</span> : "No phone"}
+      </p>
     </Card>
   );
 }

@@ -22,8 +22,10 @@ function Team({ academy }: { academy: AcademyEntry }) {
   const canManage = canViewInvitations(academy.role);
   return (
     <main className="page-shell min-w-0">
-      <h1 className="text-2xl font-bold tracking-tight">Team</h1>
-      <TeamMembers academy={academy} userId={userId} canManage={canManage} />
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+        <h1 className="text-2xl font-bold tracking-tight">Team</h1>
+        <TeamMembers academy={academy} userId={userId} canManage={canManage} />
+      </div>
     </main>
   );
 }
