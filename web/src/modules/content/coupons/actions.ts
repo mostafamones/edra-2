@@ -15,7 +15,9 @@ export async function loadCouponOptions(value: unknown) {
     const { db, userId } = await contentCaller(academyId);
     const { data, error } = await db.rpc("get_content_coupon_options", { p_academy_id: academyId });
     learningError(error);
-    return { ...couponOptionsSchema.parse(data), userId };
+    const options = couponOptionsSchema.safeParse(data);
+    if (!options.success) throw new Error("Could not load coupon settings. Refresh and try again.");
+    return { ...options.data, userId };
   });
 }
 
