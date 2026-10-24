@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ContentDetail } from "../data";
 
-const actions = vi.hoisted(() => ({ loadUnit: vi.fn(), saveUnit: vi.fn(), changeUnit: vi.fn() }));
+const actions = vi.hoisted(() => ({ loadUnit: vi.fn(), saveUnit: vi.fn(), changeUnit: vi.fn(), publishUnitEdits: vi.fn() }));
 vi.mock("../actions", () => actions);
 vi.mock("../media-actions", () => ({ refreshVideo: vi.fn() }));
 vi.mock("@/modules/auth", () => ({ AcademyGate: ({ children }: { children: (academy: { id: string }) => ReactNode }) => children({ id: "academy" }) }));
@@ -41,10 +41,35 @@ beforeEach(() => {
   vi.clearAllMocks();
   actions.saveUnit.mockResolvedValue({ ok: true, value: undefined });
   actions.changeUnit.mockResolvedValue({ ok: true, value: undefined });
+  actions.publishUnitEdits.mockResolvedValue({ ok: true, value: undefined });
 });
 afterEach(cleanup);
 
 describe("published unit maintenance", () => {
+  it("publishes unsaved manager edits in one action without a separate draft save", async () => {
+    open({ ...detail(), userId: "manager", manager: true });
+    fireEvent.change(await screen.findByLabelText("Title"), { target: { value: "Updated lesson" } });
+    fireEvent.click(screen.getByRole("button", { name: "Publish changes" }));
+    await waitFor(() => expect(actions.publishUnitEdits).toHaveBeenCalledWith(expect.objectContaining({ version: 5, document: expect.objectContaining({ title: "Updated lesson" }) })));
+    expect(actions.saveUnit).not.toHaveBeenCalled();
+    expect(actions.changeUnit).not.toHaveBeenCalled();
+  });
+  it("keeps local edits when publication fails", async () => {
+    actions.publishUnitEdits.mockResolvedValue({ ok: false, message: "Video is still processing." });
+    open({ ...detail(), userId: "manager", manager: true });
+    fireEvent.change(await screen.findByLabelText("Title"), { target: { value: "Keep this edit" } });
+    fireEvent.click(screen.getByRole("button", { name: "Publish changes" }));
+    await screen.findByText("Video is still processing.");
+    expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe("Keep this edit");
+    expect(actions.saveUnit).not.toHaveBeenCalled();
+    expect(actions.loadUnit).toHaveBeenCalledTimes(1);
+  });
+  it("publishes an already saved draft through the existing publication action", async () => {
+    open({ ...detail(), userId: "manager", manager: true });
+    fireEvent.click(await screen.findByRole("button", { name: "Publish changes" }));
+    await waitFor(() => expect(actions.changeUnit).toHaveBeenCalledWith(expect.objectContaining({ version: 5, action: "publish" })));
+    expect(actions.publishUnitEdits).not.toHaveBeenCalled();
+  });
   it("lets the author change duration in the draft without offering publication", async () => {
     const data = detail(); data.unit.draft.accessDays = 44;
     open(data);

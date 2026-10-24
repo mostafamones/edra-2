@@ -8121,6 +8121,15 @@ export type Database = {
         }
         Returns: Json
       }
+      publish_content_edits: {
+        Args: {
+          p_academy_id: string
+          p_document: Json
+          p_unit_id: string
+          p_version: number
+        }
+        Returns: number
+      }
       record_assignment_work: {
         Args: {
           p_academy_id: string
