@@ -3,6 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Archive02Icon, IdentityCardIcon, MoreHorizontalIcon, PencilEdit02Icon, RestoreBinIcon, UserIdVerificationIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useState } from "react";
 import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,23 @@ export type ColumnOptions = {
   /** Current code per record id for the rows on this page; the column is hidden while codes are off. */
   codes: Record<string, string>;
 };
+
+/** The staff record name; linked students' cells blur on hover and swap to the account's own name on click. */
+function NameToggle({ recordName, accountName }: { recordName: string; accountName: string | null }) {
+  const [showAccount, setShowAccount] = useState(false);
+  const name = showAccount && accountName ? accountName : recordName;
+  if (!accountName) return <CellText text={recordName} className="font-medium">{recordName}</CellText>;
+  return (
+    <button
+      type="button"
+      aria-pressed={showAccount}
+      onClick={() => setShowAccount((value) => !value)}
+      className="min-w-0 rounded-sm text-start font-medium text-foreground outline-none transition-[filter] hover:blur-[2px] focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      <CellText text={name}>{name}</CellText>
+    </button>
+  );
+}
 
 const muted = (text: string, label: string) => (
   <span className="text-muted-foreground" aria-label={label}>{text}</span>
@@ -85,13 +103,7 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
     data("name", ({ row }) => (
       // dir="auto" puts the dot after the name in its reading direction, including Arabic names.
       <div dir="auto" className="inline-flex max-w-full min-w-0 items-center gap-1.5 align-middle">
-        <button
-          type="button"
-          onClick={() => options.onOpen(row.original)}
-          className="min-w-0 rounded-sm text-start font-medium text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          <CellText text={row.original.fullName}>{row.original.fullName}</CellText>
-        </button>
+        <NameToggle recordName={row.original.fullName} accountName={row.original.accountName} />
         <AccountDot state={row.original.onlineAccount} />
       </div>
     )),
