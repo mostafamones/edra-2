@@ -30,17 +30,18 @@ it("reports removals without a spurious reorder", () => {
   expect(revisionChanges(base, base)).toEqual([]);
 });
 
-it("merges drafts and publications into one timeline", () => {
-  const draft = { ...base, title: "Draft title" };
+it("merges consecutive draft saves into one entry between publications", () => {
+  const mona = { id: "mona" }, omar = { id: "omar" };
+  const draft = { ...base, title: "Draft title" }, more = { ...draft, accessDays: 14 };
   const entries = historyEntries(
-    [{ kind: "saved", document: draft, at: "2026-10-03T00:00:00Z", by: "Mona" }, { kind: "created", document: base, at: "2026-10-01T00:00:00Z", by: "Mona" }],
-    [{ revision: 2, document: draft, at: "2026-10-03T00:00:00Z", by: "Omar" }, { revision: 1, document: base, at: "2026-10-02T00:00:00Z", by: "Omar" }],
+    [{ kind: "saved", document: more, at: "2026-10-05T00:00:00Z", by: omar }, { kind: "saved", document: draft, at: "2026-10-04T00:00:00Z", by: mona },
+      { kind: "saved", document: { ...base, description: "x" }, at: "2026-10-01T12:00:00Z", by: mona }, { kind: "created", document: { ...base, items: [] }, at: "2026-10-01T00:00:00Z", by: mona }],
+    [{ revision: 1, document: base, at: "2026-10-02T00:00:00Z", by: omar }],
   );
-  expect(entries.map(e => [e.kind, e.by, e.changes])).toEqual([
-    ["published", "Omar", ["Renamed from “Lesson” to “Draft title”"]],
-    ["saved", "Mona", ["Renamed from “Lesson” to “Draft title”"]],
-    ["published", "Omar", ["Published with 2 materials"]],
-    ["created", "Mona", ["Created the unit"]],
+  expect(entries.map(e => [e.kind, e.authors, e.saves, e.changes])).toEqual([
+    ["draft", [omar, mona], 2, ["Renamed from “Lesson” to “Draft title”", "Changed access from 7 days to 14 days"]],
+    ["published", [omar], 1, ["Published with 2 materials"]],
+    ["draft", [mona], 2, ["Created the unit", "Updated the description", "Added explanation video “Intro”", "Added document “Notes”"]],
   ]);
   expect(historyEntries([{ kind: "saved", document: { bad: true }, at: "2026-10-01T00:00:00Z", by: null }], [])[0].changes).toBeNull();
 });

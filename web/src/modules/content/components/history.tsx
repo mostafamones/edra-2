@@ -13,8 +13,6 @@ import type { UnitHistory } from "../data";
 import { historyEntries, type HistoryEntry } from "../revisions";
 import { unwrapContent } from "../types";
 
-const TITLES = { created: "Unit created", saved: "Draft saved" };
-
 /** Every stored draft and publication of a unit, newest first, with who made it, when, and what changed. */
 export function VersionHistory({ academyId, unitId, live }: { academyId: string; unitId: string; live: boolean }) {
   const [open, setOpen] = useState(false);
@@ -28,7 +26,7 @@ export function VersionHistory({ academyId, unitId, live }: { academyId: string;
     <FloatingSheetContent className="gap-0">
       <FloatingSheetHeader className="border-b">
         <FloatingSheetTitle className="text-lg font-semibold">Version history</FloatingSheetTitle>
-        <FloatingSheetDescription className={query.data ? undefined : "sr-only"}>{query.data ? `${query.data.length} change${query.data.length === 1 ? "" : "s"}` : "Drafts and publications of this unit"}</FloatingSheetDescription>
+        <FloatingSheetDescription className={query.data ? undefined : "sr-only"}>{query.data ? `${query.data.length} entr${query.data.length === 1 ? "y" : "ies"}` : "Drafts and publications of this unit"}</FloatingSheetDescription>
       </FloatingSheetHeader>
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
         {query.isPending ? <div role="status" aria-label="Loading history" className="space-y-6">{[0, 1, 2].map(i => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}</div>
@@ -40,23 +38,36 @@ export function VersionHistory({ academyId, unitId, live }: { academyId: string;
   </FloatingSheet>;
 }
 
-function Entry({ entry, live, last }: { entry: HistoryEntry<UnitHistory["drafts"][number]["by"]>; live: boolean; last: boolean }) {
-  const name = entry.by?.name ?? "Unknown staff member";
+type Author = UnitHistory["drafts"][number]["by"];
+
+/** "Mona", "Mona and Omar", "Mona, Omar and 2 others". */
+function authorNames(authors: Author[]) {
+  const names = authors.map(a => a?.name ?? "Unknown staff member");
+  if (names.length <= 2) return names.join(" and ");
+  const others = names.length - 2;
+  return `${names.slice(0, 2).join(", ")} and ${others} other${others === 1 ? "" : "s"}`;
+}
+
+function Entry({ entry, live, last }: { entry: HistoryEntry<Author>; live: boolean; last: boolean }) {
   const published = entry.kind === "published";
   return <li className="relative flex gap-4 pb-8 last:pb-0">
     {!last && <span className="absolute top-5 bottom-0 left-[5px] w-px bg-border" aria-hidden="true" />}
     <span className={`relative mt-1.5 size-[11px] shrink-0 rounded-full border-2 ${published ? `border-primary ${live ? "bg-primary" : "bg-popover"}` : "border-muted-foreground/40 bg-popover"}`} aria-hidden="true" />
     <div className="min-w-0 flex-1 space-y-2">
-      <p className="flex items-center gap-2 font-medium">{entry.kind === "published" ? `Version ${entry.revision}` : TITLES[entry.kind]}{live && <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">Live</Badge>}</p>
+      <div className="flex items-center gap-2">
+        <p className="font-medium">{published ? `Version ${entry.revision}` : "Draft"}</p>
+        {live && <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">Live</Badge>}
+        {entry.saves > 1 && <span className="text-xs text-muted-foreground tabular-nums">{entry.saves} saves</span>}
+        <time dateTime={entry.at} className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">{new Date(entry.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time>
+      </div>
       <div className="rounded-lg bg-muted/50 px-3 py-2.5">
         <div className="flex items-center gap-2">
-          <Avatar aria-hidden="true" className="size-6"><AvatarImage src={entry.by?.avatarUrl} alt="" /><AvatarFallback className="text-[11px]">{entry.by?.name?.slice(0, 1).toUpperCase() ?? "?"}</AvatarFallback></Avatar>
-          <span dir="auto" className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
-          <time dateTime={entry.at} className="shrink-0 text-xs text-muted-foreground tabular-nums">{new Date(entry.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time>
+          <div className="flex shrink-0 -space-x-1.5">{entry.authors.slice(0, 3).map((author, i) => <Avatar key={author?.id ?? i} aria-hidden="true" className="size-6 ring-2 ring-muted"><AvatarImage src={author?.avatarUrl} alt="" /><AvatarFallback className="text-[11px]">{author?.name?.slice(0, 1).toUpperCase() ?? "?"}</AvatarFallback></Avatar>)}</div>
+          <span dir="auto" className="min-w-0 flex-1 truncate text-sm font-medium">{authorNames(entry.authors)}</span>
         </div>
         {entry.changes
-          ? <ul className="mt-2 space-y-1 pl-8 text-sm">{entry.changes.map((change, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60" aria-hidden="true" />{change}</li>)}</ul>
-          : <p className="mt-2 pl-8 text-sm text-muted-foreground">Changes unavailable</p>}
+          ? <ul className="mt-2 space-y-1 text-sm">{entry.changes.map((change, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60" aria-hidden="true" />{change}</li>)}</ul>
+          : <p className="mt-2 text-sm text-muted-foreground">Changes unavailable</p>}
       </div>
     </div>
   </li>;

@@ -91,7 +91,7 @@ export async function readUnitHistory(academyId: string, unitId: string) {
   const paths = (profiles.data ?? []).flatMap(p => p.avatar_path ?? []);
   const signed = paths.length ? (await db.storage.from("avatars").createSignedUrls(paths, 60 * 60)).data : null;
   const urls = new Map(signed?.flatMap(entry => entry.path && entry.signedUrl ? [[entry.path, entry.signedUrl] as const] : []));
-  const people = new Map((profiles.data ?? []).map(p => [p.id, { name: p.display_name || p.full_name, avatarUrl: p.avatar_path ? urls.get(p.avatar_path) : undefined }]));
+  const people = new Map((profiles.data ?? []).map(p => [p.id, { id: p.id, name: p.display_name || p.full_name, avatarUrl: p.avatar_path ? urls.get(p.avatar_path) : undefined }]));
   return {
     drafts: (drafts.data ?? []).map(d => ({ kind: d.kind as "created" | "saved", document: d.document, at: d.saved_at, by: (d.saved_by && people.get(d.saved_by)) || null })),
     revisions: (revisions.data ?? []).map(r => ({ revision: r.revision, document: r.document, at: r.published_at, by: people.get(r.published_by) || null })),
