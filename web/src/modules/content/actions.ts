@@ -1,11 +1,21 @@
 "use server";
 import { z } from "zod";
-import { contentCaller, contentError, contentResult, readContentUnit, readContentWorkspace, readUnitHistory } from "./data";
+import { contentCaller, contentError, contentResult, readContentUnit, readContentWorkspace, readReuseSources, readUnitHistory } from "./data";
 import { documentSchema } from "./types";
 
 export async function loadWorkspace(academyId: string) { return readContentWorkspace(academyId); }
 export async function loadUnit(academyId: string, unitId: string) { return readContentUnit(academyId, unitId); }
 export async function loadUnitHistory(academyId: string, unitId: string) { return contentResult(() => readUnitHistory(academyId, unitId)); }
+
+/** One background request; client Server Actions are dispatched sequentially by Next.js. */
+export async function loadUnitPanels(academyId: string, unitId: string) {
+  const [history, assessments, sources] = await Promise.all([
+    loadUnitHistory(academyId, unitId),
+    contentResult(() => assessmentOptions(academyId, unitId)),
+    contentResult(() => readReuseSources(academyId, unitId)),
+  ]);
+  return { history, assessments, sources };
+}
 const scopeSchema = z.object({ academyId: z.guid(), yearId: z.guid(), levelId: z.string().min(1), trackId: z.guid().nullable(), unitId: z.guid() });
 export async function createUnit(value: unknown) {
   return contentResult(async () => {

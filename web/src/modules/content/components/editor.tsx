@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, Archive02Icon, ArchiveRestoreIcon, BookOpen01Icon, Message01Icon, FloppyDiskIcon, MoreHorizontalIcon, SentIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, Archive02Icon, ArchiveRestoreIcon, Message01Icon, FloppyDiskIcon, MoreHorizontalIcon, SentIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { AcademyGate } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
@@ -23,14 +22,14 @@ import { changeUnit, loadUnit, publishUnitEdits, saveUnit } from "../actions";
 import { refreshVideo } from "../media-actions";
 import type { ContentDetail } from "../data";
 import { canEditUnit, documentSchema, STATE_LABELS, unwrapContent, type ContentDocument, type ContentItem } from "../types";
-import { AddMaterial } from "./add-material";
-import { MaterialRow } from "./material";
-import { ReuseMaterial } from "./reuse";
-import { UploadedFiles } from "./uploads";
+import { MaterialList } from "./list";
+import { useMaterialUpload } from "./uploader";
+import { canAttach, linkMaterial } from "./tree";
 import { UnitAccessPanel } from "../access/manager";
 import { UnitRequirements } from "../requirements/editor";
 import { AccessDuration } from "./duration";
 import { VersionHistory } from "./history";
+import { unitPanelOptions } from "../panels";
 
 export function ContentEditorPage({ unitId }: { unitId: string }) { return <AcademyGate>{academy => <Editor academy={academy} unitId={unitId} />}</AcademyGate>; }
 function Editor({ academy, unitId }: { academy: AcademyEntry; unitId: string }) {
@@ -46,13 +45,18 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
   const [document, setDocument] = useState<ContentDocument>(unit.draft);
   const [assets, setAssets] = useState(data.assets);
   const [feedback, setFeedback] = useState("");
-  const [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false), [error, setError] = useState("");
+  const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const upload = useMaterialUpload({ academyId: academy.id, unitId: unit.id, onUploaded: uploaded });
+  const uploading = upload.busy;
   const [archiving, setArchiving] = useState(false), [tab, setTab] = useState("material");
   const closed = !!program.academic_years.closed_at;
   const editable = canEditUnit(unit, data.userId, data.manager) && !closed;
   const disabled = busy || uploading || !editable;
   const dirty = JSON.stringify(document) !== JSON.stringify(unit.draft);
   const canManage = data.manager && !closed;
+  useEffect(() => {
+    void cache.prefetchQuery(unitPanelOptions(academy.id, unit.id));
+  }, [cache, academy.id, unit.id]);
   useEffect(() => {
     if (!dirty && !uploading) return;
     const protect = (event: BeforeUnloadEvent) => { event.preventDefault(); };
@@ -94,12 +98,12 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
     finally { setBusy(false); }
   }
   const add = (item: ContentItem) => setDocument(current => item.assetId && current.items.some(existing => existing.assetId === item.assetId && existing.kind === item.kind && existing.assessmentId === item.assessmentId && existing.assessmentKind === item.assessmentKind) ? current : ({ ...current, items: [...current.items, item] }));
-  function move(index: number, delta: number) { setDocument(current => { const items = [...current.items]; const to = index + delta; if (to < 0 || to >= items.length) return current; [items[index], items[to]] = [items[to], items[index]]; return { ...current, items }; }); }
-  async function uploaded(item: ContentItem) {
-    add(item);
+  async function uploaded(item: ContentItem, parent?: ContentItem) {
+    // A fresh upload's kind already says whether it is a document.
+    if (parent && canAttach(item, parent, i => i.kind === "document")) setDocument(current => ({ ...current, items: linkMaterial(current.items, item, parent, i => i.kind === "document") }));
+    else add(item);
     try { await refreshAssets(); } catch { setError("Upload finished. Refresh processing status if it does not appear yet."); }
   }
-  const setItems = (items: ContentItem[]) => setDocument({ ...document, items });
   const actions = <>
     <VersionHistory academyId={academy.id} unitId={unit.id} userId={data.userId} live={unit.state !== "archived"} disabled={disabled || dirty}
       onSubmit={editable ? () => perform("submit") : undefined} onPublish={canManage && unit.state !== "archived" ? () => perform("publish") : undefined} />
@@ -134,17 +138,10 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
         <TabsTrigger value="review" className="flex-none">Review<Count value={data.feedback.length} /></TabsTrigger>
         {unit.published_revision > 0 && <TabsTrigger value="students" className="flex-none">Students</TabsTrigger>}
       </TabsList>
-      {tab === "material" && editable && <ReuseMaterial academyId={academy.id} unitId={unit.id} version={unit.version} disabled={disabled || dirty} onChange={reload} />}
       </div>
       <TabsContent value="material" forceMount className={panel}>
-        <section aria-label="Material" className="space-y-4">
-          {document.items.length > 0 && <ol className="divide-y divide-border/60 overflow-hidden rounded-xl border bg-card shadow-xs">{document.items.map((item, index) => <MaterialRow key={item.id} academyId={academy.id} item={item} asset={assets.find(a => a.id === item.assetId)} position={index + 1} first={index === 0} last={index === document.items.length - 1} disabled={disabled}
-            onTitle={title => setItems(document.items.map(i => i.id === item.id ? { ...i, title } : i))} onMove={delta => move(index, delta)} onRemove={() => setItems(document.items.filter(i => i.id !== item.id))}
-            onRefresh={async () => { try { unwrapContent(await refreshVideo(academy.id, item.assetId!)); await refreshAssets(); } catch { setError("Could not refresh processing. Try again."); } }} />)}</ol>}
-          {!document.items.length && !editable && <Empty className="min-h-48 rounded-xl border border-dashed bg-card/20"><EmptyHeader><EmptyMedia variant="icon"><HugeiconsIcon icon={BookOpen01Icon} strokeWidth={1.5} aria-hidden="true" /></EmptyMedia><EmptyTitle>No material yet</EmptyTitle></EmptyHeader></Empty>}
-          {editable && <AddMaterial academyId={academy.id} unitId={unit.id} version={unit.version} items={document.items} dirty={dirty} disabled={disabled} busy={busy || uploading} onBusy={setUploading} onUploaded={uploaded} onAdd={add} onCreated={reload} />}
-          {editable && <UploadedFiles academyId={academy.id} unitId={unit.id} assets={assets} items={document.items} disabled={disabled} dirty={dirty} onAdd={add} onRefresh={refreshAssets} />}
-        </section>
+        <MaterialList academyId={academy.id} unitId={unit.id} version={unit.version} items={document.items} assets={assets} editable={editable} disabled={disabled} dirty={dirty} upload={upload}
+          onItems={change => setDocument(current => ({ ...current, items: change(current.items) }))} onAdd={add} onChanged={reload} onRefreshAssets={refreshAssets} onError={setError} />
       </TabsContent>
       <TabsContent value="settings" forceMount className={panel}>
         <div className="flex max-w-2xl flex-col gap-6">

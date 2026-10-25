@@ -174,6 +174,29 @@ set local role authenticated;
 do $$ begin
   if not exists(select 1 from storage.objects where bucket_id='content-documents' and name=(select storage_path from public.content_assets where id=(select asset_id from content_test_context))) then raise exception 'Staff cannot read their private document object'; end if;
 end $$;
+-- Answers may be documents; explanations may not. Documents attach only directly after an explanation video.
+select set_config('request.jwt.claim.sub',actor::text,true) from content_test_context;
+do $$ declare c record; unit_id uuid:=gen_random_uuid(); document_id uuid:=gen_random_uuid(); notes_id uuid:=gen_random_uuid(); video_id uuid:=gen_random_uuid(); u public.content_units; quiz jsonb; video jsonb; notes jsonb; begin
+  select * into c from content_test_context;
+  perform public.create_content_unit(c.academy,c.year_id,'secondary-1',null,unit_id,'Answer document draft');
+  perform public.register_content_asset(c.academy,unit_id,document_id,'document','Solutions.pdf','application/pdf');
+  perform public.register_content_asset(c.academy,unit_id,notes_id,'document','Notes.pdf','application/pdf');
+  perform public.register_content_asset(c.academy,unit_id,video_id,'video','Lesson.mp4','video/mp4');
+  video:=jsonb_build_object('id',gen_random_uuid(),'kind','explanation','title','Lesson','assetId',video_id);
+  notes:=jsonb_build_object('id',gen_random_uuid(),'kind','document','title','Notes','assetId',notes_id,'attached',true);
+  perform public.create_content_assessment(c.academy,unit_id,1,'quiz','Answer document quiz');
+  select * into u from public.content_units where id=unit_id;
+  select i into strict quiz from jsonb_array_elements(u.draft->'items') i where i->>'kind'='assessment';
+  perform pg_temp.expect_content_error(format('select public.save_content_unit(%L,%L,%s,%L)',c.academy,unit_id,u.version,
+    (u.draft||jsonb_build_object('items',(u.draft->'items')||jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'kind','explanation','title','Not a video','assetId',document_id))))::text),'invalid_asset');
+  perform pg_temp.expect_content_error(format('select public.save_content_unit(%L,%L,%s,%L)',c.academy,unit_id,u.version,
+    (u.draft||jsonb_build_object('items',(u.draft->'items')||jsonb_build_array(notes)))::text),'invalid_attachment');
+  perform pg_temp.expect_content_error(format('select public.save_content_unit(%L,%L,%s,%L)',c.academy,unit_id,u.version,
+    (u.draft||jsonb_build_object('items',(u.draft->'items')||jsonb_build_array(video,notes||'{"attached":false}')))::text),'validation');
+  perform public.save_content_unit(c.academy,unit_id,u.version,u.draft||jsonb_build_object('items',(u.draft->'items')||jsonb_build_array(
+    jsonb_build_object('id',gen_random_uuid(),'kind','answer','title','Solutions','assetId',document_id,'assessmentKind','quiz','assessmentId',quiz->>'assessmentId'),
+    video,notes)));
+end $$;
 reset role;
 create temporary table content_deletion_test(academy uuid,id uuid,token uuid);
 grant select,insert on content_deletion_test to authenticated;

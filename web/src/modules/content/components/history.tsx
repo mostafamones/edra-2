@@ -10,20 +10,22 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FloatingSheet, FloatingSheetContent, FloatingSheetHeader, FloatingSheetTitle, FloatingSheetTrigger } from "@/components/ui/floating-sheet";
-import { loadUnitHistory } from "../actions";
+import { unitPanelOptions, type UnitPanels } from "../panels";
 import type { UnitHistory } from "../data";
 import { historyEntries, historyTime, timeAgo, type HistoryEntry } from "../revisions";
 import { unwrapContent } from "../types";
+
+function selectHistory(panels: UnitPanels) {
+  const history = unwrapContent(panels.history);
+  return historyEntries(history.drafts, history.revisions);
+}
 
 /** Every stored draft and publication of a unit, newest first, with who made it, when, and what changed. */
 export function VersionHistory({ academyId, unitId, userId, live, disabled, onSubmit, onPublish }: {
   academyId: string; unitId: string; userId: string; live: boolean; disabled: boolean; onSubmit?: () => void; onPublish?: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const query = useQuery({ queryKey: ["content", academyId, "unit", unitId, "history"], enabled: open, queryFn: async () => {
-    const history = unwrapContent(await loadUnitHistory(academyId, unitId));
-    return historyEntries(history.drafts, history.revisions);
-  } });
+  const query = useQuery({ ...unitPanelOptions(academyId, unitId), enabled: open, select: selectHistory });
   const liveKey = live ? query.data?.find(entry => entry.kind === "published")?.key : undefined;
   const withYear = new Set(query.data?.map(entry => new Date(entry.at).getFullYear())).size > 1;
   return <FloatingSheet open={open} onOpenChange={setOpen}>
@@ -50,16 +52,16 @@ type Action = { label: string; icon: typeof SentIcon; run: () => void };
 
 /** "You", "You and Omar", "Mona, Omar and 2 others". */
 function authorNames(authors: Author[], userId: string) {
-  const names = authors.map(a => a?.id === userId ? "You" : a?.name ?? "Unknown staff member");
-  if (names.length <= 2) return names.join(" and ");
-  const others = names.length - 2;
-  return `${names.slice(0, 2).join(", ")} and ${others} other${others === 1 ? "" : "s"}`;
+  const names = authors.map(a => a?.id === userId ? "You" : a?.name?.split(" ").slice(0, 2).join(" ") ?? "Unknown staff member");
+  if (names.length <= 2) return names.map(a => a.split(" ").slice(0, 1)).join(", ");
+  const others = names.length - 1;
+  return `${names.slice(0, 1).join(" & ")}, ${others} other${others === 1 ? "" : "s"}`;
 }
 
 function People({ authors, userId }: { authors: Author[]; userId: string }) {
   return <div className="flex min-w-0 items-center gap-2">
     <div className="flex shrink-0 -space-x-1.5">{authors.slice(0, 3).map((author, i) => <Avatar key={author?.id ?? i} aria-hidden="true" className="size-5 ring-2 ring-muted"><AvatarImage src={author?.avatarUrl} alt="" /><AvatarFallback className="text-[10px]">{author?.name?.slice(0, 1).toUpperCase() ?? "?"}</AvatarFallback></Avatar>)}</div>
-    <span dir="auto" className="min-w-0 truncate text-foreground/90">{authorNames(authors, userId)}</span>
+    <span dir="auto" className="min-w-0 truncate font-semibold text-foreground/90">{authorNames(authors, userId)}</span>
   </div>;
 }
 
