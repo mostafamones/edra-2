@@ -65,9 +65,9 @@ insert into learning_ids(name) values('regular'),('revision'),('track-type'),('b
 insert into learning_ids(name,id) select 'assignment',public.create_content_assessment(pg_temp.lid('academy'),pg_temp.lid('unit'),3,'assignment','Required homework');
 insert into learning_ids(name,id) select 'quiz',public.create_content_assessment(pg_temp.lid('academy'),pg_temp.lid('unit'),4,'quiz','Required quiz');
 select public.change_content_unit(pg_temp.lid('academy'),pg_temp.lid('unit'),5,'publish');
-select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('unit')),'Standard',pg_temp.lid('regular'));
-select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('unit')),'Revision',pg_temp.lid('revision'));
-select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('track-unit')),'Standard',pg_temp.lid('track-type'));
+select public.create_academy_coupon_type(pg_temp.lid('academy'),pg_temp.lid('year'),'Standard','STD',pg_temp.lid('regular'));
+select public.create_academy_coupon_type(pg_temp.lid('academy'),pg_temp.lid('year'),'Revision','REV',pg_temp.lid('revision'));
+select public.create_academy_coupon_type(pg_temp.lid('academy'),pg_temp.lid('year'),'Other type','OTH',pg_temp.lid('track-type'));
 select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('regular'),3,pg_temp.lid('batch-regular'));
 select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('revision'),1,pg_temp.lid('batch-revision'));
 select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('track-type'),1,pg_temp.lid('batch-track'));
@@ -93,9 +93,9 @@ select pg_temp.lact('student');
 do $$ declare result jsonb; i integer; begin
  result:=public.get_my_content_unit(pg_temp.lid('academy'),pg_temp.lid('second-unit'));
  perform pg_temp.lcheck(result->>'title' is not null and result->>'prerequisitesMet'='false','blocked unit remains visible');
- perform pg_temp.lcheck(jsonb_array_length(result->'prerequisites')=2,'both chosen assessments listed');
+ perform pg_temp.lcheck(jsonb_array_length(result->'prerequisites')=3,'source activation and both chosen assessments listed');
  perform pg_temp.lcheck(public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('third-unit'),pg_temp.code('regular'),gen_random_uuid())->>'error'='coupon_type_mismatch','regular code cannot unlock revision unit');
- perform pg_temp.lcheck(public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('second-unit'),pg_temp.code('track-type'),gen_random_uuid())->>'error'='coupon_type_mismatch','track code cannot unlock whole-grade unit');
+ perform pg_temp.lcheck(public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('second-unit'),pg_temp.code('track-type'),gen_random_uuid())->>'error'='coupon_type_mismatch','a different type cannot unlock the selected unit');
  perform pg_temp.lcheck(public.redeem_content_coupon(pg_temp.lid('academy'),pg_temp.lid('second-unit'),pg_temp.code('regular'),gen_random_uuid())->>'error'='prerequisites_required','code blocked by prerequisites');
 end $$;
 select pg_temp.lact('owner');
@@ -127,7 +127,22 @@ insert into public.assignment_recipients(assignment_id,annual_student_record_id,
 select pg_temp.lcheck(not edra_private.content_requirements_met(pg_temp.lid('second-unit'),pg_temp.lid('record-student')),'assignment alone and draft quiz insufficient');
 insert into public.quiz_submissions(academy_id,academic_year_id,quiz_id,annual_student_record_id,source,reason,submitted_at,processed_at,scoring_revision,confirmed_by)
  values(pg_temp.lid('academy'),pg_temp.lid('year'),pg_temp.lid('quiz'),pg_temp.lid('record-student'),'physical','physical',now(),now(),1,pg_temp.lid('owner'));
-select pg_temp.lcheck(edra_private.content_requirements_met(pg_temp.lid('second-unit'),pg_temp.lid('record-student')),'late assignment and official quiz satisfy all requirements');
+select pg_temp.lcheck(not edra_private.content_requirements_met(pg_temp.lid('second-unit'),pg_temp.lid('record-student')),'official submissions without activation do not unlock the next unit');
+do $$ declare result jsonb; begin
+ result:=public.get_my_content_unit(pg_temp.lid('academy'),pg_temp.lid('second-unit'));
+ perform pg_temp.lcheck(result->>'prerequisitesMet'='false','unit details load while activation is missing');
+ perform pg_temp.lcheck(exists(select 1 from jsonb_array_elements(result->'prerequisites') r where r->>'kind'='assignment' and (r->>'submitted')::boolean),'late official assignment is displayed as submitted');
+ perform pg_temp.lcheck(exists(select 1 from jsonb_array_elements(result->'prerequisites') r where r->>'kind'='access' and not (r->>'submitted')::boolean),'missing activation stays separately unmet');
+end $$;
+-- Insert immutable expired history: prior activation counts without requiring renewal.
+do $$ declare grant_id uuid:=gen_random_uuid(); begin
+ insert into public.content_access_accounts(academy_id,academic_year_id,annual_record_id,unit_id)
+ values(pg_temp.lid('academy'),pg_temp.lid('year'),pg_temp.lid('record-student'),pg_temp.lid('unit')) on conflict do nothing;
+ insert into public.content_access_grants(id,academy_id,academic_year_id,annual_record_id,unit_id,kind,actor_id,issued_at,starts_at,expires_at,duration_seconds)
+ values(grant_id,pg_temp.lid('academy'),pg_temp.lid('year'),pg_temp.lid('record-student'),pg_temp.lid('unit'),'staff',pg_temp.lid('owner'),now()-interval '10 days',now()-interval '10 days',now()-interval '3 days',604800);
+ update public.content_access_accounts set current_grant_id=grant_id where annual_record_id=pg_temp.lid('record-student') and unit_id=pg_temp.lid('unit');
+end $$;
+select pg_temp.lcheck(edra_private.content_requirements_met(pg_temp.lid('second-unit'),pg_temp.lid('record-student')),'expired activation plus official submissions satisfy the combined requirements');
 set local role authenticated;
 select pg_temp.lact('student');
 do $$ declare result jsonb; code text; request uuid:=gen_random_uuid(); begin
@@ -150,6 +165,16 @@ end $$;
 reset role;
 -- Private generation helper is intentionally inaccessible from authenticated callers.
 select pg_temp.lcheck(not has_function_privilege('authenticated','edra_private.new_coupon_code()','EXECUTE'),'generator is private');
+select pg_temp.lcheck(not has_function_privilege('authenticated','edra_private.content_previously_unlocked(uuid,uuid)','EXECUTE'),'unlock-history helper is private');
+select pg_temp.lact('owner');
+select pg_temp.publish_policy('draft',jsonb_build_object('prerequisites',jsonb_build_array(jsonb_build_object('unitId',pg_temp.lid('unit'),'kind','access'))));
+select pg_temp.lcheck(edra_private.content_requirements_met(pg_temp.lid('draft'),pg_temp.lid('record-student')),'unit-only requirement accepts previous expired activation');
+select pg_temp.lcheck(not edra_private.content_requirements_met(pg_temp.lid('draft'),pg_temp.lid('record-second')),'another student cannot borrow unlock history');
+select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','unit',jsonb_build_object('prerequisites',jsonb_build_array(jsonb_build_object('unitId',pg_temp.lid('draft'),'kind','access')))),'prerequisite_cycle');
+select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','draft',jsonb_build_object('prerequisites',jsonb_build_array(jsonb_build_object('unitId',pg_temp.lid('draft'),'kind','access')))),'invalid_prerequisite');
+insert into public.content_access_revocations(id,grant_id,actor_id,reason)
+select gen_random_uuid(),current_grant_id,pg_temp.lid('owner'),'Invalid source activation' from public.content_access_accounts where annual_record_id=pg_temp.lid('record-student') and unit_id=pg_temp.lid('unit');
+select pg_temp.lcheck(not edra_private.content_requirements_met(pg_temp.lid('draft'),pg_temp.lid('record-student')),'revoked source activation does not qualify');
 select pg_temp.lcheck(to_regclass('public.content_access_codes') is null and to_regclass('public.content_code_redemptions') is null and to_regclass('public.content_code_batches') is null,'legacy code tables retired');
 -- Persistent rate limit: a returned business denial must not roll the counter back.
 select pg_temp.lact('second');

@@ -13,7 +13,9 @@ export const itemSchema = z.object({
     ctx.addIssue({ code: "custom", message: "Choose an assessment.", path: ["assessmentId"] });
 });
 export const accessDaysSchema = z.number().int().min(1, "Enter at least one day.").max(2147483647, "Enter fewer days.");
-export const prerequisiteSchema = z.object({ unitId: z.guid(), kind: z.enum(["assignment", "quiz"]), assessmentId: z.guid() }).strict();
+export const prerequisiteSchema = z.object({ unitId: z.guid(), kind: z.enum(["access", "assignment", "quiz"]), assessmentId: z.guid().optional() }).strict().superRefine((value, ctx) => {
+  if ((value.kind === "access") !== (value.assessmentId === undefined)) ctx.addIssue({ code: "custom", message: "Choose a valid prerequisite.", path: ["assessmentId"] });
+});
 export const documentSchema = z.object({ title: z.string().trim().min(1, "Enter a title.").max(200), description: z.string().max(10000), accessDays: accessDaysSchema.default(7), items: z.array(itemSchema).max(200), couponTypeId: z.guid().nullable().optional(), prerequisites: z.array(prerequisiteSchema).max(100).optional() }).strict().superRefine((document, ctx) => {
   if (new Set(document.items.map(i => i.id)).size !== document.items.length) ctx.addIssue({ code: "custom", message: "Material identities must be unique.", path: ["items"] });
   let parent: ContentItem["kind"] | undefined;

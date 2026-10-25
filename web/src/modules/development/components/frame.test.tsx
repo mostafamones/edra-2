@@ -32,8 +32,8 @@ describe("DeveloperPreviewFrame", () => {
   });
 
   it("shows the student state with return and exit actions", () => {
-    mount({ ...base, current: studentIdentity, priorStaff: original, staffTargets: [] });
-    expect(screen.getByText("Ana Student")).toBeTruthy();
+    mount({ ...base, current: studentIdentity, priorStaff: original, staffTargets: [], students: [{ logicalId: studentIdentity.logicalId, displayName: studentIdentity.displayName, annualStudentRecordId: "record", participationType: "online_only" }] });
+    expect(screen.getByRole("combobox", { name: "Preview identity" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Return to staff" }));
     expect(api.run).toHaveBeenCalledWith("return", { runId, expectedRevision: 7 });
     fireEvent.click(screen.getByRole("button", { name: "Exit preview" }));
@@ -46,6 +46,7 @@ describe("DeveloperPreviewFrame", () => {
     expect((screen.getByRole("button", { name: "Return to staff" }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole("button", { name: "Exit preview" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByLabelText("Switching")).toBeTruthy();
+    expect(screen.queryByText("App content")).toBeNull();
   });
 
   it("shows the identity selector for staff and no return action", () => {

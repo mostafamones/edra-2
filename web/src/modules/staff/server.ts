@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { createClient } from "../../lib/supabase/server";
 
@@ -15,6 +16,7 @@ export { isStaffInviteToken } from "./link";
  */
 export async function isStaffAccount(): Promise<boolean> {
   const { data, error } = await (await createClient()).rpc("is_staff_account");
+  if (error?.code === "EDRA_SESSION_INACTIVE") redirect("/auth/session-ended");
   if (error) throw error;
   return data === true;
 }

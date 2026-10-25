@@ -21,7 +21,7 @@ beforeEach(() => {
   mocks.loadCouponBatch.mockResolvedValue({ ok: true, value: { userId: "staff", manager: true, codes: [{ id: "c1", code: "AB7K9M3R", prefix: "REG", status: "unused", redeemed_at: null, student_name: null, unit_title: null }] } });
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
-const revision = { id: "type", programId: "scope", yearId: "year", levelId: "grade", trackId: "science", name: "Revision", prefix: "REVS", isDefault: false, allTracks: false };
+const revision = { id: "type", programId: null, yearId: "year", levelId: null, trackId: null, name: "Revision", prefix: "REVS", isDefault: false, allTracks: true };
 const academyPass = { id: "pass", programId: null, yearId: "year", levelId: null, trackId: null, name: "Pass", prefix: "PAS", isDefault: false, allTracks: true };
 function withTypes(types: unknown[]) { mocks.loadCouponOptions.mockResolvedValue({ ok: true, value: { userId: "staff", programs: [scope], types } }); }
 async function openGenerate() {
@@ -51,7 +51,7 @@ it("replaces the whole table with an empty state", async () => {
 it("defaults generation to the whole academy's Regular and retries with the same request", async () => {
   mocks.generateCoupons.mockResolvedValue({ ok: false, message: "Retry generation." });
   open(); const dialog = await openGenerate();
-  expect(dialog.getByRole("combobox", { name: "Program" }).textContent).toContain("Whole academy");
+  expect(dialog.queryByRole("combobox", { name: "Program" })).toBeNull();
   expect(dialog.getByRole("combobox", { name: "Coupon type" }).textContent).toContain("Regular · REG");
   expect((dialog.getByLabelText("Number of coupons") as HTMLInputElement).value).toBe("10");
   fireEvent.click(dialog.getByRole("button", { name: "Generate" }));
@@ -68,15 +68,14 @@ it("steps the coupon count by five, or by one with Shift, and allows retyping", 
   fireEvent.change(input, { target: { value: "" } }); expect(input.value).toBe("");
   fireEvent.change(input, { target: { value: "25x" } }); expect(input.value).toBe("25");
 });
-it("generates a grade type and opens the new batch", async () => {
+it("generates an academy type and opens the new batch", async () => {
   withTypes([revision]);
   mocks.generateCoupons.mockResolvedValue({ ok: true, value: { batchId: "new", codes: [{ id: "c1", code: "AB7K9M3R", prefix: "REG" }] } });
   open(); const dialog = await openGenerate();
-  fireEvent.click(dialog.getByRole("combobox", { name: "Program" }));
-  fireEvent.click(await screen.findByRole("option", { name: "Grade · Science" }));
-  await waitFor(() => expect(dialog.getByRole("combobox", { name: "Coupon type" }).textContent).toContain("Revision"));
+  fireEvent.click(dialog.getByRole("combobox", { name: "Coupon type" }));
+  fireEvent.click(await screen.findByRole("option", { name: "Revision · REVS" }));
   fireEvent.click(dialog.getByRole("button", { name: "Generate" }));
-  await waitFor(() => expect(mocks.generateCoupons).toHaveBeenCalledWith(expect.objectContaining({ levelId: "grade", trackId: "science", typeId: "type" })));
+  await waitFor(() => expect(mocks.generateCoupons).toHaveBeenCalledWith(expect.objectContaining({ levelId: null, trackId: null, typeId: "type" })));
   expect(await within(await screen.findByRole("dialog")).findByText("REG-AB7K-9M3R")).toBeTruthy();
   expect(mocks.loadCouponBatch).toHaveBeenCalledWith({ academyId: "academy", batchId: "new" });
 });
@@ -87,7 +86,7 @@ it("adds an academy-wide type inline", async () => {
   fireEvent.change(screen.getByLabelText("New type prefix"), { target: { value: "pas" } });
   expect(screen.queryByLabelText("All tracks")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Add type" }));
-  await waitFor(() => expect(mocks.createCouponType).toHaveBeenCalledWith(expect.objectContaining({ yearId: "year", levelId: null, trackId: null, name: "Pass", prefix: "PAS", allTracks: true })));
+  await waitFor(() => expect(mocks.createCouponType).toHaveBeenCalledWith(expect.objectContaining({ yearId: "year", name: "Pass", prefix: "PAS" })));
   await waitFor(() => expect(screen.queryByLabelText("New type name")).toBeNull());
 });
 it("cancels an inline type with Escape", async () => {
@@ -122,20 +121,26 @@ it("does not display batches returned for a different account", async () => {
 });
 it("lists batches and opens a batch's coupons in a sheet", async () => {
   mocks.loadCouponBatches.mockResolvedValue({ ok: true, value: { userId: "staff", manager: true, hasMore: false, batches: [batch, { ...batch, id: "academy-batch", level: null, track: null }] } });
-  open(); expect(await screen.findByText("Whole academy", { selector: "td" })).toBeTruthy();
+  open(); expect((await screen.findAllByText("Revision", { selector: "td" })).length).toBe(2);
   fireEvent.click(screen.getAllByRole("button", { name: "Details" })[0]);
   expect(await within(await screen.findByRole("dialog")).findByText("REG-AB7K-9M3R")).toBeTruthy();
   expect(mocks.loadCouponBatch).toHaveBeenCalledWith({ academyId: "academy", batchId: "batch" });
 });
-it("filters batches by type prefix tab and program", async () => {
+it("filters academy batches by type prefix without a program selector", async () => {
   withTypes([revision, academyPass]);
   open(); fireEvent.mouseDown(await screen.findByRole("tab", { name: "REV" }), { button: 0 });
-  await waitFor(() => expect(mocks.loadCouponBatches).toHaveBeenLastCalledWith(expect.objectContaining({ prefix: "REV" })));
-  fireEvent.click(screen.getByRole("button", { name: "Filters" }));
-  fireEvent.click(within(await screen.findByRole("dialog")).getByRole("combobox", { name: "Program" }));
-  fireEvent.click(await screen.findByRole("option", { name: "Whole academy" }));
-  await waitFor(() => expect(mocks.loadCouponBatches).toHaveBeenLastCalledWith(expect.objectContaining({ yearId: "year", levelId: null, academyWide: true })));
-  expect(screen.queryByRole("tab", { name: "REV" })).toBeNull();
+  await waitFor(() => expect(mocks.loadCouponBatches).toHaveBeenLastCalledWith(expect.objectContaining({ prefix: "REV", yearId: "year", levelId: null, trackId: null, academyWide: true })));
+  expect(screen.queryByRole("button", { name: "Filters" })).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "Program" })).toBeNull();
+});
+it("lets instructors generate existing types without managing them", async () => {
+  withTypes([academyPass]);
+  mocks.loadCouponBatches.mockResolvedValue({ ok: true, value: { userId: "staff", manager: false, batches: [], hasMore: false } });
+  open(); await screen.findByText("Pass");
+  expect(screen.queryByRole("button", { name: "New type" })).toBeNull();
+  expect(screen.queryByLabelText("Name of Pass")).toBeNull();
+  expect(screen.queryByLabelText("Prefix of Pass")).toBeNull();
+  expect((await openGenerate()).getByRole("button", { name: "Generate" })).toBeTruthy();
 });
 it("hides closed-year scopes", async () => {
   mocks.loadCouponOptions.mockResolvedValue({ ok: true, value: { userId: "staff", programs: [{ ...scope, closed: true }], types: [] } });

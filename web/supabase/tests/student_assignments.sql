@@ -248,16 +248,34 @@ do $$ declare one jsonb; unit jsonb; begin
   perform pg_temp.check(jsonb_array_length(one->'answerVideos')=0,'no answer videos before qualifying work');
   perform pg_temp.fails(format('select public.authorize_content_material(%L,%L,%L)',pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('answer-video')),'material_unavailable');
   unit:=public.get_my_content_unit(pg_temp.sid('academy'),pg_temp.sid('unit'));
-  perform pg_temp.check((select (i->>'available')::boolean from jsonb_array_elements(unit->'items') i where i->>'kind'='assessment')
-    and (select i->>'assessmentId'=pg_temp.sid('attached')::text from jsonb_array_elements(unit->'items') i where i->>'kind'='assessment'),'unit links its assignment');
+  perform pg_temp.check(not (select (i->>'available')::boolean from jsonb_array_elements(unit->'items') i where i->>'kind'='assessment')
+    and (select i->>'assessmentId'=pg_temp.sid('attached')::text from jsonb_array_elements(unit->'items') i where i->>'kind'='assessment'),'locked unit retains assignment metadata without an open action');
 end $$;
+reset role;
+savepoint expired_assignment_link;
+-- Immutable expired history is fixture-only; roll it back before the normal grant journey.
+do $$ declare grant_id uuid:=gen_random_uuid(); begin
+ insert into public.content_access_accounts(academy_id,academic_year_id,annual_record_id,unit_id)
+ values(pg_temp.sid('academy'),pg_temp.sid('year'),pg_temp.sid('record-student'),pg_temp.sid('unit'));
+ insert into public.content_access_grants(id,academy_id,academic_year_id,annual_record_id,unit_id,kind,actor_id,issued_at,starts_at,expires_at,duration_seconds)
+ values(grant_id,pg_temp.sid('academy'),pg_temp.sid('year'),pg_temp.sid('record-student'),pg_temp.sid('unit'),'staff',pg_temp.sid('owner'),now()-interval '10 days',now()-interval '10 days',now()-interval '3 days',604800);
+ update public.content_access_accounts set current_grant_id=grant_id where annual_record_id=pg_temp.sid('record-student') and unit_id=pg_temp.sid('unit');
+end $$;
+select pg_temp.check((select (i->>'available')::boolean from jsonb_array_elements(public.get_my_content_unit(pg_temp.sid('academy'),pg_temp.sid('unit'))->'items') i where i->>'kind'='assessment'),'expired unrevoked entitlement retains the assignment link');
+select pg_temp.check(not edra_private.content_assignment_openable(pg_temp.sid('academy'),pg_temp.sid('unit'),gen_random_uuid(),pg_temp.sid('record-student')),'missing assignment has no open action');
+select pg_temp.check(not edra_private.content_assignment_openable(pg_temp.sid('other-academy'),pg_temp.sid('unit'),pg_temp.sid('attached'),pg_temp.sid('record-student')),'cross-academy assignment has no open action');
+rollback to savepoint expired_assignment_link;
+set local role authenticated;
 select pg_temp.act('instructor');
 select public.confirm_content_access(pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('record-student'),gen_random_uuid(),null,1);
+select pg_temp.act('student');
+select pg_temp.check((select (i->>'available')::boolean from jsonb_array_elements(public.get_my_content_unit(pg_temp.sid('academy'),pg_temp.sid('unit'))->'items') i where i->>'kind'='assessment'),'active entitlement opens a visible assignment');
 select pg_temp.act('owner');
 select public.revoke_content_access(pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('record-student'),gen_random_uuid(),'Revoked for test',
   pg_temp.grant_id());
 select pg_temp.act('student');
 select pg_temp.check(public.get_my_assignment(pg_temp.sid('academy'),pg_temp.sid('attached'))->>'blockedReason'='entitlement_required','revoked head never falls back');
+select pg_temp.check(not (select (i->>'available')::boolean from jsonb_array_elements(public.get_my_content_unit(pg_temp.sid('academy'),pg_temp.sid('unit'))->'items') i where i->>'kind'='assessment'),'revoked entitlement removes the assignment open action');
 select pg_temp.act('instructor');
 select public.confirm_content_access(pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('record-student'),gen_random_uuid(),
   pg_temp.grant_id(),1);
@@ -325,5 +343,6 @@ select pg_temp.act('student');
 select pg_temp.fails('select * from public.assignment_work_files','permission denied');
 select pg_temp.fails('select * from public.assignment_online_submissions','permission denied');
 select pg_temp.fails(format('select edra_private.assignment_student_scope(%L,%L)',pg_temp.sid('academy'),pg_temp.sid('choice')),'permission denied');
+select pg_temp.fails(format('select edra_private.content_assignment_openable(%L,%L,%L,%L)',pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('attached'),pg_temp.sid('record-student')),'permission denied');
 reset role;
 rollback;

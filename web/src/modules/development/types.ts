@@ -10,7 +10,7 @@ export type PreviewIdentity = {
 };
 
 export type PreviewStaffTarget = { logicalId: string; displayName: string; role: Exclude<PreviewRole, "student"> };
-export type PreviewStudentTarget = { logicalId: string; displayName: string; recordId: string };
+export type PreviewStudentTarget = { logicalId: string; displayName: string; recordId: string; participationType?: string };
 
 export type PreviewStatus =
   | { available: false }

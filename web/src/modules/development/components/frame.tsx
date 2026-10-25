@@ -5,11 +5,12 @@ import { ArrowLeft01Icon, Loading03Icon, Logout01Icon } from "@hugeicons/core-fr
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { ACADEMY_ROLE_LABELS } from "@/modules/academies";
 
 import { onIdentityChange } from "../client";
 import { usePreviewAction, usePreviewStatus } from "../use-preview";
+import { studentShortcuts } from "../student-shortcuts";
 
 export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
   const status = usePreviewStatus();
@@ -41,7 +42,6 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
           <div ref={bar} role="region" aria-label="Developer preview" className="sticky top-1 z-50 mx-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-t-xl border-b bg-background px-3 h-12 text-sm sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
             <span className="hidden text-muted-foreground sm:block">Viewing academy as</span>
             <div className="flex min-w-0 items-center justify-center gap-2">
-              {preview.current.kind !== "student" ? (
               <Select
                 value={preview.current.logicalId ?? "original"}
                 disabled={pending}
@@ -58,18 +58,16 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
                 </SelectTrigger>
                 <SelectContent>
                   {preview.current.kind === "original" && <SelectItem value="original" disabled>{preview.current.displayName}</SelectItem>}
+                  <SelectGroup><SelectLabel>Staff</SelectLabel>
                   {preview.staffTargets.map((target) => (
                     <SelectItem key={target.logicalId} value={target.logicalId}>
                       {`${target.displayName} · ${ACADEMY_ROLE_LABELS[target.role]}`}
                     </SelectItem>
                   ))}
+                  </SelectGroup>
+                  <SelectGroup><SelectLabel>Students</SelectLabel>{studentShortcuts(preview.students,preview.current.logicalId).map(student=><SelectItem key={student.logicalId} value={student.logicalId}>{student.displayName} · {student.participationType === "online_only" ? "Online student" : "Student"}</SelectItem>)}</SelectGroup>
                 </SelectContent>
               </Select>
-            ) : (
-              <>
-                <span className="font-medium">{preview.current.displayName}</span>
-              </>
-            )}
             </div>
             <div className="flex flex-wrap items-center justify-end gap-1">
               {pending && <HugeiconsIcon icon={Loading03Icon} strokeWidth={1.5} className="size-4 animate-spin" aria-label="Switching" />}
@@ -92,7 +90,7 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
           <style>{`[data-slot=sidebar-container]{top:var(--edra-preview-bar,0px);height:calc(100svh - var(--edra-preview-bar,0px))}[data-slot=sidebar-wrapper]{height:calc(100svh - var(--edra-preview-bar,0px));min-height:0}`}</style>
         </>
       )}
-      {children}
+      {!pending && children}
     </>
   );
 }

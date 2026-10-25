@@ -18,6 +18,28 @@ function open(initial = unit()) {
 }
 beforeEach(() => { vi.clearAllMocks(); mocks.auth.mockReturnValue({ user: { id: userId }, loading: false }); });
 afterEach(cleanup);
+it.each(["locked", "revoked"] as const)("locks assignment links when unit access is %s, even with stale available metadata", async status => {
+  const initial = unit(); initial.access.status = status;
+  initial.items = [{ id: "assignment", kind: "assessment", title: "Homework", available: true, assessmentKind: "assignment", assessmentId: "homework" }];
+  open(initial);
+  expect(await screen.findByText("Homework")).toBeTruthy();
+  expect(screen.queryByRole("link", { name: "Open assignment" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Open protected material" })).toBeNull();
+  expect(screen.getAllByText("Locked").length).toBeGreaterThan(0);
+});
+it.each(["active", "expired"] as const)("opens available assignments with %s unit access", async status => {
+  const initial = unit(); initial.access.status = status;
+  initial.items = [{ id: "assignment", kind: "assessment", title: "Homework", available: true, assessmentKind: "assignment", assessmentId: "homework" }];
+  open(initial);
+  expect((await screen.findByRole("link", { name: "Open assignment" })).getAttribute("href")).toContain("assignments/homework");
+});
+it("does not link an unavailable assignment even with active unit access", async () => {
+  const initial = unit(); initial.access.status = "active";
+  initial.items = [{ id: "assignment", kind: "assessment", title: "Homework", available: false, assessmentKind: "assignment", assessmentId: "homework" }];
+  open(initial);
+  expect(await screen.findByText("Unavailable")).toBeTruthy();
+  expect(screen.queryByRole("link", { name: "Open assignment" })).toBeNull();
+});
 it("shows unmet requirements and disables coupon redemption and self-extension", async () => {
   const initial = unit(); initial.prerequisitesMet = false;
   initial.prerequisites = [{ unitId: "previous", assessmentId: "homework", kind: "assignment", unitTitle: "Previous lesson", title: "Homework", submitted: false }];
@@ -35,6 +57,18 @@ it("keeps already-authorized material available when prerequisites subsequently 
   initial.items[0].available = true;
   open(initial);
   expect(await screen.findByRole("button", { name: "Open protected material" })).toBeTruthy();
+});
+it("shows missing activation separately from an already submitted assessment", async () => {
+  const initial = unit(); initial.prerequisitesMet = false;
+  initial.prerequisites = [
+    { unitId: "previous", assessmentId: null, kind: "access", unitTitle: "Fundamentals", title: "Previously unlocked", submitted: false },
+    { unitId: "previous", assessmentId: "homework", kind: "assignment", unitTitle: "Fundamentals", title: "Homework", submitted: true },
+  ];
+  open(initial);
+  expect(await screen.findByRole("link", { name: "Fundamentals · Previously unlocked" })).toBeTruthy();
+  expect(screen.getByText("Submitted")).toBeTruthy();
+  expect(screen.getByText("Required")).toBeTruthy();
+  expect((screen.getByRole("button", { name: "Redeem coupon" }) as HTMLButtonElement).disabled).toBe(true);
 });
 it("keeps locked document metadata visible without opening protected material or offering an initial extension", async () => {
   open(); await screen.findByText("Notes");

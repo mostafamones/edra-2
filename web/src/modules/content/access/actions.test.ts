@@ -61,6 +61,6 @@ it("binds a staff confirmation to the reviewed grant and publication", async () 
 });
 it("reports returned coupon denials without treating them as a successful grant", async () => {
   mocks.rpc.mockResolvedValue({ error: null, data: { error: "prerequisites_required" } });
-  expect(await redeemUnitCode({ academyId, unitId, requestId, code: "ab7k-9m3r" })).toEqual({ ok: false, message: "Submit all required prerequisite assessments first." });
+  expect(await redeemUnitCode({ academyId, unitId, requestId, code: "ab7k-9m3r" })).toEqual({ ok: false, message: "Complete this unit’s unlock and submission requirements first." });
   expect(mocks.rpc).toHaveBeenCalledWith("redeem_content_coupon", { p_academy_id: academyId, p_unit_id: unitId, p_request_id: requestId, p_code: "AB7K9M3R" });
 });

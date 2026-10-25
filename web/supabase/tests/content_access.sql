@@ -72,6 +72,8 @@ do $$ declare page jsonb; unit jsonb; item_id uuid; begin
   perform pg_temp.lerror(format('select public.generate_content_coupons(%L,%L,1,%L)',pg_temp.lid('academy'),pg_temp.lid('unit'),gen_random_uuid()),'forbidden');
   perform pg_temp.lerror(format('select public.issue_content_access(%L,%L,%L,%L)',pg_temp.lid('academy'),pg_temp.lid('unit'),pg_temp.lid('record-student'),gen_random_uuid()),'forbidden');
 end $$;
+select pg_temp.lact('owner');
+select public.create_academy_coupon_type(pg_temp.lid('academy'),pg_temp.lid('year'),'Standard','STD',pg_temp.lid('coupon-type'));
 select pg_temp.lact('instructor');
 do $$ declare first_result jsonb; retry jsonb; extended jsonb; before_expiry timestamptz; begin
   first_result:=public.confirm_content_access(pg_temp.lid('academy'),pg_temp.lid('unit'),pg_temp.lid('record-student'),pg_temp.lid('request'),null,1);
@@ -87,7 +89,6 @@ do $$ declare first_result jsonb; retry jsonb; extended jsonb; before_expiry tim
   before_expiry:=(first_result->>'expiresAt')::timestamptz;
   extended:=public.issue_content_access(pg_temp.lid('academy'),pg_temp.lid('unit'),pg_temp.lid('record-student'),pg_temp.lid('extension'),48);
   perform pg_temp.lcheck((extended->>'expiresAt')::timestamptz=before_expiry+interval '48 hours','staff extension preserves remaining time');
-  perform public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('second-unit')),'Standard',pg_temp.lid('coupon-type'));
   perform public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('coupon-type'),3,pg_temp.lid('batch'));
   perform pg_temp.lcheck(jsonb_array_length(public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('coupon-type'),3,pg_temp.lid('batch'))->'codes')=3,'code generation retry');
 end $$;
