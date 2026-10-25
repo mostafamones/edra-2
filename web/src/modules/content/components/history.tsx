@@ -66,7 +66,7 @@ function Entry({ entry, live, last }: { entry: HistoryEntry<Author>; live: boole
           <span dir="auto" className="min-w-0 flex-1 truncate text-sm font-medium">{authorNames(entry.authors)}</span>
         </div>
         {entry.changes
-          ? <ul className="mt-2 space-y-1 text-sm">{entry.changes.map((change, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60" aria-hidden="true" />{change}</li>)}</ul>
+          ? <ul className="mt-2 space-y-1 text-sm text-muted-foreground">{entry.changes.map((change, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/40" aria-hidden="true" />{change}</li>)}</ul>
           : <p className="mt-2 text-sm text-muted-foreground">Changes unavailable</p>}
       </div>
     </div>
