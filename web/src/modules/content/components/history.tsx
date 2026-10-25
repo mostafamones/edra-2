@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, ArrowDown01Icon, Clock01Icon } from "@hugeicons/core-free-icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,29 +49,46 @@ function authorNames(authors: Author[]) {
   return `${names.slice(0, 2).join(", ")} and ${others} other${others === 1 ? "" : "s"}`;
 }
 
+function People({ authors }: { authors: Author[] }) {
+  return <div className="flex min-w-0 items-center gap-2">
+    <div className="flex shrink-0 -space-x-1.5">{authors.slice(0, 3).map((author, i) => <Avatar key={author?.id ?? i} aria-hidden="true" className="size-5 ring-2 ring-muted"><AvatarImage src={author?.avatarUrl} alt="" /><AvatarFallback className="text-[10px]">{author?.name?.slice(0, 1).toUpperCase() ?? "?"}</AvatarFallback></Avatar>)}</div>
+    <span dir="auto" className="min-w-0 truncate text-foreground/90">{authorNames(authors)}</span>
+  </div>;
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="contents"><dt className="text-xs leading-5 text-muted-foreground">{label}</dt><dd className="min-w-0 text-sm leading-5">{children}</dd></div>;
+}
+
 function Entry({ entry, live, withYear, last }: { entry: HistoryEntry<Author>; live: boolean; withYear: boolean; last: boolean }) {
   const published = entry.kind === "published";
+  const { summary } = entry;
   return <li className="relative flex gap-4 pb-8 last:pb-0">
     {!last && <span className="absolute top-5 bottom-0 left-[5px] w-px bg-border" aria-hidden="true" />}
     <span className={`relative mt-1.5 size-[11px] shrink-0 rounded-full border-2 ${published ? `border-primary ${live ? "bg-primary" : "bg-popover"}` : "border-muted-foreground/40 bg-popover"}`} aria-hidden="true" />
     <div className="min-w-0 flex-1 space-y-2">
-      <div className="flex items-center gap-2">
-        <p className="font-medium">{published ? "Published" : "Draft"}</p>
-        {live && <Badge className="h-5 gap-1.5 px-2 text-[11px]"><span className="size-1.5 animate-pulse rounded-full bg-current" aria-hidden="true" />Live</Badge>}
-        {entry.saves > 1 && <span className="text-xs text-muted-foreground tabular-nums">{entry.saves} saves</span>}
-        <time dateTime={entry.at} className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">{historyTime(entry.at, new Date(), withYear)}</time>
+      <div>
+        <p dir="auto" className="font-medium">{summary?.headline || (published ? "Published" : "Draft")}</p>
+        <p className="text-xs text-muted-foreground tabular-nums">
+          {live && <><span className="font-medium text-primary">Live</span> · </>}
+          {!published && "Draft · "}
+          {entry.saves > 1 && `${entry.saves} saves · `}
+          <time dateTime={entry.at}>{historyTime(entry.at, new Date(), withYear)}</time>
+        </p>
       </div>
-      <Collapsible className={`rounded-lg px-3 py-2.5 ${live ? "bg-primary/10 ring-1 ring-primary/25" : "bg-muted/50"}`}>
-        <div className="flex items-center gap-2">
-          <div className="flex shrink-0 -space-x-1.5">{entry.authors.slice(0, 3).map((author, i) => <Avatar key={author?.id ?? i} aria-hidden="true" className={`size-6 ring-2 ${live ? "ring-transparent" : "ring-muted"}`}><AvatarImage src={author?.avatarUrl} alt="" /><AvatarFallback className="text-[11px]">{author?.name?.slice(0, 1).toUpperCase() ?? "?"}</AvatarFallback></Avatar>)}</div>
-          <span dir="auto" className="min-w-0 flex-1 truncate text-sm font-medium">{authorNames(entry.authors)}</span>
-          {!!entry.summary?.details.length && <CollapsibleTrigger asChild><Button variant="ghost" size="icon-xs" aria-label="Show details" className="-mr-1 text-muted-foreground [&[data-state=open]>svg]:rotate-180"><HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={1.5} className="transition-transform" aria-hidden="true" /></Button></CollapsibleTrigger>}
-        </div>
-        {entry.summary ? <>
-          <p dir="auto" className="mt-2 text-sm text-foreground/90">{entry.summary.headline}</p>
-          {entry.summary.groups.length > 0 && <dl className="mt-2 grid grid-cols-[4.5rem_1fr] gap-x-3 gap-y-1 text-xs">{entry.summary.groups.map(group => <div key={group.label} className="contents"><dt className="text-muted-foreground">{group.label}</dt><dd className="text-foreground/80 tabular-nums">{group.parts.join(" · ")}</dd></div>)}</dl>}
-          <CollapsibleContent><ul className="mt-2.5 space-y-1 border-t border-foreground/10 pt-2.5 text-xs text-foreground/80">{entry.summary.details.map((detail, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-foreground/30" aria-hidden="true" />{detail}</li>)}</ul></CollapsibleContent>
-        </> : <p className="mt-2 text-sm text-muted-foreground">Changes unavailable</p>}
+      <Collapsible className="rounded-lg bg-muted/50 px-3 py-2.5">
+        <dl className="grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-2">
+          <Row label="Created by"><People authors={entry.creators} /></Row>
+          {!summary ? <Row label="Changes"><span className="text-muted-foreground">Unavailable</span></Row>
+            : summary.lines.length > 0 && <Row label="Changes">
+              <div className="flex items-start gap-2">
+                <ul dir="auto" className="min-w-0 flex-1 text-foreground/80">{summary.lines.map(line => <li key={line}>{line}</li>)}</ul>
+                {summary.details.length > 0 && <CollapsibleTrigger asChild><Button variant="ghost" size="icon-xs" aria-label="Show details" className="-my-0.5 -mr-1 shrink-0 text-muted-foreground [&[data-state=open]>svg]:rotate-180"><HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={1.5} className="transition-transform" aria-hidden="true" /></Button></CollapsibleTrigger>}
+              </div>
+            </Row>}
+          {entry.reviewer && <Row label="Reviewed"><People authors={[entry.reviewer]} /></Row>}
+        </dl>
+        {summary && summary.details.length > 0 && <CollapsibleContent><ul className="mt-2.5 space-y-1 border-t border-foreground/10 pt-2.5 text-xs text-foreground/80">{summary.details.map((detail, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-foreground/30" aria-hidden="true" />{detail}</li>)}</ul></CollapsibleContent>}
       </Collapsible>
     </div>
   </li>;
