@@ -1,6 +1,6 @@
 # Edra — academic years, levels, tracks and programs
 
-Approved by the owner, 2026-10-10. Calendar and detailed cross-domain workflows remain for their separate reviews.
+Approved by the owner, 2026-10-10; manager-controlled student learning start confirmed 2026-10-25. Other calendar and detailed cross-domain workflows remain for their separate reviews.
 
 ## Academic structure
 
@@ -68,6 +68,14 @@ An academy has at most one active academic year. The active year is the period i
 Owners, Head Admins and Admins manage academic years. Instructors use the active year for academic work and can consult earlier years within their ordinary reading permissions.
 
 Opening another active year requires closing the existing one. Preparing a separate upcoming year while the current year remains active is outside the MVP.
+
+### Preparing and starting student learning
+
+Confirmed 2026-10-25: the academy's single open year has a preparation period before student learning starts. Staff can prepare its groups, participation and academic work; booking and verified account connection remain available under their own settings. Connected students can see the academy and their registration during this period. This is not a second upcoming year and does not apply administrative suspension.
+
+Owners, Head Admins and Admins explicitly choose Start year to enable student learning for everyone in that open year. Calendar dates do not automatically perform this action. Repeating the action does not restart the year or repeat access effects. Once started, all normal publication, entitlement, assessment and suspension checks still apply; starting a year does not itself grant learning access or change grant timing.
+
+Existing open years retain their current student learning availability when this preparation state is introduced. Newly established years start in preparation. Starting student learning does not alter the year identity or its recorded calendar boundaries. Closure remains the separate explicit action below.
 
 ## Closing a year
 
