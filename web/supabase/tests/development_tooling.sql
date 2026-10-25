@@ -109,6 +109,25 @@ insert into edra_private.dev_accounts (run_id, logical_id, kind, display_name, p
   ('d0e10000-0000-4000-8000-0000000000e1', 'account:student:01', 'student', 'Student 01', '+201099000003',
     'd0e10000-0000-4000-8000-000000000004', 'd0e10000-0000-4000-8000-0000000000d1', 'v1.a.b.c', 'loaded');
 
+-- Preview staff labels follow current profiles, while registry metadata stays reproducible.
+update public.profiles set full_name = 'Updated owner', display_name = 'Owner nickname'
+where id = 'd0e10000-0000-4000-8000-000000000002';
+select pg_temp.assert_eq('preview prefers staff display name',
+  (select target->>'display_name'
+   from jsonb_array_elements(public.dev_run_targets('d0e10000-0000-4000-8000-0000000000e1')->'staff') target
+   where target->>'logical_id' = 'account:staff:owner'), 'Owner nickname');
+update public.profiles set full_name = 'Renamed owner', display_name = null
+where id = 'd0e10000-0000-4000-8000-000000000002';
+select pg_temp.assert_eq('preview falls back to current full name',
+  (select target->>'display_name'
+   from jsonb_array_elements(public.dev_run_targets('d0e10000-0000-4000-8000-0000000000e1')->'staff') target
+   where target->>'logical_id' = 'account:staff:owner'), 'Renamed owner');
+select pg_temp.assert_eq('preview does not rewrite generated registry names',
+  (select display_name from edra_private.dev_accounts where run_id = 'd0e10000-0000-4000-8000-0000000000e1'
+   and logical_id = 'account:staff:owner'), 'Owner');
+select pg_temp.assert_eq('unready run still has no targets',
+  public.dev_run_targets('d0e10000-0000-4000-8000-0000000000e2')::text, null);
+
 -- D1b: registry-free user metadata cannot make a user synthetic or allowlisted.
 update auth.users set raw_user_meta_data = '{"synthetic":true,"developer":true}'
   where id = 'd0e10000-0000-4000-8000-000000000005';

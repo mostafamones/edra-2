@@ -24,6 +24,10 @@ Expose **Developer mode** in the authorized account's sidebar account dropdown i
 
 Entering Developer mode shows a persistent frame around the normal application, with a top bar showing **Viewing academy as**, a staff identity/role selector, and **Exit preview**. Role choices use dedicated test accounts with actual server/database permissions, including distinct instructor identities.
 
+Staff identity labels use each account's current display name, falling back to its full name. Saving an account name refreshes preview labels; opening the selector also refreshes its available names. Generated scenario names remain registry metadata.
+
+Entering staff preview or switching staff identities preserves the current account settings page or synthetic-academy page, including its query parameters. The page reloads with the selected identity's data and normal permissions. Other destinations fall back to the synthetic academy home.
+
 In the synthetic academy's student directory, **View as student** opens the selected linked student's real portal within the same preview frame. It is a developer action, not an instructor permission in ordinary academies. The frame identifies the student.
 
 **Return to staff** restores the previous staff test identity and directory context. **Exit preview** restores the owner's original identity and academy context. The controls remain accessible while viewing test identities.

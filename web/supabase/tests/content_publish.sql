@@ -92,5 +92,18 @@ update public.academic_years set closed_at=now() where id=pg_temp.lid('year');
 select pg_temp.lact('owner');
 select pg_temp.lerror(format('select public.publish_content_edits(%L,%L,3,%L::jsonb)',pg_temp.lid('academy'),pg_temp.lid('second-unit'),'{"title":"Closed year","description":"","items":[]}'),'year_closed');
 select pg_temp.lcheck(not has_function_privilege('anon','public.publish_content_edits(uuid,uuid,integer,jsonb)','EXECUTE'),'anonymous callers cannot publish');
+-- Draft history: creation, each stored draft and save-and-publish edits are kept; failed or unchanged writes are not.
+select pg_temp.lcheck((select array_agg(kind order by id)=array['created','saved','saved'] from public.content_drafts where unit_id=pg_temp.lid('unit')),'draft history records creation, the editor save and the save-and-publish edit');
+select pg_temp.lcheck((select document->>'title'='Published directly' and saved_by=pg_temp.lid('owner') and version=4 from public.content_drafts where unit_id=pg_temp.lid('unit') order by id desc limit 1),'draft history keeps the stored document, its author and version');
+select pg_temp.lcheck(not exists(select 1 from public.content_drafts where document->>'title' in ('Must roll back','Stale edit')),'rolled back saves leave no draft history');
+set local role authenticated;
+select pg_temp.lact('instructor');
+select pg_temp.lcheck((select count(*)>0 from public.content_drafts where unit_id=pg_temp.lid('unit')),'academy staff can read draft history');
+select pg_temp.lact('outsider');
+select pg_temp.lcheck(not exists(select 1 from public.content_drafts where unit_id=pg_temp.lid('unit')),'other academies cannot read draft history');
+select pg_temp.lact('student');
+select pg_temp.lcheck(not exists(select 1 from public.content_drafts),'students cannot read draft history');
+select pg_temp.lerror(format('insert into public.content_drafts(unit_id,academy_id,version,kind,document) values(%L,%L,9,%L,%L::jsonb)',pg_temp.lid('unit'),pg_temp.lid('academy'),'saved','{}'),'permission denied');
+reset role;
 rollback;
 select 'Atomic save-and-publish passed' as result;

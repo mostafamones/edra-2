@@ -13,11 +13,15 @@ import { removeAvatar, uploadAvatar, type AvatarResult } from "../actions";
 import { accountQueryKeys, type AccountProfile } from "../queries";
 import { CropDialog, type CropSource } from "./crop-dialog";
 
-const SOURCE_TYPES = ["image/jpeg", "image/png", "image/webp"];
-/** Source images stay in the browser; these limits only protect its memory. */
+/**
+ * Source images stay in the browser and are cropped to WebP there, so any image the browser can decode works.
+ * A narrow `accept` list made OS pickers grey out other formats. These limits only protect memory.
+ */
 const SOURCE_MAX_BYTES = 20 * 1024 * 1024;
 const SOURCE_MAX_SIDE = 10000;
 const SOURCE_MIN_SIDE = 64;
+/** Many browsers leave HEIC photos untyped and cannot decode them, so they are recognised by name too. */
+const HEIC = /\.(heic|heif)$/i;
 
 export function ProfilePicture({ userId, profile, name, avatarUrl }: {
   userId: string;
@@ -30,6 +34,7 @@ export function ProfilePicture({ userId, profile, name, avatarUrl }: {
   const [source, setSource] = useState<CropSource | null>(null);
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Release the selected source when it is replaced, closed or unmounted.
@@ -47,16 +52,23 @@ export function ProfilePicture({ userId, profile, name, avatarUrl }: {
   async function choose(file: File | undefined) {
     setError(null);
     if (!file) return;
-    if (!SOURCE_TYPES.includes(file.type) || file.size > SOURCE_MAX_BYTES) {
-      setError("Choose a JPEG, PNG or WebP image up to 20 MB.");
+    const heic = HEIC.test(file.name) || /^image\/hei[cf]/.test(file.type);
+    if (!(file.type.startsWith("image/") || heic) || file.size > SOURCE_MAX_BYTES) {
+      setError("Choose an image up to 20 MB.");
       return;
     }
+    let image: Blob = file;
     let bitmap: ImageBitmap;
+    setOpening(true);
     try {
-      bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+      // Only Safari decodes HEIC natively; convert it here (loading the decoder only when needed) for every browser.
+      if (heic) image = await (await import("heic-to/next")).heicTo({ blob: file, type: "image/jpeg", quality: 0.92 });
+      bitmap = await createImageBitmap(image, { imageOrientation: "from-image" });
     } catch {
-      setError("This image can’t be opened.");
+      setError("This image can’t be opened. Try a JPEG or PNG.");
       return;
+    } finally {
+      setOpening(false);
     }
     const smallest = Math.min(bitmap.width, bitmap.height);
     if (smallest < SOURCE_MIN_SIDE || Math.max(bitmap.width, bitmap.height) > SOURCE_MAX_SIDE) {
@@ -64,7 +76,7 @@ export function ProfilePicture({ userId, profile, name, avatarUrl }: {
       setError("Choose an image at least 64 pixels wide and tall.");
       return;
     }
-    setSource({ url: URL.createObjectURL(file), bitmap });
+    setSource({ url: URL.createObjectURL(image), bitmap });
   }
 
   async function save(blob: Blob) {
@@ -97,7 +109,7 @@ export function ProfilePicture({ userId, profile, name, avatarUrl }: {
     toast.success("Picture removed");
   }
 
-  const busy = saving || removing;
+  const busy = saving || removing || opening;
   return (
     <div className="flex flex-col gap-2 px-6 py-5">
       <div className="flex items-center gap-4">
@@ -113,14 +125,14 @@ export function ProfilePicture({ userId, profile, name, avatarUrl }: {
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => input.current?.click()} disabled={busy}>
-            <HugeiconsIcon icon={ImageUploadIcon} strokeWidth={1.5} aria-hidden="true" />
+            <HugeiconsIcon icon={opening ? Loading03Icon : ImageUploadIcon} strokeWidth={1.5} className={opening ? "animate-spin" : undefined} aria-hidden="true" />
             {profile.avatarPath ? "Change picture" : "Upload picture"}
           </Button>
         </div>
         <input
           ref={input}
           type="file"
-          accept={SOURCE_TYPES.join(",")}
+          accept="image/*,.heic,.heif"
           className="sr-only"
           tabIndex={-1}
           aria-label="Profile picture file"

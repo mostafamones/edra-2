@@ -27,7 +27,7 @@ export function contentError(error: { message?: string } | null) {
     invalid_prerequisite: "Choose assignments or quizzes from another published unit in this academic scope.",
     prerequisite_cycle: "These prerequisites would create a circular dependency.",
     asset_in_use: "This video is still used by a saved draft or published history. Remove it from drafts and save first. Published videos must be preserved.", asset_deleting: "This video is being permanently deleted and cannot be attached.",
-    forbidden: "You do not have permission to make this change.", content_conflict: "Someone changed this unit. Reload it before saving again.", year_closed: "This academic year is closed. Its content is read-only.", archived: "Restore this unit before editing it.", explanation_required: "Add at least one ready explanation video before publishing.", assets_not_ready: "Wait until every attached upload is ready before publishing.", incompatible_assessment: "The assessment must belong to this academy/year and fit the entire program audience.", assessment_already_attached: "This assessment already belongs to another unit. Copy it instead.", attachment_locked: "This assessment has recorded work and cannot be detached or moved.", published_source_required: "Choose a published unit to copy.", answer_requires_assessment: "Attach the assessment before adding its answer video.", invalid_asset: "This file is not available to this unit.", validation: "Check the unit fields and materials.",
+    forbidden: "You do not have permission to make this change.", content_conflict: "Someone changed this unit. Reload it before saving again.", year_closed: "This academic year is closed. Its content is read-only.", archived: "Restore this unit before editing it.", explanation_required: "Add at least one ready explanation video before publishing.", assets_not_ready: "Wait until every attached upload is ready before publishing.", incompatible_assessment: "The assessment must belong to this academy/year and fit the entire program audience.", assessment_already_attached: "This assessment already belongs to another unit. Copy it instead.", attachment_locked: "This assessment has recorded work and cannot be detached or moved.", published_source_required: "Choose a published unit to copy.", answer_requires_assessment: "Attach the assessment before adding its answer video.", invalid_asset: "This file is not available to this unit.", invalid_attachment: "Attach documents directly under an explanation video.", validation: "Check the unit fields and materials.",
   };
   throw new Error(messages[error.message ?? ""] ?? "Could not complete this change. Please retry.");
 }
@@ -73,3 +73,47 @@ export async function readContentUnit(academyId: string, unitId: string) {
   return { unit: { ...unit, draft: document } as ContentUnit, program: program.data!, programLabel, assets, feedback: feedback.data ?? [], revisions: revisions.data ?? [], userId, manager };
 }
 export type ContentDetail = Awaited<ReturnType<typeof readContentUnit>>;
+
+/** Reuse needs only each published unit's latest snapshot, not its assets, feedback or older revisions. */
+export async function readReuseSources(academyId: string, unitId: string) {
+  z.guid().parse(unitId);
+  const { db } = await contentCaller(academyId);
+  const units = await fetchAllPages((from, to) => db.from("content_units")
+    .select("id,title:draft->>title,revisions:content_revisions!content_revisions_academy_id_unit_id_fkey(document)")
+    .eq("academy_id", academyId).eq("state", "published").neq("id", unitId)
+    .order("updated_at", { ascending: false }).order("id")
+    .order("revision", { referencedTable: "revisions", ascending: false })
+    .limit(1, { referencedTable: "revisions" }).range(from, to));
+  return units.flatMap(unit => {
+    const snapshot = unit.revisions[0];
+    if (!snapshot) return [];
+    const document = documentSchema.parse(snapshot.document);
+    return [{ id: unit.id, title: unit.title ?? document.title, items: document.items }];
+  });
+}
+
+/** Stored drafts and publications of one unit, newest first, with the names of who wrote them. */
+export async function readUnitHistory(academyId: string, unitId: string) {
+  z.guid().parse(unitId);
+  const { db } = await contentCaller(academyId);
+  // shortcut: only the latest 200 draft saves are shown; page the query if units outgrow that.
+  const [drafts, revisions] = await Promise.all([
+    db.from("content_drafts").select("id,kind,document,saved_by,saved_at").eq("academy_id", academyId).eq("unit_id", unitId).order("saved_at", { ascending: false }).order("id", { ascending: false }).limit(200),
+    db.from("content_revisions").select("revision,document,published_by,published_at").eq("academy_id", academyId).eq("unit_id", unitId).order("revision", { ascending: false }),
+  ]);
+  contentError(drafts.error); contentError(revisions.error);
+  const ids = [...new Set([...(drafts.data ?? []).flatMap(d => d.saved_by ? [d.saved_by] : []), ...(revisions.data ?? []).map(r => r.published_by)])];
+  // Profiles are readable for people who share the academy; anyone else shows as an unnamed staff member.
+  const profiles = ids.length ? await db.from("profiles").select("id,full_name,display_name,avatar_path").in("id", ids) : { data: [], error: null };
+  contentError(profiles.error);
+  // Private bucket: avatars come through signed URLs; a failure just leaves initials.
+  const paths = (profiles.data ?? []).flatMap(p => p.avatar_path ?? []);
+  const signed = paths.length ? (await db.storage.from("avatars").createSignedUrls(paths, 60 * 60)).data : null;
+  const urls = new Map(signed?.flatMap(entry => entry.path && entry.signedUrl ? [[entry.path, entry.signedUrl] as const] : []));
+  const people = new Map((profiles.data ?? []).map(p => [p.id, { id: p.id, name: p.display_name || p.full_name, avatarUrl: p.avatar_path ? urls.get(p.avatar_path) : undefined }]));
+  return {
+    drafts: (drafts.data ?? []).map(d => ({ kind: d.kind as "created" | "saved", document: d.document, at: d.saved_at, by: (d.saved_by && people.get(d.saved_by)) || null })),
+    revisions: (revisions.data ?? []).map(r => ({ revision: r.revision, document: r.document, at: r.published_at, by: people.get(r.published_by) || null })),
+  };
+}
+export type UnitHistory = Awaited<ReturnType<typeof readUnitHistory>>;

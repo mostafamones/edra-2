@@ -12,7 +12,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowDown01Icon, RefreshIcon } from "@hugeicons/core-free-icons";
 import { useCanonicalHref } from "@/modules/navigation";
-import { assessmentOptions, createAttachedAssessment } from "../actions";
+import { createAttachedAssessment } from "../actions";
+import { unitPanelOptions } from "../panels";
 import { unwrapContent, type ContentItem } from "../types";
 
 export function AssessmentPicker({ academyId, unitId, items, version, dirty, disabled, onAdd, onCreated }: { academyId: string; unitId: string; items: ContentItem[]; version: number; dirty: boolean; disabled: boolean; onAdd: (item: ContentItem) => void; onCreated: () => Promise<void> }) {
@@ -27,7 +28,7 @@ export function AssessmentPicker({ academyId, unitId, items, version, dirty, dis
       router.push(href(`/app/${kind === "quiz" ? "quizzes" : kind === "exam" ? "exams" : "assignments"}/${id}/edit`));
     } catch(e) { setError(e instanceof Error ? e.message : "Could not create assessment."); setBusy(false); }
   }
-  const options = useQuery({ queryKey: ["content", academyId, "assessments", unitId], queryFn: () => assessmentOptions(academyId, unitId), refetchOnWindowFocus: true });
+  const options = useQuery({ ...unitPanelOptions(academyId, unitId), select: panels => unwrapContent(panels.assessments), refetchOnWindowFocus: true });
   const available = options.data?.filter(a => !items.some(item => item.kind === "assessment" && item.assessmentKind === a.kind && item.assessmentId === a.id)) ?? [];
   const chosen = available.find(a => `${a.kind}:${a.id}` === selected);
   const LABELS = { assignment: "Assignment", quiz: "Quiz", exam: "Exam" };

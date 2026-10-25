@@ -12,6 +12,7 @@ import { SettingsRow } from "@/components/shared/settings-row";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { PREVIEW_STATUS_KEY } from "@/modules/development";
 
 import { saveProfile } from "../actions";
 import { accountQueryKeys, type AccountProfile } from "../queries";
@@ -38,6 +39,7 @@ export function ProfileNames({ userId, profile }: { userId: string; profile: Acc
     form.reset(saved);
     queryClient.setQueryData<AccountProfile>(accountQueryKeys.profile(userId), (previous) => previous && { ...previous, fullName: result.fullName, displayName: result.displayName });
     void queryClient.invalidateQueries({ queryKey: accountQueryKeys.profile(userId) });
+    void queryClient.invalidateQueries({ queryKey: PREVIEW_STATUS_KEY });
     toast.success("Profile saved");
   }
 

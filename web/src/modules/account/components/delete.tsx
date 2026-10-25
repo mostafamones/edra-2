@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { usePreviewStatus } from "@/modules/development";
 
 import { deleteAccount } from "../actions";
 import { DELETE_CONFIRMATION } from "../validation";
@@ -22,6 +23,9 @@ export function AccountDeletion() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const confirmed = typed.trim().toLowerCase() === DELETE_CONFIRMATION;
+  // A Developer mode identity is a generated test account; deleting it would break the preview run.
+  const preview = usePreviewStatus().data;
+  const generated = Boolean(preview?.available && preview.active && preview.current.kind !== "original");
 
   async function confirm() {
     setBusy(true); setError("");
@@ -39,7 +43,7 @@ export function AccountDeletion() {
     <SettingsRow title="Delete account">
       <AlertDialog open={open} onOpenChange={(next) => { if (busy) return; setOpen(next); setTyped(""); setError(""); }}>
         <AlertDialogTrigger asChild>
-          <Button variant="destructive" size="sm">Delete account</Button>
+          <Button variant="destructive" size="sm" disabled={generated}>Delete account</Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>

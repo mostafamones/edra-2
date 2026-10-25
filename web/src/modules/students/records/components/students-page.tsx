@@ -209,7 +209,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   }
 
   return (
-    <div className="flex flex-1">
+    <div className="relative flex flex-1">
       <main className="page-shell min-w-0">
         <HeaderActions>
           <AddStudentMenu academyId={academyId} canImport={canImportStudents(academy.role)} />
@@ -360,7 +360,9 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
         />
       </main>
       {groupsOpen && (
-        <aside aria-label="Groups" className="w-72 shrink-0 border-l animate-in fade-in slide-in-from-right-4 duration-200">
+        // Floats over the students table; the strip to its left blurs and fades the table into the panel.
+        <aside aria-label="Groups" className="absolute inset-y-0 right-0 z-20 w-72 border-l bg-background/80 backdrop-blur-md animate-in fade-in slide-in-from-right-4 duration-200">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-full w-48 bg-linear-to-l from-background/90 via-background/60 to-transparent backdrop-blur-md mask-l-from-30%" />
           {/* Matches the page's padding and section gap so the title row lines up with the students toolbar. */}
           <div className="sticky top-(--header-height,4rem) flex max-h-[calc(100svh-var(--header-height,4rem))] flex-col gap-(--page-section-gap) overflow-y-auto px-6 py-(--page-padding-y)">
             <GroupsBoard

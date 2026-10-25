@@ -3,6 +3,17 @@ import { staffAcademyPath, validateReturnDestination } from "@/lib/routing";
 // Students directory URL parameters (records/list-params.ts); anything else is dropped.
 const DIRECTORY_KEYS = ["q", "status", "level", "track", "group", "type", "sort", "page", "size"];
 
+/** Keep account settings or a page within this preview's academy when changing staff identity. */
+export function staffPreviewPath(slug: string, value: unknown): string | null {
+  const destination = validateReturnDestination(value, "staff");
+  if (!destination || destination.platform !== "staff") return null;
+  const { pathname } = new URL(destination.path, "https://routing.invalid");
+  const academy = staffAcademyPath(slug);
+  return pathname === "/account" || pathname === academy || pathname.startsWith(`${academy}/`)
+    ? destination.path
+    : null;
+}
+
 /** The synthetic academy's students directory with allowlisted filters/page, or null. */
 export function studentsDirectoryPath(slug: string, value: unknown): string | null {
   const destination = validateReturnDestination(value, "staff");

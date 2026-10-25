@@ -9,10 +9,11 @@ import { platformOrigin, staffAcademyHref, staffAcademyPath, studentAcademyHref 
 import { authCookieOptions } from "@/lib/supabase/cookie-policy";
 import { createClient } from "@/lib/supabase/server";
 import { isPhoneCodeSession } from "@/lib/supabase/session-grade";
+import { accountName } from "@/modules/account/contract";
 
 import { developmentConfig, type DevelopmentConfig } from "./config";
 import { hashControlToken, newControlToken, open, seal } from "./crypto";
-import { exitPath, studentsDirectoryPath } from "./paths";
+import { exitPath, staffPreviewPath, studentsDirectoryPath } from "./paths";
 import type { PreviewErrorCode, PreviewIdentity, PreviewResult, PreviewRole, PreviewStatus } from "./types";
 
 export const CONTROL_COOKIE = "edra-dev-control";
@@ -129,14 +130,16 @@ function openReceipt(config: DevelopmentConfig, runId: string, receipt: string) 
   return open(config.key, sealed ?? "", receiptContext(config, runId, commandId ?? ""));
 }
 
-function destinationFor(slug: string, logicalId: string | null) {
-  return logicalId && STUDENT_ID.test(logicalId) ? studentAcademyHref(slug) : staffAcademyHref(slug);
+function destinationFor(slug: string, logicalId: string | null, staffPath?: string | null) {
+  if (logicalId && STUDENT_ID.test(logicalId)) return studentAcademyHref(slug);
+  return staffPath ? platformOrigin("staff") + staffPath : staffAcademyHref(slug);
 }
 
 type SwitchPlan = {
   config: DevelopmentConfig; control: Control; claims: Claims; db: Awaited<ReturnType<typeof createClient>>;
   kind: "enter" | "switch" | "return"; target: string | null; commandId: string; expectedRevision: number;
   prior?: { logicalId: string | null; returnPath: string | null } | null;
+  staffPath?: string | null;
 };
 
 /**
@@ -158,7 +161,7 @@ async function performSwitch(plan: SwitchPlan): Promise<PreviewResult> {
       : JSON.parse(open(config.key, await rpc<string>(config, "dev_control_original", { p_control_id: control.id }), originalContext(config, control))) as Pair;
     const { error } = await db.auth.setSession(pair);
     if (error) return fail("session_inactive");
-    return { ok: true, revision: begun.revision, destination: destinationFor(control.academy_slug, begun.target_logical_id ?? null) };
+    return { ok: true, revision: begun.revision, destination: destinationFor(control.academy_slug, begun.target_logical_id ?? null, plan.staffPath) };
   }
   if (begun.result !== "begun") return fail(begun.result as PreviewErrorCode);
 
@@ -211,7 +214,7 @@ async function performSwitch(plan: SwitchPlan): Promise<PreviewResult> {
   // Keep the new session and the replay binding of this command; revoke older issued sessions.
   const currentSession = target === null ? null : (await db.auth.getSession()).data.session;
   await revokeIssued(config, control, [currentSession ? sessionIdOf(currentSession.access_token) : null, claims.session_id]);
-  return { ok: true, revision: begun.revision, destination: destinationFor(control.academy_slug, target) };
+  return { ok: true, revision: begun.revision, destination: destinationFor(control.academy_slug, target, plan.staffPath) };
 }
 
 async function activeContext() {
@@ -237,9 +240,9 @@ export async function previewStatus(): Promise<PreviewStatus> {
   if (control?.live && sessionOfControl(control, claims)) {
     const [targets, developer] = await Promise.all([
       rpc<Targets>(config, "dev_run_targets", { p_run_id: control.run_id }),
-      adminClient(config).from("profiles").select("full_name").eq("id", control.developer_id).maybeSingle(),
+      adminClient(config).from("profiles").select("full_name,display_name").eq("id", control.developer_id).maybeSingle(),
     ]);
-    const developerName = developer.data?.full_name ?? "Developer";
+    const developerName = accountName(developer.data) ?? "Developer";
     const current = identity(control.current_logical_id, targets, developerName);
     return {
       available: true, active: true, run: { id: control.run_id, academySlug: control.academy_slug }, revision: control.revision,
@@ -299,6 +302,7 @@ export async function enterPreview(input: { runId: string; studentLogicalId: str
   return performSwitch({
     config, control, claims, db, kind: "enter", target: input.studentLogicalId ?? STAFF_ENTRY, commandId: randomUUID(), expectedRevision: 0,
     prior: input.studentLogicalId ? { logicalId: null, returnPath: directory } : undefined,
+    staffPath: staffPreviewPath(slug, input.returnTo),
   });
 }
 
@@ -322,6 +326,7 @@ export async function switchPreview(input: {
   return performSwitch({
     config, control, claims, db, kind: "switch", target: input.logicalId, commandId: input.commandId,
     expectedRevision: input.expectedRevision, prior,
+    staffPath: !fromStudent && !toStudent ? staffPreviewPath(control.academy_slug, input.returnTo) : null,
   });
 }
 
