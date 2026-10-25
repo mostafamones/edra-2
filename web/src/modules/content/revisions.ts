@@ -101,3 +101,13 @@ export function historyEntries<B extends Author>(drafts: (Event<B> & { kind: "cr
     return { key: newest.kind === "published" ? `revision-${newest.revision}` : `draft-${index}`, kind: newest.kind, revision: newest.kind === "published" ? newest.revision : undefined, at: newest.at, authors, saves: group.length, summary };
   });
 }
+
+/** "Today, 3:21 AM", "Yesterday, 12:10 AM" or "Oct 23, 3:21 AM"; the year only when asked for. */
+export function historyTime(at: string, now: Date, withYear: boolean) {
+  const date = new Date(at);
+  const time = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const days = Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(date).setHours(0, 0, 0, 0)) / 86_400_000);
+  if (days === 0) return `Today, ${time}`;
+  if (days === 1) return `Yesterday, ${time}`;
+  return `${date.toLocaleDateString(undefined, { month: "short", day: "numeric", ...(withYear ? { year: "numeric" } : {}) })}, ${time}`;
+}

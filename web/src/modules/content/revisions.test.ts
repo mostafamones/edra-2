@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { historyEntries, revisionChanges } from "./revisions";
+import { historyEntries, historyTime, revisionChanges } from "./revisions";
 import type { ContentDocument } from "./types";
 
 const video = { id: "00000000-0000-4000-8000-00000000000a", kind: "explanation" as const, title: "Intro", assetId: "00000000-0000-4000-8000-0000000000aa" };
@@ -49,4 +49,13 @@ it("merges consecutive draft saves into one entry between publications", () => {
   ]);
   expect(entries[2].summary?.groups).toEqual([{ label: "Material", parts: ["+2"] }, { label: "Details", parts: ["Description"] }]);
   expect(historyEntries([{ kind: "saved", document: { bad: true }, at: "2026-10-01T00:00:00Z", by: null }], [])[0].summary).toBeNull();
+});
+
+it("labels history times relative to today", () => {
+  const now = new Date(2026, 9, 25, 15, 0);
+  const at = (d: Date) => d.toISOString();
+  expect(historyTime(at(new Date(2026, 9, 25, 3, 21)), now, false)).toMatch(/^Today, /);
+  expect(historyTime(at(new Date(2026, 9, 24, 0, 10)), now, false)).toMatch(/^Yesterday, /);
+  expect(historyTime(at(new Date(2026, 9, 20, 9, 0)), now, false)).not.toMatch(/2026/);
+  expect(historyTime(at(new Date(2025, 11, 30, 9, 0)), now, true)).toMatch(/2025/);
 });
