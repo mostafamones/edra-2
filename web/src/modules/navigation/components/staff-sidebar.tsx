@@ -2,6 +2,7 @@
 import { usePortalPath, useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type ComponentProps } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowLeft02Icon, AssignmentsIcon, Building03Icon, Calendar03Icon, FolderLibraryIcon, Home07Icon, Message01Icon, Search01Icon, StudentsIcon, TeachingIcon, Task01Icon, Ticket01Icon, UserCircleIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
@@ -42,6 +43,7 @@ import { AcademySwitcher } from "./academy-switcher";
 import { useSectionOpenState } from "./open-state";
 import { QuickCreate } from "./quick-create";
 import { PortalFooter } from "./portal-footer";
+import { useManagementReturn } from "../use-management-return";
 
 function pageFor(href: string): NavItem {
   const item = findStaffItem(href);
@@ -229,15 +231,13 @@ function ManagementNavigation({ pathname, role, closeMobile, query }: { pathname
 }
 
 /** Management footer: sits where the workspace footer's Manage button is, so the two read as replacing each other. */
-function BackFooter({ closeMobile }: { closeMobile: () => void }) {
-  const href = useCanonicalHref();
+function BackFooter({ closeMobile, returnTo }: { closeMobile: () => void; returnTo: () => string }) {
+  const router = useRouter();
   return (
     <div className="flex rounded-lg px-1 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-      <Button asChild variant="ghost" className="h-9 w-full justify-start gap-1 px-2 text-sidebar-foreground/75 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0" aria-label="Back">
-        <Link href={href("/app")} onClick={closeMobile}>
-          <HugeiconsIcon icon={ArrowLeft02Icon} size={20} strokeWidth={1.5} aria-hidden="true" />
-          <span className="group-data-[collapsible=icon]:hidden">Back</span>
-        </Link>
+      <Button variant="ghost" className="h-9 w-full justify-start gap-1 px-2 text-sidebar-foreground/75 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0" aria-label="Back" onClick={() => { closeMobile(); router.push(returnTo()); }}>
+        <HugeiconsIcon icon={ArrowLeft02Icon} size={20} strokeWidth={1.5} aria-hidden="true" />
+        <span className="group-data-[collapsible=icon]:hidden">Back</span>
       </Button>
     </div>
   );
@@ -249,6 +249,7 @@ export function StaffSidebar() {
   const { isMobile, open, setOpen, setOpenMobile } = useSidebar();
   const role = activeAcademy?.role ?? null;
   const management = pathname === "/app/manage" || pathname.startsWith("/app/manage/");
+  const returnTo = useManagementReturn(activeAcademy?.slug, pathname, management);
   const [query, setQuery] = useState("");
   const closeMobile = () => setOpenMobile(false);
   const expandSidebar = () => { if (!open) setOpen(true); };
@@ -283,7 +284,7 @@ export function StaffSidebar() {
           <WorkspaceNavigation pathname={pathname} role={role} closeMobile={closeMobile} sidebarOpen={open || isMobile} expandSidebar={expandSidebar} />
         )}
       </SidebarContent>
-      <SidebarFooter>{management ? <BackFooter closeMobile={closeMobile} /> : <PortalFooter />}</SidebarFooter>
+      <SidebarFooter>{management ? <BackFooter closeMobile={closeMobile} returnTo={returnTo} /> : <PortalFooter />}</SidebarFooter>
     </Sidebar>
   );
 }
