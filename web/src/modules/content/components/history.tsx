@@ -48,15 +48,15 @@ function Entry({ entry, live, last }: { entry: HistoryEntry<UnitHistory["drafts"
     <span className={`relative mt-1.5 size-[11px] shrink-0 rounded-full border-2 ${published ? `border-primary ${live ? "bg-primary" : "bg-popover"}` : "border-muted-foreground/40 bg-popover"}`} aria-hidden="true" />
     <div className="min-w-0 flex-1 space-y-2">
       <p className="flex items-center gap-2 font-medium">{entry.kind === "published" ? `Version ${entry.revision}` : TITLES[entry.kind]}{live && <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">Live</Badge>}</p>
-      <div className="overflow-hidden rounded-lg border bg-card">
-        <div className="flex items-center gap-2 border-b px-3 py-2">
+      <div className="rounded-lg bg-muted/50 px-3 py-2.5">
+        <div className="flex items-center gap-2">
           <Avatar aria-hidden="true" className="size-6"><AvatarImage src={entry.by?.avatarUrl} alt="" /><AvatarFallback className="text-[11px]">{entry.by?.name?.slice(0, 1).toUpperCase() ?? "?"}</AvatarFallback></Avatar>
           <span dir="auto" className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
           <time dateTime={entry.at} className="shrink-0 text-xs text-muted-foreground tabular-nums">{new Date(entry.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time>
         </div>
         {entry.changes
-          ? <ul className="space-y-1 px-3 py-2.5 text-sm">{entry.changes.map((change, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60" aria-hidden="true" />{change}</li>)}</ul>
-          : <p className="px-3 py-2.5 text-sm text-muted-foreground">Changes unavailable</p>}
+          ? <ul className="mt-2 space-y-1 pl-8 text-sm">{entry.changes.map((change, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60" aria-hidden="true" />{change}</li>)}</ul>
+          : <p className="mt-2 pl-8 text-sm text-muted-foreground">Changes unavailable</p>}
       </div>
     </div>
   </li>;
