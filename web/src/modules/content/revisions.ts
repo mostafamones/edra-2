@@ -15,7 +15,7 @@ function countItems(items: ContentItem[]) {
 
 /** What changed from the previous document to the next one. An empty `headline` means nothing changed. */
 export function revisionChanges(previous: ContentDocument | null, next: ContentDocument): ChangeSummary {
-  if (!previous) return { headline: `Published with ${plural(next.items.length, "material")}`, fields: next.items.length ? ["Material"] : [], lines: next.items.length ? [`+${next.items.length} Material`] : [], details: next.items.map(item => `${KIND_LABELS[item.kind]} “${item.title}”`) };
+  if (!previous) return { headline: `Published with ${plural(next.items.length, "material")}`, fields: next.items.length ? ["Material"] : [], lines: [], details: next.items.map(item => `${KIND_LABELS[item.kind]} “${item.title}”`) };
   const before = new Map(previous.items.map(item => [item.id, item]));
   const after = new Map(next.items.map(item => [item.id, item]));
   const added = next.items.filter(item => !before.has(item.id));
@@ -53,9 +53,6 @@ export function revisionChanges(previous: ContentDocument | null, next: ContentD
   const lines = [
     title && `Title “${previous.title}” → “${next.title}”`,
     description && "Description updated",
-    added.length && `+${added.length} Material`,
-    removed.length && `−${removed.length} Material`,
-    renamed.length && `${renamed.length} Material renamed`,
     reordered && "Reordered",
     access && `Access ${previous.accessDays} → ${plural(next.accessDays, "day")}`,
     coupon && `Coupon ${coupon}`,
@@ -123,4 +120,17 @@ export function historyTime(at: string, now: Date, withYear: boolean) {
   if (days === 0) return `Today, ${time}`;
   if (days === 1) return `Yesterday, ${time}`;
   return `${date.toLocaleDateString(undefined, { month: "short", day: "numeric", ...(withYear ? { year: "numeric" } : {}) })}, ${time}`;
+}
+
+/** "just now", "5 minutes ago", "3 hours ago", "2 days ago". */
+export function timeAgo(at: string, now: Date) {
+  const minutes = Math.floor((now.getTime() - new Date(at).getTime()) / 60_000);
+  const ago = new Intl.RelativeTimeFormat("en", { numeric: "always" });
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return ago.format(-minutes, "minute");
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return ago.format(-hours, "hour");
+  const days = Math.floor(hours / 24);
+  if (days < 30) return ago.format(-days, "day");
+  return days < 365 ? ago.format(-Math.floor(days / 30), "month") : ago.format(-Math.floor(days / 365), "year");
 }

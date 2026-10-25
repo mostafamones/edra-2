@@ -101,7 +101,8 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
   }
   const setItems = (items: ContentItem[]) => setDocument({ ...document, items });
   const actions = <>
-    <VersionHistory academyId={academy.id} unitId={unit.id} live={unit.state !== "archived"} />
+    <VersionHistory academyId={academy.id} unitId={unit.id} userId={data.userId} live={unit.state !== "archived"} disabled={disabled || dirty}
+      onSubmit={editable ? () => perform("submit") : undefined} onPublish={canManage && unit.state !== "archived" ? () => perform("publish") : undefined} />
     {editable && <Button variant={canManage && unit.state !== "archived" ? "outline" : "default"} disabled={disabled || !dirty || !document.title.trim()} onClick={() => perform("save")}><HugeiconsIcon icon={FloppyDiskIcon} strokeWidth={1.5} aria-hidden="true" />{busy ? "Saving…" : "Save draft"}</Button>}
     {editable && <Button variant="outline" disabled={disabled || dirty} onClick={() => perform("submit")}><HugeiconsIcon icon={SentIcon} strokeWidth={1.5} aria-hidden="true" />Submit for review</Button>}
     {canManage && unit.state !== "archived" && <Button disabled={disabled} onClick={() => perform("publish")}><HugeiconsIcon icon={Tick02Icon} strokeWidth={1.5} aria-hidden="true" />{unit.published_revision ? "Publish changes" : "Publish unit"}</Button>}
