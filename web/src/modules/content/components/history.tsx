@@ -3,11 +3,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, Clock01Icon } from "@hugeicons/core-free-icons";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FloatingSheet, FloatingSheetContent, FloatingSheetDescription, FloatingSheetHeader, FloatingSheetTitle, FloatingSheetTrigger } from "@/components/ui/floating-sheet";
 import { loadUnitHistory } from "../actions";
+import type { UnitHistory } from "../data";
 import { historyEntries, type HistoryEntry } from "../revisions";
 import { unwrapContent } from "../types";
 
@@ -38,19 +40,24 @@ export function VersionHistory({ academyId, unitId, live }: { academyId: string;
   </FloatingSheet>;
 }
 
-function Entry({ entry, live, last }: { entry: HistoryEntry; live: boolean; last: boolean }) {
+function Entry({ entry, live, last }: { entry: HistoryEntry<UnitHistory["drafts"][number]["by"]>; live: boolean; last: boolean }) {
+  const name = entry.by?.name ?? "Unknown staff member";
   const published = entry.kind === "published";
   return <li className="relative flex gap-4 pb-8 last:pb-0">
     {!last && <span className="absolute top-5 bottom-0 left-[5px] w-px bg-border" aria-hidden="true" />}
     <span className={`relative mt-1.5 size-[11px] shrink-0 rounded-full border-2 ${published ? `border-primary ${live ? "bg-primary" : "bg-popover"}` : "border-muted-foreground/40 bg-popover"}`} aria-hidden="true" />
     <div className="min-w-0 flex-1 space-y-2">
-      <div className="space-y-0.5">
-        <p className="flex items-center gap-2 font-medium">{entry.kind === "published" ? `Version ${entry.revision}` : TITLES[entry.kind]}{live && <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">Live</Badge>}</p>
-        <p className="text-xs text-muted-foreground"><span dir="auto">{entry.by ?? "Unknown staff member"}</span> · <time dateTime={entry.at} className="tabular-nums">{new Date(entry.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time></p>
+      <p className="flex items-center gap-2 font-medium">{entry.kind === "published" ? `Version ${entry.revision}` : TITLES[entry.kind]}{live && <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">Live</Badge>}</p>
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="flex items-center gap-2 border-b px-3 py-2">
+          <Avatar aria-hidden="true" className="size-6"><AvatarImage src={entry.by?.avatarUrl} alt="" /><AvatarFallback className="text-[11px]">{entry.by?.name?.slice(0, 1).toUpperCase() ?? "?"}</AvatarFallback></Avatar>
+          <span dir="auto" className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
+          <time dateTime={entry.at} className="shrink-0 text-xs text-muted-foreground tabular-nums">{new Date(entry.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time>
+        </div>
+        {entry.changes
+          ? <ul className="space-y-1 px-3 py-2.5 text-sm">{entry.changes.map((change, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60" aria-hidden="true" />{change}</li>)}</ul>
+          : <p className="px-3 py-2.5 text-sm text-muted-foreground">Changes unavailable</p>}
       </div>
-      {entry.changes
-        ? <ul className="space-y-1 rounded-lg bg-muted/40 px-3 py-2.5 text-sm">{entry.changes.map((change, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60" aria-hidden="true" />{change}</li>)}</ul>
-        : <p className="text-sm text-muted-foreground">Changes unavailable</p>}
     </div>
   </li>;
 }

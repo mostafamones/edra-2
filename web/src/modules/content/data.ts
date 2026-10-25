@@ -85,12 +85,16 @@ export async function readUnitHistory(academyId: string, unitId: string) {
   contentError(drafts.error); contentError(revisions.error);
   const ids = [...new Set([...(drafts.data ?? []).flatMap(d => d.saved_by ? [d.saved_by] : []), ...(revisions.data ?? []).map(r => r.published_by)])];
   // Profiles are readable for people who share the academy; anyone else shows as an unnamed staff member.
-  const profiles = ids.length ? await db.from("profiles").select("id,full_name,display_name").in("id", ids) : { data: [], error: null };
+  const profiles = ids.length ? await db.from("profiles").select("id,full_name,display_name,avatar_path").in("id", ids) : { data: [], error: null };
   contentError(profiles.error);
-  const names = new Map((profiles.data ?? []).map(p => [p.id, p.display_name || p.full_name]));
+  // Private bucket: avatars come through signed URLs; a failure just leaves initials.
+  const paths = (profiles.data ?? []).flatMap(p => p.avatar_path ?? []);
+  const signed = paths.length ? (await db.storage.from("avatars").createSignedUrls(paths, 60 * 60)).data : null;
+  const urls = new Map(signed?.flatMap(entry => entry.path && entry.signedUrl ? [[entry.path, entry.signedUrl] as const] : []));
+  const people = new Map((profiles.data ?? []).map(p => [p.id, { name: p.display_name || p.full_name, avatarUrl: p.avatar_path ? urls.get(p.avatar_path) : undefined }]));
   return {
-    drafts: (drafts.data ?? []).map(d => ({ kind: d.kind as "created" | "saved", document: d.document, at: d.saved_at, by: (d.saved_by && names.get(d.saved_by)) || null })),
-    revisions: (revisions.data ?? []).map(r => ({ revision: r.revision, document: r.document, at: r.published_at, by: names.get(r.published_by) || null })),
+    drafts: (drafts.data ?? []).map(d => ({ kind: d.kind as "created" | "saved", document: d.document, at: d.saved_at, by: (d.saved_by && people.get(d.saved_by)) || null })),
+    revisions: (revisions.data ?? []).map(r => ({ revision: r.revision, document: r.document, at: r.published_at, by: people.get(r.published_by) || null })),
   };
 }
 export type UnitHistory = Awaited<ReturnType<typeof readUnitHistory>>;

@@ -28,14 +28,14 @@ export function revisionChanges(previous: ContentDocument | null, next: ContentD
   return changes;
 }
 
-type Event = { document: unknown; at: string; by: string | null };
-export type HistoryEntry = { key: string; kind: "published" | "created" | "saved"; revision?: number; at: string; by: string | null; changes: string[] | null };
+type Event<B> = { document: unknown; at: string; by: B };
+export type HistoryEntry<B> = { key: string; kind: "published" | "created" | "saved"; revision?: number; at: string; by: B; changes: string[] | null };
 
 /**
  * One timeline of stored drafts and publications, newest first. A publication is compared with the previous
  * publication (what students saw change); a draft with whatever was stored just before it.
  */
-export function historyEntries(drafts: (Event & { kind: "created" | "saved" })[], revisions: (Event & { revision: number })[]): HistoryEntry[] {
+export function historyEntries<B>(drafts: (Event<B> & { kind: "created" | "saved" })[], revisions: (Event<B> & { revision: number })[]): HistoryEntry<B>[] {
   // A save-and-publish stores its draft and publication in one transaction; the publication sorts first.
   const events = [...revisions.map(r => ({ ...r, kind: "published" as const })), ...drafts.map(d => ({ ...d, origin: d.kind, kind: "draft" as const }))]
     .sort((a, b) => b.at.localeCompare(a.at) || (a.kind === b.kind ? 0 : a.kind === "published" ? -1 : 1));
