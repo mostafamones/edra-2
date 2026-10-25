@@ -28,7 +28,7 @@ Staff identity labels use each account's current display name, falling back to i
 
 Entering staff preview or switching staff identities preserves the current account settings page or synthetic-academy page, including its query parameters. The page reloads with the selected identity's data and normal permissions. Other destinations fall back to the synthetic academy home.
 
-In the synthetic academy's student directory, **View as student** opens the selected linked student's real portal within the same preview frame. It is a developer action, not an instructor permission in ordinary academies. The frame identifies the student.
+In the synthetic academy's student directory, **View as student** opens the selected linked student's real portal within the same preview frame. It is a developer action, not an instructor permission in ordinary academies. The frame identifies the student. Its identity selector also offers two student shortcuts, including an online-only student; it does not list the entire directory. The current student stays selectable, and Return to staff remains available. On 2026-10-25 the owner approved adding Nour Online as one extra linked synthetic student to the existing development academy, preserving the original 20 in-person students. Reserve synthetic login and parent contacts before Auth provisioning and encrypt the preview password through the existing registry.
 
 **Return to staff** restores the previous staff test identity and directory context. **Exit preview** restores the owner's original identity and academy context. The controls remain accessible while viewing test identities.
 

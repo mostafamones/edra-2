@@ -30,7 +30,7 @@ type Control = {
 };
 type Targets = {
   staff: { logical_id: string; role: Exclude<PreviewRole, "student">; display_name: string }[];
-  students: { logical_id: string; display_name: string; annual_student_record_id: string }[];
+  students: { logical_id: string; display_name: string; annual_student_record_id: string; participation_type?: string }[];
 };
 type Claims = { sub: string; session_id: string };
 
@@ -249,7 +249,7 @@ export async function previewStatus(): Promise<PreviewStatus> {
       expiresAt: control.expires_at, current,
       priorStaff: current.kind === "student" ? identity(control.prior_logical_id, targets, developerName) : null,
       staffTargets: targets.staff.map((entry) => ({ logicalId: entry.logical_id, displayName: entry.display_name, role: entry.role })),
-      students: targets.students.map((entry) => ({ logicalId: entry.logical_id, displayName: entry.display_name, recordId: entry.annual_student_record_id })),
+      students: targets.students.map((entry) => ({ logicalId: entry.logical_id, displayName: entry.display_name, recordId: entry.annual_student_record_id, participationType: entry.participation_type })),
     };
   }
   if (!config.developerIds.has(claims.sub)) return { available: false };
@@ -261,7 +261,7 @@ export async function previewStatus(): Promise<PreviewStatus> {
   const targets = await rpc<Targets>(config, "dev_run_targets", { p_run_id: preview.run.id });
   return {
     available: true, active: false, run: { id: preview.run.id, academySlug: preview.run.academy_slug },
-    students: targets.students.map((entry) => ({ logicalId: entry.logical_id, displayName: entry.display_name, recordId: entry.annual_student_record_id })),
+    students: targets.students.map((entry) => ({ logicalId: entry.logical_id, displayName: entry.display_name, recordId: entry.annual_student_record_id, participationType: entry.participation_type })),
   };
 }
 
