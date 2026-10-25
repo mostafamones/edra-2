@@ -76,8 +76,8 @@ export function AccountSettings() {
           )}
         </SettingsGroup>
         <SettingsGroup title="Security">
-          <PasswordChange key={user?.id} />
-          <AccountDeletion key={user?.id} />
+          <PasswordChange key={`password:${user?.id}`} />
+          <AccountDeletion key={`delete:${user?.id}`} />
         </SettingsGroup>
       </div>
     </main>
