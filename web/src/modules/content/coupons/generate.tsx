@@ -13,17 +13,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { unwrapContent } from "../types";
 import { generateCoupons } from "./actions";
 import { availableCouponTypes, type CouponBatch, type CouponScope, type CouponType } from "./types";
-import { ProgramSelect } from "./program-select";
 
 /** Generates one batch for a program and type; retries reuse the request id until the input changes. */
 export function GenerateDialog({ academyId, programs, allTypes, onGenerated }: { academyId: string; programs: CouponScope[]; allTypes: CouponType[]; onGenerated: (batch: CouponBatch) => Promise<void> }) {
   const request = useRef<{ key: string; id: string } | null>(null);
   const [open, setOpen] = useState(false);
-  const [programId, setProgramId] = useState("");
   const [typeId, setTypeId] = useState("");
   const [quantity, setQuantity] = useState("10");
   const [busy, setBusy] = useState(false);
-  const scope = programs.find(p => p.id === programId) ?? programs[0];
+  const scope = programs[0];
   const types = scope ? availableCouponTypes(allTypes, scope) : [];
   // A missing or deleted selection falls back to the default type.
   const selectedType = types.find(t => t.id === typeId) ?? types.find(t => t.isDefault) ?? types[0];
@@ -32,7 +30,7 @@ export function GenerateDialog({ academyId, programs, allTypes, onGenerated }: {
   function step(event: React.MouseEvent, direction: 1 | -1) { setQuantity(String(Math.min(1000, Math.max(1, count + direction * (event.shiftKey ? 1 : 5))))); }
   function reset(next: boolean) {
     setOpen(next);
-    if (!next) { setProgramId(""); setTypeId(""); setQuantity("10"); request.current = null; }
+    if (!next) { setTypeId(""); setQuantity("10"); request.current = null; }
   }
   async function generate() {
     if (!scope || !selectedType || busy) return;
@@ -53,7 +51,6 @@ export function GenerateDialog({ academyId, programs, allTypes, onGenerated }: {
       <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
         <DialogHeader><DialogTitle className="text-xl font-bold leading-tight">Generate coupons</DialogTitle></DialogHeader>
         {scope && <div className="grid gap-5">
-          <Field><FieldLabel htmlFor="generate-program">Program</FieldLabel><ProgramSelect id="generate-program" programs={programs} value={scope.id} disabled={busy} onChange={value => { setProgramId(value); setTypeId(""); }} /></Field>
           <Field>
             <FieldLabel htmlFor="generate-type">Coupon type</FieldLabel>
             <Select value={selectedType?.id ?? ""} disabled={busy || !types.length} onValueChange={setTypeId}>

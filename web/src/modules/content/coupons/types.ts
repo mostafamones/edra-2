@@ -22,7 +22,7 @@ export function matchesScope(type: CouponType, scope: CouponScope) { return type
 /** One whole-academy scope per active year, listed before the grades. */
 export function withAcademyScopes(programs: CouponScope[]): CouponScope[] {
   const years = [...new Map(programs.map(p => [p.yearId, p])).values()];
-  return [...years.map(p => ({ id: p.yearId, yearId: p.yearId, year: p.year, closed: p.closed, levelId: null, level: null, trackId: null, track: null })), ...programs];
+  return years.map(p => ({ id: p.yearId, yearId: p.yearId, year: p.year, closed: p.closed, levelId: null, level: null, trackId: null, track: null }));
 }
 export function scopeLabel(scope: CouponScope) { if (scope.levelId === null) return "Whole academy"; return `${scope.level}${scope.track ? ` · ${scope.track}` : ""}`; }
 export const couponOptionsSchema = z.object({ programs: z.array(couponScopeSchema), types: z.array(couponTypeSchema) });

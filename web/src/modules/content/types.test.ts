@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 import { canEditUnit, documentSchema, isUnitInReview, unattachedUploads, type ContentItem } from "./types";
 
 describe("content trust boundaries", () => {
+  it("accepts unit-only requirements and requires assessment IDs only for submissions", () => {
+    const base = { title: "Lesson", description: "", items: [] };
+    const unitId = crypto.randomUUID();
+    expect(documentSchema.safeParse({ ...base, prerequisites: [{ unitId, kind: "access" }] }).success).toBe(true);
+    expect(documentSchema.safeParse({ ...base, prerequisites: [{ unitId, kind: "quiz" }] }).success).toBe(false);
+    expect(documentSchema.safeParse({ ...base, prerequisites: [{ unitId, kind: "access", assessmentId: crypto.randomUUID() }] }).success).toBe(false);
+  });
   it("recovers registered uploads after unsaved material is lost without importing another unit's files", () => {
     const uploaded = { id: crypto.randomUUID(), unit_id: "this-unit", status: "ready" };
     const other = { id: crypto.randomUUID(), unit_id: "another-unit", status: "ready" };

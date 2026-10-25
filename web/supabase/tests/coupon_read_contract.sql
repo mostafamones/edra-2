@@ -58,21 +58,18 @@ do $$ declare label text; asset_id uuid; note_id uuid; doc jsonb; begin
   end loop;
 end $$;
 
--- Emulate the nullable academy-wide response contract already present in shared
--- development. This disposable-only DDL and all fixtures roll back together.
-alter table public.content_coupon_types alter column program_id drop not null;
-alter table public.content_coupon_types alter column level_id drop not null;
+-- Academy-wide nullable read contract.
 insert into learning_ids(name) values('global-type'),('global-batch'),('grade-type'),('grade-batch');
 insert into public.content_coupon_types(id,academy_id,program_id,academic_year_id,level_id,track_id,name,prefix,all_tracks,created_by)
  values(pg_temp.lid('global-type'),pg_temp.lid('academy'),null,pg_temp.lid('year'),null,null,'Academy wide','GLB',true,pg_temp.lid('owner'));
 insert into public.content_coupon_batches(id,academy_id,type_id,created_by,quantity) values(pg_temp.lid('global-batch'),pg_temp.lid('academy'),pg_temp.lid('global-type'),pg_temp.lid('owner'),1);
 insert into public.content_coupons(academy_id,type_id,batch_id,code) values(pg_temp.lid('academy'),pg_temp.lid('global-type'),pg_temp.lid('global-batch'),'ABCDEFGH');
-select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('unit')),'Grade only',pg_temp.lid('grade-type'),'GRD',true);
+select public.create_academy_coupon_type(pg_temp.lid('academy'),pg_temp.lid('year'),'Another academy type','GRD',pg_temp.lid('grade-type'));
 select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('grade-type'),1,pg_temp.lid('grade-batch'));
 set local role authenticated;
 select pg_temp.lact('owner');
 select pg_temp.lcheck(jsonb_array_length(public.get_scoped_content_coupons(pg_temp.lid('academy'),pg_temp.lid('year'),'secondary-1',pg_temp.lid('track'))->'codes')=2,'selected grade includes grade-wide and academy-wide codes');
-select pg_temp.lcheck(jsonb_array_length(public.get_scoped_content_coupons(pg_temp.lid('academy'),pg_temp.lid('year'),'secondary-2',null)->'codes')=1,'other grade includes academy-wide codes without leaking grade-specific codes');
+select pg_temp.lcheck(jsonb_array_length(public.get_scoped_content_coupons(pg_temp.lid('academy'),pg_temp.lid('year'),'secondary-2',null)->'codes')=2,'every grade includes the same academy-wide codes');
 select pg_temp.lcheck(jsonb_array_length(public.get_scoped_content_coupons(pg_temp.lid('academy'),gen_random_uuid(),'secondary-1',null)->'codes')=0,'academy-wide codes remain restricted to their year');
 select pg_temp.lcheck(jsonb_array_length(public.get_scoped_content_coupons(pg_temp.lid('academy'),pg_temp.lid('year'),'secondary-1',null,pg_temp.lid('global-type'))->'codes')=1,'academy-wide type filter remains functional');
 select pg_temp.lact('outsider');

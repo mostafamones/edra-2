@@ -6,7 +6,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon, TicketStarIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import { AcademyGate, useAuth } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
-import { FilterPopover } from "@/components/shared/filter-popover";
 import { HeaderActions } from "@/components/shared/header-actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { unwrapContent } from "../types";
 import { learningDate } from "../access/types";
 import { loadCouponBatches, loadCouponOptions } from "./actions";
-import { batchProgram, matchesScope, scopeLabel, withAcademyScopes, type CouponBatch } from "./types";
+import { withAcademyScopes, type CouponBatch } from "./types";
 import { CouponTypeList } from "./type-list";
 import { GenerateDialog } from "./generate";
 import { CouponBatchSheet } from "./batch";
@@ -31,7 +30,6 @@ export function CouponsPage() {
 function CouponWorkspace({ academy }: { academy: AcademyEntry }) {
   const { user } = useAuth();
   const cache = useQueryClient();
-  const [filter, setFilter] = useState("all");
   const [prefixTab, setPrefixTab] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -45,18 +43,17 @@ function CouponWorkspace({ academy }: { academy: AcademyEntry }) {
   // Coupons are only issued for the active academic year; the whole academy comes first and is the default.
   const programs = withAcademyScopes(options.data?.programs.filter(p => !p.closed) ?? []);
   const allTypes = options.data?.types ?? [];
-  const filterScope = programs.find(p => p.id === filter);
   // Type tabs group by the first three letters of each prefix.
-  const tabs = [...new Set(allTypes.filter(t => !filterScope || matchesScope(t, filterScope)).map(t => t.prefix.slice(0, 3)))].sort();
+  const tabs = [...new Set(allTypes.filter(t => t.levelId === null && t.yearId === programs[0]?.yearId).map(t => t.prefix.slice(0, 3)))].sort();
   const prefix = tabs.includes(prefixTab) ? prefixTab : null;
-  const batches = useQuery({ queryKey: [...rootKey, "batches", filter, prefix, search, page], enabled: Boolean(user), queryFn: async () => {
-    const result = unwrapContent(await loadCouponBatches({ academyId: academy.id, yearId: filterScope?.yearId ?? null, levelId: filterScope?.levelId ?? null, trackId: filterScope?.trackId ?? null, academyWide: filterScope?.levelId === null, prefix, search, page }));
+  const batches = useQuery({ queryKey: [...rootKey, "batches", programs[0]?.yearId, prefix, search, page], enabled: Boolean(user && options.isSuccess), queryFn: async () => {
+    const result = unwrapContent(await loadCouponBatches({ academyId: academy.id, yearId: programs[0]?.yearId ?? null, levelId: null, trackId: null, academyWide: true, prefix, search, page }));
     if (result.userId !== user?.id) throw new Error("Your account changed. Reload this page.");
     return result;
   } });
   async function refresh() { await cache.invalidateQueries({ queryKey: rootKey }); }
   const queryError = options.error ?? batches.error;
-  const filtered = Boolean(search) || filter !== "all" || Boolean(prefix);
+  const filtered = Boolean(search) || Boolean(prefix);
   return <main className="page-shell min-w-0">
     <HeaderActions>
       <GenerateDialog academyId={academy.id} programs={programs} allTypes={allTypes} onGenerated={async batch => { setSearch(""); setPage(0); setOpened(batch); await refresh(); }} />
@@ -80,18 +77,15 @@ function CouponWorkspace({ academy }: { academy: AcademyEntry }) {
                 <InputGroupInput type="search" placeholder="Search coupons" aria-label="Search coupons" maxLength={100} value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} />
                 <InputGroupAddon><HugeiconsIcon icon={Search01Icon} strokeWidth={1.5} aria-hidden="true" /></InputGroupAddon>
               </InputGroup>
-              <FilterPopover iconOnly fields={[
-                { id: "program", label: "Program", value: filter, defaultValue: "all", options: [{ value: "all", label: "All programs" }, ...programs.map(p => ({ value: p.id, label: scopeLabel(p) }))], onChange: value => { setFilter(value); setPage(0); } },
-              ]} />
             </div>
           </div>
           {batches.isLoading ? <Skeleton className="h-48 w-full rounded-lg" /> : !batches.data?.batches.length
-            ? <EmptyState title={filtered ? "No matching coupons" : "No coupons"}>{filtered && <Button variant="outline" size="sm" onClick={() => { setSearch(""); setFilter("all"); setPrefixTab("all"); setPage(0); }}>Clear filters</Button>}</EmptyState>
+            ? <EmptyState title={filtered ? "No matching coupons" : "No coupons"}>{filtered && <Button variant="outline" size="sm" onClick={() => { setSearch(""); setPrefixTab("all"); setPage(0); }}>Clear filters</Button>}</EmptyState>
             : <div className="overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Program</TableHead><TableHead className="text-center">Coupons</TableHead><TableHead className="text-center">Redeemed</TableHead><TableHead className="text-center">Created</TableHead><TableHead className="text-center"><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Type</TableHead><TableHead className="text-center">Coupons</TableHead><TableHead className="text-center">Redeemed</TableHead><TableHead className="text-center">Created</TableHead><TableHead className="text-center"><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
                 <TableBody>{batches.data.batches.map(b => <TableRow key={b.id}>
-                  <TableCell dir="auto">{batchProgram(b)}</TableCell>
+                  <TableCell dir="auto">{b.type_name} <span className="font-mono text-xs text-muted-foreground">{b.prefix}</span></TableCell>
                   <TableCell className="text-center tabular-nums">{b.quantity}</TableCell>
                   <TableCell className="text-center tabular-nums">{b.redeemed}</TableCell>
                   <TableCell className="text-center text-muted-foreground tabular-nums">{learningDate(b.created_at)}</TableCell>

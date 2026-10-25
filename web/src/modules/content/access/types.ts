@@ -22,7 +22,7 @@ export type LearningList = z.infer<typeof learningListSchema>;
 export const learningUnitSchema = z.object({
   id: z.guid(), title: z.string(), description: z.string(), accessDays: z.number().int().positive(), access: accessSchema, extensionAvailable: z.boolean(),
   couponType: z.string().nullable().optional(), prerequisitesMet: z.boolean().default(true),
-  prerequisites: z.array(z.object({ unitId: z.guid(), kind: z.enum(["assignment", "quiz"]), assessmentId: z.guid(), unitTitle: z.string(), title: z.string(), submitted: z.boolean() })).default([]),
+  prerequisites: z.array(z.object({ unitId: z.guid(), kind: z.enum(["access", "assignment", "quiz"]), assessmentId: z.guid().nullable(), unitTitle: z.string(), title: z.string(), submitted: z.boolean() })).default([]),
   items: z.array(z.object({ id: z.guid(), kind: z.enum(["explanation", "document", "assessment", "answer"]), title: z.string(), available: z.boolean(), assessmentKind: z.enum(["assignment", "quiz", "exam"]).nullable(), assessmentId: z.guid().optional() })),
 });
 export type LearningUnit = z.infer<typeof learningUnitSchema>;
@@ -44,7 +44,7 @@ export function learningError(error: { message?: string } | null) {
     extension_used: "Your academy’s extension for this academic year has already been used.",
     code_unavailable: "This coupon is not available.", code_used: "This code, or your code allowance for this unit, has already been used.",
     coupon_type_mismatch: "This coupon does not match this unit’s track and coupon type.",
-    prerequisites_required: "Submit all required prerequisite assessments first.",
+    prerequisites_required: "Complete this unit’s unlock and submission requirements first.",
     coupon_rate_limited: "Too many coupon attempts. Try again in ten minutes.",
     coupon_type_exists: "A coupon type with this name already exists in this scope.",
     coupon_type_in_use: "Units still use this coupon type. Change their coupon type first.",

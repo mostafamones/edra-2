@@ -72,8 +72,8 @@ do $$ declare a uuid; b uuid; t public.content_coupon_types; begin
 end $$;
 set local role authenticated;
 select pg_temp.lact('owner');
-select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('auto-unit')),'Revision shared',pg_temp.lid('shared'),'rev',true);
-select public.create_content_coupon_type(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('auto-unit')),'Scientific only',pg_temp.lid('track-only'),'SCI',false);
+select public.create_academy_coupon_type(pg_temp.lid('academy'),pg_temp.lid('year'),'Revision shared','REV',pg_temp.lid('shared'));
+select public.create_academy_coupon_type(pg_temp.lid('academy'),pg_temp.lid('year'),'Other type','OTH',pg_temp.lid('track-only'));
 reset role;
 create function pg_temp.settings_save(label text,type_label text) returns void language plpgsql as $$
 declare u public.content_units; begin
@@ -82,7 +82,8 @@ declare u public.content_units; begin
 end $$;
 select pg_temp.settings_save('auto-unit','shared');
 select pg_temp.settings_save('other-unit','shared');
-select pg_temp.lerror('select pg_temp.settings_save(''other-unit'',''track-only'')','coupon_type_mismatch');
+select pg_temp.settings_save('other-unit','track-only');
+select pg_temp.settings_save('other-unit','shared');
 select pg_temp.settings_save('track-unit','shared');
 select public.change_content_unit(pg_temp.lid('academy'),pg_temp.lid('track-unit'),(select version from public.content_units where id=pg_temp.lid('track-unit')),'publish');
 select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('shared'),2,pg_temp.lid('old-batch'));
@@ -92,6 +93,27 @@ select pg_temp.lcheck((select prefix='REV' from public.content_coupon_batches wh
 select pg_temp.lcheck(public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('shared'),2,pg_temp.lid('old-batch'))->'codes'->0->>'prefix'='REV','lost-response generation retry retains original prefix');
 select pg_temp.lcheck(jsonb_array_length(public.get_content_coupons(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('other-unit')))->'codes')=3,'shared coupons listed from another track');
 select pg_temp.lcheck(jsonb_path_exists(public.get_content_coupon_options(pg_temp.lid('academy')),'$.types[*] ? (@.isDefault == true && @.allTracks == true && @.prefix == "REG")'),'options expose shared defaults');
+-- Explicit publication timestamps avoid same-transaction now() ties in this fixture.
+insert into learning_ids(name) values('inherit-unit'),('fallback-unit');
+insert into public.content_revisions(unit_id,academy_id,revision,document,published_by,published_at)
+select u.id,u.academy_id,u.published_revision+1,u.draft||jsonb_build_object('couponTypeId',pg_temp.lid('shared')),pg_temp.lid('owner'),now()+interval '1 minute'
+from public.content_units u where u.id=pg_temp.lid('track-unit');
+update public.content_units set published_revision=published_revision+1 where id=pg_temp.lid('track-unit');
+-- A newer working draft in another track cannot influence the selection.
+select public.create_content_unit(pg_temp.lid('academy'),pg_temp.lid('year'),'secondary-1',pg_temp.lid('track'),pg_temp.lid('inherit-unit'),'Inherited');
+select pg_temp.lcheck((select draft->>'couponTypeId'=pg_temp.lid('shared')::text from public.content_units where id=pg_temp.lid('inherit-unit')),'new units inherit the latest publication in their exact audience');
+-- The most recent publication explicitly choosing no coupon must fall back to Regular.
+insert into public.content_revisions(unit_id,academy_id,revision,document,published_by,published_at)
+select u.id,u.academy_id,u.published_revision+1,u.draft||jsonb_build_object('couponTypeId',null),pg_temp.lid('owner'),now()+interval '2 minutes'
+from public.content_units u where u.id=pg_temp.lid('track-unit');
+update public.content_units set published_revision=published_revision+1 where id=pg_temp.lid('track-unit');
+select public.create_content_unit(pg_temp.lid('academy'),pg_temp.lid('year'),'secondary-1',pg_temp.lid('track'),pg_temp.lid('fallback-unit'),'Fallback');
+select pg_temp.lcheck((select t.is_default and t.level_id is null from public.content_units u join public.content_coupon_types t on t.id::text=u.draft->>'couponTypeId' where u.id=pg_temp.lid('fallback-unit')),'latest unusable selection falls back to Regular');
+-- Restore the published choice by adding a new immutable revision.
+insert into public.content_revisions(unit_id,academy_id,revision,document,published_by,published_at)
+select u.id,u.academy_id,u.published_revision+1,u.draft,pg_temp.lid('owner'),now()+interval '3 minutes'
+from public.content_units u where u.id=pg_temp.lid('track-unit');
+update public.content_units set published_revision=published_revision+1 where id=pg_temp.lid('track-unit');
 -- The student still needs their own eligible track, despite the shared coupon scope.
 update public.annual_student_records set track_id=pg_temp.lid('track') where id in (pg_temp.lid('record-student'),pg_temp.lid('record-second'));
 create temporary table settings_codes as select row_number() over(order by id) as n,code,id from public.content_coupons where batch_id=pg_temp.lid('old-batch');
@@ -128,7 +150,7 @@ select public.change_content_unit(pg_temp.lid('academy'),pg_temp.lid('unit'),(se
 select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('academy-type'),1,pg_temp.lid('academy-batch'));
 select public.generate_academy_default_coupons(pg_temp.lid('academy'),pg_temp.lid('year'),2,pg_temp.lid('academy-default-batch'));
 select pg_temp.lcheck((select t.level_id is null and t.is_default from public.content_coupon_batches b join public.content_coupon_types t on t.id=b.type_id where b.id=pg_temp.lid('academy-default-batch')),'academy default generation uses the academy Regular');
-select pg_temp.lcheck(jsonb_array_length(public.get_content_coupon_batches(pg_temp.lid('academy'),p_academy_wide=>true)->'batches')=2,'academy filter lists only academy-wide batches');
+select pg_temp.lcheck(jsonb_array_length(public.get_content_coupon_batches(pg_temp.lid('academy'),p_academy_wide=>true)->'batches')=4,'academy filter lists only academy-wide batches');
 select pg_temp.lcheck((public.get_content_coupon_batches(pg_temp.lid('academy'),p_academy_wide=>true)->'batches'->0->>'level') is null,'academy batches have no grade');
 create temporary table academy_codes as select code from public.content_coupons where batch_id=pg_temp.lid('academy-batch');
 grant select on academy_codes to authenticated;
@@ -158,6 +180,10 @@ select pg_temp.lact('outsider');
 select pg_temp.lerror(format('select public.get_content_coupon_batch(%L,%L)',pg_temp.lid('academy'),pg_temp.lid('academy-batch')),'forbidden');
 select pg_temp.lact('instructor');
 select pg_temp.lcheck(jsonb_array_length(public.get_content_coupon_batch(pg_temp.lid('academy'),pg_temp.lid('academy-batch'))->'codes')=1,'instructor can read a batch');
+select pg_temp.lerror(format('select public.create_academy_coupon_type(%L,%L,''Denied'',''DNY'',%L)',pg_temp.lid('academy'),pg_temp.lid('year'),gen_random_uuid()),'forbidden');
+select pg_temp.lerror(format('select public.rename_content_coupon_type(%L,%L,''Denied'',%L)',pg_temp.lid('academy'),pg_temp.lid('unused-type'),gen_random_uuid()),'forbidden');
+select pg_temp.lerror(format('select public.change_content_coupon_prefix(%L,%L,''DNY'',%L)',pg_temp.lid('academy'),pg_temp.lid('shared'),gen_random_uuid()),'forbidden');
+select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('shared'),1,gen_random_uuid());
 select pg_temp.lerror(format('select public.delete_content_coupon_type(%L,%L,%L)',pg_temp.lid('academy'),pg_temp.lid('unused-type'),gen_random_uuid()),'forbidden');
 select pg_temp.lact('owner');
 select public.rename_content_coupon_type(pg_temp.lid('academy'),pg_temp.lid('unused-type'),'Renamed type',gen_random_uuid());
