@@ -1,10 +1,11 @@
 "use server";
 import { z } from "zod";
-import { contentCaller, contentError, contentResult, readContentUnit, readContentWorkspace } from "./data";
+import { contentCaller, contentError, contentResult, readContentUnit, readContentWorkspace, readUnitHistory } from "./data";
 import { documentSchema } from "./types";
 
 export async function loadWorkspace(academyId: string) { return readContentWorkspace(academyId); }
 export async function loadUnit(academyId: string, unitId: string) { return readContentUnit(academyId, unitId); }
+export async function loadUnitHistory(academyId: string, unitId: string) { return contentResult(() => readUnitHistory(academyId, unitId)); }
 const scopeSchema = z.object({ academyId: z.guid(), yearId: z.guid(), levelId: z.string().min(1), trackId: z.guid().nullable(), unitId: z.guid() });
 export async function createUnit(value: unknown) {
   return contentResult(async () => {

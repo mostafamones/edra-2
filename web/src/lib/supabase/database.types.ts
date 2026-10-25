@@ -2719,6 +2719,54 @@ export type Database = {
           },
         ]
       }
+      content_drafts: {
+        Row: {
+          academy_id: string
+          document: Json
+          id: number
+          kind: string
+          saved_at: string
+          saved_by: string | null
+          unit_id: string
+          version: number
+        }
+        Insert: {
+          academy_id: string
+          document: Json
+          id?: never
+          kind: string
+          saved_at?: string
+          saved_by?: string | null
+          unit_id: string
+          version: number
+        }
+        Update: {
+          academy_id?: string
+          document?: Json
+          id?: never
+          kind?: string
+          saved_at?: string
+          saved_by?: string | null
+          unit_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_drafts_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_drafts_saved_by_fkey"
+            columns: ["saved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_feedback: {
         Row: {
           academy_id: string

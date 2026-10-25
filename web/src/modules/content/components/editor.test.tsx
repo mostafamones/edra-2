@@ -40,6 +40,8 @@ function open(data: ContentDetail) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // jsdom has no ResizeObserver; the floating history sheet observes the sidebar inset.
+  globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };
   actions.saveUnit.mockResolvedValue({ ok: true, value: undefined });
   actions.changeUnit.mockResolvedValue({ ok: true, value: undefined });
   actions.publishUnitEdits.mockResolvedValue({ ok: true, value: undefined });

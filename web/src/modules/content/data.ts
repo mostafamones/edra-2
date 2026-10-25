@@ -59,7 +59,7 @@ export async function readContentUnit(academyId: string, unitId: string) {
     db.from("content_programs").select("*,academic_years(start_year,closed_at)").eq("id", unit.program_id).single(),
     fetchAllPages((from, to) => db.from("content_assets").select("*").eq("academy_id", academyId)
       .or(`unit_id.eq.${unitId}${referencedAssets.length ? `,id.in.(${referencedAssets.join(",")})` : ""}`).order("created_at").order("id").range(from, to)),
-    db.from("content_feedback").select("*").eq("academy_id", academyId).eq("unit_id", unitId).order("created_at"), db.from("content_revisions").select("revision,document,published_at,published_by").eq("academy_id", academyId).eq("unit_id", unitId).order("revision", { ascending: false }),
+    db.from("content_feedback").select("*").eq("academy_id", academyId).eq("unit_id", unitId).order("created_at"), db.from("content_revisions").select("revision,document,published_at").eq("academy_id", academyId).eq("unit_id", unitId).order("revision", { ascending: false }),
   ]);
   for (const response of [program, feedback, revisions]) contentError(response.error);
   const [level, track, historicalLabels] = await Promise.all([
@@ -68,13 +68,29 @@ export async function readContentUnit(academyId: string, unitId: string) {
     readOfferingTrackLabels(academyId, db),
   ]);
   contentError(level.error); contentError(track.error);
-  const publisherIds = [...new Set((revisions.data ?? []).map(r => r.published_by))];
-  // Profiles are readable for people who share the academy; anyone else falls back to an unnamed publisher.
-  const publishers = publisherIds.length ? await db.from("profiles").select("id,full_name,display_name").in("id", publisherIds) : { data: [], error: null };
-  contentError(publishers.error);
-  const publisherNames = new Map((publishers.data ?? []).map(p => [p.id, p.display_name || p.full_name]));
   const trackName = historicalLabels.find(label => label.track_id === program.data!.track_id && label.academic_year_id === program.data!.academic_year_id)?.name ?? track.data?.name;
   const programLabel = `${level.data?.name ?? program.data!.level_id}${trackName ? ` · ${trackName}` : " · All tracks"}`;
-  return { unit: { ...unit, draft: document } as ContentUnit, program: program.data!, programLabel, assets, feedback: feedback.data ?? [], revisions: (revisions.data ?? []).map(r => ({ ...r, publisher: publisherNames.get(r.published_by) ?? null })), userId, manager };
+  return { unit: { ...unit, draft: document } as ContentUnit, program: program.data!, programLabel, assets, feedback: feedback.data ?? [], revisions: revisions.data ?? [], userId, manager };
 }
 export type ContentDetail = Awaited<ReturnType<typeof readContentUnit>>;
+/** Stored drafts and publications of one unit, newest first, with the names of who wrote them. */
+export async function readUnitHistory(academyId: string, unitId: string) {
+  z.guid().parse(unitId);
+  const { db } = await contentCaller(academyId);
+  // shortcut: only the latest 200 draft saves are shown; page the query if units outgrow that.
+  const [drafts, revisions] = await Promise.all([
+    db.from("content_drafts").select("id,kind,document,saved_by,saved_at").eq("academy_id", academyId).eq("unit_id", unitId).order("saved_at", { ascending: false }).order("id", { ascending: false }).limit(200),
+    db.from("content_revisions").select("revision,document,published_by,published_at").eq("academy_id", academyId).eq("unit_id", unitId).order("revision", { ascending: false }),
+  ]);
+  contentError(drafts.error); contentError(revisions.error);
+  const ids = [...new Set([...(drafts.data ?? []).flatMap(d => d.saved_by ? [d.saved_by] : []), ...(revisions.data ?? []).map(r => r.published_by)])];
+  // Profiles are readable for people who share the academy; anyone else shows as an unnamed staff member.
+  const profiles = ids.length ? await db.from("profiles").select("id,full_name,display_name").in("id", ids) : { data: [], error: null };
+  contentError(profiles.error);
+  const names = new Map((profiles.data ?? []).map(p => [p.id, p.display_name || p.full_name]));
+  return {
+    drafts: (drafts.data ?? []).map(d => ({ kind: d.kind as "created" | "saved", document: d.document, at: d.saved_at, by: (d.saved_by && names.get(d.saved_by)) || null })),
+    revisions: (revisions.data ?? []).map(r => ({ revision: r.revision, document: r.document, at: r.published_at, by: names.get(r.published_by) || null })),
+  };
+}
+export type UnitHistory = Awaited<ReturnType<typeof readUnitHistory>>;
