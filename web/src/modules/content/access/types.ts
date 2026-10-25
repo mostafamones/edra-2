@@ -35,6 +35,7 @@ export function learningDate(value: string | null) { return value ? new Intl.Dat
 export function learningError(error: { message?: string } | null) {
   if (!error) return;
   const messages: Record<string, string> = {
+    EDRA_SESSION_INACTIVE: "Your session has ended. Sign in again.",
     forbidden: "You do not have permission for this action.", student_unavailable: "This student account or placement is unavailable.",
     content_unavailable: "This unit is not available.", year_closed: "This academic year is closed.",
     content_conflict: "Access or published content changed. Close this action, refresh and review again.",
