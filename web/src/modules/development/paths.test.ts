@@ -1,8 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { exitPath, studentsDirectoryPath } from "./paths";
+import { exitPath, staffPreviewPath, studentsDirectoryPath } from "./paths";
 
 const slug = "edra-dev-abc";
+
+describe("staffPreviewPath", () => {
+  it.each(["/account", "/account?tab=profile", `/${slug}`, `/${slug}/students?q=ali&page=2`])("keeps the current staff page %s", (path) => {
+    expect(staffPreviewPath(slug, path)).toBe(path);
+    expect(staffPreviewPath(slug, `http://app.lvh.me:3000${path}`)).toBe(path);
+  });
+
+  it.each([
+    null, "/other-academy/students", `/${slug}-other/students`, "/auth/login", "/api/development/switch",
+    "//evil.test/account", "https://evil.test/account", "http://learn.lvh.me:3000/profile", "/account/../other-academy",
+  ])("rejects an unrelated or unsafe destination %s", (path) => {
+    expect(staffPreviewPath(slug, path)).toBeNull();
+  });
+});
 
 describe("studentsDirectoryPath", () => {
   it("keeps only allowlisted filters in allowlist order", () => {

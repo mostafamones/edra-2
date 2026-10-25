@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { IconArrowBackUp, IconDoorExit, IconLoader2 } from "@tabler/icons-react";
+import { ArrowLeft01Icon, Loading03Icon, Logout01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ACADEMY_ROLE_LABELS } from "@/modules/academies";
@@ -45,10 +45,11 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
               <Select
                 value={preview.current.logicalId ?? "original"}
                 disabled={pending}
+                onOpenChange={(open) => { if (open) void status.refetch(); }}
                 onValueChange={(value) => {
                   if (value === "original" || value === preview.current.logicalId) return;
                   void run("switch", {
-                    runId: preview.run.id, logicalId: value, expectedRevision: preview.revision, returnTo: null,
+                    runId: preview.run.id, logicalId: value, expectedRevision: preview.revision, returnTo: window.location.href,
                   });
                 }}
               >
@@ -71,7 +72,7 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
             )}
             </div>
             <div className="flex flex-wrap items-center justify-end gap-1">
-              {pending && <IconLoader2 className="size-4 animate-spin" aria-label="Switching" />}
+              {pending && <HugeiconsIcon icon={Loading03Icon} strokeWidth={1.5} className="size-4 animate-spin" aria-label="Switching" />}
               {preview.current.kind === "student" && (
                 <Button
                   size="sm"
@@ -79,11 +80,11 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
                   disabled={pending}
                   onClick={() => void run("return", { runId: preview.run.id, expectedRevision: preview.revision })}
                 >
-                  <IconArrowBackUp />Return to staff
+                  <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} />Return to staff
                 </Button>
               )}
               <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:hover:bg-destructive/20" disabled={pending} onClick={() => void run("exit", { runId: preview.run.id })}>
-                <IconDoorExit />Exit preview
+                <HugeiconsIcon icon={Logout01Icon} strokeWidth={1.5} />Exit preview
               </Button>
             </div>
           </div>

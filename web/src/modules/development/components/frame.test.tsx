@@ -2,9 +2,9 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const api = vi.hoisted(() => ({ status: vi.fn(), run: vi.fn(), pending: false }));
+const api = vi.hoisted(() => ({ status: vi.fn(), refetch: vi.fn(), run: vi.fn(), pending: false }));
 vi.mock("../use-preview", () => ({
-  usePreviewStatus: () => ({ data: api.status() }),
+  usePreviewStatus: () => ({ data: api.status(), refetch: api.refetch }),
   usePreviewAction: () => ({ pending: api.pending, run: api.run }),
 }));
 
@@ -17,8 +17,9 @@ const studentIdentity = { kind: "student" as const, logicalId: "account:student:
 
 beforeAll(() => {
   globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+  HTMLElement.prototype.scrollIntoView ??= vi.fn();
 });
-beforeEach(() => { api.pending = false; api.run.mockReset(); });
+beforeEach(() => { api.pending = false; api.run.mockReset(); api.refetch.mockReset(); });
 afterEach(cleanup);
 
 const mount = (status: unknown) => { api.status.mockReturnValue(status); return render(<DeveloperPreviewFrame><p>App content</p></DeveloperPreviewFrame>); };
@@ -51,5 +52,28 @@ describe("DeveloperPreviewFrame", () => {
     mount({ ...base, current: original, staffTargets: [{ logicalId: "account:staff:owner", displayName: "Dev Owner", role: "owner" }] });
     expect(screen.getByRole("combobox", { name: "Preview identity" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Return to staff" })).toBeNull();
+  });
+
+  it("updates the selected label when refreshed profile names arrive", async () => {
+    const owner = { logicalId: "account:staff:owner", displayName: "Generated name", role: "owner" as const };
+    const status = { ...base, current: { kind: "staff" as const, ...owner }, staffTargets: [owner] };
+    const view = mount(status);
+    expect(screen.getByRole("combobox", { name: "Preview identity" }).textContent).toContain("Generated name");
+    api.status.mockReturnValue({ ...status, current: { ...status.current, displayName: "Current profile" }, staffTargets: [{ ...owner, displayName: "Current profile" }] });
+    view.rerender(<DeveloperPreviewFrame><p>App content</p></DeveloperPreviewFrame>);
+    expect(await screen.findByText("Current profile · Owner")).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Preview identity" }).textContent).toContain("Current profile");
+  });
+
+  it("sends the current account page when selecting another staff identity", async () => {
+    window.history.replaceState(null, "", "/account?tab=profile");
+    mount({ ...base, current: original, staffTargets: [{ logicalId: "account:staff:owner", displayName: "Dev Owner", role: "owner" }] });
+    fireEvent.click(screen.getByRole("combobox", { name: "Preview identity" }));
+    expect(api.refetch).toHaveBeenCalledOnce();
+    fireEvent.click(await screen.findByRole("option", { name: "Dev Owner · Owner" }));
+    expect(api.run).toHaveBeenCalledWith("switch", {
+      runId, logicalId: "account:staff:owner", expectedRevision: 7, returnTo: window.location.href,
+    });
+    window.history.replaceState(null, "", "/");
   });
 });
