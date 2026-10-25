@@ -1,10 +1,14 @@
 # Edra — learning access, coupons and playback
 
-Approved by the owner, 2026-10-11; unit access updated 2026-10-21; track/type coupons and prerequisites confirmed 2026-10-24. Product requirements do not imply implemented delivery.
+Approved by the owner, 2026-10-11; unit access updated 2026-10-21; track/type coupons and prerequisites confirmed 2026-10-24; manager-controlled year learning start confirmed 2026-10-25. Product requirements do not imply implemented delivery.
 
 ## Learning access
 
 Students browse the released content available to their current academy placement. A visible unit may still have locked explanation or answer videos. Academy entry, content visibility, explanation access and answer access each have their own purpose.
+
+Confirmed 2026-10-25: student learning in the academy's single open year remains unavailable until an Owner, Head Admin or Admin explicitly starts that year. Booking and verified account connection can happen beforehand; connected students can see the academy and their registration. This applies to all students in that year, regardless of entry through booking or an ordinary invite. The pre-start state is separate from suspension and must be enforced by trusted learning operations, not only by hidden controls.
+
+Starting the year enables only learning otherwise permitted by publication, placement, grants, assessment rules and effective suspension. It does not issue grants, remove suspensions or start, pause or reset grant periods. Staff preparation and grant issuance retain their existing rules and timing; students cannot redeem learning coupons or use protected learning before the year starts. Existing open years retain current availability when the preparation state is introduced; new years begin in preparation. Calendar dates do not automatically start learning.
 
 Explanation access belongs to the student's annual record and the annual content release. It covers the release's explanation videos, so replacing a video asset does not require issuing access again. Reusing material in a later year does not carry over the previous year's access.
 

@@ -16,6 +16,8 @@ Staff can create student records before students have online accounts. Enrollmen
 
 Creating a genuinely new student establishes their academy profile and annual participation. A returning student keeps their existing profile and receives participation for the new year. Earlier attendance, work and results remain associated with their original year.
 
+Public booking also permits signed-out returning registration without account connection. A unique historical student-phone match reuses the academy profile for the new annual record; ambiguous profiles or an existing participation under another phone require staff resolution. This record-creation match never proves account ownership or changes an existing account connection. Public registration uses its configured current-year fields and preserves prior records.
+
 Changes to a student's current details do not replace historical session rosters or official academic records.
 
 ## Contacts
@@ -48,7 +50,7 @@ Participation type, online account connection and learning access are separate. 
 
 ## Online accounts
 
-New students gain online academy access through its student invite and onboarding flow. Signed-in returning students may also use the public booking link to continue through returning onboarding and gain academy access without another invite. Both flows preserve the existing academy identity and connect the account automatically.
+New students gain online academy access through its student invite and onboarding flow. Signed-in returning students may also use the public booking link to continue through returning onboarding and gain academy access without another invite. Signed-in students with eligible current-year records may use that booking link for verified existing-record connection too. These flows preserve the existing academy identity and connect the account through onboarding without staff manually attaching it.
 
 Signing in with a matching phone alone does not grant academy access. Staff student management does not connect accounts. Students without connected accounts can still have attendance, marks, notes and parent reports.
 

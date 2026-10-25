@@ -53,7 +53,9 @@ These are the properties that make Edra what it is. Scope and completion criteri
 - Student contact details, participation type, program and group placement, and archival.
 - Student onboarding through the academy’s student invite link.
 
-Student onboarding connects accounts automatically; staff do not link them. New students gain online academy access through the student invite. Signed-in returning students can use the academy's public booking link to continue through returning onboarding and receive access without another invite. A matching phone number alone does not grant academy access.
+Student onboarding connects accounts automatically; staff do not link them. New students gain online academy access through the student invite. Signed-in returning students can use the academy's public booking link to continue through returning onboarding and receive access without another invite. Signed-in students with eligible current-year records can use the booking link for verified existing-record connection too. A matching phone number alone does not grant academy access.
+
+Public booking permits guest returning registration without connecting an account. Connected students can see the academy and their registration before learning starts. Owners, Head Admins and Admins explicitly start student learning for the academy's single open year; normal content access and suspension rules still apply afterward.
 
 ### 3. Live teaching and attendance
 

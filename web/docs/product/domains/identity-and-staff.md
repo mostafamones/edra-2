@@ -8,7 +8,7 @@ An Edra account belongs to a person and can be used across academies. The person
 
 A staff membership gives an account access to one academy under a defined role. A person may hold different staff roles in different academies. Choosing an academy opens that academy’s workspace and uses the permissions of that membership.
 
-A student’s academy record holds their academic relationship and history with that academy. It can exist before the student has an online account. New students gain online access through the academy’s student invite and onboarding flow. Signed-in returning students may use the public booking link to continue through returning onboarding and receive academy access without another invite. A matching phone number alone does not grant academy access. Staff student management does not link accounts.
+A student’s academy record holds their academic relationship and history with that academy. It can exist before the student has an online account. New students gain online access through the academy’s student invite and onboarding flow. Signed-in returning students may use the public booking link to continue through returning onboarding and receive academy access without another invite. Signed-in students with eligible current-year records can also use the booking link for verified existing-record connection. A matching phone number alone does not grant academy access. Staff student management does not link accounts.
 
 ## Academy ownership
 

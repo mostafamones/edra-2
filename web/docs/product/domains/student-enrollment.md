@@ -1,10 +1,10 @@
 # Edra — student enrollment and account connection
 
-Approved by the owner, 2026-10-10. Account-level enrollment selection confirmed 2026-10-19. Detailed account-change, intake and access workflows remain for their separate reviews.
+Approved by the owner, 2026-10-10. Account-level enrollment selection confirmed 2026-10-19; booking-link connection and manager-controlled year learning start confirmed 2026-10-25. Other detailed account-change and access workflows remain for their separate reviews.
 
 ## Joining an academy
 
-A new student gains online academy access through its student invite link. The link opens that academy’s student onboarding flow, where the student signs in or creates their Edra account and completes any required student setup. A signed-in returning student may also enter through the academy's public booking link without requiring another invite.
+A new student gains online academy access through its student invite link. The link opens that academy’s student onboarding flow, where the student signs in or creates their Edra account and completes any required student setup. A signed-in returning student or student with an eligible current-year record may also enter through the academy's public booking link without requiring another invite.
 
 The flow connects an existing academy record or enrolls a genuinely new student. It preserves the student’s academic identity and earlier work.
 
@@ -28,6 +28,10 @@ When there is one matching, non-archived record and no conflicting account conne
 
 The student does not complete a second enrollment form for a record already present. Connecting an account does not replace staff-entered contacts or change the student’s level, track, group or participation type.
 
+Confirmed 2026-10-25: the public booking link can serve as the invite for this existing-record connection. It uses the same verified identity matching, conflict checks and explicit confirmation as the student invite flow. Opening the link alone does not connect an account.
+
+A valid booking link can still connect an eligible current-year record when booking registration is closed. This connection preserves the record even when its placement is no longer offered for new booking. Ordinary invite availability remains separate.
+
 A parent phone alone does not choose a student record when the same parent contact is shared by siblings.
 
 ## New students
@@ -50,9 +54,11 @@ When no account connection or current-year record exists, onboarding compares th
 
 For a signed-in returning student, the public booking link serves as the academy invite. It skips the public form and opens the same online academy onboarding used by invited students.
 
-The student’s school level remains the level set on their account. They choose a current academy track within that level when tracks are offered, then optionally choose a compatible group. They cannot select another level during academy onboarding; if the academy does not offer their account’s level, this flow cannot create their new-year record. This does not change staff authority to maintain academy placement or rewrite existing records.
+Booking-origin new annual participation follows booking's open/closed state, enabled program/group choices and allow-without-group setting, independently of the ordinary invite and its new-enrollment setting. The student's preserved participation type and account school level remain authoritative. Guest returning registration is also allowed through the public form without account connection; its record-only rules are defined in [public booking](student-intake.md).
 
-Completing onboarding creates the new annual record under their existing academy profile, connects their account and grants online academy access without a separately sent invite. Their in-person or online-only participation type and earlier history are preserved.
+The student’s school level remains the level set on their account. They choose a current academy track within that level when tracks are offered, then a compatible group. Ordinary invite onboarding allows no group; booking-origin onboarding allows this only when booking settings permit it. They cannot select another level during academy onboarding; if the academy does not offer their account’s level, this flow cannot create their new-year record. This does not change staff authority to maintain academy placement or rewrite existing records.
+
+Completing onboarding creates the new annual record under their existing academy profile, connects their account and makes the academy available in their navigation without a separately sent invite. Their in-person or online-only participation type and earlier history are preserved. Account connection does not itself grant learning entitlements, and registering before teaching starts does not automatically apply administrative suspension.
 
 Previous-year placement and learning access do not carry over automatically. A student who already has a current-year record follows the existing-student flow rather than returning enrollment.
 
@@ -69,6 +75,8 @@ Shared parent phones and similar names do not alone block enrollment or cause re
 ## After connection
 
 The student can navigate the academy and see the learning, performance and other information their annual participation and access permit.
+
+Before managers start the open year's student learning, connected students can see the academy and their registration, while protected learning remains unavailable. Owners, Head Admins and Admins explicitly start learning for all students in that year, including ordinary-invite and booking entrants. Starting the year does not bypass publication, grants, assessment rules or either cause of suspension. It does not reset grant clocks. See [academic structure](academic-structure.md) and [learning access](learning-access.md).
 
 Archiving annual participation adds online-access suspension caused by archival. Restoring that participation removes only that suspension; any suspension applied independently by staff, before or during archival, remains until staff explicitly remove it. The account connection and academic history remain intact.
 
