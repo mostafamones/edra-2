@@ -2,10 +2,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, Clock01Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, ArrowDown01Icon, Clock01Icon } from "@hugeicons/core-free-icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FloatingSheet, FloatingSheetContent, FloatingSheetDescription, FloatingSheetHeader, FloatingSheetTitle, FloatingSheetTrigger } from "@/components/ui/floating-sheet";
 import { loadUnitHistory } from "../actions";
@@ -65,9 +66,14 @@ function Entry({ entry, live, last }: { entry: HistoryEntry<Author>; live: boole
           <div className="flex shrink-0 -space-x-1.5">{entry.authors.slice(0, 3).map((author, i) => <Avatar key={author?.id ?? i} aria-hidden="true" className="size-6 ring-2 ring-muted"><AvatarImage src={author?.avatarUrl} alt="" /><AvatarFallback className="text-[11px]">{author?.name?.slice(0, 1).toUpperCase() ?? "?"}</AvatarFallback></Avatar>)}</div>
           <span dir="auto" className="min-w-0 flex-1 truncate text-sm font-medium">{authorNames(entry.authors)}</span>
         </div>
-        {entry.changes
-          ? <ul className="mt-2 space-y-1 text-sm text-muted-foreground">{entry.changes.map((change, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/40" aria-hidden="true" />{change}</li>)}</ul>
-          : <p className="mt-2 text-sm text-muted-foreground">Changes unavailable</p>}
+        {entry.summary ? <>
+          <p dir="auto" className="mt-2 text-sm text-foreground/90">{entry.summary.headline}</p>
+          {entry.summary.groups.length > 0 && <dl className="mt-2 grid grid-cols-[4.5rem_1fr] gap-x-3 gap-y-1 text-xs">{entry.summary.groups.map(group => <div key={group.label} className="contents"><dt className="text-muted-foreground">{group.label}</dt><dd className="text-foreground/80 tabular-nums">{group.parts.join(" · ")}</dd></div>)}</dl>}
+          {entry.summary.details.length > 0 && <Collapsible>
+            <CollapsibleTrigger asChild><Button variant="ghost" size="xs" className="mt-1.5 -ml-2 text-muted-foreground [&[data-state=open]>svg]:rotate-180">Details<HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={1.5} className="transition-transform" aria-hidden="true" /></Button></CollapsibleTrigger>
+            <CollapsibleContent><ul className="mt-1 space-y-1 text-xs text-foreground/80">{entry.summary.details.map((detail, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-foreground/30" aria-hidden="true" />{detail}</li>)}</ul></CollapsibleContent>
+          </Collapsible>}
+        </> : <p className="mt-2 text-sm text-muted-foreground">Changes unavailable</p>}
       </div>
     </div>
   </li>;
