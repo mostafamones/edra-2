@@ -7,7 +7,7 @@ const sheet = { id: "00000000-0000-4000-8000-00000000000b", kind: "document" as 
 const base: ContentDocument = { title: "Lesson", description: "", accessDays: 7, items: [video, sheet] };
 
 it("summarises the first publication", () => {
-  expect(revisionChanges(null, base)).toEqual({ headline: "Published with 2 materials", lines: ["+2 Material"], details: ["Explanation video “Intro”", "Document “Notes”"] });
+  expect(revisionChanges(null, base)).toEqual({ headline: "Published with 2 materials", fields: ["Material"], lines: ["+2 Material"], details: ["Explanation video “Intro”", "Document “Notes”"] });
 });
 
 it("builds a headline, one line per change and itemised details", () => {
@@ -16,6 +16,7 @@ it("builds a headline, one line per change and itemised details", () => {
     prerequisites: [{ unitId: "u", kind: "quiz", assessmentId: "q0" }] };
   expect(revisionChanges(base, next)).toEqual({
     headline: "Added an assessment, renamed the unit and more",
+    fields: ["Title", "Material", "Access", "Coupon", "Requirements"],
     lines: ["Title “Lesson” → “Lesson 1”", "+1 Material", "1 Material renamed", "Reordered", "Access 7 → 14 days", "Coupon required", "+1 required submission"],
     details: ["Added assessment “Quiz”", "Renamed document “Notes” → “Worksheet”"],
   });
@@ -24,6 +25,7 @@ it("builds a headline, one line per change and itemised details", () => {
 it("joins two changes and reports removals without a spurious reorder", () => {
   expect(revisionChanges(base, { ...base, items: [sheet], description: "New" })).toEqual({
     headline: "Removed a video and updated the description",
+    fields: ["Description", "Material"],
     lines: ["Description updated", "−1 Material"],
     details: ["Removed video “Intro”"],
   });
@@ -52,7 +54,7 @@ it("has no reviewer when the creator published, and starts a never-published uni
   const legacy = historyEntries([], [{ revision: 1, document: base, at, by: omar }]);
   expect(legacy.map(e => [e.creators, e.reviewer, e.saves])).toEqual([[[omar], null, 0]]);
   const fresh = historyEntries([{ kind: "saved", document: { ...base, description: "x" }, at: "2026-10-02T00:00:00Z", by: omar }, { kind: "created", document: { ...base, items: [] }, at, by: omar }], []);
-  expect(fresh[0].summary).toEqual({ headline: "Created the unit", lines: ["Description updated", "+2 Material"], details: ["Added video “Intro”", "Added document “Notes”"] });
+  expect(fresh[0].summary).toEqual({ headline: "Created the unit", fields: ["Description", "Material"], lines: ["Description updated", "+2 Material"], details: ["Added video “Intro”", "Added document “Notes”"] });
 });
 
 it("labels history times relative to today", () => {

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, ArrowDown01Icon, Clock01Icon } from "@hugeicons/core-free-icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,15 +81,15 @@ function Entry({ entry, live, withYear, last }: { entry: HistoryEntry<Author>; l
         <dl className="grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-2">
           <Row label="Created by"><People authors={entry.creators} /></Row>
           {!summary ? <Row label="Changes"><span className="text-muted-foreground">Unavailable</span></Row>
-            : summary.lines.length > 0 && <Row label="Changes">
+            : summary.fields.length > 0 && <Row label="Changes">
               <div className="flex items-start gap-2">
-                <ul dir="auto" className="min-w-0 flex-1 text-foreground/80">{summary.lines.map(line => <li key={line}>{line}</li>)}</ul>
-                {summary.details.length > 0 && <CollapsibleTrigger asChild><Button variant="ghost" size="icon-xs" aria-label="Show details" className="-my-0.5 -mr-1 shrink-0 text-muted-foreground [&[data-state=open]>svg]:rotate-180"><HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={1.5} className="transition-transform" aria-hidden="true" /></Button></CollapsibleTrigger>}
+                <div className="flex min-w-0 flex-1 flex-wrap gap-1">{summary.fields.map(field => <Badge key={field} variant="secondary" className="h-5 px-1.5 text-[11px] font-normal">{field}</Badge>)}</div>
+                {summary.lines.length > 0 && <CollapsibleTrigger asChild><Button variant="ghost" size="icon-xs" aria-label="Show details" className="-my-0.5 -mr-1 shrink-0 text-muted-foreground [&[data-state=open]>svg]:rotate-180"><HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={1.5} className="transition-transform" aria-hidden="true" /></Button></CollapsibleTrigger>}
               </div>
             </Row>}
           {entry.reviewer && <Row label="Reviewed"><People authors={[entry.reviewer]} /></Row>}
         </dl>
-        {summary && summary.details.length > 0 && <CollapsibleContent><ul className="mt-2.5 space-y-1 border-t border-foreground/10 pt-2.5 text-xs text-foreground/80">{summary.details.map((detail, i) => <li key={i} dir="auto" className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-foreground/30" aria-hidden="true" />{detail}</li>)}</ul></CollapsibleContent>}
+        {summary && summary.lines.length > 0 && <CollapsibleContent><ul dir="auto" className="mt-2.5 space-y-1 border-t border-foreground/10 pt-2.5 text-xs text-foreground/80">{[...summary.lines, ...summary.details].map((line, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-foreground/30" aria-hidden="true" />{line}</li>)}</ul></CollapsibleContent>}
       </Collapsible>
     </div>
   </li>;

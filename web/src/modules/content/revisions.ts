@@ -3,8 +3,8 @@ import { documentSchema, KIND_LABELS, type ContentDocument, type ContentItem } f
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 const NOUNS: Record<ContentItem["kind"], string> = { explanation: "video", answer: "answer video", document: "document", assessment: "assessment" };
 
-/** A headline, one short line per change, and the itemised material kept behind a toggle. */
-export type ChangeSummary = { headline: string; lines: string[]; details: string[] };
+/** A headline, the fields that changed, and their specifics (lines, then itemised material) kept behind a toggle. */
+export type ChangeSummary = { headline: string; fields: string[]; lines: string[]; details: string[] };
 
 /** "a video", "2 videos", or "3 materials" when the kinds are mixed. */
 function countItems(items: ContentItem[]) {
@@ -15,7 +15,7 @@ function countItems(items: ContentItem[]) {
 
 /** What changed from the previous document to the next one. An empty `headline` means nothing changed. */
 export function revisionChanges(previous: ContentDocument | null, next: ContentDocument): ChangeSummary {
-  if (!previous) return { headline: `Published with ${plural(next.items.length, "material")}`, lines: next.items.length ? [`+${next.items.length} Material`] : [], details: next.items.map(item => `${KIND_LABELS[item.kind]} “${item.title}”`) };
+  if (!previous) return { headline: `Published with ${plural(next.items.length, "material")}`, fields: next.items.length ? ["Material"] : [], lines: next.items.length ? [`+${next.items.length} Material`] : [], details: next.items.map(item => `${KIND_LABELS[item.kind]} “${item.title}”`) };
   const before = new Map(previous.items.map(item => [item.id, item]));
   const after = new Map(next.items.map(item => [item.id, item]));
   const added = next.items.filter(item => !before.has(item.id));
@@ -46,6 +46,10 @@ export function revisionChanges(previous: ContentDocument | null, next: ContentD
   const lower = (phrase: string) => phrase[0].toLowerCase() + phrase.slice(1);
   const headline = phrases.length <= 2 ? phrases.map((p, i) => i ? lower(p) : p).join(" and ") : `${phrases[0]}, ${lower(phrases[1])} and more`;
 
+  const fields = [
+    title && "Title", description && "Description", (added.length || removed.length || renamed.length || reordered) && "Material",
+    access && "Access", coupon && "Coupon", (requiredAdded || requiredRemoved) && "Requirements",
+  ].filter((field): field is string => Boolean(field));
   const lines = [
     title && `Title “${previous.title}” → “${next.title}”`,
     description && "Description updated",
@@ -64,7 +68,7 @@ export function revisionChanges(previous: ContentDocument | null, next: ContentD
     ...removed.map(item => `Removed ${NOUNS[item.kind]} “${item.title}”`),
     ...renamed.map(({ item, from }) => `Renamed ${NOUNS[item.kind]} “${from}” → “${item.title}”`),
   ];
-  return { headline, lines, details };
+  return { headline, fields, lines, details };
 }
 
 type Event<B> = { document: unknown; at: string; by: B };
@@ -85,7 +89,7 @@ export function historyEntries<B extends Author>(drafts: (Event<B> & { kind: "cr
     if (event.kind === "published" || !groups.length) groups.push([event]); else groups.at(-1)!.push(event);
   }
   const parse = (value: unknown) => { const parsed = documentSchema.safeParse(value); return parsed.success ? parsed.data : undefined; };
-  const only = (headline: string): ChangeSummary => ({ headline, lines: [], details: [] });
+  const only = (headline: string): ChangeSummary => ({ headline, fields: [], lines: [], details: [] });
   const unique = (people: B[]) => [...new Map(people.map(person => [person?.id ?? null, person])).values()];
   return groups.map((group, index) => {
     const newest = group[0], saves = group.filter(e => e.kind === "draft");
