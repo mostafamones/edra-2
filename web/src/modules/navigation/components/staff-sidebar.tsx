@@ -3,13 +3,13 @@ import { usePortalPath, useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type ComponentProps } from "react";
+import { type ComponentProps } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft02Icon, AssignmentsIcon, Building03Icon, Calendar03Icon, FolderLibraryIcon, Home07Icon, Message01Icon, Search01Icon, StudentsIcon, TeachingIcon, Task01Icon, Ticket01Icon, UserCircleIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft02Icon, AssignmentsIcon, Building03Icon, Calendar03Icon, FolderLibraryIcon, Home07Icon, Message01Icon, StudentsIcon, TeachingIcon, Task01Icon, Ticket01Icon, UserCircleIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
+import { SearchMenu } from "../search/menu";
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +18,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
-  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -250,7 +249,6 @@ export function StaffSidebar() {
   const role = activeAcademy?.role ?? null;
   const management = pathname === "/app/manage" || pathname.startsWith("/app/manage/");
   const returnTo = useManagementReturn(activeAcademy?.slug, pathname, management);
-  const [query, setQuery] = useState("");
   const closeMobile = () => setOpenMobile(false);
   const expandSidebar = () => { if (!open) setOpen(true); };
 
@@ -258,28 +256,17 @@ export function StaffSidebar() {
     <Sidebar collapsible="icon" variant="inset" className="group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]">
       <SidebarHeader>
         <AcademySwitcher />
-        {management && (
-          <div className="relative mt-2 px-1 group-data-[collapsible=icon]:hidden">
-            <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={1.5} aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sidebar-foreground/75" />
-            <SidebarInput type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search" aria-label="Search management"
-              className="border-border! pl-8 text-sm placeholder:text-sidebar-foreground/75 md:text-sm" />
-          </div>
-        )}
+        {management && <div className="mt-2 flex px-1 group-data-[collapsible=icon]:hidden"><SearchMenu platform="staff" /></div>}
         {!management && (
           <div className="flex items-center gap-1 px-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:px-0 mt-2">
-            <Button type="button" variant="outline" size="sm" aria-label="Command Menu"
-              className="min-w-0 flex-1 justify-start border-border! text-sidebar-foreground/75 group-data-[collapsible=icon]:hidden">
-              <span className="truncate group-data-[collapsible=icon]:hidden font-normal">Search</span>
-              <Kbd className="ml-auto group-data-[collapsible=icon]:ml-0">⌘K</Kbd>
-            </Button>
+            <SearchMenu platform="staff" className="group-data-[collapsible=icon]:hidden" />
             <QuickCreate />
           </div>
         )}
       </SidebarHeader>
       <SidebarContent className={open || isMobile ? "px-1" : ""}>
         {management ? (
-          <ManagementNavigation pathname={pathname} role={role} closeMobile={closeMobile} query={query} />
+          <ManagementNavigation pathname={pathname} role={role} closeMobile={closeMobile} query="" />
         ) : (
           <WorkspaceNavigation pathname={pathname} role={role} closeMobile={closeMobile} sidebarOpen={open || isMobile} expandSidebar={expandSidebar} />
         )}

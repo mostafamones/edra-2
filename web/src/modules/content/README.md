@@ -43,9 +43,15 @@ Server configuration: `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_SIGNING_KEY_ID`, 
 
 ## Boundaries and verification
 
-The module now also owns the initial student learning/access slice described below. Student enrollment/account linking remains in its existing module. Progress, answer-material eligibility, assessment execution from units, DRM, watermarking, simultaneous-session policy, notifications and session-to-content access effects remain outside this delivery. Staff preview actions are never exposed to students.
+The module now also owns the initial student learning/access slice described below. Student enrollment/account linking remains in its existing module. Answer-material eligibility, assessment execution from units, DRM, watermarking, simultaneous-session policy, notifications and session-to-content access effects remain outside this delivery. Staff preview actions are never exposed to students.
 
 ## Student learning and access
+
+Progress and resume are owned by `progress/`. Explanation videos complete at 90% unique watched timeline coverage; documents and answer materials are excluded. Attached assessments use official assignment received-work states (`submitted`/`late`) and quiz/exam submission records, never draft attempts or marks. Unit and browse summaries recalculate against the current publication while preserving prior activity for replaced/removed videos.
+
+The player checkpoints every five seconds and saves on pause/close. Overlapping watched sections are merged; seeking and buffering do not contribute. The newest opened session controls resume, and ordered checkpoints prevent older writes from replacing its position. Activity belongs to an annual student record, unit and immutable asset, so copied/reused units and new-year records start separately. Every start/save rechecks live playback authority. Progress grants no access and satisfies no prerequisite. Abrupt browser/network loss may leave recent unacknowledged seconds unsaved.
+
+Mux supplies the trusted video duration on processing or first authorized progress start for older assets. Private progress tables are RPC-only with RLS enabled. The `content_progress` disposable database suite covers coverage, ordering, isolation, publication edits and access denials; never run its fixtures on shared development.
 
 `LearningBrowse` and `StudentLearningUnit` are the client public components; `readLearningList` and `readLearningUnit` are server exports. Connected students enter `/<academy>` on the student host to see published units for their current annual grade/optional track, newest publication first. `/<academy>/units/<id>` shows ordered metadata, access status/expiry, unit-code redemption and the annual extension. Client caches are scoped by account and academy; account changes hide stale learning data. Answers remain locked and attached assessments unavailable until their separate eligibility/execution integration is supplied.
 

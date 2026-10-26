@@ -18,6 +18,8 @@ Current implementation reference; intended rules are in [teaching and attendance
 
 ## Public API
 
+`StartSessionCommand` is the client component used by navigation's nested command menu. It composes the existing startable-schedule queries and idempotent start hook. Audience filters select schedules rather than changing roster membership. A separate review and confirmation precede the start; leaving or filtering never creates a session. It supports all active schedules, independent of planned time, and uses the existing live-session rule. No new backend rule or schema is introduced.
+
 Receipt locking: `start_session` takes a transaction advisory lock on the actor/key, then the schedule row, then (for an unbound key) the year and live session. Backfill covered every stored original-start key; a legacy fallback binds an original start committed by the previous function. **Legacy limit:** opens of an already-live session before the migration were never stored and cannot be recovered; their first use through the corrected function is treated as a fresh request.
 
 Client-safe (`index.ts`): `startSession`, `endSession`, `archiveSession`, `restoreSession` server actions; `fetchLiveSessions`, `fetchSession` and query keys; `LiveSession`, `SessionDetail`, `RosterEntry` types.

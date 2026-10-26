@@ -2440,6 +2440,7 @@ export type Database = {
           created_at: string
           created_by: string
           deletion_token: string | null
+          duration_seconds: number | null
           id: string
           kind: string
           mime_type: string
@@ -2456,6 +2457,7 @@ export type Database = {
           created_at?: string
           created_by: string
           deletion_token?: string | null
+          duration_seconds?: number | null
           id: string
           kind: string
           mime_type: string
@@ -2472,6 +2474,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           deletion_token?: string | null
+          duration_seconds?: number | null
           id?: string
           kind?: string
           mime_type?: string
@@ -7924,6 +7927,10 @@ export type Database = {
         Args: { p_academy_id: string; p_unit_id: string }
         Returns: Json
       }
+      get_my_content_unit_before_progress: {
+        Args: { p_academy_id: string; p_unit_id: string }
+        Returns: Json
+      }
       get_my_content_unit_before_requirements: {
         Args: { p_academy_id: string; p_unit_id: string }
         Returns: Json
@@ -8073,6 +8080,15 @@ export type Database = {
         Returns: Json
       }
       list_my_content_units: {
+        Args: {
+          p_academy_id: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+        }
+        Returns: Json
+      }
+      list_my_content_units_before_progress: {
         Args: {
           p_academy_id: string
           p_limit?: number
@@ -8630,6 +8646,17 @@ export type Database = {
         }
         Returns: Json
       }
+      save_my_content_progress: {
+        Args: {
+          p_academy_id: string
+          p_position: number
+          p_ranges: Json
+          p_sequence: number
+          p_session_id: string
+          p_unit_id: string
+        }
+        Returns: Json
+      }
       save_my_exam_answers: {
         Args: {
           p_academy_id: string
@@ -8847,6 +8874,10 @@ export type Database = {
         Returns: Json
       }
       start_exam_attempt: { Args: { p_exam_id: string }; Returns: Json }
+      start_my_content_progress: {
+        Args: { p_academy_id: string; p_item_id: string; p_unit_id: string }
+        Returns: Json
+      }
       start_my_exam: {
         Args: { p_academy_id: string; p_exam_id: string }
         Returns: Json

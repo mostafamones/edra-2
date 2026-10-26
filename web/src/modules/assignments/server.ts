@@ -8,3 +8,5 @@ export {
 // Student cookie web boundary (EDRA-81).
 export { StudentAssignmentList } from "./student/components/list";
 export { StudentAssignmentPage } from "./student/components/page";
+export { listMyAssignments } from "./student/data";
+export { searchStaffAssignments } from "./search";
