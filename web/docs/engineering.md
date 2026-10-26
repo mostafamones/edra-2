@@ -32,6 +32,12 @@ During implementation, run checks appropriate to the changed behavior. Verify da
 
 Report source, test, cloud and deployed-flow evidence separately. Documentation edits do not establish runtime readiness.
 
+### Jobs fail before starting
+
+When every job fails with no steps or logs, inspect the check annotations on the run's summary. The message "The job was not started because recent account payments have failed or your spending limit needs to be increased" means GitHub did not allocate runners; application checks have not executed.
+
+The repository owner must resolve the payment or Actions spending limit in GitHub's Billing & plans settings. After that, rerun the failed jobs from the run summary, or use `gh run rerun <run-id> --failed`. A new pull request also triggers CI. Confirm that all required jobs actually run and pass before merging; local checks do not replace the disposable database and authenticated attendance jobs.
+
 ### Edge Function checks
 
 From `web/`, with Deno 2 on PATH:

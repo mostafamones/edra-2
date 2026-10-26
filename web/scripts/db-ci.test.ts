@@ -9,6 +9,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 // calls, so no Docker, database or GitHub runner is needed. The wrapper runs from a copy of scripts/
 // and supabase/ whose concurrency harness is a stub: fake psql cannot model real races.
 const web = join(__dirname, "..");
+// Full runner journeys launch a fake psql process for every SQL suite. Allow for
+// that work on busy runners without changing the default timeout for unit tests.
+const fullRunnerTimeout = 30_000;
 
 const fakePsql = readFileSync(join(web, "scripts/fixtures/fake-psql.sh"), "utf8");
 const fakeSupabase = `#!/usr/bin/env bash
@@ -120,7 +123,7 @@ describe("db-ci wrapper", () => {
     expect(log).toContain("concurrency stub");
     expect(log).not.toContain("--all");
     expect(readdirSync(runnerTemp)).toEqual([]);
-  });
+  }, fullRunnerTimeout);
 
   it.each([
     ["startup", { FAKE_START_FAIL: "1" }, 4],
@@ -139,7 +142,7 @@ describe("db-ci wrapper", () => {
     const { status, output } = run({ FAKE_STOP_FAIL: "1" });
     expect(status).toBe(1);
     expect(output).toContain("cleanup of project");
-  });
+  }, fullRunnerTimeout);
 
   it("exports types from the disposable schema without using linked cloud connectivity", () => {
     const typesPath = join(dir, "database.types.ts");
@@ -150,5 +153,5 @@ describe("db-ci wrapper", () => {
       "supabase gen types typescript --db-url postgresql://postgres:postgres@127.0.0.1:54322/postgres --schema public",
     ]);
     expect(log).not.toContain("--linked");
-  });
+  }, fullRunnerTimeout);
 });

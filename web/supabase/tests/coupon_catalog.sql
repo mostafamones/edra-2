@@ -90,8 +90,8 @@ select pg_temp.lerror(format('select public.get_scoped_content_coupons(%L,%L,''s
 reset role;
 select pg_temp.lcheck((select count(*)=5 from public.content_units where academy_id=pg_temp.lid('academy')),'coupon operations did not create units');
 select pg_temp.lcheck((select count(*)=1 from public.content_coupon_types where academy_id=pg_temp.lid('academy') and academic_year_id=pg_temp.lid('year') and level_id is null and is_default and all_tracks and not retired),'only one shared Regular default');
-insert into public.content_coupon_types(id,academy_id,program_id,academic_year_id,level_id,track_id,name,prefix,created_by,retired)
- select pg_temp.lid('retired-type'),pg_temp.lid('academy'),program_id,academic_year_id,level_id,track_id,'Old automatic type','REG',pg_temp.lid('owner'),true from public.content_coupon_types where id=pg_temp.lid('custom-type');
+insert into public.content_coupon_types(id,academy_id,program_id,academic_year_id,level_id,track_id,name,prefix,all_tracks,created_by,retired)
+ select pg_temp.lid('retired-type'),pg_temp.lid('academy'),program_id,academic_year_id,level_id,track_id,'Old automatic type','REG',all_tracks,pg_temp.lid('owner'),true from public.content_coupon_types where id=pg_temp.lid('custom-type');
 select pg_temp.lact('owner');
 select pg_temp.lcheck(not exists(select 1 from jsonb_array_elements(public.get_content_coupon_options(pg_temp.lid('academy'))->'types') t where t->>'id'=pg_temp.lid('retired-type')::text),'retired types are absent from picker');
 select pg_temp.lerror(format('select public.generate_content_coupons(%L,%L,1,%L)',pg_temp.lid('academy'),pg_temp.lid('retired-type'),gen_random_uuid()),'validation');

@@ -61,7 +61,7 @@ do $$ declare label text; asset_id uuid; note_id uuid; doc jsonb; begin
 end $$;
 
 -- Build real content-linked assessments through the authoring API.
-insert into learning_ids(name) values('regular'),('revision'),('track-type'),('batch-regular'),('batch-revision'),('batch-track');
+insert into learning_ids(name) values('regular'),('revision'),('track-type'),('foreign-type'),('batch-regular'),('batch-revision'),('batch-track');
 insert into learning_ids(name,id) select 'assignment',public.create_content_assessment(pg_temp.lid('academy'),pg_temp.lid('unit'),3,'assignment','Required homework');
 insert into learning_ids(name,id) select 'quiz',public.create_content_assessment(pg_temp.lid('academy'),pg_temp.lid('unit'),4,'quiz','Required quiz');
 select public.change_content_unit(pg_temp.lid('academy'),pg_temp.lid('unit'),5,'publish');
@@ -110,13 +110,21 @@ select pg_temp.lact('student');
 select pg_temp.lerror(format('select public.get_content_coupon_options(%L)',pg_temp.lid('academy')),'forbidden');
 reset role;
 select pg_temp.lcheck(not exists(select 1 from public.content_coupon_redemptions where coupon_id in (select id from coupons)),'failed attempts consumed no coupons');
--- Publication validation rejects scope mismatches, self-dependencies and cycles.
+-- Academy-wide coupon types cover track units, while academy and prerequisite scopes remain enforced.
+select pg_temp.lact('outsider');
+select public.create_academy_coupon_type(pg_temp.lid('other-academy'),
+ (select id from public.academic_years where academy_id=pg_temp.lid('other-academy')),'Foreign type','FOR',pg_temp.lid('foreign-type'));
 select pg_temp.lact('owner');
 insert into learning_ids(name,id) select 'dependent-assignment',public.create_content_assessment(pg_temp.lid('academy'),pg_temp.lid('second-unit'),(select version from public.content_units where id=pg_temp.lid('second-unit')),'assignment','Follow-up homework');
 select public.change_content_unit(pg_temp.lid('academy'),pg_temp.lid('second-unit'),(select version from public.content_units where id=pg_temp.lid('second-unit')),'publish');
 select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','unit',jsonb_build_object('prerequisites',jsonb_build_array(jsonb_build_object('unitId',pg_temp.lid('second-unit'),'kind','assignment','assessmentId',pg_temp.lid('dependent-assignment'))))),'prerequisite_cycle');
 select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','unit',jsonb_build_object('prerequisites',jsonb_build_array(jsonb_build_object('unitId',pg_temp.lid('unit'),'kind','assignment','assessmentId',pg_temp.lid('assignment'))))),'invalid_prerequisite');
-select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','track-unit',jsonb_build_object('couponTypeId',pg_temp.lid('regular'))),'coupon_type_mismatch');
+select pg_temp.publish_policy('track-unit',jsonb_build_object('couponTypeId',pg_temp.lid('regular')));
+select pg_temp.lcheck((select v.document->>'couponTypeId'=pg_temp.lid('regular')::text
+ from public.content_units u join public.content_revisions v on v.unit_id=u.id and v.revision=u.published_revision
+ where u.id=pg_temp.lid('track-unit')),'academy coupon type is published for a track-specific unit');
+select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','track-unit',jsonb_build_object('couponTypeId',pg_temp.lid('foreign-type'))),'coupon_type_mismatch');
+select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','track-unit',jsonb_build_object('prerequisites',jsonb_build_array(jsonb_build_object('unitId',pg_temp.lid('unit'),'kind','access')))),'invalid_prerequisite');
 select pg_temp.lerror(format('select pg_temp.publish_policy(%L,%L::jsonb)','third-unit',jsonb_build_object('prerequisites',jsonb_build_array(jsonb_build_object('unitId',gen_random_uuid(),'kind','assignment','assessmentId',pg_temp.lid('assignment'))))),'invalid_prerequisite');
 -- A saved/draft quiz work row is not an official submission.
 insert into public.quiz_work(quiz_id,annual_student_record_id,academy_id,academic_year_id)
@@ -128,12 +136,17 @@ select pg_temp.lcheck(not edra_private.content_requirements_met(pg_temp.lid('sec
 insert into public.quiz_submissions(academy_id,academic_year_id,quiz_id,annual_student_record_id,source,reason,submitted_at,processed_at,scoring_revision,confirmed_by)
  values(pg_temp.lid('academy'),pg_temp.lid('year'),pg_temp.lid('quiz'),pg_temp.lid('record-student'),'physical','physical',now(),now(),1,pg_temp.lid('owner'));
 select pg_temp.lcheck(not edra_private.content_requirements_met(pg_temp.lid('second-unit'),pg_temp.lid('record-student')),'official submissions without activation do not unlock the next unit');
+set local role authenticated;
+select pg_temp.lerror(format('select public.get_my_content_unit(%L,%L)',pg_temp.lid('academy'),pg_temp.lid('second-unit')),'student_unavailable');
+select pg_temp.lact('student');
 do $$ declare result jsonb; begin
  result:=public.get_my_content_unit(pg_temp.lid('academy'),pg_temp.lid('second-unit'));
  perform pg_temp.lcheck(result->>'prerequisitesMet'='false','unit details load while activation is missing');
  perform pg_temp.lcheck(exists(select 1 from jsonb_array_elements(result->'prerequisites') r where r->>'kind'='assignment' and (r->>'submitted')::boolean),'late official assignment is displayed as submitted');
  perform pg_temp.lcheck(exists(select 1 from jsonb_array_elements(result->'prerequisites') r where r->>'kind'='access' and not (r->>'submitted')::boolean),'missing activation stays separately unmet');
 end $$;
+reset role;
+select pg_temp.lact('owner');
 -- Insert immutable expired history: prior activation counts without requiring renewal.
 do $$ declare grant_id uuid:=gen_random_uuid(); begin
  insert into public.content_access_accounts(academy_id,academic_year_id,annual_record_id,unit_id)
