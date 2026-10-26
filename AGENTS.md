@@ -32,6 +32,12 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 - Give each commit a clear subject and a detailed message explaining what changed and why. Include relevant verification results and material limitations.
 - Do not push commits unless the owner explicitly requests it.
 
+## Pull request titles
+
+- Name every pull request `type(scope): summary`. Both the type and scope are required, for example `fix(ci): stabilize database runner tests` or `docs(assessments): clarify submission rules`.
+- Use a lowercase conventional type such as `feat`, `fix`, `docs`, `refactor`, `test`, `ci`, or `chore`, and a short lowercase scope identifying the affected application, domain, or component. Keep the summary concise, imperative, and accurate for the final changes in the pull request.
+- Check the title before creating or updating a pull request, and revise it when the final scope changes.
+
 ## UI copy and helper text
 
 - Do not add helper text by default anywhere in either application. This includes descriptions under fields, page subtitles, section introductions, card descriptions, and explanatory text beside controls. Add helper text only when the owner explicitly requests it.
