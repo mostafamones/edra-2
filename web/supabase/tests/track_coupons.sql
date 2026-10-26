@@ -136,12 +136,17 @@ select pg_temp.lcheck(not edra_private.content_requirements_met(pg_temp.lid('sec
 insert into public.quiz_submissions(academy_id,academic_year_id,quiz_id,annual_student_record_id,source,reason,submitted_at,processed_at,scoring_revision,confirmed_by)
  values(pg_temp.lid('academy'),pg_temp.lid('year'),pg_temp.lid('quiz'),pg_temp.lid('record-student'),'physical','physical',now(),now(),1,pg_temp.lid('owner'));
 select pg_temp.lcheck(not edra_private.content_requirements_met(pg_temp.lid('second-unit'),pg_temp.lid('record-student')),'official submissions without activation do not unlock the next unit');
+set local role authenticated;
+select pg_temp.lerror(format('select public.get_my_content_unit(%L,%L)',pg_temp.lid('academy'),pg_temp.lid('second-unit')),'student_unavailable');
+select pg_temp.lact('student');
 do $$ declare result jsonb; begin
  result:=public.get_my_content_unit(pg_temp.lid('academy'),pg_temp.lid('second-unit'));
  perform pg_temp.lcheck(result->>'prerequisitesMet'='false','unit details load while activation is missing');
  perform pg_temp.lcheck(exists(select 1 from jsonb_array_elements(result->'prerequisites') r where r->>'kind'='assignment' and (r->>'submitted')::boolean),'late official assignment is displayed as submitted');
  perform pg_temp.lcheck(exists(select 1 from jsonb_array_elements(result->'prerequisites') r where r->>'kind'='access' and not (r->>'submitted')::boolean),'missing activation stays separately unmet');
 end $$;
+reset role;
+select pg_temp.lact('owner');
 -- Insert immutable expired history: prior activation counts without requiring renewal.
 do $$ declare grant_id uuid:=gen_random_uuid(); begin
  insert into public.content_access_accounts(academy_id,academic_year_id,annual_record_id,unit_id)
