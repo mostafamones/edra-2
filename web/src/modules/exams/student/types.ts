@@ -234,5 +234,5 @@ export type StudentExamRead<T> = { ok: true; data: T } | StudentExamFailure;
 export type StudentExamCommandResult<T> = ({ ok: true } & T) | StudentExamFailure;
 
 /** The verified connected academy the student route resolved (students module), passed in by the route. */
-export type StudentExamAccess = "active" | "suspended" | "no_current_year";
+export type StudentExamAccess = "active" | "suspended" | "not_started" | "no_current_year";
 export type StudentExamAcademy = { id: string; slug: string; name: string; access: StudentExamAccess };

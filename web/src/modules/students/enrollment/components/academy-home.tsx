@@ -29,6 +29,13 @@ export function StudentAcademyHome({ academy }: { academy: StudentAcademy }) {
           <AlertDescription>Contact the academy staff to restore your access.</AlertDescription>
         </Alert>
       )}
+      {academy.access === "not_started" && (
+        <Alert>
+          <IconAlertCircle aria-hidden="true" />
+          <AlertTitle>Learning hasn’t started yet</AlertTitle>
+          <AlertDescription>The academy will open learning when the year starts.</AlertDescription>
+        </Alert>
+      )}
       {academy.access === "no_current_year" && (
         <Alert>
           <IconAlertCircle aria-hidden="true" />

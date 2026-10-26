@@ -11,13 +11,13 @@ export default async function StaffPreviewPage({ params }: { params: Promise<{ a
   const href = `/app/${slug.join("/")}`;
   const previousRoutes: Record<string, string> = {
     "/app/bookings": "/app/manage/bookings",
-    "/app/bookings/review": "/app/manage/bookings/review",
+    "/app/bookings/review": "/app/manage/bookings",
     "/app/access": "/app/manage/access",
     "/app/communications": "/app/manage/messages",
     "/app/settings": "/app/manage",
     "/app/settings/academy": "/app/manage/academy",
     "/app/settings/structure": "/app/manage/academy/structure",
-    "/app/settings/booking": "/app/manage/academy/enrollment",
+    "/app/settings/booking": "/app/manage/bookings",
     "/app/settings/team": "/app/manage/team",
     "/app/settings/notifications": "/app/manage/notifications",
     "/app/settings/integrations": "/app/manage/integrations",

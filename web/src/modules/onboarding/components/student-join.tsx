@@ -52,6 +52,8 @@ export function StudentJoin({ state: initialState }: { state: StudentJoinState }
   const single = programs.length === 1;
   const program = single ? programs[0] : programs.find((entry) => programKey(entry) === selectedProgram) ?? null;
   const currentStep = single ? "group" : step;
+  // Booking settings may require a group; the ordinary invite always allows joining without one.
+  const groupOptional = state.kind === "enroll" ? state.groupOptional : true;
   const openGroups = program?.groups.filter((group) => !group.full) ?? [];
   const fullGroups = program?.groups.filter((group) => group.full) ?? [];
 
@@ -77,6 +79,8 @@ export function StudentJoin({ state: initialState }: { state: StudentJoinState }
     }
     // Stay busy while the portal opens so the completion cannot be submitted twice.
     if (next.kind === "connected") return enterAcademy(next.academy.slug);
+    // A first-time booking student registers through the public form; the join page sends them there.
+    if (next.kind === "form") return router.replace("/onboarding/student/join");
     if (next.kind === "error") {
       setBusy(false);
       setMessage(copy.messages.failed);
@@ -149,7 +153,7 @@ export function StudentJoin({ state: initialState }: { state: StudentJoinState }
   } else if (state.kind === "enroll") {
     body = <>
       {program?.groups.length
-        ? <Heading title={copy.group.title} description={copy.group.description} />
+        ? <Heading title={copy.group.title} description={groupOptional ? copy.group.description : copy.group.requiredDescription} />
         : <Heading title={<AcademyTitle prefix={copy.group.noneTitle} name={state.academy.name} />} description={copy.group.noneDescription} />}
       <div className="mt-8 flex flex-col gap-5">
         {openGroups.length > 0 && (
@@ -166,10 +170,10 @@ export function StudentJoin({ state: initialState }: { state: StudentJoinState }
                 description: group.slots.length ? <GroupSchedule slots={group.slots} /> : undefined,
               }))}
               onChange={(value) => { setGroupId(value); setMessage(null); }} />
-            <FieldSeparator>{copy.group.or}</FieldSeparator>
+            {groupOptional && <FieldSeparator>{copy.group.or}</FieldSeparator>}
           </>
         )}
-        {program?.groups.length ? (
+        {program?.groups.length && groupOptional ? (
           <ChoiceCards name="online" label={copy.group.onlineLabel} value={groupId ? "" : "online"} disabled={busy} className="sm:grid-cols-1"
             options={[{ value: "online", title: <span className="text-base font-semibold">{copy.group.online}</span> }]}
             onChange={() => { setGroupId(""); setMessage(null); }} />
@@ -178,7 +182,7 @@ export function StudentJoin({ state: initialState }: { state: StudentJoinState }
       </div>
     </>;
     if (!single) left = <Button type="button" variant="ghost" className="-ml-2" disabled={busy} onClick={() => { setMessage(null); setStep("program"); }}><IconArrowLeft className="size-4" />{copy.actions.back}</Button>;
-    primary = <Button type="button" disabled={busy} onClick={() => enroll(true)}>{joinLabel}<IconArrowRight className="size-4" /></Button>;
+    primary = <Button type="button" disabled={busy || (!groupOptional && !groupId)} onClick={() => enroll(true)}>{joinLabel}<IconArrowRight className="size-4" /></Button>;
   } else {
     const text = state.kind === "staff_help" ? copy.states[state.reason]
       : state.kind === "closed" || state.kind === "unavailable" || state.kind === "level_unavailable" || state.kind === "invalid" || state.kind === "unverified" ? copy.states[state.kind === "level_unavailable" ? "levelUnavailable" : state.kind]

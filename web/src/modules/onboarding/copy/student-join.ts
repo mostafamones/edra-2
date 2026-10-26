@@ -14,6 +14,7 @@ export const studentJoinCopy = {
   group: {
     title: "Choose your group",
     description: "You’ll join online by default. Pick a group if you’ll attend in person.",
+    requiredDescription: "Pick the group you’ll join.",
     label: "Group",
     or: "or",
     online: "Online only",
@@ -34,7 +35,7 @@ export const studentJoinCopy = {
     error: { title: "We couldn’t check this invite", description: "Check your connection and try again." },
   },
   messages: {
-    groupFull: "That group just filled up. Choose another group or continue without one.",
+    groupFull: "That group just filled up. Choose another option.",
     invalidChoice: "That choice is no longer available. Choose again.",
     changed: "Your academy record changed. Check the details below.",
     failed: "Couldn’t join. Please try again.",
