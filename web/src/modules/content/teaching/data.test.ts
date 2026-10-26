@@ -22,6 +22,23 @@ describe("session content authority and boundaries", () => {
     await expect(writeTaught(input, null)).rejects.toThrow("permission");
     expect(state.calls).toEqual([]);
   });
+  it("accepts persisted PostgreSQL identifiers used by generated academies and units", async () => {
+    const generated = "4eba77f8-870f-c7c7-4bb9-fcf3ddebb0fc";
+    const devTarget = { academyId: generated, sessionId: S };
+    await expect(readTaught(devTarget)).resolves.toMatchObject({ revision: 0, items: [] });
+    state.pages = [[{ unitId: generated, revision: 1, title: "Generated unit" }]];
+    await expect(readTaughtOptions(devTarget)).resolves.toEqual([{ unitId: generated, revision: 1, title: "Generated unit" }]);
+    await expect(writeTaught({ ...input, ...devTarget, items: [{ unitId: generated, revision: 1 }] })).resolves.toMatchObject({ outcome: "saved" });
+    expect(state.calls.every(call => call.args.p_academy_id === generated)).toBe(true);
+  });
+  it("still rejects malformed identifiers and denies generated targets without membership", async () => {
+    await expect(readTaught({ ...target, academyId: "not-an-id" })).rejects.toThrow();
+    await expect(writeTaught({ ...input, items: [{ unitId: "not-an-id", revision: 1 }] })).rejects.toThrow();
+    expect(state.calls).toEqual([]);
+    state.allowed = false;
+    await expect(readTaught({ academyId: "4eba77f8-870f-c7c7-4bb9-fcf3ddebb0fc", sessionId: S })).rejects.toThrow("permission");
+    expect(state.calls).toEqual([]);
+  });
   it("preserves the reviewed version, selected publication and retry key", async () => {
     const result = await writeTaught(input, {} as Authority);
     expect(result.replayed).toBe(true);

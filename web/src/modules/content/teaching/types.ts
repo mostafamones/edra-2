@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-export const targetSchema = z.object({ academyId: z.uuid(), sessionId: z.uuid() });
-export const selectionSchema = z.object({ unitId: z.uuid(), revision: z.number().int().positive() }).strict();
+// Persisted PostgreSQL UUIDs include deterministic dev fixtures without RFC version/variant bits.
+export const targetSchema = z.object({ academyId: z.guid(), sessionId: z.guid() });
+export const selectionSchema = z.object({ unitId: z.guid(), revision: z.number().int().positive() }).strict();
 export const taughtItemSchema = selectionSchema.extend({ title: z.string() });
 export const taughtSheetSchema = z.object({
   revision: z.number().int().nonnegative(),
