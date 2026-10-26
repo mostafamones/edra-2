@@ -91,7 +91,11 @@ select public.change_content_coupon_prefix(pg_temp.lid('academy'),pg_temp.lid('s
 select public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('shared'),1,pg_temp.lid('new-batch'));
 select pg_temp.lcheck((select prefix='REV' from public.content_coupon_batches where id=pg_temp.lid('old-batch')) and (select prefix='MOCK' from public.content_coupon_batches where id=pg_temp.lid('new-batch')),'prefix edit preserves printed batches');
 select pg_temp.lcheck(public.generate_content_coupons(pg_temp.lid('academy'),pg_temp.lid('shared'),2,pg_temp.lid('old-batch'))->'codes'->0->>'prefix'='REV','lost-response generation retry retains original prefix');
-select pg_temp.lcheck(jsonb_array_length(public.get_content_coupons(pg_temp.lid('academy'),(select program_id from public.content_units where id=pg_temp.lid('other-unit')))->'codes')=3,'shared coupons listed from another track');
+select pg_temp.lcheck(jsonb_array_length(public.get_content_coupon_batches(pg_temp.lid('academy'),p_year_id=>pg_temp.lid('year'),p_academy_wide=>true)->'batches')=2,'academy coupon page lists both printed batches without a program filter');
+select pg_temp.lcheck(
+ jsonb_array_length(public.get_content_coupon_batch(pg_temp.lid('academy'),pg_temp.lid('old-batch'))->'codes')=2
+ and jsonb_array_length(public.get_content_coupon_batch(pg_temp.lid('academy'),pg_temp.lid('new-batch'))->'codes')=1,
+ 'academy batch details retain all three coupons across the prefix change');
 select pg_temp.lcheck(jsonb_path_exists(public.get_content_coupon_options(pg_temp.lid('academy')),'$.types[*] ? (@.isDefault == true && @.allTracks == true && @.prefix == "REG")'),'options expose shared defaults');
 -- Explicit publication timestamps avoid same-transaction now() ties in this fixture.
 insert into learning_ids(name) values('inherit-unit'),('fallback-unit');

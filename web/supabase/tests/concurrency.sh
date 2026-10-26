@@ -1014,7 +1014,7 @@ insert into public.content_units(id,academy_id,program_id,created_by,state,publi
 insert into public.content_revisions(unit_id,academy_id,revision,document,published_by)
  select id,'$ACADEMY',1,draft,'$ADMIN' from public.content_units where id in ('$LU1','$LU2');
 $as_admin
-select public.create_content_coupon_type('$ACADEMY','$CONTENT_PROGRAM','Race coupons','$LT');
+select public.create_academy_coupon_type('$ACADEMY','$YEAR','Race coupons','RAC','$LT');
 select public.generate_content_coupons('$ACADEMY','$LT',1,'$LB');
 reset role;
 -- Fixture publication is established before the race; application editing is covered by SQL suites.
