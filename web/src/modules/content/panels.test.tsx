@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const api = vi.hoisted(() => ({ loadUnitPanels: vi.fn(), reuseMaterial: vi.fn(), createAttachedAssessment: vi.fn() }));
 vi.mock("./actions", () => api);
@@ -29,11 +30,11 @@ beforeEach(() => {
 afterEach(cleanup);
 
 function mount(client: QueryClient) {
-  render(<QueryClientProvider client={client}>
+  render(<QueryClientProvider client={client}><TooltipProvider>
     <VersionHistory academyId="academy" unitId="unit" userId="author" live disabled={false} />
     <ReuseMaterial academyId="academy" unitId="unit" version={1} disabled={false} onChange={async () => {}} />
     <AssessmentPicker academyId="academy" unitId="unit" version={1} items={[]} dirty={false} disabled={false} onAdd={() => {}} onCreated={async () => {}} />
-  </QueryClientProvider>);
+  </TooltipProvider></QueryClientProvider>);
 }
 
 it("opens history and assessment options from the background cache without another request", async () => {

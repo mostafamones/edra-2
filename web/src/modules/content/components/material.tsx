@@ -17,7 +17,7 @@ const ASSESSMENT_LABELS = { assignment: "Assignment", quiz: "Quiz", exam: "Exam"
 // Each child hangs off a rounded └; the rail continues past every child but the last. The line colour is solid
 // (dark mode's border token is translucent), so where the rail and an elbow overlap they don't darken.
 const LINE = "border-border dark:border-muted";
-const BRANCH = "relative ps-5 before:absolute before:inset-y-0 before:start-0 before:w-px before:bg-border dark:before:bg-muted last:before:hidden";
+const BRANCH = "relative ps-5 before:absolute before:inset-y-0 before:start-0 before:w-px before:bg-border dark:before:bg-muted last:before:hidden my-0.5";
 function Elbow() { return <span aria-hidden="true" className={`pointer-events-none absolute start-0 top-0 h-1/2 w-5 rounded-es-lg border-b border-s ${LINE}`} />; }
 // The title field grows in steps of this many characters rather than filling the row.
 const TITLE_STEP = 14;
@@ -75,9 +75,9 @@ export function MaterialRow({ academyId, item, asset, disabled, child, children,
   return <li className={child ? BRANCH : undefined}>
     {child && <Elbow />}
     <div {...handlers} data-selected={selected || undefined}
-      className={`group/row relative flex items-center gap-3 outline-none transition-colors ${child ? "rounded-md py-2 ps-2 pe-3" : "px-3 py-3"} ${!disabled && !editing ? "cursor-grab active:cursor-grabbing" : ""} ${zone === "link" ? "bg-primary/5 ring-1 ring-primary/50 ring-inset" : selected ? "bg-muted/70 ring-1 ring-foreground/15 ring-inset" : "hover:bg-muted/40 focus-visible:bg-muted/40"}`}>
+      className={`group/row relative flex items-center gap-3 outline-none transition-colors ${child ? "rounded-md py-2 ps-2 pe-3" : "px-3 py-3"} ${!disabled && !editing ? "cursor-grab active:cursor-grabbing" : ""} ${zone === "link" ? "bg-primary/5 ring-1 ring-primary/50 ring-inset" : selected ? "bg-primary/10" : "hover:bg-muted/40 focus-visible:bg-muted/40"}`}>
       {(zone === "before" || zone === "after") && <span aria-hidden="true" className={`pointer-events-none absolute inset-x-3 h-0.5 rounded-full bg-primary ${zone === "before" ? "top-0" : "bottom-0"}`} />}
-      <KindIcon kind={item.kind} small={child} />
+      <KindIcon kind={item.kind} document={asset?.kind === "document"} small={child} />
       <div className="min-w-0 flex-1">
         <Input aria-label="Material title" dir="auto" style={{ width: `calc(${Math.ceil((item.title.length + 1) / TITLE_STEP) * TITLE_STEP}ch + 1rem)` }} className="-ms-2 h-7 max-w-full border-transparent bg-transparent px-2 font-medium shadow-none hover:border-input focus-visible:border-ring disabled:opacity-100 dark:bg-transparent" value={item.title} maxLength={250} disabled={disabled}
           onFocus={() => setEditing(true)} onBlur={() => setEditing(false)} onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }} onChange={e => onTitle(e.target.value)} />

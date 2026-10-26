@@ -13,6 +13,13 @@ function countItems(items: ContentItem[]) {
   return items.length === 1 ? `${/^[aeiou]/.test(noun) ? "an" : "a"} ${noun}` : plural(items.length, noun);
 }
 
+/** Whether two stored documents are the same; parsing puts keys in schema order, since jsonb reorders them. */
+export function sameDocument(a: unknown, b: unknown) {
+  const parse = (value: unknown) => { const parsed = documentSchema.safeParse(value); return parsed.success ? JSON.stringify(parsed.data) : undefined; };
+  const left = parse(a);
+  return left !== undefined && left === parse(b);
+}
+
 /** What changed from the previous document to the next one. An empty `headline` means nothing changed. */
 export function revisionChanges(previous: ContentDocument | null, next: ContentDocument): ChangeSummary {
   if (!previous) return { headline: `Published with ${plural(next.items.length, "material")}`, fields: next.items.length ? ["Material"] : [], lines: [], details: next.items.map(item => `${KIND_LABELS[item.kind]} “${item.title}”`) };
@@ -70,12 +77,12 @@ export function revisionChanges(previous: ContentDocument | null, next: ContentD
 
 type Event<B> = { document: unknown; at: string; by: B };
 type Author = { id: string } | null;
-export type HistoryEntry<B> = { key: string; kind: "published" | "draft"; at: string; creators: B[]; reviewer: B | null; saves: number; summary: ChangeSummary | null };
+export type HistoryEntry<B> = { key: string; kind: "published" | "draft"; at: string; creators: B[]; saves: number; summary: ChangeSummary | null };
 
 /**
  * One timeline, newest first. A publication owns the draft saves made since the previous publication, so a unit
- * sent for review is one event: the people who saved the drafts created it and the publisher reviewed it (only when
- * they are someone else). Saves newer than the latest publication form a leading draft entry.
+ * sent for review is one event: the people who saved the drafts created it. Saves newer than the latest publication form a leading draft entry,
+ * left out when they end where the publication is (edits that were undone).
  */
 export function historyEntries<B extends Author>(drafts: (Event<B> & { kind: "created" | "saved" })[], revisions: (Event<B> & { revision: number })[]): HistoryEntry<B>[] {
   // A save-and-publish stores its draft and publication in one transaction; the publication sorts first.
@@ -88,6 +95,7 @@ export function historyEntries<B extends Author>(drafts: (Event<B> & { kind: "cr
   const parse = (value: unknown) => { const parsed = documentSchema.safeParse(value); return parsed.success ? parsed.data : undefined; };
   const only = (headline: string): ChangeSummary => ({ headline, fields: [], lines: [], details: [] });
   const unique = (people: B[]) => [...new Map(people.map(person => [person?.id ?? null, person])).values()];
+  if (groups[0]?.[0].kind === "draft" && groups[1] && sameDocument(groups[0][0].document, groups[1][0].document)) groups.shift();
   return groups.map((group, index) => {
     const newest = group[0], saves = group.filter(e => e.kind === "draft");
     const before = groups[index + 1]?.[0];
@@ -107,8 +115,7 @@ export function historyEntries<B extends Author>(drafts: (Event<B> & { kind: "cr
     }
     // Publications from before drafts were recorded have no saves; their publisher is the only known creator.
     const creators = unique(saves.length ? saves.map(e => e.by) : [newest.by]);
-    const reviewer = newest.kind === "published" && !creators.some(c => c?.id === newest.by?.id) ? newest.by : null;
-    return { key: newest.kind === "published" ? `revision-${newest.revision}` : `draft-${index}`, kind: newest.kind, at: newest.at, creators, reviewer, saves: saves.length, summary };
+    return { key: newest.kind === "published" ? `revision-${newest.revision}` : `draft-${index}`, kind: newest.kind, at: newest.at, creators, saves: saves.length, summary };
   });
 }
 
