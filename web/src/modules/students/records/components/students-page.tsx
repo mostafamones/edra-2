@@ -5,6 +5,8 @@ import { useCanonicalHref } from "@/modules/navigation";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { z } from "zod";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   getCoreRowModel, useReactTable, type ColumnSizingState, type Updater, type VisibilityState,
@@ -73,6 +75,10 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   const { preferences, hydrated, update: updatePreferences } = useTablePreferences(user?.id, academyId);
   const [params, updateParams] = useListParams(preferences.pageSize ?? DEFAULT_PAGE_SIZE);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const linkedRecord = useSearchParams().get("record");
+  useEffect(() => {
+    if (linkedRecord && z.guid().safeParse(linkedRecord).success) setEditingId(linkedRecord);
+  }, [linkedRecord]);
   const [archiveRequest, setArchiveRequest] = useState<ArchiveRequest | null>(null);
   const [groupChange, setGroupChange] = useState<RecordVersion[] | null>(null);
   const [groupsOpen, setGroupsOpen] = useState(false);
