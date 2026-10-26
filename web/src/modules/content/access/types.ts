@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { REDEMPTION_PATTERN, normalizeCoupon } from "../coupons/types";
+import { unitProgressSchema } from "../progress/types";
 
 export const accessSchema = z.object({ status: z.enum(["locked", "active", "expired", "revoked"]), expiresAt: z.string().nullable(), grantId: z.guid().nullable() });
 export type LearningAccess = z.infer<typeof accessSchema>;
@@ -17,11 +18,12 @@ export type AccessWorkspace = z.infer<typeof workspaceSchema>;
 export type AccessRecord = AccessWorkspace["records"][number];
 export const historySchema = z.array(z.object({ id: z.guid(), kind: z.string(), issuedAt: z.string(), startsAt: z.string(), expiresAt: z.string(), previousExpiry: z.string().nullable(), actorId: z.guid(), revokedAt: z.string().nullable(), reason: z.string().nullable() }));
 export type AccessHistory = z.infer<typeof historySchema>;
-export const learningListSchema = z.object({ units: z.array(z.object({ id: z.guid(), title: z.string(), materialCount: z.number().int(), publishedAt: z.string(), access: accessSchema })), hasMore: z.boolean() });
+export const learningListSchema = z.object({ units: z.array(z.object({ id: z.guid(), title: z.string(), materialCount: z.number().int(), publishedAt: z.string(), access: accessSchema, progress: unitProgressSchema.optional() })), hasMore: z.boolean() });
 export type LearningList = z.infer<typeof learningListSchema>;
 export const learningUnitSchema = z.object({
   id: z.guid(), title: z.string(), description: z.string(), accessDays: z.number().int().positive(), access: accessSchema, extensionAvailable: z.boolean(),
   couponType: z.string().nullable().optional(), prerequisitesMet: z.boolean().default(true),
+  progress: unitProgressSchema.optional(),
   prerequisites: z.array(z.object({ unitId: z.guid(), kind: z.enum(["access", "assignment", "quiz"]), assessmentId: z.guid().nullable(), unitTitle: z.string(), title: z.string(), submitted: z.boolean() })).default([]),
   items: z.array(z.object({ id: z.guid(), kind: z.enum(["explanation", "document", "assessment", "answer"]), title: z.string(), available: z.boolean(), assessmentKind: z.enum(["assignment", "quiz", "exam"]).nullable(), assessmentId: z.guid().optional() })),
 });
@@ -32,7 +34,7 @@ export function isValidAccessCode(value: string) { return REDEMPTION_PATTERN.tes
 export const redeemInput = requestInput.extend({ code: z.string().max(100).transform(normalizeUnitCode).refine(isValidAccessCode, "Enter a valid coupon.") });
 export function learningDate(value: string | null) { return value ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Cairo" }).format(new Date(value)) : "—"; }
 
-export function learningError(error: { message?: string } | null) {
+export function learningError(error: { message?: string; code?: string } | null) {
   if (!error) return;
   const messages: Record<string, string> = {
     EDRA_SESSION_INACTIVE: "Your session has ended. Sign in again.",
@@ -50,7 +52,8 @@ export function learningError(error: { message?: string } | null) {
     coupon_type_exists: "A coupon type with this name already exists in this scope.",
     coupon_type_in_use: "Units still use this coupon type. Change their coupon type first.",
     access_required: "Active unit access is required.", material_unavailable: "This material is not available.",
+    progress_unavailable: "Playback progress is unavailable. Close the video and reopen it.",
     validation: "Check the fields and try again.",
   };
-  throw new Error(messages[error.message ?? ""] ?? "Could not complete this action. Please retry.");
+  throw new Error(messages[error.code ?? ""] ?? messages[error.message ?? ""] ?? "Could not complete this action. Please retry.");
 }

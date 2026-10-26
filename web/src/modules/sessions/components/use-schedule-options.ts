@@ -25,5 +25,6 @@ export function useScheduleOptions(academyId: string, enabled = true) {
     lookup,
     loading: !schedules.data || !lookup,
     failed: schedules.isError || structure.isError || groups.isError,
+    retry: () => { void schedules.refetch(); void structure.refetch(); void groups.refetch(); },
   };
 }

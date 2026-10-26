@@ -21,6 +21,7 @@ Product references preserve the full reviewed wording and subsequent confirmed d
 - [Shared app boundaries](../../docs/engineering/application-boundaries.md) and [brand](../../docs/engineering/brand.md).
 - [Current API](api/README.md), [routing](technical/routing.md), [deployment](technical/deployment.md), the [standalone student exam release record](technical/student-exam-release.md) and the [development academy verification record](technical/development-academy-verification.md).
 - Existing module READMEs describe public APIs and implementation limits beside their source.
+- [Search and commands](../src/modules/navigation/README.md): current portal scope, shortcuts and permission-aware result sources.
 - [Native documentation](../../mobile/docs/README.md).
 
 Planning threads use product context and current integration evidence. Implementation plans are self-contained and assign only the relevant final product sections and engineering/API references. Temporary plans, rating worksheets and review queues are not implementation requirements. AGENTS.md remains the applicable workspace guidance while its final wording is reviewed.

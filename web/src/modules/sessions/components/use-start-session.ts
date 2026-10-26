@@ -22,10 +22,12 @@ export function useStartSession(academyId: string) {
   const queryClient = useQueryClient();
   const isCurrentAcademy = useAcademyScope();
   const keys = useRef(new Map<string, string>());
+  const pending = useRef(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   async function start(scheduleId: string) {
-    if (pendingId) return;
+    if (pending.current) return false;
+    pending.current = true;
     const targetAcademyId = academyId;
     const startKey = keys.current.get(scheduleId) ?? newUuid();
     keys.current.set(scheduleId, startKey);
@@ -36,11 +38,11 @@ export function useStartSession(academyId: string) {
         // Only a lost response keeps the key for a retry; definite answers start fresh next time.
         if (result.code !== "unavailable") keys.current.delete(scheduleId);
         if (isCurrentAcademy(targetAcademyId)) toast.error(result.message);
-        return;
+        return false;
       }
       keys.current.delete(scheduleId);
       await queryClient.invalidateQueries({ queryKey: sessionsRootKey(targetAcademyId) });
-      if (!isCurrentAcademy(targetAcademyId)) return;
+      if (!isCurrentAcademy(targetAcademyId)) return false;
       if (result.outcome === "existing") toast.info("This class is already live. Opened its session.");
       // A retried start returns the session it made, even if someone archived it since; that session
       // stays archived and read-only. Starting the class again uses a new key.
@@ -48,9 +50,12 @@ export function useStartSession(academyId: string) {
         toast.info("This start already opened a session that has since been archived. Showing it read-only; start the class again for a new session.");
       }
       router.push(href(`/app/attendance/${result.sessionId}`));
+      return true;
     } catch {
       if (isCurrentAcademy(targetAcademyId)) toast.error("Could not start the session. Check your connection and try again.");
+      return false;
     } finally {
+      pending.current = false;
       setPendingId(null);
     }
   }

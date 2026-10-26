@@ -1,5 +1,9 @@
 import { expect, it } from "vitest";
-import { learningUnitSchema, staffGrantInput, unitInput } from "./types";
+import { learningError, learningUnitSchema, staffGrantInput, unitInput } from "./types";
+
+it("recognizes an ended session returned as an API error code", () => {
+  expect(() => learningError({ code: "EDRA_SESSION_INACTIVE", message: "This session has ended or can only be used to set a new password. Sign in again." })).toThrow("Your session has ended. Sign in again.");
+});
 
 it("accepts Postgres UUID identities from the development academy without requiring UUID version bits", () => {
   const id = "12345678-1234-0234-1234-123456789abc";

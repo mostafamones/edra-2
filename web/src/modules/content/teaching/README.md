@@ -14,6 +14,8 @@ Every changed save bumps the existing attendance revision. A finalization opened
 
 `types.ts` validates trusted inputs/results and defines account/academy/session-scoped cache keys. `data.ts` owns live membership, RPC calls, paginated options and safe error mapping. `actions.ts` exposes cookie-authorized server actions. The session route composes the public UI; no new native API is introduced.
 
+Persisted academy/session/unit identifiers use PostgreSQL GUID syntax, including deterministic generated-academy identifiers without RFC UUID version/variant bits. This matches the existing membership and content boundaries; actor authority and database/RLS checks remain unchanged. New client request keys retain UUID validation.
+
 The picker preserves unsaved choices on failures, rejects duplicate selections, supports search, explicit refresh, a 200-unit limit, and confirms discarding edits. An updated saved revision requires an explicit reload; background refresh never overwrites local edits. Loading/error/empty/locked states are visible. Finalization displays the selected taught units and warns that the list will lock. Successful saves invalidate attendance; finalization and archive/restore invalidate taught-content reads. Server checks remain authoritative when another device changes state before the next refresh.
 
 ## Verification — 2026-10-19

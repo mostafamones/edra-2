@@ -8,8 +8,7 @@ import { IconBuilding, IconSchool as GraduationCap } from "@tabler/icons-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AssignmentsIcon, Calendar03Icon, FolderLibraryIcon, Home07Icon, Task01Icon, TeachingIcon } from "@hugeicons/core-free-icons";
 
-import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
+import { SearchMenu } from "../search/menu";
 
 import {
   Sidebar,
@@ -62,11 +61,7 @@ export function StudentSidebar({ academies = [] }: { academies?: StudentSidebarA
           <span className="truncate group-data-[collapsible=icon]:hidden">Edra Learning</span>
         </Link>
         <div className="mt-2 flex px-1 group-data-[collapsible=icon]:hidden">
-          <Button type="button" variant="outline" size="sm" aria-label="Command Menu"
-            className="min-w-0 flex-1 justify-start border-border! text-sidebar-foreground/75">
-            <span className="truncate font-normal">Search</span>
-            <Kbd className="ml-auto">⌘K</Kbd>
-          </Button>
+          <SearchMenu platform="student" academies={academies} />
         </div>
       </SidebarHeader>
       <SidebarContent className={open || isMobile ? "px-1" : ""}>
