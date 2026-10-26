@@ -25,6 +25,16 @@ do $$ begin
 end $$;
 
 begin;
+
+-- Fixture years start student learning when created; preparation is covered by student_booking.sql.
+create function public.edra_test_start_fixture_year() returns trigger language plpgsql as $fixture$
+begin
+  new.student_learning_started_at := coalesce(new.student_learning_started_at, now());
+  new.student_learning_start_source := coalesce(new.student_learning_start_source, 'legacy');
+  return new;
+end $fixture$;
+create trigger edra_test_fixture_year_started before insert on public.academic_years
+for each row execute function public.edra_test_start_fixture_year();
 create function pg_temp.check(ok boolean, label text) returns void language plpgsql as $$
 begin if ok is not true then raise exception 'Review check failed: %', label; end if; end $$;
 create function pg_temp.expect_error(statement text, expected text) returns void language plpgsql as $$

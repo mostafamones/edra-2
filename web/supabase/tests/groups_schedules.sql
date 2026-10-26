@@ -31,6 +31,16 @@ do $$ begin
 end $$;
 begin;
 
+-- Fixture years start student learning when created; preparation is covered by student_booking.sql.
+create function public.edra_test_start_fixture_year() returns trigger language plpgsql as $fixture$
+begin
+  new.student_learning_started_at := coalesce(new.student_learning_started_at, now());
+  new.student_learning_start_source := coalesce(new.student_learning_start_source, 'legacy');
+  return new;
+end $fixture$;
+create trigger edra_test_fixture_year_started before insert on public.academic_years
+for each row execute function public.edra_test_start_fixture_year();
+
 insert into auth.users (id) values
   ('11111111-1111-4111-8111-111111111111'),
   ('22222222-2222-4222-8222-222222222222'),
