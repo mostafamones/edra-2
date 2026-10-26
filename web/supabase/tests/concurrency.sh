@@ -1186,6 +1186,7 @@ grep -qi deadlock "$OUT"/a1a "$OUT"/a1b "$OUT"/a2a "$OUT"/a2b "$OUT"/a3a "$OUT"/
 
 # B. Public booking (EDRA-231) in its own academy: the last place, booking against invite onboarding,
 #    duplicate phones against staff creation, closure during submission and year start against closure.
+# ADMIN already owns the main fixture academy; use its manager permissions here through an admin role.
 BK="$(uuid)"; BK_YEAR="$(uuid)"; BK_GROUP="$(uuid)"; BK_GROUP2="$(uuid)"
 BK_USER="$(uuid)"
 psqlx >/dev/null <<SQL
@@ -1193,7 +1194,7 @@ insert into public.academies (id, name, slug, icon, subject, created_by)
   values ('$BK', 'Booking race $RUN', 'booking-race-$RUN', 'school', 'Math', '$ADMIN');
 update public.academic_years set id = '$BK_YEAR', start_year = 2030,
   student_learning_started_at = now(), student_learning_start_source = 'legacy' where academy_id = '$BK';
-insert into public.academy_memberships (academy_id, user_id, role, created_by) values ('$BK', '$ADMIN', 'owner', '$ADMIN');
+insert into public.academy_memberships (academy_id, user_id, role, created_by) values ('$BK', '$ADMIN', 'admin', '$ADMIN');
 insert into public.academy_levels (academy_id, level_id, sort_order) values ('$BK', 'secondary-1', 10);
 insert into public.groups (id, academy_id, academic_year_id, level_id, name, capacity) values
   ('$BK_GROUP', '$BK', '$BK_YEAR', 'secondary-1', 'Last place', 1),
@@ -1255,7 +1256,7 @@ psqlx >/dev/null <<SQL
 insert into public.academies (id, name, slug, icon, subject, created_by)
   values ('$BK2', 'Year start race $RUN', 'year-start-race-$RUN', 'school', 'Math', '$ADMIN');
 update public.academic_years set id = '$BK2_YEAR', start_year = 2030 where academy_id = '$BK2';
-insert into public.academy_memberships (academy_id, user_id, role, created_by) values ('$BK2', '$ADMIN', 'owner', '$ADMIN');
+insert into public.academy_memberships (academy_id, user_id, role, created_by) values ('$BK2', '$ADMIN', 'admin', '$ADMIN');
 SQL
 hold b5a b5b "$as_admin select public.start_year_learning('$BK2','$BK2_YEAR');"
 start b5b "update public.academic_years set closed_at = now() where id = '$BK2_YEAR';"
