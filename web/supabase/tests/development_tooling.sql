@@ -109,6 +109,16 @@ insert into edra_private.dev_accounts (run_id, logical_id, kind, display_name, p
   ('d0e10000-0000-4000-8000-0000000000e1', 'account:student:01', 'student', 'Student 01', '+201099000003',
     'd0e10000-0000-4000-8000-000000000004', 'd0e10000-0000-4000-8000-0000000000d1', 'v1.a.b.c', 'loaded');
 
+-- Staff preview targets use live academy memberships, as a loaded synthetic run does.
+insert into public.academies (id, name, slug, icon, subject, created_by) values
+  ('d0e10000-0000-4000-8000-0000000000f1', 'Preview test academy', 'development-tooling-test', 'school', 'Math',
+    'd0e10000-0000-4000-8000-000000000002');
+insert into public.academy_memberships (academy_id, user_id, role, created_by) values
+  ('d0e10000-0000-4000-8000-0000000000f1', 'd0e10000-0000-4000-8000-000000000002', 'owner',
+    'd0e10000-0000-4000-8000-000000000002'),
+  ('d0e10000-0000-4000-8000-0000000000f1', 'd0e10000-0000-4000-8000-000000000003', 'instructor',
+    'd0e10000-0000-4000-8000-000000000002');
+
 -- Preview staff labels follow current profiles, while registry metadata stays reproducible.
 update public.profiles set full_name = 'Updated owner', display_name = 'Owner nickname'
 where id = 'd0e10000-0000-4000-8000-000000000002';
