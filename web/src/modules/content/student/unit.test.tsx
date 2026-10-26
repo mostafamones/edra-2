@@ -18,6 +18,16 @@ function open(initial = unit()) {
 }
 beforeEach(() => { vi.clearAllMocks(); mocks.auth.mockReturnValue({ user: { id: userId }, loading: false }); });
 afterEach(cleanup);
+it("shows acknowledged unit completion and material completion independently of access", async () => {
+  const initial = unit();
+  initial.items.push({ id: "video", kind: "explanation", title: "Lesson video", available: false, assessmentKind: null });
+  initial.progress = { completed: 1, total: 2, items: [{ itemId: "video", completed: true, watchedSeconds: 90, durationSeconds: 100, positionSeconds: 95 }] };
+  open(initial);
+  expect(await screen.findByText("1 of 2 completed")).toBeTruthy();
+  expect(screen.getByText("Completed")).toBeTruthy();
+  expect(screen.getByRole("progressbar", { name: "Unit completion" }).getAttribute("aria-valuenow")).toBe("50");
+  expect(screen.queryByRole("button", { name: "Open protected material" })).toBeNull();
+});
 it.each(["locked", "revoked"] as const)("locks assignment links when unit access is %s, even with stale available metadata", async status => {
   const initial = unit(); initial.access.status = status;
   initial.items = [{ id: "assignment", kind: "assessment", title: "Homework", available: true, assessmentKind: "assignment", assessmentId: "homework" }];

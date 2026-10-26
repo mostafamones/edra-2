@@ -52,6 +52,10 @@ Within a unit, students watch available explanation videos, open resources, comp
 
 Unit progress and announced assessment performance describe different parts of the student’s learning. Watching a lesson does not create an assessment result.
 
+Student progress confirmed by the owner, 2026-10-25: an explanation video completes after the student watches at least 90% of its unique timeline. Seeking does not count, and replaying a section does not count twice. Save the latest playback position separately for resume. Documents are excluded from completion. Each attached assessment completes through its official submission; answer materials are optional and excluded. Unit completion is the number of completed explanation videos and submitted attached assessments out of those currently published. Progress never grants access, extends access or satisfies a prerequisite.
+
+Keep activity per student annual record, unit and video asset. Reusing material in a different unit or academic year starts separate progress. Adding or replacing published videos recalculates current completion while preserving earlier viewing history. Renaming or reordering the same video does not reset activity; removed material stays in history and leaves the current denominator. The most recently opened playback session controls resume position; older sessions may contribute watched coverage but cannot overwrite that newer position. Save periodically and on pause/close; abrupt browser or network loss may leave the last few seconds unsaved. Progress reflects player-reported activity, not verified mastery.
+
 Access duration, answer unlocks, playback restrictions and assessment attempt limits are defined in their own rules.
 
 ## Teaching in sessions

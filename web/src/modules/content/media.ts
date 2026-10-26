@@ -23,7 +23,9 @@ export async function synchronizeVideo(localAssetId: string, uploadId: string) {
   const status = providerAsset?.status === "ready" && signed ? "ready"
     : providerAsset?.status === "errored" || ["errored", "cancelled", "timed_out"].includes(upload.status) ? "failed"
     : providerAsset ? "processing" : "uploading";
-  const { error } = await mediaAdmin().from("content_assets").update({ status, provider_asset_id: providerAsset?.id ?? null, playback_id: signed?.id ?? null })
+  const duration = providerAsset?.duration;
+  const { error } = await mediaAdmin().from("content_assets").update({ status, provider_asset_id: providerAsset?.id ?? null, playback_id: signed?.id ?? null,
+    ...(typeof duration === "number" && Number.isFinite(duration) && duration > 0 && duration <= 43200 ? { duration_seconds: duration } : {}) })
     .eq("id", localAssetId).eq("provider_upload_id", uploadId).neq("status", "ready").is("deletion_token", null);
   if (error) throw new Error("Could not save video processing status.");
   return status;

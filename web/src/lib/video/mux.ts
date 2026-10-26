@@ -18,7 +18,7 @@ export async function muxRequest<T>(path: string, body?: object, method = body ?
   return ((await response.json()) as MuxResponse<T>).data;
 }
 export type MuxUpload = { id: string; url: string; status: string; asset_id?: string };
-export type MuxAsset = { id: string; status: string; playback_ids?: { id: string; policy: string }[] };
+export type MuxAsset = { id: string; status: string; duration?: number; playback_ids?: { id: string; policy: string }[] };
 export async function deleteVideo(assetId: string | null, uploadId: string | null) {
   // A waiting direct upload must be cancelled before a late PUT can create an asset.
   // If processing won the race, reread it and delete the resulting asset instead.
