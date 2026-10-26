@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowDown01Icon, Cancel01Icon, SquareUnlock01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -31,9 +32,9 @@ export function PrerequisitePicker({ units, selected, onChange, disabled }: { un
     onChange([...selected, ...access, { unitId, kind: assessment.kind, assessmentId: assessment.id }]);
   }
   return <section aria-label="Prerequisites" className="space-y-3">
-    <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-medium">Prerequisites</h3>
+    <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-medium text-muted-foreground">Prerequisites</h3>
       <Dialog onOpenChange={open => { if (!open) { setSearch(""); setExpanded(null); } }}>
-        <DialogTrigger asChild><Button variant="outline" size="sm" disabled={disabled}>{ids.length ? "Edit prerequisites" : "Add prerequisite"}</Button></DialogTrigger>
+        <DialogTrigger asChild><Button variant="ghost" size="sm" className="text-muted-foreground" aria-label="Add prerequisite" disabled={disabled}><HugeiconsIcon icon={Add01Icon} strokeWidth={1.5} aria-hidden="true" />Add</Button></DialogTrigger>
         <DialogContent className="sm:max-w-xl" aria-describedby={undefined}><DialogHeader><DialogTitle>Prerequisites</DialogTitle></DialogHeader>
           <Input aria-label="Search prerequisite units or assessments" type="search" value={search} onChange={event => setSearch(event.target.value)} />
           <div className="max-h-[60svh] space-y-2 overflow-y-auto">
@@ -62,6 +63,6 @@ export function PrerequisitePicker({ units, selected, onChange, disabled }: { un
       const assessments = selected.filter(r => r.unitId === id && r.kind !== "access");
       return <div key={id} className="flex items-center justify-between gap-3 rounded-lg border p-3"><div className="min-w-0 space-y-1"><p className="truncate text-sm font-medium">{unit?.title ?? "Unavailable prerequisite unit"}</p><div className="flex flex-wrap gap-1"><Badge variant="secondary">Previously unlocked</Badge>{assessments.map(r => <Badge key={`${r.kind}:${r.assessmentId}`} variant="outline">{unit?.assessments?.find(a => a.id === r.assessmentId && a.kind === r.kind)?.title ?? `Unavailable ${r.kind}`}</Badge>)}</div></div><Button variant="ghost" size="icon-sm" disabled={disabled} aria-label={`Remove ${unit?.title ?? "unavailable prerequisite"}`} onClick={() => onChange(selected.filter(r => r.unitId !== id))}><HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.5} /></Button></div>;
     })}
-    {!ids.length && <p className="text-sm text-muted-foreground">No prerequisites</p>}
+    {!ids.length && <Empty className="gap-2 rounded-lg bg-muted/30 p-6"><EmptyHeader><EmptyMedia variant="icon"><HugeiconsIcon icon={SquareUnlock01Icon} strokeWidth={1.5} aria-hidden="true" /></EmptyMedia><EmptyTitle className="text-sm font-normal text-muted-foreground">No prerequisites</EmptyTitle></EmptyHeader></Empty>}
   </section>;
 }

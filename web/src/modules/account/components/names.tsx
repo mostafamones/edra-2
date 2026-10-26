@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { SettingsRow } from "@/components/shared/settings-row";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { ActionBar, ActionBarSeparator } from "@/components/ui/action-bar";
 import { PREVIEW_STATUS_KEY } from "@/modules/development";
 
 import { saveProfile } from "../actions";
@@ -58,17 +58,17 @@ export function ProfileNames({ userId, profile }: { userId: string; profile: Acc
       </div>
       {(isDirty || formError) && (
         // Pinned like the students bulk bar so the settings list never grows a row.
-        <div role="region" aria-label="Unsaved changes" className="fixed bottom-6 left-1/2 z-40 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center gap-1 rounded-lg border bg-popover p-1.5 text-sm shadow-lg animate-in fade-in slide-in-from-bottom-2">
+        <ActionBar aria-label="Unsaved changes">
           {formError
             ? <span role="alert" className="px-2 text-destructive">{formError}</span>
             : <span className="px-2 font-medium">Unsaved changes</span>}
-          <Separator orientation="vertical" className="mx-1 h-5! self-center!" />
+          <ActionBarSeparator />
           <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => { form.reset(); setFormError(null); }}>Cancel</Button>
           <Button type="submit" size="sm" disabled={pending || !isDirty}>
             {pending && <HugeiconsIcon icon={Loading03Icon} strokeWidth={1.5} className="animate-spin" aria-hidden="true" />}
             Save
           </Button>
-        </div>
+        </ActionBar>
       )}
     </form>
   );

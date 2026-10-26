@@ -9,7 +9,6 @@ import { unwrapContent, type ContentItem } from "../types";
 import { AddMaterial } from "./add-material";
 import { MaterialBar } from "./bar";
 import { materialLabel, MaterialRow, type MaterialDrop } from "./material";
-import { ReuseMaterial } from "./reuse";
 import { dropOptions, linkMaterial, materialTree, moveMaterial, parentOf, placeMaterial, removeMaterial, unlinkMaterial } from "./tree";
 import type { MaterialUpload } from "./uploader";
 import { UploadedFiles } from "./uploads";
@@ -50,7 +49,7 @@ export function MaterialList({ academyId, unitId, version, items, assets, editab
     document.addEventListener("pointerdown", outside);
     return () => { document.removeEventListener("keydown", keys); document.removeEventListener("pointerdown", outside); };
   }, [selected, onItems, assets]);
-  // Drops edit the draft directly; Save draft is the confirmation.
+  // Drops edit the draft directly; it autosaves and Undo reverts.
   function dropOn(target: ContentItem, drop: MaterialDrop) {
     const source = dragged; setDragged(null);
     if ("file" in drop) { const parent = target.kind === "assessment" || target.kind === "explanation" ? target : parentOf(items, target); if (parent) upload.start(drop.file, parent); return; }
@@ -78,10 +77,6 @@ export function MaterialList({ academyId, unitId, version, items, assets, editab
   const canEnd = !!dragged && dragged.id !== tree.at(-1)?.item.id;
   return <div className="flex flex-col gap-8">
     <section aria-labelledby="material-title" className="flex flex-col gap-2">
-      <div className="flex min-h-8 items-center gap-2 px-2">
-        <h2 id="material-title" className="text-base font-semibold text-foreground/80">Material</h2>
-        {editable && <div className="ms-auto"><ReuseMaterial academyId={academyId} unitId={unitId} version={version} disabled={disabled || dirty} onChange={onChanged} /></div>}
-      </div>
       {tree.length > 0
         ? <ol aria-label="Unit material" className="divide-y divide-border/60 overflow-hidden rounded-lg bg-card">
           {tree.map(node => row(node.item, { children: node.children.map(c => row(c, { child: true })) }))}
@@ -90,7 +85,7 @@ export function MaterialList({ academyId, unitId, version, items, assets, editab
         : !editable && <Empty className="min-h-48 rounded-lg bg-card"><EmptyHeader><EmptyMedia variant="icon"><HugeiconsIcon icon={BookOpen01Icon} strokeWidth={1.5} aria-hidden="true" /></EmptyMedia><EmptyTitle>No material yet</EmptyTitle></EmptyHeader></Empty>}
       {editable && <AddMaterial academyId={academyId} unitId={unitId} version={version} items={items} dirty={dirty} disabled={disabled} upload={upload} onAdd={onAdd} onCreated={onChanged} />}
     </section>
-    {selected && <MaterialBar item={selected} label={materialLabel(selected, assets.find(a => a.id === selected.assetId))} child={!!parent}
+    {selected && <MaterialBar item={selected} label={materialLabel(selected, assets.find(a => a.id === selected.assetId))} document={isDocument(selected)} child={!!parent}
       first={siblings[0]?.id === selected.id} last={siblings.at(-1)?.id === selected.id}
       onMove={delta => onItems(current => moveMaterial(current, selected.id, delta, isDocument))} onFile={file => upload.start(file, selected)}
       onUnlink={() => onItems(current => unlinkMaterial(current, selected.id, isDocument))}

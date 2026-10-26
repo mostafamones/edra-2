@@ -34,7 +34,7 @@ export function StudentMaterial({ academyId, unitId, itemId, title, expiresAt }:
   return <><Button variant="outline" size="sm" disabled={busy} onClick={open}><IconPlayerPlay />{busy ? "Opening…" : "Open"}</Button>{!opened && error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     <Dialog open={opened} onOpenChange={value => { setOpened(value); if (!value) { setMaterial(null); setError(""); } }}><DialogContent aria-describedby={undefined} className="sm:max-w-3xl"><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      {material?.kind === "video" ? <MuxPlayer playbackId={material.playbackId} tokens={{ playback: material.token, thumbnail: material.thumbnailToken, storyboard: material.storyboardToken }} metadata={{ video_title: title }} streamType="on-demand" autoPlay={false} /> : material?.kind === "document" ? <Button asChild><a href={material.url} target="_blank" rel="noopener noreferrer"><IconExternalLink />Open document</a></Button> : null}
+      {material?.kind === "video" ? <MuxPlayer playbackId={material.playbackId} tokens={{ playback: material.token, thumbnail: material.thumbnailToken, storyboard: material.storyboardToken }} metadata={{ video_title: title }} streamType="on-demand" autoPlay={false} className="max-h-[70dvh]" /> : material?.kind === "document" ? <Button asChild><a href={material.url} target="_blank" rel="noopener noreferrer"><IconExternalLink />Open document</a></Button> : null}
       <Button variant="outline" disabled={busy} onClick={open}><IconRefresh />Refresh access</Button>
     </DialogContent></Dialog>
   </>;

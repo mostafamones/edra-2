@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { FloatingSheet, FloatingSheetContent, FloatingSheetHeader, FloatingSheetTitle, FloatingSheetTrigger } from "@/components/ui/floating-sheet";
 import { unitPanelOptions, type UnitPanels } from "../panels";
 import type { UnitHistory } from "../data";
@@ -29,7 +30,7 @@ export function VersionHistory({ academyId, unitId, userId, live, disabled, onSu
   const liveKey = live ? query.data?.find(entry => entry.kind === "published")?.key : undefined;
   const withYear = new Set(query.data?.map(entry => new Date(entry.at).getFullYear())).size > 1;
   return <FloatingSheet open={open} onOpenChange={setOpen}>
-    <FloatingSheetTrigger asChild><Button variant="outline"><HugeiconsIcon icon={Clock01Icon} strokeWidth={1.5} aria-hidden="true" />History</Button></FloatingSheetTrigger>
+    <Tooltip><TooltipTrigger asChild><FloatingSheetTrigger asChild><Button variant="ghost" size="icon" aria-label="History"><HugeiconsIcon icon={Clock01Icon} strokeWidth={1.5} /></Button></FloatingSheetTrigger></TooltipTrigger><TooltipContent>History</TooltipContent></Tooltip>
     <FloatingSheetContent className="gap-0" aria-describedby={undefined}>
       <FloatingSheetHeader className="border-b">
         <FloatingSheetTitle className="text-lg font-semibold">Version history</FloatingSheetTitle>
@@ -52,13 +53,16 @@ type Action = { label: string; icon: typeof SentIcon; run: () => void };
 
 /** "You", "You and Omar", "Mona, Omar and 2 others". */
 function authorNames(authors: Author[], userId: string) {
-  const names = authors.map(a => a?.id === userId ? "You" : a?.name?.split(" ").slice(0, 2).join(" ") ?? "Unknown staff member");
+  const names = authors.map(a => a?.id === userId ? "You" : a!.name!.split(" ").slice(0, 2).join(" "));
   if (names.length <= 2) return names.map(a => a.split(" ").slice(0, 1)).join(", ");
   const others = names.length - 1;
   return `${names.slice(0, 1).join(" & ")}, ${others} other${others === 1 ? "" : "s"}`;
 }
 
-function People({ authors, userId }: { authors: Author[]; userId: string }) {
+function People({ authors: all, userId }: { authors: Author[]; userId: string }) {
+  // Saves by removed or unrecorded staff are left out; an entry with no known author is untracked.
+  const authors = all.filter(a => a && (a.id === userId || a.name));
+  if (!authors.length) return <span className="text-muted-foreground">Untracked</span>;
   return <div className="flex min-w-0 items-center gap-2">
     <div className="flex shrink-0 -space-x-1.5">{authors.slice(0, 3).map((author, i) => <Avatar key={author?.id ?? i} aria-hidden="true" className="size-5 ring-2 ring-muted"><AvatarImage src={author?.avatarUrl} alt="" /><AvatarFallback className="text-[10px]">{author?.name?.slice(0, 1).toUpperCase() ?? "?"}</AvatarFallback></Avatar>)}</div>
     <span dir="auto" className="min-w-0 truncate font-semibold text-foreground/90">{authorNames(authors, userId)}</span>
@@ -105,7 +109,6 @@ function Entry({ entry, userId, live, withYear, last, disabled, actions }: { ent
                 {specifics.length > 0 && <CollapsibleTrigger asChild><Button variant="ghost" size="icon-xs" aria-label="Show details" className="-my-0.5 -mr-1 shrink-0 text-muted-foreground [&[data-state=open]>svg]:rotate-180"><HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={1.5} className="transition-transform" aria-hidden="true" /></Button></CollapsibleTrigger>}
               </div>
             </Row>}
-          {entry.reviewer && <Row label="Reviewed"><People authors={[entry.reviewer]} userId={userId} /></Row>}
         </dl>
         {specifics.length > 0 && <CollapsibleContent><ul dir="auto" className="mt-2.5 space-y-1 border-t border-foreground/10 pt-2.5 text-xs text-foreground/80">{specifics.map((line, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-foreground/30" aria-hidden="true" />{line}</li>)}</ul></CollapsibleContent>}
       </Collapsible>

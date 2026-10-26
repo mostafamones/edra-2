@@ -32,7 +32,7 @@ it("joins two changes and reports removals without a spurious reorder", () => {
   expect(revisionChanges(base, base).headline).toBe("");
 });
 
-it("folds draft saves into the publication they led to and names the reviewer", () => {
+it("folds draft saves into the publication they led to", () => {
   const mona = { id: "mona" }, omar = { id: "omar" };
   const draft = { ...base, title: "Draft title" }, more = { ...draft, accessDays: 14 };
   const entries = historyEntries(
@@ -40,19 +40,26 @@ it("folds draft saves into the publication they led to and names the reviewer", 
       { kind: "saved", document: { ...base, description: "x" }, at: "2026-10-01T12:00:00Z", by: mona }, { kind: "created", document: { ...base, items: [] }, at: "2026-10-01T00:00:00Z", by: mona }],
     [{ revision: 1, document: base, at: "2026-10-02T00:00:00Z", by: omar }],
   );
-  expect(entries.map(e => [e.kind, e.creators, e.reviewer, e.saves, e.summary?.headline])).toEqual([
-    ["draft", [omar, mona], null, 2, "Renamed the unit and changed access to 14 days"],
-    ["published", [mona], omar, 2, "Published with 2 materials"],
+  expect(entries.map(e => [e.kind, e.creators, e.saves, e.summary?.headline])).toEqual([
+    ["draft", [omar, mona], 2, "Renamed the unit and changed access to 14 days"],
+    ["published", [mona], 2, "Published with 2 materials"],
   ]);
   expect(historyEntries([{ kind: "saved", document: { bad: true }, at: "2026-10-01T00:00:00Z", by: null }], [])[0].summary).toBeNull();
 });
 
-it("has no reviewer when the creator published, and starts a never-published unit at creation", () => {
+it("leaves out trailing saves that end where the live publication is", () => {
+  const omar = { id: "omar" };
+  // jsonb returns keys in its own order; the comparison must not care.
+  const stored = Object.fromEntries(Object.entries(base).reverse());
+  const entries = historyEntries([{ kind: "saved", document: base, at: "2026-10-03T00:00:00Z", by: omar }, { kind: "saved", document: { ...base, title: "Tried" }, at: "2026-10-02T12:00:00Z", by: omar }],
+    [{ revision: 1, document: stored, at: "2026-10-02T00:00:00Z", by: omar }]);
+  expect(entries.map(e => e.kind)).toEqual(["published"]);
+});
+
+it("credits the publisher of legacy revisions and starts a never-published unit at creation", () => {
   const omar = { id: "omar" }, at = "2026-10-01T00:00:00Z";
-  const same = historyEntries([{ kind: "saved", document: base, at, by: omar }], [{ revision: 1, document: base, at, by: omar }]);
-  expect(same.map(e => [e.creators, e.reviewer])).toEqual([[[omar], null]]);
   const legacy = historyEntries([], [{ revision: 1, document: base, at, by: omar }]);
-  expect(legacy.map(e => [e.creators, e.reviewer, e.saves])).toEqual([[[omar], null, 0]]);
+  expect(legacy.map(e => [e.creators, e.saves])).toEqual([[[omar], 0]]);
   const fresh = historyEntries([{ kind: "saved", document: { ...base, description: "x" }, at: "2026-10-02T00:00:00Z", by: omar }, { kind: "created", document: { ...base, items: [] }, at, by: omar }], []);
   expect(fresh[0].summary).toEqual({ headline: "Created the unit", fields: ["Description", "Material"], lines: ["Description updated"], details: ["Added video “Intro”", "Added document “Notes”"] });
 });
