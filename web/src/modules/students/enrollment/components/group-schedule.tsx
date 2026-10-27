@@ -1,4 +1,5 @@
-import { IconCalendarClock } from "@tabler/icons-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Calendar03Icon } from "@hugeicons/core-free-icons";
 
 import { describeGroupSchedule } from "../schedule";
 import type { EnrollmentProgram } from "../types";
@@ -7,7 +8,7 @@ import type { EnrollmentProgram } from "../types";
 export function GroupSchedule({ slots }: { slots: EnrollmentProgram["groups"][number]["slots"] }) {
   const text = describeGroupSchedule(slots);
   if (!text) return null;
-  return <span className="flex items-center gap-1.5 text-xs opacity-80"><IconCalendarClock aria-hidden="true" className="size-3.5 shrink-0" />{text}</span>;
+  return <span className="flex items-center gap-1.5 text-xs opacity-80"><HugeiconsIcon icon={Calendar03Icon} strokeWidth={1.5} aria-hidden="true" className="size-3.5 shrink-0" />{text}</span>;
 }
 
 /** "12 seats left" for a capacity-limited group, the number emphasized. */

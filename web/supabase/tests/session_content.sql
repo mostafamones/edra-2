@@ -1,5 +1,15 @@
 -- Disposable GitHub Actions database only; all fixtures roll back.
 begin;
+
+-- Fixture years start student learning when created; preparation is covered by student_booking.sql.
+create function public.edra_test_start_fixture_year() returns trigger language plpgsql as $fixture$
+begin
+  new.student_learning_started_at := coalesce(new.student_learning_started_at, now());
+  new.student_learning_start_source := coalesce(new.student_learning_start_source, 'legacy');
+  return new;
+end $fixture$;
+create trigger edra_test_fixture_year_started before insert on public.academic_years
+for each row execute function public.edra_test_start_fixture_year();
 do $$ begin
   if (select count(*) from edra_db_test.target)<>1 or not exists(select 1 from edra_db_test.target where name like 'edra-db-check-%') then raise exception 'Isolated Edra test target required'; end if;
   if has_function_privilege('anon','public.save_session_content(uuid,uuid,integer,jsonb,uuid)','execute')

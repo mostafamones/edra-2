@@ -7,13 +7,13 @@ export function isStudentInviteToken(value: unknown): value is string {
   return typeof value === "string" && TOKEN_PATTERN.test(value);
 }
 
-const academySchema = z.object({ id: z.guid(), name: z.string(), slug: z.string(), icon: z.string() });
+export const academySchema = z.object({ id: z.guid(), name: z.string(), slug: z.string(), icon: z.string() });
 
-const slotSchema = z.object({ weekday: z.number().int(), startsAt: z.string(), location: z.string().nullable() });
+export const slotSchema = z.object({ weekday: z.number().int(), startsAt: z.string(), location: z.string().nullable() });
 
 const groupSchema = z.object({ id: z.guid(), name: z.string(), full: z.boolean(), seatsLeft: z.number().int().nullable(), slots: z.array(slotSchema) });
 
-const programSchema = z.object({
+export const programSchema = z.object({
   levelId: z.string(),
   levelName: z.string(),
   trackId: z.guid().nullable(),
@@ -28,10 +28,26 @@ const studentSchema = z.object({
   groupName: z.string().nullable(),
 });
 
+/** Known account details offered to a signed-in first-time student on the booking form. */
+const prefillSchema = z.object({
+  fullName: z.string().nullable(),
+  studentPhone: z.string(),
+  parentPhone: z.string().nullable(),
+  levelId: z.string(),
+});
+
+export type BookingPrefill = z.infer<typeof prefillSchema>;
+
 const responseSchema = z.discriminatedUnion("result", [
   z.object({ result: z.literal("connected"), academy: academySchema }),
   z.object({ result: z.literal("existing"), academy: academySchema, student: studentSchema }),
-  z.object({ result: z.literal("enroll"), academy: academySchema, returning: z.boolean(), programs: z.array(programSchema) }),
+  // groupOptional is false only when booking settings require a group; the ordinary invite omits it.
+  z.object({
+    result: z.literal("enroll"), academy: academySchema, returning: z.boolean(), programs: z.array(programSchema),
+    groupOptional: z.boolean().default(true),
+  }),
+  // Booking entry for a first-time student: register through the public form instead.
+  z.object({ result: z.literal("form"), academy: academySchema, prefill: prefillSchema.optional() }),
   z.object({ result: z.literal("staff_help"), academy: academySchema, reason: z.enum(["archived", "conflict", "details"]) }),
   z.object({ result: z.enum(["closed", "unavailable", "level_unavailable", "group_full", "invalid_choice", "changed"]), academy: academySchema }),
   z.object({ result: z.enum(["invalid", "unverified", "setup_required", "unauthenticated"]) }),
@@ -69,7 +85,8 @@ export type EnrollmentSettings = Omit<z.infer<typeof enrollmentSettingsSchema>, 
 export const studentAcademySchema = z.object({
   academy: academySchema,
   startYear: z.number().nullable(),
-  access: z.enum(["active", "suspended", "no_current_year"]),
+  // not_started: the open year's student learning has not been started by a manager yet.
+  access: z.enum(["active", "suspended", "not_started", "no_current_year"]),
   record: z.object({
     fullName: z.string(),
     levelName: z.string().nullable(),

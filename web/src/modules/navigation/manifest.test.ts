@@ -23,13 +23,13 @@ describe("portal navigation manifest", () => {
         expect(prefix === "/app" ? findStaffItem(item.href) : findStudentItem(item.href)).toBe(item);
       }
     }
-    for (const href of ["/app/groups", "/app/groups/new", "/app/schedules", "/app/schedules/new", "/app/attendance", "/app/attendance/new", "/app/students", "/app/students/new"]) {
+    for (const href of ["/app/groups", "/app/groups/new", "/app/schedules", "/app/schedules/new", "/app/attendance", "/app/attendance/new", "/app/students", "/app/students/new", "/app/manage/bookings"]) {
       expect(findStaffItem(href)?.preview).toBeUndefined();
     }
   });
 
   it("keeps restricted staff sections out of Instructor navigation", () => {
-    for (const href of ["/app/manage/access", "/app/manage/bookings/review", "/app/manage/notifications", "/app/manage/integrations"]) {
+    for (const href of ["/app/manage/access", "/app/manage/notifications", "/app/manage/integrations"]) {
       const item = findStaffItem(href);
       expect(item).toBeDefined();
       expect(canViewStaffItem(item!, "instructor")).toBe(false);

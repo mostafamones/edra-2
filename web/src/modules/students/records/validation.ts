@@ -20,7 +20,8 @@ export const isParticipationType = (value: unknown): value is ParticipationType 
 
 const nullableId = z.union([z.guid(), z.literal(""), z.null()]).transform((value) => value || null);
 
-const fullName = z.string().trim()
+/** The student record name rule, shared with the public booking form. */
+export const studentNameSchema = z.string().trim()
   .min(1, "Enter the student’s name.")
   .max(200, "Keep the name to 200 characters or fewer.");
 
@@ -28,7 +29,7 @@ const fullName = z.string().trim()
 export const studentRecordInputSchema = z.object({
   academyId: z.guid(),
   academicYearId: z.guid(),
-  fullName,
+  fullName: studentNameSchema,
   studentPhone: phoneSchema,
   parentPhone: phoneSchema,
   levelId: z.string().trim().min(1, "Choose a level."),
@@ -84,7 +85,7 @@ export function isGroupCompatible(group: { level_id: string; track_id: string | 
 /** Form schema that validates raw values and produces the action input for one academy and year. */
 export function studentFormSchema(scope: { academyId: string; academicYearId: string }, context: PlacementContext) {
   return z.object({
-    fullName,
+    fullName: studentNameSchema,
     studentPhone: phoneSchema,
     parentPhone: phoneSchema,
     levelId: z.string().min(1, "Choose a level."),

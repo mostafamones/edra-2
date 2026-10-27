@@ -64,6 +64,15 @@ update public.content_assets set duration_seconds=100 where academy_id=pg_temp.l
 select pg_temp.lact('owner');
 select public.issue_content_access(pg_temp.lid('academy'),pg_temp.lid('unit'),pg_temp.lid('record-student'),gen_random_uuid());
 select public.issue_content_access(pg_temp.lid('academy'),pg_temp.lid('unit'),pg_temp.lid('record-second'),gen_random_uuid());
+-- Preparation blocks learning and progress even when a content grant already exists.
+set local role authenticated;
+select pg_temp.lact('student');
+select pg_temp.lerror(format('select public.list_my_content_units(%L)',pg_temp.lid('academy')),'student_unavailable');
+select pg_temp.lerror(format('select public.get_my_content_unit(%L,%L)',pg_temp.lid('academy'),pg_temp.lid('unit')),'student_unavailable');
+select pg_temp.lerror(format('select public.start_my_content_progress(%L,%L,%L)',pg_temp.lid('academy'),pg_temp.lid('unit'),gen_random_uuid()),'student_unavailable');
+reset role;
+select pg_temp.lact('owner');
+select public.start_year_learning(pg_temp.lid('academy'),pg_temp.lid('year'));
 set local role authenticated;
 select pg_temp.lact('student');
 do $$ declare item_id uuid; first_session uuid; newer_session uuid; response jsonb; progress jsonb; unit jsonb; begin

@@ -18,6 +18,9 @@ export type Database = {
         Row: {
           academy_id: string
           closed_at: string | null
+          student_learning_start_source: string | null
+          student_learning_started_at: string | null
+          student_learning_started_by: string | null
           created_at: string
           ends_on: string | null
           id: string
@@ -27,6 +30,9 @@ export type Database = {
         Insert: {
           academy_id: string
           closed_at?: string | null
+          student_learning_start_source?: string | null
+          student_learning_started_at?: string | null
+          student_learning_started_by?: string | null
           created_at?: string
           ends_on?: string | null
           id?: string
@@ -36,6 +42,9 @@ export type Database = {
         Update: {
           academy_id?: string
           closed_at?: string | null
+          student_learning_start_source?: string | null
+          student_learning_started_at?: string | null
+          student_learning_started_by?: string | null
           created_at?: string
           ends_on?: string | null
           id?: string
@@ -241,7 +250,8 @@ export type Database = {
           academy_id: string
           access_suspended_at: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
+          created_via: string
           id: string
           linked_at: string | null
           user_id: string | null
@@ -250,7 +260,8 @@ export type Database = {
           academy_id: string
           access_suspended_at?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
+          created_via?: string
           id?: string
           linked_at?: string | null
           user_id?: string | null
@@ -259,7 +270,8 @@ export type Database = {
           academy_id?: string
           access_suspended_at?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
+          created_via?: string
           id?: string
           linked_at?: string | null
           user_id?: string | null
@@ -479,7 +491,8 @@ export type Database = {
           academy_student_profile_id: string
           archived_at: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
+          created_via: string
           full_name: string
           id: string
           level_id: string
@@ -497,7 +510,8 @@ export type Database = {
           academy_student_profile_id: string
           archived_at?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
+          created_via?: string
           full_name: string
           id?: string
           level_id: string
@@ -515,7 +529,8 @@ export type Database = {
           academy_student_profile_id?: string
           archived_at?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
+          created_via?: string
           full_name?: string
           id?: string
           level_id?: string
@@ -6162,6 +6177,146 @@ export type Database = {
           },
         ]
       }
+      student_booking_links: {
+        Row: {
+          academy_id: string
+          created_at: string
+          created_by: string
+          token: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          created_by: string
+          token: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          created_by?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_booking_links_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: true
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_booking_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_booking_receipts: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          actor_id: string | null
+          annual_student_record_id: string
+          created_at: string
+          entry: string
+          fingerprint: string | null
+          id: string
+          retry_key: string | null
+          settings_revision: number
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          actor_id?: string | null
+          annual_student_record_id: string
+          created_at?: string
+          entry: string
+          fingerprint?: string | null
+          id?: string
+          retry_key?: string | null
+          settings_revision: number
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          actor_id?: string | null
+          annual_student_record_id?: string
+          created_at?: string
+          entry?: string
+          fingerprint?: string | null
+          id?: string
+          retry_key?: string | null
+          settings_revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_booking_receipts_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_booking_receipts_annual_student_record_id_fkey"
+            columns: ["annual_student_record_id"]
+            isOneToOne: true
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_booking_settings: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          allow_without_group: boolean
+          excluded_group_ids: string[]
+          is_open: boolean
+          excluded_level_ids: string[]
+          participation_mode: string
+          revision: number
+          excluded_track_ids: string[]
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          allow_without_group?: boolean
+          excluded_group_ids?: string[]
+          is_open?: boolean
+          excluded_level_ids?: string[]
+          participation_mode?: string
+          revision?: number
+          excluded_track_ids?: string[]
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          allow_without_group?: boolean
+          excluded_group_ids?: string[]
+          is_open?: boolean
+          excluded_level_ids?: string[]
+          participation_mode?: string
+          revision?: number
+          excluded_track_ids?: string[]
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_booking_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_code_assignments: {
         Row: {
           academic_year_id: string
@@ -7228,6 +7383,10 @@ export type Database = {
         Args: { p_academy_id: string; p_asset_id: string; p_token: string }
         Returns: undefined
       }
+      complete_student_booking_entry: {
+        Args: { p_group_id: string; p_token: string; p_track_id: string }
+        Returns: Json
+      }
       complete_student_invite: {
         Args: { p_group_id: string; p_token: string; p_track_id: string }
         Returns: Json
@@ -7828,6 +7987,8 @@ export type Database = {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: Json
       }
+      get_student_booking_form: { Args: { p_token: string }; Returns: Json }
+      get_student_booking_settings: { Args: { p_academy_id: string }; Returns: Json }
       get_student_code_settings: {
         Args: { p_academy_id: string }
         Returns: Json
@@ -7844,6 +8005,7 @@ export type Database = {
         Args: { p_academy_id: string }
         Returns: Json
       }
+      get_year_learning: { Args: { p_academy_id: string }; Returns: Json }
       is_academy_manager: {
         Args: { target_academy_id: string }
         Returns: boolean
@@ -7986,6 +8148,10 @@ export type Database = {
           p_page_size: number
           p_status: string
         }
+        Returns: Json
+      }
+      list_student_booking_registrations: {
+        Args: { p_academy_id: string; p_limit: number; p_offset: number }
         Returns: Json
       }
       list_student_import_rows: {
@@ -8201,6 +8367,7 @@ export type Database = {
         Returns: Json
       }
       preview_staff_invitation: { Args: { p_token: string }; Returns: Json }
+      preview_student_booking_entry: { Args: { p_token: string }; Returns: Json }
       preview_student_code_generation: {
         Args: {
           p_academy_id: string
@@ -8543,6 +8710,20 @@ export type Database = {
         }
         Returns: Json
       }
+      save_student_booking_settings: {
+        Args: {
+          p_academic_year_id: string
+          p_academy_id: string
+          p_allow_without_group: boolean
+          p_expected_revision: number
+          p_excluded_group_ids: string[]
+          p_excluded_level_ids: string[]
+          p_open: boolean
+          p_participation_mode: string
+          p_excluded_track_ids: string[]
+        }
+        Returns: Json
+      }
       save_student_code_settings: {
         Args: {
           p_academy_id: string
@@ -8735,6 +8916,10 @@ export type Database = {
         }
         Returns: string
       }
+      start_year_learning: {
+        Args: { p_academic_year_id: string; p_academy_id: string }
+        Returns: Json
+      }
       student_code_capacity: {
         Args: {
           p_academy_id: string
@@ -8855,6 +9040,22 @@ export type Database = {
       }
       submit_quiz_attempt: {
         Args: { p_key: string; p_quiz_id: string }
+        Returns: Json
+      }
+      submit_student_booking: {
+        Args: {
+          p_full_name: string
+          p_group_id: string
+          p_level_id: string
+          p_parent_phone: string
+          p_participation_type: string
+          p_retry_key: string
+          p_revision: number
+          p_student_phone: string
+          p_token: string
+          p_track_id: string
+          p_year_id: string
+        }
         Returns: Json
       }
       suspend_staff_member: {

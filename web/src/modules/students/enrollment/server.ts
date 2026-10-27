@@ -2,22 +2,32 @@ import { cookies } from "next/headers";
 
 import { createClient } from "@/lib/supabase/server";
 
-import { PENDING_STUDENT_INVITE_COOKIE } from "./pending";
-import { isStudentInviteToken, parseStudentJoinState, studentAcademySchema, type StudentAcademy, type StudentJoinState } from "./types";
+import { PENDING_STUDENT_INVITE_COOKIE, parsePendingStudentEntry, type PendingStudentEntry } from "./pending";
+import { parseStudentJoinState, studentAcademySchema, type StudentAcademy, type StudentJoinState } from "./types";
 
 export { PENDING_STUDENT_INVITE_COOKIE, pendingStudentInviteCookie } from "./pending";
+export type { PendingStudentEntry } from "./pending";
 
+/** The pending invite or booking entry, or null when none is pending or it is malformed. */
+export async function pendingStudentEntry(): Promise<PendingStudentEntry | null> {
+  const entry = parsePendingStudentEntry((await cookies()).get(PENDING_STUDENT_INVITE_COOKIE)?.value);
+  return entry === "invalid" ? null : entry;
+}
+
+/** The raw pending entry value, if any; callers use it to know that academy onboarding is waiting. */
 export async function pendingStudentInviteToken() {
   return (await cookies()).get(PENDING_STUDENT_INVITE_COOKIE)?.value ?? null;
 }
 
-/** Read-only preview of the pending invite for the signed-in account. Never links. */
+/** Read-only preview of the pending entry for the signed-in account. Never links. */
 export async function getStudentJoinState(): Promise<StudentJoinState> {
-  const token = await pendingStudentInviteToken();
-  if (!token) return { kind: "none" };
-  if (!isStudentInviteToken(token)) return { kind: "invalid" };
+  const entry = parsePendingStudentEntry((await cookies()).get(PENDING_STUDENT_INVITE_COOKIE)?.value);
+  if (!entry) return { kind: "none" };
+  if (entry === "invalid") return { kind: "invalid" };
   const db = await createClient();
-  const { data, error } = await db.rpc("preview_student_invite", { p_token: token });
+  const { data, error } = entry.kind === "booking"
+    ? await db.rpc("preview_student_booking_entry", { p_token: entry.token })
+    : await db.rpc("preview_student_invite", { p_token: entry.token });
   return error ? { kind: "error" } : parseStudentJoinState(data);
 }
 
