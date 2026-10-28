@@ -2,6 +2,7 @@ import { clearBrowserQueryCache } from "@/lib/query-client";
 import { newUuid } from "@/lib/uuid";
 import { setExamJournalAccount } from "@/modules/exams/browser";
 
+import { clearFailure } from "./failures/browser";
 import type { PreviewErrorCode, PreviewResult, PreviewStatus } from "./types";
 
 export const PREVIEW_STATUS_KEY = ["development", "preview-status"] as const;
@@ -61,6 +62,7 @@ export function onIdentityChange(listener: () => void): () => void {
 /** Drops client state from the previous identity before the browser loads the next one. */
 export async function leaveForIdentity(destination: string) {
   clearBrowserQueryCache();
+  clearFailure();
   await setExamJournalAccount(null);
   announceIdentityChange();
   window.location.assign(destination);

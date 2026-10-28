@@ -5,7 +5,7 @@ import { Geist_Mono, Noto_Sans_Arabic, Figtree, Poppins } from "next/font/google
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/modules/auth";
-import { DeveloperPreviewFrame } from "@/modules/development";
+import { DeveloperPreviewFrame, FailureStatusChip } from "@/modules/development";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -64,6 +64,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 </DeveloperPreviewFrame>
               </AuthProvider>
               <Toaster />
+              <FailureStatusChip />
             </TooltipProvider>
           </QueryProvider>
         </ThemeProvider>

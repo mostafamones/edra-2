@@ -6,7 +6,7 @@ import { platformOrigin, ROUTE_HEADER } from "../../../lib/routing";
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
-import { clearedControlCookie, endPreviewForSignOut } from "@/modules/development/server";
+import { clearedControlCookie, clearedFailureCookie, endPreviewForSignOut } from "@/modules/development/server";
 import { clearPendingStaffInvite } from "@/modules/staff/server";
 
 export async function POST() {
@@ -25,6 +25,7 @@ export async function POST() {
   response.cookies.set("edra_pending_student_invite", "", { httpOnly: true, maxAge: 0, path: "/", sameSite: "lax" });
   clearPendingStaffInvite(response);
   response.cookies.set(clearedControlCookie());
+  response.cookies.set(clearedFailureCookie());
   const policy = authCookieOptions();
   const names = new Set([AUTH_COOKIE_NAME, ...(await cookies()).getAll().map(cookie => cookie.name)]);
   for (const name of names) {
