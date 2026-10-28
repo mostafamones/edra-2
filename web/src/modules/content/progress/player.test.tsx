@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 const mocks = vi.hoisted(() => ({ start: vi.fn(), save: vi.fn(), clock: 0, startTime: 0,
@@ -26,7 +26,7 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 async function open(strict = false) {
   const content = <QueryClientProvider client={new QueryClient()}><LearningVideo academyId={academyId} unitId={unitId} itemId={itemId} title="Lesson" playbackId="mux" tokens={{ playback: "p", thumbnail: "t", storyboard: "s" }} /></QueryClientProvider>;
-  render(strict ? <StrictMode>{content}</StrictMode> : content);
+  await act(async () => { render(strict ? <StrictMode>{content}</StrictMode> : content); });
   await screen.findByRole("button", { name: "onPlaying" });
 }
 it("keeps checkpoint ordering across development effect cleanup/replay", async () => {
