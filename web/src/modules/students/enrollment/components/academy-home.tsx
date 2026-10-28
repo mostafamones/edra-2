@@ -1,17 +1,14 @@
-import Link from "next/link";
-import { IconAlertCircle, IconChevronRight, IconCircleCheck, IconFileCertificate } from "@tabler/icons-react";
+import { IconAlertCircle, IconCircleCheck } from "@tabler/icons-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { studentAcademyPath } from "@/lib/routing";
 
 import type { StudentAcademy } from "../types";
 
 const PARTICIPATION = { in_person: "In person", online_only: "Online only" } as const;
 
-/** A connected student's academy landing: current participation and online access status. */
+/** A connected student's academy: participation, and why online access is unavailable when it is. */
 export function StudentAcademyHome({ academy }: { academy: StudentAcademy }) {
   const record = academy.record;
   const year = academy.startYear ? `${academy.startYear}–${academy.startYear + 1}` : null;
@@ -65,16 +62,6 @@ export function StudentAcademyHome({ academy }: { academy: StudentAcademy }) {
         </Card>
       )}
 
-      {academy.access === "active" && (
-        <nav aria-label={`${academy.academy.name} sections`}>
-          <Button variant="outline" size="lg" className="w-full justify-between sm:w-auto" asChild>
-            <Link href={studentAcademyPath(academy.academy.slug, "exams")}>
-              <span className="flex items-center gap-2"><IconFileCertificate aria-hidden="true" />Exams</span>
-              <IconChevronRight aria-hidden="true" />
-            </Link>
-          </Button>
-        </nav>
-      )}
     </main>
   );
 }

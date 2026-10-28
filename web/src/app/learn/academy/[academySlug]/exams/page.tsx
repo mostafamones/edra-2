@@ -1,15 +1,10 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
-import { StudentExamList } from "@/modules/exams/server";
-import { getMyStudentAcademy } from "@/modules/students/server";
+import { studentListPath } from "@/lib/routing";
 
-/** A connected academy's Exams page. Unconnected accounts are not found. */
-export default async function StudentExamsPage({ params, searchParams }: PageProps<"/learn/academy/[academySlug]/exams">) {
+/** Earlier academy-scoped Exams links open the shared page filtered to that academy. */
+export default async function AcademyExamsPage({ params, searchParams }: PageProps<"/learn/academy/[academySlug]/exams">) {
   const { academySlug } = await params;
-  const { page } = await searchParams;
-  const connected = await getMyStudentAcademy(academySlug);
-  if (!connected) notFound();
-  const number = typeof page === "string" && /^[1-9]\d{0,3}$/.test(page) ? Number(page) : 1;
-  const { academy, access } = connected;
-  return <StudentExamList academy={{ id: academy.id, slug: academy.slug, name: academy.name, access }} page={number} />;
+  const query = Object.fromEntries(Object.entries(await searchParams).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[0] !== "academy"));
+  redirect(studentListPath("exams", academySlug, query));
 }

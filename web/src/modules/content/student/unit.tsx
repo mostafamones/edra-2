@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, File01Icon, PlayIcon, SquareLock01Icon } from "@hugeicons/core-free-icons";
 import { newUuid } from "@/lib/uuid";
-import { studentAcademyPath } from "@/lib/routing";
+import { studentAcademyPath, studentListPath } from "@/lib/routing";
 import { useAuth } from "@/modules/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import { accessLabels, isValidAccessCode, learningDate, normalizeUnitCode, type 
 import { KIND_LABELS, unwrapContent } from "../types";
 import { StudentMaterial } from "./material";
 import { LearningProgress } from "../progress/summary";
+import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 
 export function StudentLearningUnit({ academyId, academySlug, userId, initial }: { academyId: string; academySlug: string; userId: string; initial: LearningUnit }) {
   const cache = useQueryClient();
@@ -33,6 +34,9 @@ export function StudentLearningUnit({ academyId, academySlug, userId, initial }:
   }, initialData: initial, staleTime: 0, refetchInterval: 60000 });
   const unit = query.data;
   const assessmentAccess = unit.access.status === "active" || unit.access.status === "expired";
+  // Back leads to the list the unit appears in: My courses once started, otherwise Discover.
+  const started = unit.progress?.items.some((item) => item.completed || (item.watchedSeconds ?? 0) > 0) ?? false;
+  useBreadcrumbTitle(!loading && user?.id === userId ? unit.title : "Course", { label: started ? "My courses" : "Discover", href: studentListPath(started ? "courses" : "discover") });
   async function refresh() { await cache.invalidateQueries({ queryKey: ["learning", userId, academyId] }); }
   async function redeem() {
     const normalized = normalizeUnitCode(code);
@@ -51,7 +55,7 @@ export function StudentLearningUnit({ academyId, academySlug, userId, initial }:
   }
   if (loading || user?.id !== userId) return <main className="page-shell"><p role="status">{loading ? "Loading…" : "Reload to continue with your current account."}</p>{!loading && <Button onClick={() => window.location.reload()}>Reload</Button>}</main>;
   if (query.isError) return <main className="page-shell"><p role="alert">{query.error.message}</p><Button variant="outline" onClick={() => query.refetch()}>Retry</Button></main>;
-  return <main className="page-shell max-w-5xl"><Button asChild variant="ghost" className="self-start"><Link href={studentAcademyPath(academySlug)}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} />Content units</Link></Button>
+  return <main className="page-shell max-w-5xl"><Button asChild variant="ghost" className="self-start">{started ? <Link href={studentListPath("courses")}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} />My courses</Link> : <Link href={studentListPath("discover")}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} />Discover</Link>}</Button>
     <div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-bold">{unit.title}</h1><Badge variant="secondary">{accessLabels[unit.access.status]}</Badge></div>
     {unit.description && <p className="whitespace-pre-wrap">{unit.description}</p>}
     <LearningProgress progress={unit.progress} />

@@ -1,4 +1,6 @@
 import { createBrowserClient, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr'
+import { failureFetch } from '@/modules/development/failures/browser'
+
 import { authCookieOptions, isLegacyAuthCookie } from './cookie-policy'
 
 import type { Database } from './database.types'
@@ -9,6 +11,8 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookieOptions: authCookieOptions(),
+      // Development only: Developer mode's failure simulator.
+      ...(process.env.NODE_ENV !== 'production' && { global: { fetch: failureFetch } }),
       cookies: {
         getAll: () => typeof document === 'undefined' ? [] : parseCookieHeader(document.cookie).map(({ name, value }) => ({ name, value: value ?? '' })),
         setAll(cookiesToSet) {

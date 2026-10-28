@@ -23,7 +23,7 @@ describe("portal navigation manifest", () => {
         expect(prefix === "/app" ? findStaffItem(item.href) : findStudentItem(item.href)).toBe(item);
       }
     }
-    for (const href of ["/app/groups", "/app/groups/new", "/app/schedules", "/app/schedules/new", "/app/attendance", "/app/attendance/new", "/app/students", "/app/students/new", "/app/manage/bookings"]) {
+    for (const href of ["/app/students?groups=open", "/app/schedules", "/app/schedules/new", "/app/attendance", "/app/attendance/new", "/app/students", "/app/students/new", "/app/manage/bookings"]) {
       expect(findStaffItem(href)?.preview).toBeUndefined();
     }
   });

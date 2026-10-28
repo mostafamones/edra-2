@@ -87,10 +87,10 @@ export const STAFF_MANAGEMENT_NAV: readonly { label: string; items: readonly Man
     label: "Operations",
     items: [
       { label: "Coupons", href: "/app/manage/access" },
-      { label: "Messaging", href: "/app/manage/messages", also: ["/app/manage/notifications", "/app/manage/integrations"] },
+      { label: "Messages", href: "/app/manage/messages", also: ["/app/manage/notifications", "/app/manage/integrations"] },
     ],
   },
-  { label: "Personal", items: [{ label: "Profile", href: "/app/manage/account" }] },
+  { label: "Personal", items: [{ label: "Account", href: "/app/manage/account" }] },
 ];
 
 export const STAFF_GROUPS: readonly NavGroup[] = [
@@ -155,7 +155,8 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
       },
       {
         label: "Groups",
-        href: "/app/groups",
+        // Groups live in a panel on the Students page.
+        href: "/app/students?groups=open",
         icon: "groups",
       },
       {
@@ -279,11 +280,11 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
     label: "Operations",
     items: [
       {
-        label: "Message delivery",
+        label: "Messages",
         href: "/app/manage/messages",
         icon: "communications",
         preview: {
-          title: "Message delivery",
+          title: "Messages",
           purpose: "Follow the parent notifications created by published academic events.",
           sections: [
             "Events for absence, replacement attendance, published results, and parent-visible notes.",
@@ -330,16 +331,16 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         },
         children: [
           {
-            label: "Academy profile",
+            label: "General",
             href: "/app/manage/academy",
             icon: "academy",
           },
           {
-            label: "Academic structure",
+            label: "Structure",
             href: "/app/manage/academy/structure",
             icon: "structure",
             preview: {
-              title: "Academic structure",
+              title: "Structure",
               purpose: "Define the programs and grouping used throughout the academy.",
               sections: [
                 "Platform levels offered by the academy and its own tracks.",
@@ -349,7 +350,7 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             },
           },
           {
-            label: "Student enrollment",
+            label: "Enrollment",
             href: "/app/manage/academy/enrollment",
             icon: "studentEnrollment",
           },
@@ -404,7 +405,7 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
 ];
 
 export const STAFF_ACCOUNT: NavItem = {
-  label: "Profile",
+  label: "Account",
   href: "/app/manage/account",
   icon: "account",
   preview: {
@@ -419,12 +420,6 @@ export const STAFF_ACCOUNT: NavItem = {
 };
 
 export const STAFF_CREATE_ITEMS: readonly NavItem[] = [
-  {
-    label: "Create group",
-    href: "/app/groups/new",
-    icon: "groups",
-    roles: MANAGERS,
-  },
   {
     label: "Add student",
     href: "/app/students/new",
@@ -458,21 +453,12 @@ export const STAFF_CREATE_ITEMS: readonly NavItem[] = [
 
 export const STUDENT_GROUPS: readonly NavGroup[] = [
   {
-    label: "Learning",
+    label: "",
     items: [
       {
         label: "Home",
         href: "/learn",
         icon: "overview",
-        preview: {
-          title: "Home",
-          purpose: "The student's starting point for upcoming learning and recent progress.",
-          sections: [
-            "Upcoming classes and the next events on the student's calendar.",
-            "Recently released learning content and current access windows.",
-            "Assignments or quizzes needing attention and recent published results.",
-          ],
-        },
       },
       {
         label: "Calendar",
@@ -488,38 +474,30 @@ export const STUDENT_GROUPS: readonly NavGroup[] = [
           ],
         },
       },
+    ],
+  },
+  {
+    label: "Learning",
+    items: [
       {
-        label: "My learning",
-        href: "/learn/content",
+        label: "Discover",
+        href: "/learn/discover",
+        icon: "content",
+      },
+      {
+        label: "My courses",
+        href: "/learn/courses",
         icon: "learning",
-        preview: {
-          title: "My learning",
-          purpose: "Find released explanations and see when each one is available.",
-          sections: [
-            "Content releases matching the student's level and track.",
-            "Protected explanation videos, attachments, and learning progress.",
-            "Access source and expiry, eligible coupon redemption, and the one self-service extension.",
-          ],
-        },
       },
     ],
   },
   {
-    label: "Assessments",
+    label: "My work",
     items: [
       {
         label: "Assignments",
         href: "/learn/assignments",
         icon: "assignments",
-        preview: {
-          title: "Assignments",
-          purpose: "Complete eligible homework and follow its submission state.",
-          sections: [
-            "Available work, instructions, parts, due dates, and submission method.",
-            "Draft, final, in-person, and graded status where applicable.",
-            "Answer-video access after a qualifying final submission or published in-person result.",
-          ],
-        },
       },
       {
         label: "Quizzes",
@@ -535,25 +513,16 @@ export const STUDENT_GROUPS: readonly NavGroup[] = [
           ],
         },
       },
+      {
+        label: "Exams",
+        href: "/learn/exams",
+        icon: "exams",
+      },
     ],
   },
   {
-    label: "Progress",
+    label: "Records",
     items: [
-      {
-        label: "Attendance",
-        href: "/learn/attendance",
-        icon: "attendance",
-        preview: {
-          title: "Attendance",
-          purpose: "Review personal class attendance without losing the original history.",
-          sections: [
-            "Attendance status for dated sessions.",
-            "Original absences and any later replacement attendance.",
-            "Whether a replacement resolved the missed content access.",
-          ],
-        },
-      },
       {
         label: "Results",
         href: "/learn/results",
@@ -568,16 +537,30 @@ export const STUDENT_GROUPS: readonly NavGroup[] = [
           ],
         },
       },
+      {
+        label: "Attendance",
+        href: "/learn/attendance",
+        icon: "attendance",
+        preview: {
+          title: "Attendance",
+          purpose: "Review personal class attendance without losing the original history.",
+          sections: [
+            "Attendance status for dated sessions.",
+            "Original absences and any later replacement attendance.",
+            "Whether a replacement resolved the missed content access.",
+          ],
+        },
+      },
     ],
   },
 ];
 
 export const STUDENT_PROFILE: NavItem = {
-  label: "Profile",
+  label: "Account",
   href: "/learn/profile",
   icon: "account",
   preview: {
-    title: "Profile",
+    title: "Account",
     purpose: "Review the student's Edra account and verified details.",
     sections: [
       "Account identity and global school level.",

@@ -36,6 +36,14 @@ Actions in preview persist to the synthetic academy. Normal authorization, tenan
 
 First implementation target: local Next development execution against the configured cloud development project. Hosted preview activation is separate work; no production activation is included.
 
+## Failure simulator
+
+On 2026-10-28 the owner approved planning failure simulation for all currently implemented web pages, with an explicit coverage checklist. Login and onboarding failure scenarios are deferred for now. This is planning authorization; application implementation belongs in a separate implementation thread.
+
+Provide a discoverable list of supported failure scenarios and controlled activation so the developer can inspect actual error UI and improve it. Coverage must account for each implemented page and its relevant operations, including shared error handling. Listing a page or registering a scenario does not establish verified coverage. Track missing handlers and unverified scenarios explicitly; do not silently omit them. Placeholder workflows do not become implementation requirements through this tooling.
+
+The working proposal and route inventory are maintained in a local, Git-ignored planning checklist. Proposed details are not final product requirements until agreed.
+
 ## Lifecycle
 
 Generation is a developer command with a read-only dry-run and verification. It does not automatically delete prior data or rebuild after a failure.

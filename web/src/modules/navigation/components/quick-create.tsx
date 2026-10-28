@@ -43,7 +43,7 @@ export function QuickCreate() {
         <TooltipContent side="right" sideOffset={8}>Quick Create</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="start" side="bottom" className="min-w-48">
-        {STAFF_CREATE_ITEMS.filter((item) => item.href !== "/app/groups/new" && canViewStaffItem(item, activeAcademy?.role ?? null)).map((item) => (
+        {STAFF_CREATE_ITEMS.filter((item) => canViewStaffItem(item, activeAcademy?.role ?? null)).map((item) => (
           <DropdownMenuItem key={item.href} asChild>
             <Link href={href(item.href)} onClick={() => setOpenMobile(false)} className="gap-2 py-2">
               <HugeiconsIcon icon={icons[item.icon]} className="size-4" strokeWidth={1.5} aria-hidden="true" />

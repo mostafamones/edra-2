@@ -1,5 +1,7 @@
 import "server-only";
 
+export const CONTROL_COOKIE = "edra-dev-control";
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export type DevelopmentConfig = {

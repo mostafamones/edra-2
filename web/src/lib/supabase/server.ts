@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+import { failureFetch } from '@/modules/development/failures/inject'
+
 import { authCookieOptions } from './cookie-policy'
 
 import type { Database } from './database.types'
@@ -11,12 +13,15 @@ import type { Database } from './database.types'
  */
 export async function createClient() {
   const cookieStore = await cookies()
+  // Development only: Developer mode's failure simulator; undefined everywhere else.
+  const simulated = await failureFetch(cookieStore)
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookieOptions: authCookieOptions(),
+      ...(simulated && { global: { fetch: simulated } }),
       cookies: {
         getAll() {
           return cookieStore.getAll()

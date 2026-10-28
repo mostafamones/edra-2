@@ -1,7 +1,7 @@
 /** Public URLs are independent of the internal App Router namespaces. */
 export type Platform = "marketing" | "staff" | "student";
 export type RouteDescriptor = { platform: Platform; scope: "global" | "academy"; academySlug?: string; path: string; canonical: string; internalPath: string; legacy?: boolean };
-export const STUDENT_GLOBAL_PATHS = ["profile", "calendar", "content", "assignments", "quizzes", "attendance", "results"] as const;
+export const STUDENT_GLOBAL_PATHS = ["profile", "calendar", "content", "discover", "courses", "assignments", "quizzes", "exams", "attendance", "results"] as const;
 export const RESERVED_NAMESPACES = ["app", "learn", "auth", "onboarding", "api", "invite", "account", ...STUDENT_GLOBAL_PATHS] as const;
 export const ROUTE_HEADER = "x-edra-platform";
 export const PUBLIC_PATH_HEADER = "x-edra-public-path";
@@ -60,6 +60,11 @@ export function staffAcademyHref(slug: string, path = "") { return platformOrigi
 export function studentHref(path = "/") { return platformOrigin("student") + (path.startsWith("/") ? path : `/${path}`); }
 /** Academy path on the student host, for same-host links. */
 export function studentAcademyPath(slug: string, path = "") { return staffAcademyPath(slug, path); }
+/** A student list page (courses, assignments…), filtered to one academy when `slug` is given. */
+export function studentListPath(section: string, slug?: string, query: Record<string, string> = {}) {
+  const params = new URLSearchParams({ ...(slug && { academy: slug }), ...query });
+  return `/${section}${params.size ? `?${params}` : ""}`;
+}
 export function studentAcademyHref(slug: string, path = "") { return platformOrigin("student") + staffAcademyPath(slug, path); }
 export function staffEntryHref() { return platformOrigin("staff") + "/"; }
 export function authHref(path = "login", platform: "staff" | "student" = "staff", next?: string) { return `${platformOrigin(platform)}/auth/${path}${next ? `?next=${encodeURIComponent(next)}` : ""}`; }

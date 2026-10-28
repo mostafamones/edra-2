@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { ACADEMY_ROLE_LABELS } from "@/modules/academies";
 
 import { onIdentityChange } from "../client";
+import { FailurePanel } from "../failures/components/panel";
 import { usePreviewAction, usePreviewStatus } from "../use-preview";
 import { studentShortcuts } from "../student-shortcuts";
 
@@ -71,6 +72,7 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
             </div>
             <div className="flex flex-wrap items-center justify-end gap-1">
               {pending && <HugeiconsIcon icon={Loading03Icon} strokeWidth={1.5} className="size-4 animate-spin" aria-label="Switching" />}
+              <FailurePanel />
               {preview.current.kind === "student" && (
                 <Button
                   size="sm"

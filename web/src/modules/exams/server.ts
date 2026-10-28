@@ -6,5 +6,6 @@ export { examResponse, examStudentsResponse, examsResponse, withExamAcademy } fr
 
 // Student cookie web boundary (EDRA-232; review EDRA-235).
 export { enterMyExam, getMyExamOverview, getMyExamReview, listMyExams } from "./student/data";
-export { StudentExamList } from "./student/components/list";
+export { StudentExamStatus } from "./student/components/status";
+export { STUDENT_EXAM_PAGE_SIZE } from "./student/types";
 export { StudentExamOverviewPage } from "./student/components/overview";

@@ -12,6 +12,7 @@ vi.mock("@/modules/staff/server", () => ({ clearPendingStaffInvite: vi.fn() }));
 vi.mock("@/modules/development/server", () => ({
   endPreviewForSignOut: state.endPreview,
   clearedControlCookie: () => ({ name: "edra-dev-control", value: "", path: "/", maxAge: 0, httpOnly: true }),
+  clearedFailureCookie: () => ({ name: "edra-dev-failure", value: "", path: "/", maxAge: 0 }),
 }));
 import { POST } from "./route";
 beforeEach(() => { state.claims = null; state.signOut.mockReset(); state.endPreview.mockClear(); vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co"); });
@@ -37,5 +38,6 @@ describe("platform sign-out", () => {
     expect(state.endPreview).toHaveBeenCalledOnce();
     expect(state.endPreview.mock.invocationCallOrder[0]).toBeLessThan(state.signOut.mock.invocationCallOrder[0]);
     expect(response.headers.getSetCookie().some(cookie => cookie.startsWith("edra-dev-control=;") && cookie.includes("Max-Age=0"))).toBe(true);
+    expect(response.headers.getSetCookie().some(cookie => cookie.startsWith("edra-dev-failure=;") && cookie.includes("Max-Age=0"))).toBe(true);
   });
 });

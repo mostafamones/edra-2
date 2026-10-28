@@ -7,9 +7,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCanonicalHref, usePortalPath } from "../use-routing";
 
 const TABS = [
-  { label: "Profile", href: "/app/manage/academy" },
+  { label: "Details", href: "/app/manage/academy" },
   { label: "Structure", href: "/app/manage/academy/structure" },
-  { label: "Students", href: "/app/manage/academy/enrollment" },
+  { label: "Enrollment", href: "/app/manage/academy/enrollment" },
 ] as const;
 
 /** The General page's sections. Each tab is a link to its own page, so back, refresh and shared links work. */

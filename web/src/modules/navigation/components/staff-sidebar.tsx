@@ -64,7 +64,7 @@ function StaffLink({ item, icon, pathname, closeMobile }: {
 }) {
   const href = useCanonicalHref();
   const Icon = NAV_ICONS[item.icon];
-  const active = activeFor(pathname, item.href) || (item.href === "/app/students" && pathname.startsWith("/app/groups"));
+  const active = activeFor(pathname, item.href);
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild tooltip={item.label} isActive={active} className={icon ? "text-sidebar-foreground/75" : undefined}>

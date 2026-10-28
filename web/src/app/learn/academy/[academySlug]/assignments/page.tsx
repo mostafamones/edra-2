@@ -1,15 +1,10 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
-import { StudentAssignmentList } from "@/modules/assignments/server";
-import { getMyStudentAcademy } from "@/modules/students/server";
+import { studentListPath } from "@/lib/routing";
 
-/** A connected academy's Assignments page. Unconnected or suspended accounts are not found. */
-export default async function StudentAssignmentsPage({ params, searchParams }: PageProps<"/learn/academy/[academySlug]/assignments">) {
+/** Earlier academy-scoped Assignments links open the shared page filtered to that academy. */
+export default async function AcademyAssignmentsPage({ params, searchParams }: PageProps<"/learn/academy/[academySlug]/assignments">) {
   const { academySlug } = await params;
-  const { page } = await searchParams;
-  const connected = await getMyStudentAcademy(academySlug);
-  if (!connected || connected.access !== "active") notFound();
-  const number = typeof page === "string" && /^[1-9]\d{0,3}$/.test(page) ? Number(page) : 1;
-  const { academy } = connected;
-  return <StudentAssignmentList academy={{ id: academy.id, slug: academy.slug, name: academy.name }} page={number} />;
+  const query = Object.fromEntries(Object.entries(await searchParams).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[0] !== "academy"));
+  redirect(studentListPath("assignments", academySlug, query));
 }

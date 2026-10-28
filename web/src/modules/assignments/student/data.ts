@@ -47,14 +47,15 @@ async function call<T>(run: (db: Db) => PromiseLike<{ data: unknown; error: Data
 }
 
 export const STUDENT_ASSIGNMENT_PAGE_SIZE = 25;
-const listInput = z.object({ academyId: z.guid(), page: z.number().int().min(1).max(4000), search: z.string().max(100) });
+const listInput = z.object({ academyId: z.guid(), page: z.number().int().min(1).max(4000), search: z.string().max(100), unitId: z.guid().optional() });
 
-export async function listMyAssignments(input: { academyId: string; page: number; search: string }): Promise<StudentAssignmentResult<StudentAssignmentPage>> {
+/** One page of the caller's assignments in the academy, optionally only those of one content unit. */
+export async function listMyAssignments(input: { academyId: string; page: number; search: string; unitId?: string }): Promise<StudentAssignmentResult<StudentAssignmentPage>> {
   const parsed = listInput.safeParse(input);
   if (!parsed.success) return studentAssignmentFailure("validation");
-  const { academyId, page, search } = parsed.data;
+  const { academyId, page, search, unitId } = parsed.data;
   return call((db) => db.rpc("list_my_assignments", {
-    p_academy_id: academyId, p_offset: (page - 1) * STUDENT_ASSIGNMENT_PAGE_SIZE, p_search: search.trim(),
+    p_academy_id: academyId, p_offset: (page - 1) * STUDENT_ASSIGNMENT_PAGE_SIZE, p_search: search.trim(), ...(unitId && { p_unit_id: unitId }),
   }), (value) => pageSchema.parse(value));
 }
 

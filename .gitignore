@@ -4,3 +4,6 @@
 
 # macOS Finder metadata
 .DS_Store
+
+# Local failure simulator planning document
+/web/planning/failure-simulator.md

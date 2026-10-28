@@ -11,12 +11,11 @@ import { createClient } from "@/lib/supabase/server";
 import { isPhoneCodeSession } from "@/lib/supabase/session-grade";
 import { accountName } from "@/modules/account/contract";
 
-import { developmentConfig, type DevelopmentConfig } from "./config";
+import { CONTROL_COOKIE, developmentConfig, type DevelopmentConfig } from "./config";
 import { hashControlToken, newControlToken, open, seal } from "./crypto";
 import { exitPath, staffPreviewPath, studentsDirectoryPath } from "./paths";
 import type { PreviewErrorCode, PreviewIdentity, PreviewResult, PreviewRole, PreviewStatus } from "./types";
 
-export const CONTROL_COOKIE = "edra-dev-control";
 const CONTROL_SECONDS = 2 * 60 * 60;
 const STAFF_ENTRY = "account:staff:owner";
 const STUDENT_ID = /^account:student:[a-z0-9-]+$/;
@@ -233,6 +232,12 @@ function identity(logicalId: string | null, targets: Targets, developerName: str
 }
 
 /** Safe display state for the frame and menu entry. Never signs in or changes identity. */
+/** True while the request carries a live preview control that issued its session. */
+export async function previewLive(): Promise<boolean> {
+  const context = await activeContext();
+  return Boolean(context?.control?.live && sessionOfControl(context.control, context.claims));
+}
+
 export async function previewStatus(): Promise<PreviewStatus> {
   const context = await activeContext();
   if (!context?.claims) return { available: false };
