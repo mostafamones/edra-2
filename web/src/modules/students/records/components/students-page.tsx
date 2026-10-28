@@ -75,13 +75,19 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   const { preferences, hydrated, update: updatePreferences } = useTablePreferences(user?.id, academyId);
   const [params, updateParams] = useListParams(preferences.pageSize ?? DEFAULT_PAGE_SIZE);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const linkedRecord = useSearchParams().get("record");
+  const searchParams = useSearchParams();
+  const linkedRecord = searchParams.get("record");
   useEffect(() => {
     if (linkedRecord && z.guid().safeParse(linkedRecord).success) setEditingId(linkedRecord);
   }, [linkedRecord]);
   const [archiveRequest, setArchiveRequest] = useState<ArchiveRequest | null>(null);
   const [groupChange, setGroupChange] = useState<RecordVersion[] | null>(null);
   const [groupsOpen, setGroupsOpen] = useState(false);
+  // `?groups=open` (the Groups command) opens the groups panel.
+  const openGroups = searchParams.get("groups") === "open";
+  useEffect(() => {
+    if (openGroups) setGroupsOpen(true);
+  }, [openGroups]);
 
   const listQuery = useQuery({
     queryKey: studentListQueryKey(academyId, params),

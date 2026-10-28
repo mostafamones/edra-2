@@ -87,10 +87,10 @@ export const STAFF_MANAGEMENT_NAV: readonly { label: string; items: readonly Man
     label: "Operations",
     items: [
       { label: "Coupons", href: "/app/manage/access" },
-      { label: "Messaging", href: "/app/manage/messages", also: ["/app/manage/notifications", "/app/manage/integrations"] },
+      { label: "Messages", href: "/app/manage/messages", also: ["/app/manage/notifications", "/app/manage/integrations"] },
     ],
   },
-  { label: "Personal", items: [{ label: "Profile", href: "/app/manage/account" }] },
+  { label: "Personal", items: [{ label: "Account", href: "/app/manage/account" }] },
 ];
 
 export const STAFF_GROUPS: readonly NavGroup[] = [
@@ -155,7 +155,8 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
       },
       {
         label: "Groups",
-        href: "/app/groups",
+        // Groups live in a panel on the Students page.
+        href: "/app/students?groups=open",
         icon: "groups",
       },
       {
@@ -305,11 +306,11 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
     label: "Operations",
     items: [
       {
-        label: "Message delivery",
+        label: "Messages",
         href: "/app/manage/messages",
         icon: "communications",
         preview: {
-          title: "Message delivery",
+          title: "Messages",
           purpose: "Follow the parent notifications created by published academic events.",
           sections: [
             "Events for absence, replacement attendance, published results, and parent-visible notes.",
@@ -356,16 +357,16 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         },
         children: [
           {
-            label: "Academy profile",
+            label: "General",
             href: "/app/manage/academy",
             icon: "academy",
           },
           {
-            label: "Academic structure",
+            label: "Structure",
             href: "/app/manage/academy/structure",
             icon: "structure",
             preview: {
-              title: "Academic structure",
+              title: "Structure",
               purpose: "Define the programs and grouping used throughout the academy.",
               sections: [
                 "Platform levels offered by the academy and its own tracks.",
@@ -375,7 +376,7 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             },
           },
           {
-            label: "Student enrollment",
+            label: "Enrollment",
             href: "/app/manage/academy/enrollment",
             icon: "studentEnrollment",
           },
@@ -430,7 +431,7 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
 ];
 
 export const STAFF_ACCOUNT: NavItem = {
-  label: "Profile",
+  label: "Account",
   href: "/app/manage/account",
   icon: "account",
   preview: {
@@ -445,12 +446,6 @@ export const STAFF_ACCOUNT: NavItem = {
 };
 
 export const STAFF_CREATE_ITEMS: readonly NavItem[] = [
-  {
-    label: "Create group",
-    href: "/app/groups/new",
-    icon: "groups",
-    roles: MANAGERS,
-  },
   {
     label: "Add student",
     href: "/app/students/new",

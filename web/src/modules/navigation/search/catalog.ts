@@ -16,7 +16,7 @@ export function commandEntries(platform: "staff" | "student", slug: string | und
   return [
     ...(slug ? pages.filter(item => canViewStaffItem(item, role)).map(item => ({ title: item.label, href: publicHref(item.href, slug), group: "Pages", icon: item.icon })) : []),
     { title: STAFF_ACCOUNT.label, href: publicHref(STAFF_ACCOUNT.href, slug), group: "Pages", icon: STAFF_ACCOUNT.icon },
-    ...(slug ? STAFF_CREATE_ITEMS.filter(item => item.href !== "/app/groups/new" && canViewStaffItem(item, role)).map(item => ({
+    ...(slug ? STAFF_CREATE_ITEMS.filter(item => canViewStaffItem(item, role)).map(item => ({
       title: item.label === "Assignment" ? "Create assignment" : item.label, href: publicHref(item.href, slug), group: "Actions",
       icon: item.icon,
       ...(item.href === "/app/attendance/new" ? { command: "start-session" as const, keywords: "class begin attendance schedule audience حصة بدء ابدا ابدأ حضور" } : {}),

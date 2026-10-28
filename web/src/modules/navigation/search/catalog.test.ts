@@ -5,12 +5,16 @@ it("only offers commands permitted by the existing role manifest", () => {
   expect(commandEntries("staff", "academy", "admin").some(item => item.title === "Notifications")).toBe(true);
 });
 it("does not offer academy mutations without academy context", () => {
-  expect(commandEntries("staff", undefined, null).map(item => item.title)).toEqual(["Profile"]);
+  expect(commandEntries("staff", undefined, null).map(item => item.title)).toEqual(["Account"]);
 });
 it("uses real creation forms and matches commands as well as pages", () => {
   const matches = filteredCommands(commandEntries("staff", "academy", "admin"), "assignment");
   expect(matches.some(item => item.group === "Actions" && item.href.endsWith("/academy/assignments/new"))).toBe(true);
   expect(matches.some(item => item.group === "Pages" && item.href.endsWith("/academy/assignments"))).toBe(true);
+});
+it("opens the groups panel on the Students page for the Groups command", () => {
+  const groups = commandEntries("staff", "academy", "admin").find(item => item.title === "Groups");
+  expect(groups?.href.endsWith("/academy/students?groups=open")).toBe(true);
 });
 it("keeps student search navigation separate from staff commands", () => {
   const entries = commandEntries("student", "academy", null);
