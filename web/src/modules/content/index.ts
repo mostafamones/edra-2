@@ -4,6 +4,6 @@ export { ContentEditorPage } from "./components/editor";
 export { ContentTaughtSection } from "./teaching/section";
 export { taughtRootKey } from "./teaching/types";
 export { ContentTaughtReview } from "./teaching/review";
-export { LearningBrowse } from "./student/browse";
+export { COURSE_ROWS, CourseCard } from "./student/card";
 export { StudentLearningUnit } from "./student/unit";
 export { StudentMaterial } from "./student/material";

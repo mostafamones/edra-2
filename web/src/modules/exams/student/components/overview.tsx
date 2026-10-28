@@ -6,7 +6,8 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { studentAcademyPath } from "@/lib/routing";
+import { studentListPath } from "@/lib/routing";
+import { BreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 
 import type { ExamSource, FinalizationReason } from "../../types";
 import { getMyExamOverview, getMyExamReview } from "../data";
@@ -35,14 +36,14 @@ const SOURCES: Record<ExamSource, string> = { online: "Online", physical: "On pa
  */
 export async function StudentExamOverviewPage({ academy, examId }: { academy: StudentExamAcademy; examId: string }) {
   if (academy.access !== "active") {
-    return <Shell academy={academy}><StudentExamNotice access={academy.access} /></Shell>;
+    return <Shell><StudentExamNotice access={academy.access} /></Shell>;
   }
   const result = await getMyExamOverview({ academyId: academy.id, examId });
   if (!result.ok) {
     if (result.code === "not_found" || result.code === "validation") notFound();
     // Transient failures reach the route's error boundary, which offers a retry.
     if (result.code === "unavailable") throw new Error(result.message);
-    return <Shell academy={academy}><StudentExamNotice message={result.message} /></Shell>;
+    return <Shell><StudentExamNotice message={result.message} /></Shell>;
   }
   const exam = result.data;
   // Accepted work only: the review read settles due work and returns material only once qualified.
@@ -54,7 +55,8 @@ export async function StudentExamOverviewPage({ academy, examId }: { academy: St
     && (exam.result === null || !review?.ok || review.data.status === "unavailable"));
   const closing = exam.actualClosesAt && Date.parse(exam.actualClosesAt) > Date.parse(exam.serverNow) ? exam.actualClosesAt : null;
   return (
-    <Shell academy={academy}>
+    <Shell>
+      <BreadcrumbTitle title={exam.title} />
       <div className="flex items-start justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{exam.title}</h1>
         <StudentExamStatus action={exam.action} />
@@ -158,11 +160,11 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
   );
 }
 
-function Shell({ academy, children }: { academy: StudentExamAcademy; children: React.ReactNode }) {
+function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
       <Button variant="ghost" size="sm" className="-ml-2 self-start" asChild>
-        <Link href={studentAcademyPath(academy.slug, "exams")}><IconArrowLeft aria-hidden="true" />Exams</Link>
+        <Link href={studentListPath("exams")}><IconArrowLeft aria-hidden="true" />Exams</Link>
       </Button>
       {children}
     </main>

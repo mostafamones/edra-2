@@ -3,12 +3,11 @@ import { z } from "zod";
 import { contentCaller, contentResult } from "../data";
 import { mediaAdmin } from "../media";
 import { playbackToken } from "@/lib/video/mux";
-import { learningCaller, readAccessHistory, readAccessWorkspace, readLearningList, readLearningUnit } from "./data";
+import { learningCaller, readAccessHistory, readAccessWorkspace, readLearningUnit } from "./data";
 import { grantReceiptSchema, learningError, materialSchema, redeemInput, requestInput, staffGrantInput, unitInput } from "./types";
 
 export async function loadAccessWorkspace(value: unknown) { return contentResult(() => readAccessWorkspace(value)); }
 export async function loadAccessHistory(value: unknown) { return contentResult(() => readAccessHistory(value)); }
-export async function loadLearningList(value: unknown) { return contentResult(() => readLearningList(value)); }
 export async function loadLearningUnit(value: unknown) { return contentResult(() => readLearningUnit(value)); }
 export async function grantUnitAccess(value: unknown) {
   return contentResult(async () => {

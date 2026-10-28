@@ -18,7 +18,8 @@ it("opens the groups panel on the Students page for the Groups command", () => {
 });
 it("keeps student search navigation separate from staff commands", () => {
   const entries = commandEntries("student", "academy", null);
-  expect(entries.some(item => item.href === "/academy/assignments")).toBe(true);
+  // Student lists are shared across academies; search never opens an academy-scoped copy.
+  expect(entries.some(item => item.href.endsWith("/assignments") && !item.href.includes("/academy/"))).toBe(true);
   expect(entries.some(item => item.group === "Actions")).toBe(false);
 });
 it("ranks exact command matches above incidental keywords and tolerates a small typo", () => {

@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -23,13 +24,13 @@ export async function getStudentJoinState(): Promise<StudentJoinState> {
 
 export type StudentAcademyLink = { id: string; name: string; slug: string };
 
-/** Academies the signed-in account is connected to, for student navigation. */
-export async function listMyStudentAcademies(): Promise<StudentAcademyLink[]> {
+/** Academies the signed-in account is connected to, for student navigation. Read once per request. */
+export const listMyStudentAcademies = cache(async (): Promise<StudentAcademyLink[]> => {
   const db = await createClient();
   const { data, error } = await db.rpc("list_my_student_academies");
   if (error) throw error;
   return studentAcademySchema.shape.academy.array().parse(data);
-}
+});
 
 /** The signed-in account's view of one connected academy, or null when not connected. */
 export async function getMyStudentAcademy(slug: string): Promise<StudentAcademy | null> {

@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { BreadcrumbTitleProvider } from "@/components/shared/breadcrumb-title";
 import { createClient } from "@/lib/supabase/server";
 import { PUBLIC_PATH_HEADER, staffEntryHref } from "@/lib/routing";
 import { isStaffAccount } from "@/modules/staff/server";
@@ -33,8 +34,10 @@ export default async function LearnLayout({ children }: LayoutProps<"/learn">) {
     <SidebarProvider defaultOpen={defaultOpen} className="h-svh min-h-0 overflow-hidden">
       <StudentSidebar academies={academies} />
       <SidebarInset className="min-h-0 overflow-y-auto overscroll-none">
-        <PortalHeader portal="student" />
-        <div className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</div>
+        <BreadcrumbTitleProvider>
+          <PortalHeader portal="student" academies={academies} />
+          <div className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">{children}</div>
+        </BreadcrumbTitleProvider>
       </SidebarInset>
       <StudentMobileNav />
     </SidebarProvider>

@@ -4,9 +4,8 @@ import { useCanonicalHref, usePortalPath } from "../use-routing";
 import Link from "next/link";
 import type { ComponentProps } from "react";
 import { usePathname } from "next/navigation";
-import { IconBuilding, IconSchool as GraduationCap } from "@tabler/icons-react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AssignmentsIcon, Calendar03Icon, FolderLibraryIcon, Home07Icon, Task01Icon, TeachingIcon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, Book02Icon, Building03Icon, Calendar03Icon, ChartBarLineIcon, Compass01Icon, Home07Icon, Mortarboard01Icon, Note01Icon, Task01Icon, TeachingIcon } from "@hugeicons/core-free-icons";
 
 import { SearchMenu } from "../search/menu";
 
@@ -21,9 +20,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -35,11 +31,13 @@ import { PortalFooter } from "./portal-footer";
 const studentIcons: Record<string, ComponentProps<typeof HugeiconsIcon>["icon"]> = {
   "/learn": Home07Icon,
   "/learn/calendar": Calendar03Icon,
-  "/learn/content": FolderLibraryIcon,
+  "/learn/discover": Compass01Icon,
+  "/learn/courses": Book02Icon,
   "/learn/assignments": AssignmentsIcon,
   "/learn/quizzes": Task01Icon,
+  "/learn/exams": Note01Icon,
+  "/learn/results": ChartBarLineIcon,
   "/learn/attendance": TeachingIcon,
-  "/learn/results": Task01Icon,
 };
 
 /** Academies the student is connected to; each links to its academy home. */
@@ -51,66 +49,36 @@ export function StudentSidebar({ academies = [] }: { academies?: StudentSidebarA
   const studentPath = usePortalPath("student");
   const { open, isMobile, setOpenMobile } = useSidebar();
   const closeMobile = () => setOpenMobile(false);
+  const isActive = (item: string) => studentPath === item || (item !== "/learn" && studentPath.startsWith(`${item}/`));
   return (
     <Sidebar collapsible="icon" variant="inset" className="group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]">
       <SidebarHeader>
-        <Link href={href("/learn")} onClick={closeMobile} className="flex h-12 items-center gap-2 rounded-md px-2 font-heading text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
-            <GraduationCap className="size-4" aria-hidden="true" />
-          </span>
-          <span className="truncate group-data-[collapsible=icon]:hidden">Edra Learning</span>
-        </Link>
+        <SidebarMenu className="-mx-1 w-auto group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:py-2">
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild className="font-heading">
+              <Link href={href("/learn")} onClick={closeMobile}>
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <HugeiconsIcon icon={Mortarboard01Icon} strokeWidth={1.5} className="size-4" aria-hidden="true" />
+                </span>
+                <span className="truncate text-base font-medium">Edra Learning</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
         <div className="mt-2 flex px-1 group-data-[collapsible=icon]:hidden">
           <SearchMenu platform="student" academies={academies} />
         </div>
       </SidebarHeader>
       <SidebarContent className={open || isMobile ? "px-1" : ""}>
-        {academies.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Academies</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {academies.map((academy) => {
-                  const home = studentAcademyPath(academy.slug);
-                  const exams = studentAcademyPath(academy.slug, "exams");
-                  const assignments = studentAcademyPath(academy.slug, "assignments");
-                  return (
-                    <SidebarMenuItem key={academy.slug}>
-                      <SidebarMenuButton asChild tooltip={academy.name} isActive={pathname === home || pathname.startsWith(`${home}/`)} className="text-sidebar-foreground/75">
-                        <Link href={home} onClick={closeMobile} aria-current={pathname === home ? "page" : undefined}>
-                          <IconBuilding aria-hidden="true" />
-                          <span>{academy.name}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                      <SidebarMenuSub>
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton asChild isActive={pathname === assignments || pathname.startsWith(`${assignments}/`)} className="text-sidebar-foreground/75">
-                            <Link href={assignments} onClick={closeMobile} aria-current={pathname === assignments ? "page" : undefined}><span>Assignments</span></Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton asChild isActive={pathname === exams || pathname.startsWith(`${exams}/`)} className="text-sidebar-foreground/75">
-                            <Link href={exams} onClick={closeMobile} aria-current={pathname === exams ? "page" : undefined}><span>Exams</span></Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      </SidebarMenuSub>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
         {STUDENT_GROUPS.map((group) => (
           <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild tooltip={item.label} className="text-sidebar-foreground/75"
-                      isActive={studentPath === item.href || (item.href !== "/learn" && studentPath.startsWith(`${item.href}/`))}>
-                      <Link href={href(item.href)} onClick={closeMobile} aria-current={studentPath === item.href ? "page" : undefined}>
+                    <SidebarMenuButton asChild tooltip={item.label} className="text-sidebar-foreground/75" isActive={isActive(item.href)}>
+                      <Link href={href(item.href)} onClick={closeMobile} aria-current={isActive(item.href) ? "page" : undefined}>
                         <HugeiconsIcon icon={studentIcons[item.href]} strokeWidth={1.5} aria-hidden="true" />
                         <span>{item.label}</span>
                       </Link>
@@ -121,6 +89,29 @@ export function StudentSidebar({ academies = [] }: { academies?: StudentSidebarA
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+        {academies.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Academies</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {academies.map((academy) => {
+                  const path = studentAcademyPath(academy.slug);
+                  const active = pathname === path || pathname === `/learn/academy/${academy.slug}`;
+                  return (
+                    <SidebarMenuItem key={academy.slug}>
+                      <SidebarMenuButton asChild tooltip={academy.name} className="text-sidebar-foreground/75" isActive={active}>
+                        <Link href={path} onClick={closeMobile} aria-current={active ? "page" : undefined}>
+                          <HugeiconsIcon icon={Building03Icon} strokeWidth={1.5} aria-hidden="true" />
+                          <span>{academy.name}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter><PortalFooter portal="student" /></SidebarFooter>
     </Sidebar>

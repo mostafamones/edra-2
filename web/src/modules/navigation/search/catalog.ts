@@ -1,17 +1,10 @@
 import { allStudentItems, STAFF_ACCOUNT, STAFF_CREATE_ITEMS, STAFF_GROUPS, canViewStaffItem, type NavIcon, type StaffRole } from "../manifest";
-import { publicHref, studentAcademyPath } from "@/lib/routing";
+import { publicHref } from "@/lib/routing";
 import { searchScore } from "@/lib/search";
 
 export type CommandEntry = { title: string; href: string; group: string; icon?: NavIcon; keywords?: string; command?: "start-session" };
 export function commandEntries(platform: "staff" | "student", slug: string | undefined, role: StaffRole | null): CommandEntry[] {
-  if (platform === "student") return [
-    ...allStudentItems().map(item => ({ title: item.label, href: publicHref(item.href), group: "Pages", icon: item.icon })),
-    ...(slug ? [
-      { title: "Content units", href: studentAcademyPath(slug), group: "Pages", icon: "content" as const },
-      { title: "Academy assignments", href: studentAcademyPath(slug, "assignments"), group: "Pages", icon: "assignments" as const },
-      { title: "Academy exams", href: studentAcademyPath(slug, "exams"), group: "Pages", icon: "exams" as const },
-    ] : []),
-  ];
+  if (platform === "student") return allStudentItems().map(item => ({ title: item.label, href: publicHref(item.href), group: "Pages", icon: item.icon }));
   const pages = STAFF_GROUPS.flatMap(group => group.items.flatMap(item => [item, ...(item.children ?? [])]));
   return [
     ...(slug ? pages.filter(item => canViewStaffItem(item, role)).map(item => ({ title: item.label, href: publicHref(item.href, slug), group: "Pages", icon: item.icon })) : []),

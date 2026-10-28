@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatAcademyDateTime } from "@/lib/academy-time";
-import { studentAcademyPath } from "@/lib/routing";
+import { studentAcademyPath, studentListPath } from "@/lib/routing";
 import { cookieAuthority } from "@/lib/supabase/authority";
 import { StudentMaterial } from "@/modules/content";
+import { BreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 
 import { getMyAssignment } from "../data";
 import { blockedMessage } from "../errors";
@@ -32,7 +33,7 @@ export async function StudentAssignmentPage({ academy, assignmentId }: { academy
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
       <Button variant="ghost" size="sm" className="-ml-2 self-start" asChild>
-        <Link href={studentAcademyPath(academy.slug, "assignments")}><IconArrowLeft aria-hidden="true" />Assignments</Link>
+        <Link href={studentListPath("assignments")}><IconArrowLeft aria-hidden="true" />Assignments</Link>
       </Button>
       {!result.ok ? (
         <Alert><IconAlertCircle aria-hidden="true" /><AlertTitle>{result.message}</AlertTitle></Alert>
@@ -41,6 +42,7 @@ export async function StudentAssignmentPage({ academy, assignmentId }: { academy
         const unit = assignment.unit;
         return (
           <>
+            <BreadcrumbTitle title={assignment.title} />
             <div className="flex items-start justify-between gap-3">
               <h1 className="text-2xl font-semibold tracking-tight">{assignment.title}</h1>
               <StudentAssignmentStatus item={assignment} />
