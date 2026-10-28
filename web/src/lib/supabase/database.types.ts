@@ -7914,10 +7914,24 @@ export type Database = {
         Returns: Json
       }
       list_my_assignments: {
-        Args: { p_academy_id: string; p_offset?: number; p_search?: string }
+        Args: {
+          p_academy_id: string
+          p_offset?: number
+          p_search?: string
+          p_unit_id?: string
+        }
         Returns: Json
       }
       list_my_content_units: {
+        Args: {
+          p_academy_id: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+        }
+        Returns: Json
+      }
+      list_my_content_units_before_contents: {
         Args: {
           p_academy_id: string
           p_limit?: number

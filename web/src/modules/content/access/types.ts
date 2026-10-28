@@ -18,7 +18,9 @@ export type AccessWorkspace = z.infer<typeof workspaceSchema>;
 export type AccessRecord = AccessWorkspace["records"][number];
 export const historySchema = z.array(z.object({ id: z.guid(), kind: z.string(), issuedAt: z.string(), startsAt: z.string(), expiresAt: z.string(), previousExpiry: z.string().nullable(), actorId: z.guid(), revokedAt: z.string().nullable(), reason: z.string().nullable() }));
 export type AccessHistory = z.infer<typeof historySchema>;
-export const learningListSchema = z.object({ units: z.array(z.object({ id: z.guid(), title: z.string(), materialCount: z.number().int(), publishedAt: z.string(), access: accessSchema, progress: unitProgressSchema.optional() })), hasMore: z.boolean() });
+/** What a unit contains by kind, with the caller's completion (documents are not tracked). */
+export const unitContentsSchema = z.array(z.object({ kind: z.enum(["video", "document", "assignment", "quiz", "exam"]), total: z.number().int().nonnegative(), completed: z.number().int().nonnegative() }));
+export const learningListSchema = z.object({ units: z.array(z.object({ id: z.guid(), title: z.string(), materialCount: z.number().int(), publishedAt: z.string(), access: accessSchema, progress: unitProgressSchema.optional(), contents: unitContentsSchema.default([]) })), hasMore: z.boolean() });
 export type LearningList = z.infer<typeof learningListSchema>;
 export const learningUnitSchema = z.object({
   id: z.guid(), title: z.string(), description: z.string(), accessDays: z.number().int().positive(), access: accessSchema, extensionAvailable: z.boolean(),

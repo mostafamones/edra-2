@@ -86,6 +86,7 @@ select pg_temp.act('student');
 do $$ declare page jsonb; one jsonb; begin
   page:=public.list_my_assignments(pg_temp.sid('academy'));
   perform pg_temp.check(jsonb_array_length(page->'items')=3,'three listed before unit publication');
+  perform pg_temp.check(jsonb_array_length(public.list_my_assignments(pg_temp.sid('academy'),0,'',gen_random_uuid())->'items')=0,'unit filter excludes other units');
   one:=public.get_my_assignment(pg_temp.sid('academy'),pg_temp.sid('attached'));
   perform pg_temp.check(one->'unit'='null'::jsonb and (one->>'canEdit')::boolean,'working attachment is not authority');
   one:=public.get_my_assignment(pg_temp.sid('academy'),pg_temp.sid('choice'));

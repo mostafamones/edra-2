@@ -87,6 +87,7 @@ do $$ declare item_id uuid; first_session uuid; newer_session uuid; response jso
  unit:=public.get_my_content_unit(pg_temp.lid('academy'),pg_temp.lid('unit'));
  perform pg_temp.lcheck(unit->'progress'->>'completed'='1','unit summary reads persisted activity');
  perform pg_temp.lcheck(public.list_my_content_units(pg_temp.lid('academy')) @> jsonb_build_object('units',jsonb_build_array(jsonb_build_object('id',pg_temp.lid('unit'),'progress',jsonb_build_object('completed',1)))),'browse projection');
+ perform pg_temp.lcheck(public.list_my_content_units(pg_temp.lid('academy')) @> jsonb_build_object('units',jsonb_build_array(jsonb_build_object('id',pg_temp.lid('unit'),'contents',jsonb_build_array(jsonb_build_object('kind','video','completed',1))))),'browse contents by kind');
  perform pg_temp.lerror(format('select public.save_my_content_progress(%L,%L,%L,3,101,''[]'')',pg_temp.lid('academy'),pg_temp.lid('unit'),newer_session),'validation');
  perform pg_temp.lerror(format('select public.save_my_content_progress(%L,%L,%L,3,90,''[[90,101]]'')',pg_temp.lid('academy'),pg_temp.lid('unit'),newer_session),'validation');
  perform pg_temp.lerror(format('select public.start_my_content_progress(%L,%L,%L)',pg_temp.lid('academy'),pg_temp.lid('unit'),(unit->'items'->1->>'id')::uuid),'material_unavailable');
