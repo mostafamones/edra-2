@@ -63,8 +63,8 @@ CSV, JSON, and Excel templates include an example for every academy level/track,
 
 ## Deferred
 
-Updating existing records through imports, general exports, bulk changes other than groups, deletion, booking and custom fields. Student academy onboarding lives in enrollment.
+Updating existing records through imports, general exports, bulk changes other than groups, deletion and custom fields. Public booking lives in `booking/`. Student academy onboarding lives in enrollment.
 
-## Intended behavior awaiting implementation
+## Provenance
 
-Current placement SQL compares group and student tracks exactly; the approved product allows level-wide groups to accept any track at that level. Track-removal broadening requires its own implementation. Do not broaden permissions or change historical placement merely to match this reference.
+`created_via` on profiles and annual records is `direct` (staff tools, imports and invite onboarding, attributed to `created_by`) or `booking`. Only `booking` may have a null `created_by` (anonymous public registration). Both columns are immutable. See the [booking module](../booking/README.md).

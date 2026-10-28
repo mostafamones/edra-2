@@ -20,9 +20,9 @@ Connected students reach `/<academySlug>` through the student sidebar; `get_my_s
 - The account's level (set in global setup) is bound to the student: academy onboarding never asks for it, offers only that level's tracks, and is blocked when the academy lacks the level. `complete_student_invite(token, track, group)` ignores any client level.
 - New participation reuses the account's verified phone and verified parent phone. A genuinely new student's record name is the account display name, else its full name; a returning student's new record uses the full name; linking an existing record keeps the academy's name (EDRA-126). Group capacity is checked under a group row lock; a full group returns `group_full`.
 
-## For EDRA-231 (booking)
+## Booking entry (EDRA-231)
 
-A signed-in returning student's booking entry must reach `/onboarding/student/join` with trusted academy entry authority (today: a valid invite token in the pending cookie). A client-supplied academy id or plain login is not a substitute. The public booking form, its settings and first-time booking without an account are outside this module.
+The pending cookie also carries a booking entry (`booking.<token>`, set by `/invite/booking/<token>/join`). `preview_student_invite`/`complete_student_invite` and `preview_student_booking_entry`/`complete_student_booking_entry` are thin wrappers over `edra_private.student_entry_preview/complete(kind, token, …)`; the kind is fixed by the wrapper, never by the client. Booking entry differs only in authority (booking link), new-participation rules (booking open state, enabled programs/groups, `groupOptional`) and provenance (`created_via = 'booking'` plus a receipt). Existing-record connection ignores booking closure and choices. A first-time student gets `form` and is sent back to the public form. Both entry kinds share the year learning gate in `student_caller_record`.
 
 ## Not implemented
 

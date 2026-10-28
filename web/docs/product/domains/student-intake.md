@@ -10,9 +10,9 @@ The academy shares an open form that anyone can use to register for its current 
 
 Owners, Head Admins and Admins configure the form and open or close it. Instructors may view and share the active form.
 
-Staff choose which levels, tracks and groups are available through the form, along with any participation choices. The form shows students only the choices enabled in those settings.
+Every current-year level, track and group is available through the form by default; staff exclude the ones the form should not offer and set any participation choices. The form shows students only the choices that are not excluded, including offerings added after the settings were saved.
 
-The settings explicitly allow current-year levels, tracks and groups and specify whether registration without a group is allowed. Staff either fix participation to one type or let students choose between in-person and online-only. A fixed type is applied without asking the student to choose it. A new year's booking starts closed; staff configure valid choices before opening it. A level with active tracks still requires a compatible enabled track.
+The settings record excluded current-year levels, tracks and groups and specify whether registration without a group is allowed. Staff either fix participation to one type or let students choose between in-person and online-only. A fixed type is applied without asking the student to choose it. A new year's booking starts closed; staff configure valid choices before opening it. A level with active tracks still requires a compatible track that is not excluded.
 
 ## Information collected
 

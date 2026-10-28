@@ -71,6 +71,8 @@ export function authHref(path = "login", platform: "staff" | "student" = "staff"
 export function onboardingHref(path = "", platform: "staff" | "student" = "staff") { return `${platformOrigin(platform)}/onboarding${suffix(path)}`; }
 export function staffInviteHref(token: string) { return `${platformOrigin("staff")}/invite/staff/${encodeURIComponent(token)}`; }
 export function studentInviteHref(token: string) { return `${platformOrigin("student")}/invite/student/${encodeURIComponent(token)}`; }
+/** The public booking form; `/join` hands a signed-in student to academy onboarding. */
+export function studentBookingHref(token: string, path: "" | "/join" = "") { return `${platformOrigin("student")}/invite/booking/${encodeURIComponent(token)}${path}`; }
 /** Manifest identifiers remain internal, while rendered hrefs are canonical. */
 export function publicHref(internal: string, slug?: string) {
   if (internal === "/app/manage/account" && !slug) return platformOrigin("staff") + "/account";

@@ -1,6 +1,16 @@
 -- EDRA-129: authority, maintenance, track transitions, fixed rosters and shutdown/resume.
 -- Runs only through the marked-target runner; all fixtures roll back.
 begin;
+
+-- Fixture years start student learning when created; preparation is covered by student_booking.sql.
+create function public.edra_test_start_fixture_year() returns trigger language plpgsql as $fixture$
+begin
+  new.student_learning_started_at := coalesce(new.student_learning_started_at, now());
+  new.student_learning_start_source := coalesce(new.student_learning_start_source, 'legacy');
+  return new;
+end $fixture$;
+create trigger edra_test_fixture_year_started before insert on public.academic_years
+for each row execute function public.edra_test_start_fixture_year();
 update edra_private.offering_release set enabled=true;
 
 create function pg_temp.check(condition boolean,message text) returns void language plpgsql as $$

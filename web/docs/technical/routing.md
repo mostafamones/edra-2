@@ -21,6 +21,8 @@ Development defaults are lvh.me:3000, app.lvh.me:3000 and learn.lvh.me:3000. NEX
 | Student learning | / and /courses, /discover, /assignments, /exams on student host | src/app/learn/; lists cover all academies and `?academy=<slug>` narrows one to a single academy |
 | Student academy | /<slug> on student host | src/app/learn/academy/[academySlug]/[[...path]]/ shows the connected academy's details; /<slug>/courses, /discover, /assignments and /exams redirect to the shared list filtered to that academy |
 | Student items | /<slug>/units/<unitId>, /<slug>/assignments/<id>, /<slug>/exams/<examId> on student host | Concrete routes under src/app/learn/academy/[academySlug]/; each item stays in its academy |
+| Bookings | /<slug>/manage/bookings | Booking settings and registrations; /manage/bookings/review, /bookings/review and /settings/booking redirect here |
+| Public booking | /invite/booking/<token>, /invite/booking/<token>/join on student host | Public form (signed out allowed, canonical host enforced); /join only stores the booking entry and opens academy onboarding. Built with `studentBookingHref` |
 | Authentication/setup | /auth/* and /onboarding/* | Existing authentication/onboarding files |
 | HTTP API | /api/* | No page rewrite; existing handlers authorize independently |
 

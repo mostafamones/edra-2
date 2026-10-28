@@ -6,7 +6,7 @@ import { z } from "zod";
 import { studentInviteHref } from "@/lib/routing";
 import { createClient } from "@/lib/supabase/server";
 
-import { PENDING_STUDENT_INVITE_COOKIE, pendingStudentInviteCookie } from "./pending";
+import { PENDING_STUDENT_INVITE_COOKIE, parsePendingStudentEntry, pendingStudentInviteCookie } from "./pending";
 import {
   enrollmentSettingsSchema, isStudentInviteToken, isTerminalJoinState, parseStudentJoinState,
   type EnrollmentSettings, type StudentJoinState,
@@ -20,42 +20,49 @@ const choiceSchema = z.object({
   groupId: z.guid().nullable(),
 }).strict().nullable();
 
-/** Re-reads the pending invite, e.g. after a failed or outdated completion. */
-export async function previewStudentInvite(): Promise<StudentJoinState> {
+/** The pending entry, clearing a malformed value. */
+async function pendingEntry() {
   const store = await cookies();
-  const token = store.get(PENDING_STUDENT_INVITE_COOKIE)?.value;
-  if (!token) return { kind: "none" };
-  if (!isStudentInviteToken(token)) {
-    store.delete({ name: PENDING_STUDENT_INVITE_COOKIE, path: "/" });
-    return { kind: "invalid" };
-  }
-  const { data, error } = await (await createClient()).rpc("preview_student_invite", { p_token: token });
+  const entry = parsePendingStudentEntry(store.get(PENDING_STUDENT_INVITE_COOKIE)?.value);
+  if (entry === "invalid") store.delete({ name: PENDING_STUDENT_INVITE_COOKIE, path: "/" });
+  return { store, entry };
+}
+
+/** Re-reads the pending invite or booking entry, e.g. after a failed or outdated completion. */
+export async function previewStudentInvite(): Promise<StudentJoinState> {
+  const { store, entry } = await pendingEntry();
+  if (!entry) return { kind: "none" };
+  if (entry === "invalid") return { kind: "invalid" };
+  const db = await createClient();
+  const { data, error } = entry.kind === "booking"
+    ? await db.rpc("preview_student_booking_entry", { p_token: entry.token })
+    : await db.rpc("preview_student_invite", { p_token: entry.token });
   const state = error ? { kind: "error" as const } : parseStudentJoinState(data);
   if (isTerminalJoinState(state)) store.delete({ name: PENDING_STUDENT_INVITE_COOKIE, path: "/" });
   return state;
 }
 
 /**
- * Connects the existing record (choice = null) or enrolls with the chosen track (where the level has tracks) and optional group.
- * The database rechecks the invite and every rule at commit time.
+ * Connects the existing record (choice = null) or enrolls with the chosen track (where the level has tracks) and group.
+ * The database rechecks the entry authority and every rule at commit time.
  */
 export async function completeStudentInvite(choice: unknown): Promise<StudentJoinState> {
   const parsed = choiceSchema.safeParse(choice);
   if (!parsed.success) return { kind: "error" };
-  const store = await cookies();
-  const token = store.get(PENDING_STUDENT_INVITE_COOKIE)?.value;
-  if (!token) return { kind: "none" };
-  if (!isStudentInviteToken(token)) {
-    store.delete({ name: PENDING_STUDENT_INVITE_COOKIE, path: "/" });
-    return { kind: "invalid" };
-  }
-  const { data, error } = await (await createClient()).rpc("complete_student_invite", {
-    p_token: token,
+  const { store, entry } = await pendingEntry();
+  if (!entry) return { kind: "none" };
+  if (entry === "invalid") return { kind: "invalid" };
+  const args = {
+    p_token: entry.token,
     // The generator types RPC arguments as non-null; the database accepts nulls here.
     // Explicit nulls: an undefined argument is dropped from the request and the function is not found.
     p_track_id: (parsed.data?.trackId ?? null) as string,
     p_group_id: (parsed.data?.groupId ?? null) as string,
-  });
+  };
+  const db = await createClient();
+  const { data, error } = entry.kind === "booking"
+    ? await db.rpc("complete_student_booking_entry", args)
+    : await db.rpc("complete_student_invite", args);
   if (error) return { kind: "error" };
   const state = parseStudentJoinState(data);
   if (isTerminalJoinState(state)) store.delete({ name: PENDING_STUDENT_INVITE_COOKIE, path: "/" });

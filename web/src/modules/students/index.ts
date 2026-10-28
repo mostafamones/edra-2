@@ -40,3 +40,9 @@ export { StudentEnrollmentPage } from "./enrollment/components/page";
 export { StudentAcademyHome } from "./enrollment/components/academy-home";
 export { openStudentInviteLink } from "./enrollment/actions";
 export { parseStudentInviteLink } from "./enrollment/link";
+export {
+  getStudentBookingSettings, listStudentBookingRegistrations, saveStudentBookingSettings, submitStudentBooking,
+} from "./booking/actions";
+export type { BookingForm, BookingOutcome, BookingRegistrations, BookingSettings } from "./booking/types";
+export { StudentBookingForm } from "./booking/components/form";
+export { StudentBookingPage } from "./booking/components/page";

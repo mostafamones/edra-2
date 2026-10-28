@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ rpc: vi.fn(), deleteCookie: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), deleteCookie: vi.fn(), cookie: "A".repeat(43) }));
 
 vi.mock("next/headers", () => ({
-  cookies: async () => ({ get: () => ({ value: "A".repeat(43) }), delete: mocks.deleteCookie }),
+  cookies: async () => ({ get: () => ({ value: mocks.cookie }), delete: mocks.deleteCookie }),
 }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ rpc: mocks.rpc }) }));
 
 import { completeStudentInvite, previewStudentInvite } from "./actions";
 
 describe("completeStudentInvite", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); mocks.cookie = "A".repeat(43); });
 
   it("sends explicit null choices when confirming an existing record", async () => {
     mocks.rpc.mockResolvedValue({ data: {
@@ -55,5 +55,16 @@ describe("completeStudentInvite", () => {
     }, error: null });
     expect(await completeStudentInvite({ trackId: null, groupId: null })).toMatchObject({ kind: "invalid_choice" });
     expect(mocks.deleteCookie).not.toHaveBeenCalled();
+  });
+
+  it("uses the booking wrappers for a pending booking entry", async () => {
+    mocks.cookie = `booking.${"A".repeat(43)}`;
+    mocks.rpc.mockResolvedValue({ data: { result: "invalid_choice", academy: {
+      id: "11111111-1111-4111-8111-111111111111", name: "Academy", slug: "academy", icon: "school",
+    } }, error: null });
+    await completeStudentInvite({ trackId: null, groupId: null });
+    await previewStudentInvite();
+    expect(mocks.rpc).toHaveBeenNthCalledWith(1, "complete_student_booking_entry", { p_token: "A".repeat(43), p_track_id: null, p_group_id: null });
+    expect(mocks.rpc).toHaveBeenNthCalledWith(2, "preview_student_booking_entry", { p_token: "A".repeat(43) });
   });
 });

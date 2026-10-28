@@ -80,7 +80,7 @@ export const STAFF_MANAGEMENT_NAV: readonly { label: string; items: readonly Man
     items: [
       { label: "General", href: "/app/manage/academy", also: ["/app/manage/academy/structure", "/app/manage/academy/enrollment"] },
       { label: "Team", href: "/app/manage/team" },
-      { label: "Bookings", href: "/app/manage/bookings", also: ["/app/manage/bookings/review"] },
+      { label: "Bookings", href: "/app/manage/bookings" },
     ],
   },
   {
@@ -163,32 +163,6 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         label: "Bookings",
         href: "/app/manage/bookings",
         icon: "bookings",
-        preview: {
-          title: "Bookings",
-          purpose: "Review applications submitted through the academy's public booking form.",
-          sections: [
-            "Submission queue with applicant, requested program and group, and processing state.",
-            "Capacity checks, returning-student recognition, and account-matching status.",
-            "Submissions requiring explicit review before a student record is finalized.",
-          ],
-          actions: ["Owners, Head Admins and Admins resolve or reject submissions; Instructors can view their status."],
-        },
-      },
-      {
-        label: "Duplicate review",
-        href: "/app/manage/bookings/review",
-        icon: "review",
-        roles: MANAGERS,
-        preview: {
-          title: "Duplicate review",
-          purpose: "Resolve booking submissions that may refer to an existing student or sibling.",
-          sections: [
-            "Flagged submissions and candidate student records shown side by side.",
-            "The contact and placement evidence behind each possible match.",
-            "A recorded review outcome that preserves existing student history.",
-          ],
-          actions: ["Confirm the appropriate record or reject an invalid booking."],
-        },
       },
     ],
   },
@@ -349,7 +323,7 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
           title: "Manage academy",
           purpose: "The administration workspace for intake, access, communication, and academy setup.",
           sections: [
-            "Booking submissions and duplicate review for student intake.",
+            "Booking form settings and registrations for student intake.",
             "Student access, coupons, and parent message delivery.",
             "Academy profile, structure, booking form, team, notifications, and integrations.",
             "Personal account and security settings.",

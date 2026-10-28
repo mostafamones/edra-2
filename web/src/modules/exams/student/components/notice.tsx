@@ -7,6 +7,7 @@ import type { StudentExamAccess } from "../types";
 const ACCESS: Record<Exclude<StudentExamAccess, "active">, string> = {
   suspended: "Online access is suspended",
   no_current_year: "No participation this year",
+  not_started: "Learning hasn’t started yet",
 };
 
 /** Access or read failure in place of exam content; never reveals exam metadata. */

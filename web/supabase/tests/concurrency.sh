@@ -105,7 +105,8 @@ psqlx <<SQL
 insert into auth.users (id) values ('$ADMIN');
 insert into public.academies (id, name, slug, icon, subject, created_by)
   values ('$ACADEMY', 'Race $RUN', '$SLUG', 'school', 'Math', '$ADMIN');
-update public.academic_years set id = '$YEAR', start_year = 2030 where academy_id = '$ACADEMY';
+update public.academic_years set id = '$YEAR', start_year = 2030,
+  student_learning_started_at = now(), student_learning_start_source = 'legacy' where academy_id = '$ACADEMY';
 insert into public.academy_memberships (academy_id, user_id, role, created_by)
   values ('$ACADEMY', '$ADMIN', 'owner', '$ADMIN');
 insert into public.academy_levels (academy_id, level_id, sort_order) values ('$ACADEMY', 'secondary-1', 10);
@@ -1182,6 +1183,91 @@ psqlx -tA -c "select count(*)=20 from public.assignment_work_files where assignm
   || fail "concurrent registrations exceeded the per-part file limit"
 grep -l file_limit "$OUT"/a6-* >/dev/null || fail "the over-limit registration was not refused with file_limit"
 grep -qi deadlock "$OUT"/a1a "$OUT"/a1b "$OUT"/a2a "$OUT"/a2b "$OUT"/a3a "$OUT"/a3b "$OUT"/a4a "$OUT"/a4b "$OUT"/a5a "$OUT"/a5b && fail "a student assignment race deadlocked"
+
+# B. Public booking (EDRA-231) in its own academy: the last place, booking against invite onboarding,
+#    duplicate phones against staff creation, closure during submission and year start against closure.
+# ADMIN already owns the main fixture academy; use its manager permissions here through an admin role.
+BK="$(uuid)"; BK_YEAR="$(uuid)"; BK_GROUP="$(uuid)"; BK_GROUP2="$(uuid)"
+BK_USER="$(uuid)"
+psqlx >/dev/null <<SQL
+insert into public.academies (id, name, slug, icon, subject, created_by)
+  values ('$BK', 'Booking race $RUN', 'booking-race-$RUN', 'school', 'Math', '$ADMIN');
+update public.academic_years set id = '$BK_YEAR', start_year = 2030,
+  student_learning_started_at = now(), student_learning_start_source = 'legacy' where academy_id = '$BK';
+insert into public.academy_memberships (academy_id, user_id, role, created_by) values ('$BK', '$ADMIN', 'admin', '$ADMIN');
+insert into public.academy_levels (academy_id, level_id, sort_order) values ('$BK', 'secondary-1', 10);
+insert into public.groups (id, academy_id, academic_year_id, level_id, name, capacity) values
+  ('$BK_GROUP', '$BK', '$BK_YEAR', 'secondary-1', 'Last place', 1),
+  ('$BK_GROUP2', '$BK', '$BK_YEAR', 'secondary-1', 'Shared place', 1);
+insert into auth.users(id,phone,phone_confirmed_at) values('$BK_USER','201066660010',now());
+update public.profiles set full_name='Booking race invitee' where id='$BK_USER';
+insert into public.student_profiles(user_id,parent_phone,parent_phone_verified_at,level_id)
+ values('$BK_USER','+201100000000',now(),'secondary-1');
+SQL
+save_booking() { # $1 expected revision, $2 open
+  echo "select public.save_student_booking_settings('$BK','$BK_YEAR',$1,$2,true,'in_person','{}','{}','{}');"
+}
+psqlx >/dev/null -c "begin; $as_admin $(save_booking 0 true) select public.set_student_invite('$BK',true); commit;"
+BK_TOKEN="$(psqlx -tA -c "select token from public.student_booking_links where academy_id='$BK'")"
+BK_INVITE="$(psqlx -tA -c "select invite_token from public.student_enrollment_settings where academy_id='$BK'")"
+book() { # $1 phone, $2 group or null, $3 revision
+  local group="null"; [ "$2" != null ] && group="'$2'"
+  echo "set local role anon; select public.submit_student_booking('$BK_TOKEN','$BK_YEAR',$3,gen_random_uuid(),'Booking race','$1','01100000000','secondary-1',null,$group,null);"
+}
+
+# B1. Two bookings compete for the last place: one registers, the other observes the full group.
+hold b1a b1b "$(book 01066660001 "$BK_GROUP" 1)"
+start b1b "$(book 01066660002 "$BK_GROUP" 1)"
+wait
+expect_ok b1a "the booking holding the last place failed"
+expect_ok b1b "the competing booking failed"
+grep -q registered "$OUT/b1a" && grep -q group_full "$OUT/b1b" || fail "the last-place booking race did not serialize"
+psqlx -tA -c "select count(*) from public.annual_student_records where primary_group_id='$BK_GROUP'" | grep -qx 1 || fail "bookings exceeded capacity"
+
+# B2. Invite onboarding holds the shared group lock; a booking for the same last place waits and is full.
+hold b2a b2b "set local role authenticated; set local request.jwt.claim.sub='$BK_USER'; select public.complete_student_invite('$BK_INVITE',null,'$BK_GROUP2');"
+start b2b "$(book 01066660003 "$BK_GROUP2" 1)"
+wait
+expect_ok b2a "invite onboarding holding the place failed"
+expect_ok b2b "booking behind invite onboarding failed"
+grep -q connected "$OUT/b2a" && grep -q group_full "$OUT/b2b" || fail "booking and invite onboarding did not compete for one place"
+
+# B3. Staff creation holds the phone; a booking for the same phone reports already_registered.
+hold b3a b3b "$as_admin select public.create_student_record('$BK','$BK_YEAR','Staff race','01066660004','01112223333','secondary-1',null,null,'in_person');"
+start b3b "$(book 01066660004 null 1)"
+wait
+expect_ok b3a "staff creation holding the phone failed"
+expect_ok b3b "booking behind staff creation failed"
+grep -q already_registered "$OUT/b3b" || fail "duplicate booking phone was not reported as already registered"
+psqlx -tA -c "select count(*) from public.annual_student_records where academy_id='$BK' and student_phone='+201066660004'" | grep -qx 1 \
+  || fail "the duplicate-phone race created two records"
+
+# B4. Closing the form holds the settings row; a waiting submission observes the closure.
+hold b4a b4b "$as_admin $(save_booking 1 false)"
+start b4b "$(book 01066660005 null 1)"
+wait
+expect_ok b4a "closing booking failed"
+expect_ok b4b "submission behind closure failed"
+grep -q '"closed"' "$OUT/b4b" || fail "a submission registered after booking closed"
+
+# B5. A manager start holds the year row; a concurrent closure waits, and a later start is refused.
+BK2="$(uuid)"; BK2_YEAR="$(uuid)"
+psqlx >/dev/null <<SQL
+insert into public.academies (id, name, slug, icon, subject, created_by)
+  values ('$BK2', 'Year start race $RUN', 'year-start-race-$RUN', 'school', 'Math', '$ADMIN');
+update public.academic_years set id = '$BK2_YEAR', start_year = 2030 where academy_id = '$BK2';
+insert into public.academy_memberships (academy_id, user_id, role, created_by) values ('$BK2', '$ADMIN', 'admin', '$ADMIN');
+SQL
+hold b5a b5b "$as_admin select public.start_year_learning('$BK2','$BK2_YEAR');"
+start b5b "update public.academic_years set closed_at = now() where id = '$BK2_YEAR';"
+start b5c "$as_admin select public.start_year_learning('$BK2','$BK2_YEAR');"
+wait
+expect_ok b5a "the year start failed"
+expect_ok b5b "closure behind the year start failed"
+psqlx -tA -c "select student_learning_start_source || ':' || (closed_at is not null) from public.academic_years where id='$BK2_YEAR'" | grep -qx 'manager:true' \
+  || fail "year start and closure did not both apply in order"
+{ [ "$(rc b5c)" = 0 ] || grep -q year_unavailable "$OUT/b5c"; } || fail "a repeated start failed unexpectedly: $(out b5c)"
+grep -qi deadlock "$OUT"/b1a "$OUT"/b1b "$OUT"/b2a "$OUT"/b2b "$OUT"/b3a "$OUT"/b3b "$OUT"/b4a "$OUT"/b4b "$OUT"/b5a "$OUT"/b5b "$OUT"/b5c && fail "a booking race deadlocked"
 
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
