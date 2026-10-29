@@ -5,3 +5,5 @@ export type {
   AddAttendeeResult, AttendanceChange, AttendanceEntry, AttendanceSheet, AttendanceStatus, AttendeeCandidate, AttendeeSearchResult, ChangeResult,
   CheckInResult, PublicationState, PublishResult, SheetEntry, UnrecordedAbsenceResult,
 } from "./types";
+export { loadStudentAttendance, studentAttendanceSummary } from "./student";
+export { attendanceInsights } from "./insights";

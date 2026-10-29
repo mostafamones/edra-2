@@ -153,11 +153,12 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     onToggleRow: (row, selected) => setSelection((current) => toggleRow(current, row, selected)),
     onTogglePage: (selected) => setSelection((current) => togglePage(current, rows, selected)),
     onOpen: (row) => setEditingId(row.id),
+    detailsHref: (row) => href(`/app/students/${row.id}?from=${encodeURIComponent(searchParams.toString())}`),
     onArchive: (row, archive) => setArchiveRequest({ archive, records: [{ id: row.id, version: row.version }], name: row.fullName }),
     codes,
     onCode: codesEnabled ? (row) => setCodeTarget({ id: row.id, fullName: row.fullName, levelId: row.levelId }) : undefined,
     viewAsStudent: (row) => viewAsStudent(row.id),
-  }), [canManage, codes, codesEnabled, isSelected, pageSelection, rows, viewAsStudent]);
+  }), [canManage, codes, codesEnabled, isSelected, pageSelection, rows, viewAsStudent, href, searchParams]);
 
   const columnOrder = useMemo(
     () => [...(canManage ? [SELECT_COLUMN] : []), ...preferences.order, ACTIONS_COLUMN],
