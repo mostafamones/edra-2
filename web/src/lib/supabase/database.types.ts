@@ -8026,6 +8026,24 @@ export type Database = {
         }
         Returns: Json
       }
+      list_assessments: {
+        Args: {
+          p_academic_year_id: string
+          p_academy_id: string
+          p_audience: string
+          p_group: string
+          p_group_id: string
+          p_level_id: string
+          p_limit: number
+          p_offset: number
+          p_search: string
+          p_sort: string
+          p_statuses: string[]
+          p_track_id: string
+          p_types: string[]
+        }
+        Returns: Json
+      }
       list_assignment_marks: {
         Args: {
           p_academy_id: string
