@@ -12,7 +12,7 @@ Edra's applications use one approved brand identity. This file is the canonical 
 
 Approved logo artwork, color roles, typography roles and product terminology are shared. Platforms may adapt layout, sizing, interaction and asset formats to their native foundations without inventing a different identity.
 
-Ordinary application icons use Tabler. Brand logos use official assets and their brand colors by default, such as the multicolor Google sign-in logo; use monochrome, filled or other variants only when explicitly specified. Native assets retain source, version and license attribution. Standard system-controlled native UI follows the platform.
+Ordinary application icons use Hugeicons with stroke width 1.5, as required by the repository's Icons rules. Brand logos use official assets and their brand colors by default, such as the multicolor Google sign-in logo; use monochrome, filled or other variants only when explicitly specified. Native assets retain source, version and license attribution. Standard system-controlled native UI follows the platform.
 
 ## Visual implementation
 

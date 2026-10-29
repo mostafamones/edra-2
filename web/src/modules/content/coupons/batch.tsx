@@ -24,7 +24,7 @@ const STATUS_DOT = { unused: "bg-muted-foreground/50", redeemed: "bg-primary", r
 const capitalize = (value: string) => value[0].toUpperCase() + value.slice(1);
 
 /** Shows every coupon in one generated batch, with copy, export and revoke. */
-export function CouponBatchSheet({ academyId, userId, batch, onClose, onChanged }: { academyId: string; userId: string | undefined; batch: CouponBatch | null; onClose: () => void; onChanged: () => Promise<void> }) {
+export function CouponBatchSheet({ academyId, userId, batch, onClose, onChanged, onCloseAutoFocus }: { academyId: string; userId: string | undefined; batch: CouponBatch | null; onClose: () => void; onChanged: () => Promise<void>; onCloseAutoFocus?: (event: Event) => void }) {
   const container = useRef<HTMLDivElement>(null);
   const request = useRef<{ key: string; id: string } | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export function CouponBatchSheet({ academyId, userId, batch, onClose, onChanged 
   const canRevoke = Boolean(codes.data?.manager && batch && !batch.closed);
   return <>
     <Sheet open={Boolean(batch)} onOpenChange={open => { if (!open) onClose(); }}>
-      <SheetContent ref={container} className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
+      <SheetContent ref={container} onCloseAutoFocus={onCloseAutoFocus} className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
         {batch && <SheetHeader>
           <SheetTitle className="text-lg font-semibold">{batch.type_name} · {batch.quantity} coupon{batch.quantity === 1 ? "" : "s"}</SheetTitle>
           <SheetDescription>{batchProgram(batch)} · {learningDate(batch.created_at)}</SheetDescription>

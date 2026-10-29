@@ -2,13 +2,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, ArrowDown01Icon, CheckmarkCircle02Icon, Clock01Icon, Edit02Icon, MoreHorizontalIcon, SentIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, CheckmarkCircle02Icon, Clock01Icon, Edit02Icon, MoreHorizontalIcon, SentIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
+import { QueryContent } from "@/components/shared/query-content";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { FloatingSheet, FloatingSheetContent, FloatingSheetHeader, FloatingSheetTitle, FloatingSheetTrigger } from "@/components/ui/floating-sheet";
 import { unitPanelOptions, type UnitPanels } from "../panels";
@@ -36,12 +36,11 @@ export function VersionHistory({ academyId, unitId, userId, live, disabled, onSu
         <FloatingSheetTitle className="text-lg font-semibold">Version history</FloatingSheetTitle>
       </FloatingSheetHeader>
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
-        {query.isPending ? <div role="status" aria-label="Loading history" className="space-y-6">{[0, 1, 2].map(i => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}</div>
-          : query.isError ? <div role="alert" className="flex flex-col items-start gap-3 text-sm"><p className="flex items-center gap-2 text-destructive"><HugeiconsIcon icon={AlertCircleIcon} strokeWidth={1.5} className="size-4" aria-hidden="true" />{query.error.message}</p><Button variant="outline" size="sm" disabled={query.isFetching} onClick={() => void query.refetch()}>Retry</Button></div>
-          : !query.data.length ? <p className="text-sm text-muted-foreground">No history yet.</p>
-          : <ol>{query.data.map((entry, index) => <Entry key={entry.key} entry={entry} userId={userId} live={entry.key === liveKey} withYear={withYear} last={index === query.data.length - 1} disabled={disabled}
+        <QueryContent query={query} label="history" isEmpty={entries => !entries.length} emptyTitle="No history yet.">
+          {entries => <ol>{entries.map((entry, index) => <Entry key={entry.key} entry={entry} userId={userId} live={entry.key === liveKey} withYear={withYear} last={index === entries.length - 1} disabled={disabled}
             // Only the newest draft is the unit's working document, so only its own author can send or publish it from here.
             actions={index === 0 && entry.kind === "draft" && entry.creators.some(c => c?.id === userId) ? [onSubmit && { label: "Send for review", icon: SentIcon, run: onSubmit }, onPublish && { label: "Publish", icon: Tick02Icon, run: onPublish }].filter((action): action is Action => Boolean(action)) : []} />)}</ol>}
+        </QueryContent>
       </div>
     </FloatingSheetContent>
   </FloatingSheet>;
@@ -88,7 +87,7 @@ function Entry({ entry, userId, live, withYear, last, disabled, actions }: { ent
         <div className="min-w-0 flex-1">
           <p dir="auto" className="font-medium">{summary?.headline || (published ? "Published" : "Draft")}</p>
           <p className="text-xs text-muted-foreground tabular-nums">
-            {live && <><span className="font-medium text-primary">Live</span> · </>}
+            {live && <><span className="font-medium text-foreground">Live</span> · </>}
             {!published && "Draft · "}
             <time dateTime={entry.at}>{historyTime(entry.at, now, withYear)}</time>
             <span className="mx-1.5 text-muted-foreground/40" aria-hidden="true">|</span>{timeAgo(entry.at, now)}
