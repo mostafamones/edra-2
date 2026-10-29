@@ -28,4 +28,4 @@ Commands (security definer; each re-checks live membership, suspension and role 
 
 Definition changes refresh the catalog and call the consumer's `onChanged` so it refreshes its own caches. UI results are applied only while the same academy is active (`useAcademyScope`).
 
-SQL coverage: `supabase/tests/labels.sql` and the L1–L3 races in `supabase/tests/concurrency.sh`.
+SQL coverage: `supabase/tests/labels.sql` and the LB1–LB3 races in `supabase/tests/concurrency.sh`.
