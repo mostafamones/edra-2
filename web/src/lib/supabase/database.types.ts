@@ -862,6 +862,42 @@ export type Database = {
           },
         ]
       }
+      assignment_labels: {
+        Row: {
+          academy_id: string
+          created_at: string
+          label_id: string
+          assignment_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          label_id: string
+          assignment_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          label_id?: string
+          assignment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_labels_academy_id_assignment_id_fkey"
+            columns: ["academy_id", "assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "assignment_labels_academy_id_label_id_fkey"
+            columns: ["academy_id", "label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
       assignment_mark_basis_history: {
         Row: {
           annual_student_record_id: string
@@ -3358,6 +3394,42 @@ export type Database = {
           },
         ]
       }
+      exam_labels: {
+        Row: {
+          academy_id: string
+          created_at: string
+          label_id: string
+          exam_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          label_id: string
+          exam_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          label_id?: string
+          exam_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_labels_academy_id_exam_id_fkey"
+            columns: ["academy_id", "exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "exam_labels_academy_id_label_id_fkey"
+            columns: ["academy_id", "label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
       exam_marks: {
         Row: {
           academy_id: string
@@ -4293,6 +4365,38 @@ export type Database = {
           },
         ]
       }
+      labels: {
+        Row: {
+          academy_id: string
+          color: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          academy_id: string
+          color: string
+          created_at?: string
+          id: string
+          name: string
+        }
+        Update: {
+          academy_id?: string
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labels_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_path: string | null
@@ -4583,6 +4687,42 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "quiz_attempts"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_labels: {
+        Row: {
+          academy_id: string
+          created_at: string
+          label_id: string
+          quiz_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          label_id: string
+          quiz_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          label_id?: string
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_labels_academy_id_quiz_id_fkey"
+            columns: ["academy_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_labels_academy_id_label_id_fkey"
+            columns: ["academy_id", "label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["academy_id", "id"]
           },
         ]
       }
@@ -7599,6 +7739,15 @@ export type Database = {
         }
         Returns: Json
       }
+      create_label: {
+        Args: {
+          p_academy_id: string
+          p_color: string
+          p_label_id: string
+          p_name: string
+        }
+        Returns: Json
+      }
       create_quiz: {
         Args: {
           p_academic_year_id: string
@@ -7671,6 +7820,14 @@ export type Database = {
       }
       delete_content_coupon_type: {
         Args: { p_academy_id: string; p_request_id: string; p_type_id: string }
+        Returns: Json
+      }
+      delete_label: {
+        Args: {
+          p_academy_id: string
+          p_confirmed: boolean
+          p_label_id: string
+        }
         Returns: Json
       }
       delete_my_account: { Args: never; Returns: undefined }
@@ -8033,6 +8190,7 @@ export type Database = {
           p_audience: string
           p_group: string
           p_group_id: string
+          p_label_ids?: string[]
           p_level_id: string
           p_limit: number
           p_offset: number
@@ -8041,6 +8199,7 @@ export type Database = {
           p_statuses: string[]
           p_track_id: string
           p_types: string[]
+          p_unlabeled?: boolean
         }
         Returns: Json
       }
@@ -8820,6 +8979,16 @@ export type Database = {
           unitId: string
         }[]
       }
+      set_assessment_label: {
+        Args: {
+          p_academy_id: string
+          p_applied: boolean
+          p_assessment_id: string
+          p_label_id: string
+          p_type: string
+        }
+        Returns: Json
+      }
       set_my_avatar: {
         Args: { p_expected: string; p_path: string }
         Returns: Json
@@ -9135,6 +9304,15 @@ export type Database = {
           p_draft: Json
           p_exam_id: string
           p_expected_version: number
+        }
+        Returns: Json
+      }
+      update_label: {
+        Args: {
+          p_academy_id: string
+          p_color: string
+          p_label_id: string
+          p_name: string
         }
         Returns: Json
       }
