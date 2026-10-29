@@ -63,5 +63,20 @@ select pg_temp.expect_error(format('select public.staff_home(%L)',pg_temp.id('ac
 select set_config('request.jwt.claim.sub','',true);
 select pg_temp.expect_error(format('select public.staff_home(%L)',pg_temp.id('academy')),'forbidden');
 reset role;
+-- The staff student projection reuses real unit progress and never accepts a foreign record.
+update public.content_units set state='published',published_revision=1,published_version=version where id=pg_temp.id('unit');
+insert into public.content_revisions(unit_id,academy_id,revision,document,published_by)
+values(pg_temp.id('unit'),pg_temp.id('academy'),1,'{"title":"Review me","description":"","accessDays":7,"items":[]}',pg_temp.id('owner'));
+select pg_temp.act('owner');
+set local role authenticated;
+select pg_temp.check((public.staff_student_learning(pg_temp.id('academy'),(select id from public.annual_student_records where full_name='Home online student' and academy_id=pg_temp.id('academy')),0)->>'total')::int=1,'staff sees eligible published unit');
+select pg_temp.expect_error(format('select public.staff_student_learning(%L,%L,0)',pg_temp.id('other'),gen_random_uuid()),'forbidden');
+select pg_temp.check((public.staff_student_assessments(pg_temp.id('academy'),(select id from public.annual_student_records where full_name='Home online student' and academy_id=pg_temp.id('academy')),0)->>'total')::int=0,'empty assessment history is scoped');
+select pg_temp.expect_error(format('select public.staff_student_assessments(%L,%L,0)',pg_temp.id('other'),gen_random_uuid()),'forbidden');
+select pg_temp.act('student');
+select pg_temp.expect_error(format('select public.staff_student_learning(%L,%L,0)',pg_temp.id('academy'),gen_random_uuid()),'forbidden');
+reset role;
 select pg_temp.check(not has_function_privilege('anon','public.staff_home(uuid)','execute'),'anonymous execution denied');
+select pg_temp.check(not has_function_privilege('anon','public.staff_student_learning(uuid,uuid,integer)','execute'),'anonymous student learning denied');
+select pg_temp.check(not has_function_privilege('anon','public.staff_student_assessments(uuid,uuid,integer)','execute'),'anonymous assessment summary denied');
 rollback;

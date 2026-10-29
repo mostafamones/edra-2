@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.17"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       academic_years: {
@@ -9120,6 +9095,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      staff_student_assessments: {
+        Args: { p_academy_id: string; p_offset?: number; p_record_id: string }
+        Returns: Json
+      }
+      staff_student_learning: {
+        Args: { p_academy_id: string; p_offset?: number; p_record_id: string }
+        Returns: Json
+      }
       stage_student_import_rows: {
         Args: { p_rows: Json; p_session_id: string }
         Returns: number
@@ -9641,9 +9624,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       academy_role: ["owner", "head_admin", "admin", "instructor"],
