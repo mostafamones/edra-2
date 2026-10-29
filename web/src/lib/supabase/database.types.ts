@@ -8026,6 +8026,24 @@ export type Database = {
         }
         Returns: Json
       }
+      list_assessments: {
+        Args: {
+          p_academic_year_id: string
+          p_academy_id: string
+          p_audience: string
+          p_group: string
+          p_group_id: string
+          p_level_id: string
+          p_limit: number
+          p_offset: number
+          p_search: string
+          p_sort: string
+          p_statuses: string[]
+          p_track_id: string
+          p_types: string[]
+        }
+        Returns: Json
+      }
       list_assignment_marks: {
         Args: {
           p_academy_id: string
@@ -8660,6 +8678,17 @@ export type Database = {
         }
         Returns: Json
       }
+      save_exam_settings: {
+        Args: {
+          p_academy_id: string
+          p_closes_at: string
+          p_draft: Json
+          p_exam_id: string
+          p_expected_version: number
+          p_opens_at: string
+        }
+        Returns: Json
+      }
       save_my_content_progress: {
         Args: {
           p_academy_id: string
@@ -8711,6 +8740,17 @@ export type Database = {
           p_key: string
           p_quiz_id: string
           p_record_id: string
+        }
+        Returns: Json
+      }
+      save_quiz_settings: {
+        Args: {
+          p_academy_id: string
+          p_closes_at: string
+          p_draft: Json
+          p_expected_version: number
+          p_opens_at: string
+          p_quiz_id: string
         }
         Returns: Json
       }

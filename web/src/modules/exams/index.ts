@@ -6,7 +6,8 @@ export { loadExam, loadExamStudents, loadExams, examQueryKey, examsRootKey } fro
 export { announceable, examPermissions } from "./permissions";
 export type { ExamPermissions } from "./permissions";
 export { EXAM_AUDIENCES, EXAM_PART_KINDS, EXAM_PHASES } from "./types";
-export type { Exam, ExamAudience, ExamDraft, ExamFailure, ExamPart, ExamPhase, ExamResult, ExamStudent, ExamSummary } from "./types";
+export { KIND_LABELS, PHASE_BADGE, PHASE_LABELS } from "./components/shared/labels";
+export type { Exam, ExamAudience, ExamDraft, ExamPartKind, ExamFailure, ExamPart, ExamPhase, ExamResult, ExamStudent, ExamSummary } from "./types";
 export { enterStudentExam } from "./student/actions";
 export { StudentExamsError, StudentExamsLoading } from "./student/components/fallback";
 export type { ExamAnsweringProps, ExamEntryIntegration } from "./student/integration";

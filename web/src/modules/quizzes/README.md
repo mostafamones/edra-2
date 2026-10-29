@@ -30,7 +30,7 @@ Worker monitoring: `edra_private.quiz_deadline_runs` (one row per run with count
 
 ## Public services
 
-`server.ts` exports the domain operations (`data.ts`) and the v1 builders (`v1.ts`); `actions.ts` exposes cookie web actions; `queries.ts` holds browser reads. Routes: `/app/quizzes`, `/app/quizzes/new`, `/app/quizzes/<id>`, `/app/quizzes/<id>/edit`, and the bearer reads `GET /api/v1/academies/{academyId}/quizzes`, `/api/v1/quizzes/{quizId}`, `/api/v1/quizzes/{quizId}/students`.
+`server.ts` exports the domain operations (`data.ts`) and the v1 builders (`v1.ts`); `actions.ts` exposes cookie web actions; `queries.ts` holds browser reads. Routes: `/app/quizzes` (redirects to the shared staff list, `/app/assessments?type=quiz`; see the [assessments module](../assessments/README.md)), `/app/quizzes/new`, `/app/quizzes/<id>`, `/app/quizzes/<id>/edit`, and the bearer reads `GET /api/v1/academies/{academyId}/quizzes`, `/api/v1/quizzes/{quizId}`, `/api/v1/quizzes/{quizId}/students`.
 
 Exact decimal helpers live in `src/lib/score.ts` and academy-time helpers in `src/lib/academy-time.ts`, shared with assignments.
 

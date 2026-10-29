@@ -14,7 +14,8 @@ Development defaults are lvh.me:3000, app.lvh.me:3000 and learn.lvh.me:3000. NEX
 | Staff entry | / on staff host | src/app/app/page.tsx |
 | Academy staff | /<slug> | src/app/app/[academySlug]/ |
 | Students/imports, groups, schedules | /<slug>/students, /groups, /schedules and their concrete subroutes | Same feature folders under the academy |
-| Assignments | /<slug>/assignments, /new, /<id>, /<id>/edit | Concrete assignment routes |
+| Assessments | /<slug>/assessments | One staff list of assignments, quizzes and exams (src/app/app/[academySlug]/assessments/); list state in `type`, `q`, `audience`, `level`, `track`, `groupId`, `statuses`, `sort`, `group`, `page`; always the active academic year |
+| Assignments, quizzes, exams | /<slug>/assignments, /quizzes, /exams and their /new, /<id>, /<id>/edit | Concrete type routes. The bare lists redirect to /<slug>/assessments?type=assignment, quiz or exam |
 | Staff content | /<slug>/content, /content/<id>, /releases | Content library/program workspace, unit editor and published filter |
 | Sessions/attendance | /<slug>/attendance, /new, /<id> | Concrete attendance routes; legacy detail suffix redirects |
 | Team/codes/profile | /<slug>/manage/team, /manage/student-codes, /manage/academy | Concrete management routes; legacy /settings/academy redirects to /manage/academy |

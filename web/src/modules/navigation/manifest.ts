@@ -68,8 +68,10 @@ export type StaffNavSection = {
 export const STAFF_WORKSPACE_SECTIONS: readonly (StaffNavSection & { icon: NavIcon })[] = [
   { label: "Teaching", icon: "schedules", hrefs: ["/app/schedules", "/app/attendance"] },
   { label: "Content", icon: "content", hrefs: ["/app/content", "/app/releases"] },
-  { label: "Assessments", icon: "assignments", hrefs: ["/app/assignments", "/app/quizzes", "/app/exams"] },
 ];
+
+/** The Assessments list and the type-specific pages it opens; all keep the Assessments entry active. */
+export const ASSESSMENT_PATHS = ["/app/assessments", "/app/assignments", "/app/quizzes", "/app/exams"] as const;
 
 export type ManagementEntry = { label: string; href: string; also?: readonly string[] };
 
@@ -200,49 +202,9 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         },
       },
       {
-        label: "Assignments",
-        href: "/app/assignments",
+        label: "Assessments",
+        href: "/app/assessments",
         icon: "assignments",
-        preview: {
-          title: "Assignments",
-          purpose: "Prepare homework and follow its submissions.",
-          sections: [
-            "Assignment brief, audience, parts, deadlines, and draft or published state.",
-            "Online and in-person submission counts and completion status.",
-            "Answer material and the rule that unlocks answer videos after qualifying work.",
-          ],
-          actions: ["Prepare drafts and open submissions; publication follows role permissions."],
-        },
-      },
-      {
-        label: "Quizzes",
-        href: "/app/quizzes",
-        icon: "quizzes",
-        preview: {
-          title: "Quizzes",
-          purpose: "Prepare quizzes, record physical work, mark and announce results.",
-          sections: [
-            "Quiz audience, questions and key, timer, and the opening and closing window.",
-            "One attempt per student, accepted online or physical work, private marks and announced results.",
-            "Key corrections and exclusions, with earlier announced results kept as history.",
-          ],
-          actions: ["All staff prepare, enter, mark and announce; Owners, Head Admins and Admins set windows, archive and correct keys."],
-        },
-      },
-      {
-        label: "Exams",
-        href: "/app/exams",
-        icon: "exams",
-        preview: {
-          title: "Exams",
-          purpose: "Prepare timed exams, record physical work, mark and announce results.",
-          sections: [
-            "Exam audience, parts, questions and key, the required timer, and the opening and closing window.",
-            "One attempt per student with a departure log, accepted online or physical work, private marks and announced results.",
-            "Key corrections and exclusions, with earlier announced results kept as history.",
-          ],
-          actions: ["All staff prepare, enter, mark and announce; Owners, Head Admins and Admins set windows, archive and correct keys."],
-        },
       },
       {
         label: "Marking queue",
@@ -435,20 +397,9 @@ export const STAFF_CREATE_ITEMS: readonly NavItem[] = [
     href: "/app/schedules/new",
     icon: "schedules",
   },
-  {
-    label: "Assignment",
-    href: "/app/assignments/new",
-    icon: "assignments",
-    preview: {
-      title: "Create assignment",
-      purpose: "Prepare homework for an eligible student audience.",
-      sections: [
-        "Brief, questions or parts, due date, and target audience.",
-        "Submission mode, answer material, and any answer video.",
-        "Draft review and role-aware publication step.",
-      ],
-    },
-  },
+  { label: "Assignment", href: "/app/assignments/new", icon: "assignments" },
+  { label: "Quiz", href: "/app/quizzes/new", icon: "quizzes" },
+  { label: "Exam", href: "/app/exams/new", icon: "exams" },
 ];
 
 export const STUDENT_GROUPS: readonly NavGroup[] = [

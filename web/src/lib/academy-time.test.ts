@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { academyDateTime, academyInstant } from "./academy-time";
+import { academyDateTime, academyInstant, formatAcademyLong, formatAcademyRelative } from "./academy-time";
 
 describe("academyInstant", () => {
   it("converts ordinary summer and winter wall times", () => {
@@ -51,5 +51,33 @@ describe("academyInstant", () => {
   it("rejects malformed input", () => {
     expect(academyInstant("2026-1-1", "10:00")).toBeNull();
     expect(academyInstant("2026-01-01", "24:00")).toBeNull();
+  });
+});
+
+describe("short academy-time labels", () => {
+  const at = (date: string, time: string) => academyInstant(date, time)!;
+  // Thursday 29 Oct 2026, noon in Cairo.
+  const now = new Date(at("2026-10-29", "12:00"));
+  it.each([
+    ["2026-10-29", "15:00", "Today 3pm"],
+    ["2026-10-29", "09:30", "Today 9:30am"],
+    ["2026-10-29", "22:00", "Tonight 10pm"],
+    ["2026-10-30", "00:00", "Midnight tonight"],
+    ["2026-10-30", "12:00", "Tomorrow noon"],
+    ["2026-10-31", "00:00", "Tomorrow midnight"],
+    ["2026-10-31", "22:00", "Saturday 10pm"],
+    ["2026-11-04", "10:30", "Wednesday 10:30am"],
+    ["2026-11-06", "09:00", "Next Friday 9am"],
+    ["2026-10-28", "20:00", "Last night 8pm"],
+    ["2026-10-29", "00:00", "Midnight last night"],
+    ["2026-10-28", "08:00", "Yesterday 8am"],
+    ["2026-10-23", "22:00", "Last Friday 10pm"],
+    ["2026-12-25", "18:00", "25 Dec 6pm"],
+    ["2025-10-30", "22:00", "30 Oct 2025 10pm"],
+  ])("%s %s → %s", (date, time, label) => {
+    expect(formatAcademyRelative(at(date, time), now)).toBe(label);
+  });
+  it("gives the full date and time for details", () => {
+    expect(formatAcademyLong(at("2026-10-30", "22:00"))).toBe("Fri, 30 Oct 2026 at 10:00 pm");
   });
 });

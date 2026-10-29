@@ -2,6 +2,7 @@
 
 import { Field, FieldError } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "cn";
 
 type Props = {
   levels: { level_id: string }[];
@@ -16,15 +17,16 @@ type Props = {
   trackError?: string;
   /** Prefix of the trigger ids, so the two selects stay unique on a page. */
   id: string;
+  className?: string;
 };
 
 const ALL_TRACKS = "__all__";
 
 /** A level, then optionally one of its tracks ("All tracks" by default). The track select only appears for levels that have tracks. */
-export function LevelTrackSelect({ levels, tracks, levelNames, levelId, trackId, onChange, disabled, levelError, trackError, id }: Props) {
+export function LevelTrackSelect({ levels, tracks, levelNames, levelId, trackId, onChange, disabled, levelError, trackError, id, className }: Props) {
   const levelTracks = tracks.filter((track) => track.level_id === levelId);
   return (
-    <div className={`grid gap-5 ${levelTracks.length ? "sm:grid-cols-2" : ""}`}>
+    <div className={cn("grid gap-5", levelTracks.length > 0 && "sm:grid-cols-2", className)}>
       <Field data-invalid={Boolean(levelError) || undefined}>
         <Select value={levelId} onValueChange={(value) => onChange({ levelId: value, trackId: "" })} disabled={disabled}>
           <SelectTrigger id={`${id}-level`} aria-label="Level" className="w-full" aria-invalid={Boolean(levelError) || undefined}>

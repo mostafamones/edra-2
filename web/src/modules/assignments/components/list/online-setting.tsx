@@ -25,7 +25,7 @@ export function InPersonOnlineSetting({ academyId }: { academyId: string }) {
   return (
     <Field orientation="horizontal" className="w-auto">
       <Switch id="in-person-online" checked={query.data?.enabled ?? false} disabled={!query.data} onCheckedChange={(value) => void change(value)} />
-      <FieldLabel htmlFor="in-person-online">Online submission for in-person students</FieldLabel>
+      <FieldLabel htmlFor="in-person-online">Online assignment submission for in-person students</FieldLabel>
     </Field>
   );
 }

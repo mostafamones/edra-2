@@ -3,7 +3,7 @@ import { useCanonicalHref } from "../use-routing";
 
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AssignmentsIcon, Calendar03Icon, StudentsIcon, TeachingIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AssignmentsIcon, Calendar03Icon, CheckListIcon, File01Icon, StudentsIcon, TeachingIcon } from "@hugeicons/core-free-icons";
 import type { ComponentProps } from "react";
 
 import {
@@ -24,6 +24,8 @@ const icons: Record<string, ComponentProps<typeof HugeiconsIcon>["icon"]> = {
   sessions: TeachingIcon,
   schedules: Calendar03Icon,
   assignments: AssignmentsIcon,
+  quizzes: CheckListIcon,
+  exams: File01Icon,
 };
 
 export function QuickCreate() {

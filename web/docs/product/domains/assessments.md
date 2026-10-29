@@ -128,6 +128,17 @@ Owners, Head Admins, Admins and Instructors may prepare assignments, record work
 
 Owners, Head Admins and Admins manage submission availability and archival. Locked structure applies to all roles. Only Owners, Head Admins and Admins may correct the shared answer key or exclude questions after work has begun, for assignments, quizzes and exams. Instructors retain ordinary marking and announcement permissions, including announcing complete recalculated corrections; they cannot change the shared answer key or exclusion rules. No role may bypass scoring maxima, result completeness or history-preservation rules.
 
+## Staff Assessments area
+
+Confirmed by the owner, 2026-10-29. Staff discover assignments, quizzes and exams in one place; each type keeps its own authoring, availability, submission, marking and result rules above.
+
+- Staff navigation has one destination named Assessments. Student navigation and student assessment pages are unchanged.
+- The list combines all three types with a type selector: All, Assignments, Quizzes, Exams. The list shows the active academic year only. One search and the audience filter (program-wide, group-wide) apply across the selected types.
+- Table and Cards controls show the same filtered, sorted and paginated results. Switching views preserves search, filters, ordering and page.
+- Each signed-in user's chosen view is remembered on that browser. Without a saved choice, the default is Table on desktop and Cards on mobile, using the application's existing responsive breakpoint.
+- One Create assessment entry lets staff choose Assignment, Quiz or Exam, then continues in that type's existing authoring flow.
+- Opening an item enters its existing type-specific workspace, which keeps the shared assessment workspace components and type-specific controls.
+
 ## Labels
 
 Confirmed by the owner, 2026-10-29. These are approved requirements, not a statement of implementation or deployment. The UI reference is the current `ui/unified-assessments-view` Assessments area, including its row/card context menus and existing Filters and View options controls.

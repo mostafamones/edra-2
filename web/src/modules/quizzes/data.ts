@@ -82,7 +82,13 @@ export async function createQuiz(input: z.input<typeof createInput>, authority?:
   }));
 }
 
-const updateInput = z.object({ academyId: z.guid(), quizId: z.guid(), expectedVersion: z.number().int().min(1), draft: quizDraftSchema });
+const updateInput = z.object({
+  academyId: z.guid(), quizId: z.guid(), expectedVersion: z.number().int().min(1), draft: quizDraftSchema,
+  availability: z.object({
+    opensAt: z.iso.datetime({ offset: true }).nullable(), closesAt: z.iso.datetime({ offset: true }).nullable(),
+  }).refine((value) => (value.opensAt === null) === (value.closesAt === null)
+    && (value.opensAt === null || Date.parse(value.opensAt) < Date.parse(value.closesAt as string))).optional(),
+});
 
 /**
  * Saves preparation against `expectedVersion` (quiz_conflict when stale). The target and timer lock
@@ -91,9 +97,13 @@ const updateInput = z.object({ academyId: z.guid(), quizId: z.guid(), expectedVe
 export async function updateQuiz(input: z.input<typeof updateInput>, authority?: Authority | null): Promise<QuizResult> {
   const parsed = updateInput.safeParse(input);
   if (!parsed.success) return failure("validation");
-  const { academyId, quizId, expectedVersion, draft } = parsed.data;
+  const { academyId, quizId, expectedVersion, draft, availability } = parsed.data;
   const caller = await academyMember(academyId, authority);
   if (!caller) return failure("forbidden");
+  if (availability) return quizCommand(() => caller.db.rpc("save_quiz_settings", {
+    p_academy_id: academyId, p_quiz_id: quizId, p_expected_version: expectedVersion, p_draft: draftJson(draft),
+    p_opens_at: availability.opensAt as string, p_closes_at: availability.closesAt as string,
+  }));
   return quizCommand(() => caller.db.rpc("update_quiz", {
     p_academy_id: academyId, p_quiz_id: quizId, p_expected_version: expectedVersion, p_draft: draftJson(draft),
   }));
