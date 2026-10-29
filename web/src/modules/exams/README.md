@@ -32,7 +32,7 @@ Worker monitoring: `edra_private.exam_deadline_runs` (counts, failures, largest 
 
 ## Public services
 
-`server.ts` exports the domain operations (`data.ts`) and the v1 builders (`v1.ts`); `actions.ts` exposes cookie web actions; `queries.ts` holds browser reads. Routes: `/app/exams`, `/app/exams/new`, `/app/exams/<id>`, `/app/exams/<id>/edit`, and the bearer reads `GET /api/v1/academies/{academyId}/exams`, `/api/v1/exams/{examId}`, `/api/v1/exams/{examId}/students`. Staff commands are web actions only.
+`server.ts` exports the domain operations (`data.ts`) and the v1 builders (`v1.ts`); `actions.ts` exposes cookie web actions; `queries.ts` holds browser reads. Routes: `/app/exams` (redirects to the shared staff list, `/app/assessments?type=exam`; see the [assessments module](../assessments/README.md)), `/app/exams/new`, `/app/exams/<id>`, `/app/exams/<id>/edit`, and the bearer reads `GET /api/v1/academies/{academyId}/exams`, `/api/v1/exams/{examId}`, `/api/v1/exams/{examId}/students`. Staff commands are web actions only.
 
 Student code lives in `student/` (cookie web boundary only; no bearer API): `server.ts` exports `listMyExams`, `getMyExamOverview`, `getMyExamReview`, `enterMyExam` and the `StudentExamList` / `StudentExamOverviewPage` server components; `index.ts` exports the `enterStudentExam` server action, the route loading/error states, the entry integration types and the student DTO types. Student routes are `/<slug>/exams` and `/<slug>/exams/<examId>` on the student host.
 

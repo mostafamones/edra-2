@@ -24,7 +24,7 @@ Staff may enter per-question answers/manual scores or a fast part total. Answers
 
 ## Public services and concurrency
 
-server.ts exports createAssignment, updateAssignment, changeAssignmentState, getAssignment, listAssignments, previewAudience, listMarks, saveMarks, recordWork, publishResults, resolveStudent, studentCodesEnabled and assignmentAcademy plus v1 builders. actions.ts exposes web actions; routes remain composition/adapters.
+server.ts exports createAssignment, updateAssignment, changeAssignmentState, getAssignment, listAssignments, previewAudience, listMarks, saveMarks, recordWork, publishResults, resolveStudent, studentCodesEnabled and assignmentAcademy plus v1 builders. actions.ts exposes web actions; routes remain composition/adapters. Staff routes: `/app/assignments/new`, `/app/assignments/<id>` and `/app/assignments/<id>/edit`; `/app/assignments` redirects to the shared staff list (`/app/assessments?type=assignment`, see the [assessments module](../assessments/README.md)). `index.ts` also exports the state labels/badges used by that list.
 
 Authoring uses expectedVersion and a create identity; marking uses per-student expectedVersion and stable retry keys. Code saves bind the previewed record where supplied. Lifecycle/authoring lock assignment then year; marking/code operations follow the SQL lock graph before recipient writes. First work locks the annual record before the recipient; placement writers update only targeted cohort membership and never take assignment or recipient locks in reverse. Do not reverse lock order or replace existing part IDs during an edit.
 
