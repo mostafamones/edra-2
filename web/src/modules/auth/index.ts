@@ -17,3 +17,4 @@ export type {
 export { AuthProvider, ScopedAcademyProvider, useAuth } from "./components/provider";
 export { AcademyGate } from "./components/academy-gate";
 export { useAcademyScope } from "./use-academy-scope";
+export { requestSessionRecovery } from "./session-recovery";

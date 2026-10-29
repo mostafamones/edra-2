@@ -32,7 +32,9 @@ In the synthetic academy's student directory, **View as student** opens the sele
 
 **Return to staff** restores the previous staff test identity and directory context. **Exit preview** restores the owner's original identity and academy context. The controls remain accessible while viewing test identities.
 
-Actions in preview persist to the synthetic academy. Normal authorization, tenant boundaries, snapshots and history rules apply. Switching clears account-specific cached state. Reuse existing shared staff/student auth cookies: the owner accepts that switching affects other open development tabs. Independent sessions per tab are outside scope.
+Actions in preview persist to the synthetic academy. Normal authorization, tenant boundaries, snapshots and history rules apply. Internal attendance-based learning access is enabled; generated notifications and other external deliveries remain suppressed (confirmed 2026-10-26). Switching clears account-specific cached state. Reuse existing shared staff/student auth cookies: the owner accepts that switching affects other open development tabs. Independent sessions per tab are outside scope.
+
+Preview retains its two-hour authority limit. When it expires, the client stops protected interactions and offers sign-in with a safe return destination. Session checks also run on focus, navigation and while the page is visible. Connectivity failures do not themselves sign the user out; recovery never extends preview authority or retries a failed mutation.
 
 First implementation target: local Next development execution against the configured cloud development project. Hosted preview activation is separate work; no production activation is included.
 

@@ -8,8 +8,10 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { clearedControlCookie, clearedFailureCookie, endPreviewForSignOut } from "@/modules/development/server";
 import { clearPendingStaffInvite } from "@/modules/staff/server";
+import { safeNextPath } from "@/modules/auth/return-path";
 
-export async function POST() {
+export async function POST(request: Request) {
+  const next = new URL(request.url).searchParams.get("next");
   // Developer mode: end the control and revoke its sessions and the preserved original session first.
   // A failed provider revocation is logged; the ended control already denies generated-account authority.
   if (!(await endPreviewForSignOut().catch(() => false))) console.error("Developer mode sign-out cleanup needs a retry");
@@ -18,7 +20,9 @@ export async function POST() {
   if (data?.claims) await supabase.auth.signOut({ scope: "global" });
   revalidatePath("/", "layout");
   const platform = (await headers()).get(ROUTE_HEADER) === "student" ? "student" : "staff";
-  const response = NextResponse.redirect(new URL("/auth/login", platformOrigin(platform)), 303);
+  const login = new URL("/auth/login", platformOrigin(platform));
+  if (next) login.searchParams.set("next", safeNextPath(next, "/", platform));
+  const response = NextResponse.redirect(login, 303);
   response.headers.set("cache-control", "private, no-store");
   response.cookies.set("edra_recovery_pending", "", { httpOnly: true, maxAge: 0, path: "/", sameSite: "lax" });
   response.cookies.set("edra_recovery_session", "", { httpOnly: true, maxAge: 0, path: "/auth/recover", sameSite: "strict" });

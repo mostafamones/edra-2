@@ -75,6 +75,15 @@ describe("auth provider lifecycle", () => {
     expect(harness.effects[0].dependencies).toEqual([]);
   });
 
+  it("only blocks the app for an explicitly expired Developer preview", () => {
+    mount();
+    browser.dispatchEvent(new CustomEvent("edra-session-ended", { detail: "session" }));
+    expect(harness.state[4]).toBeNull();
+    browser.dispatchEvent(new CustomEvent("edra-session-ended", { detail: "preview" }));
+    expect(harness.state[4]).toBe("preview");
+    expect(harness.clearCache).toHaveBeenCalledOnce();
+  });
+
   it("discovers an existing session without refreshing the server-rendered route", async () => {
     harness.getSession.mockResolvedValue({ data: { session: session("a") }, error: null });
     mount();
@@ -96,6 +105,7 @@ describe("auth provider lifecycle", () => {
     expect(harness.refresh).toHaveBeenCalledTimes(1);
     expect(harness.clearCache).toHaveBeenCalledTimes(1);
     expect(harness.state[0]).toBeNull();
+    expect(harness.state[4]).toBeNull();
   });
 
   it("cancels refreshes and subscriptions when the provider unmounts", async () => {

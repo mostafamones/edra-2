@@ -2,7 +2,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const api = vi.hoisted(() => ({ status: vi.fn(), refetch: vi.fn(), run: vi.fn(), pending: false }));
+const api = vi.hoisted(() => ({ status: vi.fn(), refetch: vi.fn(), run: vi.fn(), expired: vi.fn(), pending: false }));
+vi.mock("@/modules/auth", () => ({ requestSessionRecovery: api.expired }));
 vi.mock("../use-preview", () => ({
   usePreviewStatus: () => ({ data: api.status(), refetch: api.refetch }),
   usePreviewAction: () => ({ pending: api.pending, run: api.run }),
@@ -11,7 +12,7 @@ vi.mock("../use-preview", () => ({
 import { DeveloperPreviewFrame } from "./frame";
 
 const runId = "12345678-1234-4123-8123-123456789012";
-const base = { available: true as const, active: true as const, run: { id: runId, academySlug: "edra" }, revision: 7, expiresAt: "2026-10-21T10:00:00Z", priorStaff: null, students: [], staffTargets: [] };
+const base = { available: true as const, active: true as const, run: { id: runId, academySlug: "edra" }, revision: 7, expiresAt: new Date(Date.now() + 3_600_000).toISOString(), priorStaff: null, students: [], staffTargets: [] };
 const original = { kind: "original" as const, logicalId: null, displayName: "Dev Owner", role: "instructor" as const };
 const studentIdentity = { kind: "student" as const, logicalId: "account:student:ana", displayName: "Ana Student", role: "student" as const };
 
@@ -19,12 +20,18 @@ beforeAll(() => {
   globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
   HTMLElement.prototype.scrollIntoView ??= vi.fn();
 });
-beforeEach(() => { api.pending = false; api.run.mockReset(); api.refetch.mockReset(); });
-afterEach(cleanup);
+beforeEach(() => { api.pending = false; api.run.mockReset(); api.refetch.mockReset(); api.expired.mockReset(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 const mount = (status: unknown) => { api.status.mockReturnValue(status); return render(<DeveloperPreviewFrame><p>App content</p></DeveloperPreviewFrame>); };
 
 describe("DeveloperPreviewFrame", () => {
+  it("recovers when a generated identity reaches its trusted preview expiry", async () => {
+    vi.useFakeTimers();
+    mount({ ...base, current: studentIdentity, expiresAt: new Date(Date.now() + 1000).toISOString() });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(api.expired).toHaveBeenCalledWith("preview");
+  });
   it("renders children without the bar when Developer mode is unavailable", () => {
     mount({ available: false });
     expect(screen.getByText("App content")).toBeTruthy();
