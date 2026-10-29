@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 const mocks = vi.hoisted(() => ({
-  query: "", replace: vi.fn(), push: vi.fn(), rpc: vi.fn(), role: "admin", details: vi.fn(), saveDetails: vi.fn(),
+  query: "", replace: vi.fn(), push: vi.fn(), rpc: vi.fn(), role: "admin", details: vi.fn(), saveDetails: vi.fn(), examStudents: vi.fn(),
   catalog: [] as { id: string; name: string; color: string }[], setLabel: vi.fn(), createLabel: vi.fn(), updateLabel: vi.fn(), deleteLabel: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
@@ -34,6 +34,10 @@ vi.mock("@/components/shared/assessment/workspace/names", () => ({
 vi.mock("@/modules/assignments", async (original) => ({
   ...await original<typeof import("@/modules/assignments")>(),
   loadYears: async () => [{ id: "11111111-1111-4111-8111-111111111111", startYear: 2026, open: true }],
+}));
+vi.mock("@/modules/exams", async (original) => ({
+  ...await original<typeof import("@/modules/exams")>(),
+  loadExamStudents: mocks.examStudents,
 }));
 vi.mock("@/modules/groups", async (original) => ({
   ...await original<typeof import("@/modules/groups")>(),
@@ -96,6 +100,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.query = "";
   mocks.role = "admin";
+  mocks.examStudents.mockResolvedValue([{ recordId: "r1", fullName: "Mona Adel", studentCode: "S1", result: { total: "40", complete: true } }]);
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   Element.prototype.scrollIntoView = vi.fn();
   window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener() {}, removeEventListener() {} });
@@ -159,6 +164,36 @@ describe("staff Assessments page", () => {
     await waitFor(() => expect(listCalls()).toHaveLength(2));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Edit exam" })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(target));
+  });
+
+  it("lists Edit, Summary and Open editor from the Actions button, and Summary opens its tab in the edit sheet", async () => {
+    show();
+    await screen.findByRole("table");
+    const trigger = screen.getByRole("button", { name: "Actions for Term exam" });
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: "mouse" });
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Edit", "Summary", "Open editor"]);
+    expect(within(menu).getByRole("menuitem", { name: "Open editor" }).getAttribute("href")).toBe("http://app.lvh.me:3000/science/exams/e1/edit");
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Summary" }));
+    const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
+    expect(within(sheet).getByRole("tab", { name: "Summary" }).getAttribute("aria-selected")).toBe("true");
+    expect(await within(sheet).findByText("Mona Adel")).toBeTruthy();
+    expect(within(sheet).getByRole("columnheader", { name: "Student" })).toBeTruthy();
+    fireEvent.mouseDown(within(sheet).getByRole("tab", { name: "Edit" }), { button: 0, ctrlKey: false });
+    expect(((await within(sheet).findByRole("textbox", { name: "Name" })) as HTMLInputElement).value).toBe("Term exam");
+  });
+
+  it("keeps the sheet usable when scores fail and allows retrying Summary", async () => {
+    mocks.examStudents.mockRejectedValueOnce(new Error("Unavailable"));
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Summary" }));
+    const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
+    expect(await within(sheet).findByText("Couldn’t load assessment scores.")).toBeTruthy();
+    fireEvent.click(within(sheet).getByRole("button", { name: "Retry scores" }));
+    expect(await within(sheet).findByText("Mona Adel")).toBeTruthy();
+    fireEvent.mouseDown(within(sheet).getByRole("tab", { name: "Edit" }), { button: 0, ctrlKey: false });
+    expect(await within(sheet).findByRole("textbox", { name: "Name" })).toBeTruthy();
   });
 
   it.each(["quiz", "exam"] as const)("steps the %s timer by 30 minutes, by 5 with Shift, and still saves a typed value", async (type) => {
@@ -292,7 +327,7 @@ describe("staff Assessments page", () => {
     show();
     const table = await screen.findByRole("table");
     expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent))
-      .toEqual(["Title", "Labels", "Type", "Status", "Date", "Marked", "Parts"]);
+      .toEqual(["Title", "Labels", "Type", "Parts", "Status", "Date", "Marked", "Actions"]);
     const tableLinks = links(table);
     expect(tableLinks).toEqual([
       ["Term exam", "http://app.lvh.me:3000/science/exams/e1"],
@@ -322,7 +357,7 @@ describe("staff Assessments page", () => {
     expect(exam.textContent).toContain("Open");
     expect(exam.textContent).toMatch(/Opens .*Closes /);
     // A short label, with the full dates for hover and screen readers.
-    const date = within(exam).getAllByRole("cell")[4];
+    const date = within(exam).getAllByRole("cell")[5];
     expect(date.querySelector("[aria-hidden=true]")?.textContent).toBe("Closed 1 Oct noon");
     expect(date.textContent).toContain("Opens Thu, 1 Oct 2026 at 11:00 am, Closes Thu, 1 Oct 2026 at 12:00 pm");
     expect(assignment.textContent).toContain("Active");
@@ -339,7 +374,7 @@ describe("staff Assessments page", () => {
     expect(title.textContent).toBe("Term examProgram-wide:Audience level");
     expect(within(quiz).getAllByRole("cell")[0].textContent).toBe("Weekly quizNo audience yet");
     expect(within(exam).getAllByRole("cell")[2].textContent).toBe("Exam");
-    expect(within(exam).getAllByRole("cell")[5].textContent).toBe("4 / 12");
+    expect(within(exam).getAllByRole("cell")[6].textContent).toBe("4 / 12");
     expect(within(table).getAllByRole("row").slice(1).every((row) => row.classList.contains("h-16"))).toBe(true);
   });
 

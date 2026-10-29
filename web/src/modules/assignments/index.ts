@@ -1,6 +1,6 @@
 export { changeAssignment, createNewAssignment, saveAssignment } from "./actions";
 export {
-  assignmentListQueryKey, assignmentQueryKey, assignmentsRootKey, loadAssignment, loadAssignments, loadAudiencePreview,
+  assignmentListQueryKey, assignmentQueryKey, assignmentsRootKey, loadAssignment, loadAssignments, loadAudiencePreview, loadMarks,
   loadRecipients, loadYears, recipientsQueryKey,
 } from "./queries";
 export { assignmentPermissions, isManager } from "./permissions";

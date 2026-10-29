@@ -28,7 +28,7 @@ export const AUDIENCE_KINDS: Record<Audience, { label: string; icon: Icon }> = {
 
 const number = new Intl.NumberFormat("en");
 
-const PART_ICONS: Record<string, Icon> = {
+export const PART_ICONS: Record<string, Icon> = {
   online_questions: ComputerIcon, answer_sheet: CheckmarkSquare02Icon, file_upload: FileUploadIcon, legacy: LeftToRightListNumberIcon,
   question_sheet: LeftToRightListBulletIcon, written_work: PencilEdit01Icon,
 };

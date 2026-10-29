@@ -20,16 +20,16 @@ import { useCanonicalHref } from "@/modules/navigation";
 import { ALL, DEFAULT_PARAMS, sameStatuses } from "../params";
 import { assessmentListQueryKey, assessmentsRootKey, loadAssessments, type ListFilters } from "../queries";
 import { setAssessmentLabel } from "../labels";
-import { DEFAULT_STATUSES, TYPE_ROUTES, type AssessmentListItem, type AssessmentRow } from "../types";
+import { DEFAULT_STATUSES, TYPE_ROUTES, type AssessmentRow } from "../types";
 import { useAssessmentParams } from "../use-params";
 import { useAssessmentView } from "../view";
 import { AssessmentCards } from "./cards";
 import { CreateAssessment } from "./create";
 import { groupRows } from "./groups";
+import type { AssessmentEditHandler, RowActions, SheetTab } from "./menu";
 import { AssessmentTable } from "./table";
 import { AssessmentToolbar } from "./toolbar";
 import { AssessmentPagination } from "./pagination";
-import type { RowActions } from "./menu";
 import { QuickEditSheet } from "./quick-edit";
 
 /** `/app/assessments`: every assignment, quiz and exam in the academy, as a table or cards. */
@@ -52,9 +52,8 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   const academyId = academy.id;
   const [params, update, query] = useAssessmentParams();
   const [view, setView] = useAssessmentView(user?.id);
-  const [editing, setEditing] = useState<{ item: AssessmentListItem; opener: HTMLElement | null } | null>(null);
-  const edit = (item: AssessmentListItem, opener: HTMLElement | null) => setEditing({ item, opener });
-  const names = useAudienceNames(academyId);
+  const [editing, setEditing] = useState<{ row: AssessmentRow; opener: HTMLElement | null; tab: SheetTab } | null>(null);
+  const edit: AssessmentEditHandler = (row, opener, tab) => setEditing({ row, opener, tab });
   const queryClient = useQueryClient();
   const isCurrent = useAcademyScope();
   const labels = useLabels(academyId);
@@ -76,6 +75,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
     },
     onManageLabels: managesLabels ? (opener) => setManaging({ open: true, opener }) : undefined,
   };
+  const names = useAudienceNames(academyId);
   useEffect(() => { rememberAssessmentList(academy.slug, query); }, [academy.slug, query]);
 
   const yearsQuery = useQuery({ queryKey: [...assessmentsRootKey(academyId), "years"], queryFn: () => loadYears(academyId) });
@@ -183,7 +183,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
           <AssessmentPagination params={params} total={data.total} disabled={listQuery.isFetching || listQuery.isPlaceholderData} onChange={update} />
         </div>
       ))}
-      {editing && <QuickEditSheet academy={academy} item={editing.item} opener={editing.opener} onClose={() => setEditing(null)} />}
+      {editing && <QuickEditSheet academy={academy} row={editing.row} tab={editing.tab} opener={editing.opener} onClose={() => setEditing(null)} />}
     </main>
   );
 }

@@ -135,4 +135,3 @@ export async function saveDetails(record: AssessmentDetails, values: QuickValues
   const result = await saveExam({ academyId, examId: id, expectedVersion, draft: timedDetailsDraft(record.value, values), ...(availability ? { availability } : {}) });
   return result.ok ? { ok: true, record: { type: "exam", value: result.exam } } : result;
 }
-

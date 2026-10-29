@@ -8,9 +8,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { formatScore } from "@/lib/score";
 import { itemKey, TYPE_LABELS } from "../types";
 import { AssessmentDate, AssessmentStatus, AudienceLine, MarkedCount, PartsSummary, TYPE_ICONS } from "./facts";
-import { LabelBadges } from "@/modules/labels";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { GroupToggle, type RowGroup } from "./groups";
+import { LabelBadges } from "@/modules/labels";
 import { AssessmentMenu, type RowActions } from "./menu";
 
 /** Card view of the same rows, in the same order, as the table. Each card opens its workspace. */
@@ -36,8 +36,10 @@ export function AssessmentCards({ groups, collapsed, onToggle, actions }: Props)
 function Cards({ rows, actions }: { rows: RowGroup["rows"]; actions: RowActions }) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {rows.map(({ item, href, audience }) => (
-        <AssessmentMenu key={itemKey(item)} item={item} href={href} actions={actions}>
+      {rows.map((row) => {
+        const { item, href, audience } = row;
+        return (
+        <AssessmentMenu key={itemKey(item)} row={row} actions={actions}>
           <li className="min-w-0 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
             {/* Same stretched-link pattern as the existing assessment cards: the whole card is one target. */}
             <Card size="sm" className="relative h-full gap-0 rounded-lg py-0 ring-0 transition-colors focus-within:ring-3 focus-within:ring-ring/50 hover:bg-muted/30">
@@ -70,7 +72,8 @@ function Cards({ rows, actions }: { rows: RowGroup["rows"]; actions: RowActions 
             </Card>
           </li>
         </AssessmentMenu>
-      ))}
+        );
+      })}
     </ul>
   );
 }

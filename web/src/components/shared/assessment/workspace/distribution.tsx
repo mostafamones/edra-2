@@ -17,10 +17,10 @@ const buckets = (scores: number[]) => Array.from({ length: 10 }, (_, index) => (
 }));
 
 /** Marked students by share of the total mark. `scores` is undefined while loading. */
-export function ScoreDistribution({ scores }: { scores: number[] | undefined }) {
+export function ScoreDistribution({ scores, className }: { scores: number[] | undefined; className?: string }) {
   if (scores === undefined) return <Skeleton className="h-80 rounded-xl" />;
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader><CardTitle className="font-medium">Scores</CardTitle></CardHeader>
       <CardContent>
         {scores.length === 0 ? (
@@ -33,10 +33,10 @@ export function ScoreDistribution({ scores }: { scores: number[] | undefined }) 
           </Empty>
         ) : (
           <ChartContainer config={config} className="aspect-auto h-58 w-full">
-            <BarChart data={buckets(scores)} margin={{ top: 8, right: 4, left: -16, bottom: 0 }} accessibilityLayer>
+            <BarChart data={buckets(scores)} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} accessibilityLayer>
               <CartesianGrid vertical={false} />
               <XAxis dataKey="range" tickLine={false} axisLine={false} tickMargin={8} interval={0} />
-              <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
+              <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={24} />
               <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
               <Bar dataKey="students" fill="var(--color-students)" radius={4} maxBarSize={48} />
             </BarChart>
