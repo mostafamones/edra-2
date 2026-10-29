@@ -45,7 +45,7 @@ select edra_private.learning_issue(gen_random_uuid(),pg_temp.aid('academy'),
   pg_temp.aid('present'),pg_temp.aid('regular'),'staff',40*86400);
 create function pg_temp.make_session(label text) returns uuid language plpgsql as $$
 declare schedule uuid; sid uuid; changes jsonb; begin
-  schedule:=public.create_schedule(pg_temp.aid('academy'),pg_temp.aid('year'),label,'recurring','program',null,'secondary-1',null,true,null,
+  schedule:=public.create_schedule(pg_temp.aid('academy'),pg_temp.aid('year'),label,'recurring','level',null,'secondary-1',null,true,null,
     '[{"weekday":1,"startsAt":"17:00","endsAt":"18:00"}]','[]');
   select session_id into sid from public.start_session(pg_temp.aid('academy'),schedule,gen_random_uuid());
   perform public.save_session_content(pg_temp.aid('academy'),sid,0,
