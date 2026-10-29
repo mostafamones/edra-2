@@ -8678,6 +8678,17 @@ export type Database = {
         }
         Returns: Json
       }
+      save_exam_settings: {
+        Args: {
+          p_academy_id: string
+          p_closes_at: string
+          p_draft: Json
+          p_exam_id: string
+          p_expected_version: number
+          p_opens_at: string
+        }
+        Returns: Json
+      }
       save_my_content_progress: {
         Args: {
           p_academy_id: string
@@ -8729,6 +8740,17 @@ export type Database = {
           p_key: string
           p_quiz_id: string
           p_record_id: string
+        }
+        Returns: Json
+      }
+      save_quiz_settings: {
+        Args: {
+          p_academy_id: string
+          p_closes_at: string
+          p_draft: Json
+          p_expected_version: number
+          p_opens_at: string
+          p_quiz_id: string
         }
         Returns: Json
       }

@@ -15,7 +15,7 @@ export async function createNewExam(value: { academyId: string; academicYearId: 
   return invalid(value) ? failure("validation") : createExam(value);
 }
 
-export async function saveExam(value: { academyId: string; examId: string; expectedVersion: number; draft: ExamDraft }): Promise<ExamResult> {
+export async function saveExam(value: { academyId: string; examId: string; expectedVersion: number; draft: ExamDraft; availability?: { opensAt: string | null; closesAt: string | null } }): Promise<ExamResult> {
   return invalid(value) ? failure("validation") : updateExam(value);
 }
 

@@ -161,4 +161,72 @@ select set_config('request.jwt.claim.sub', '', true);
 select pg_temp.check(pg_temp.list() is null, 'signed out denied');
 reset role;
 
+-- Settings saves combine preparation and availability atomically using the existing commands.
+create function pg_temp.settings_draft() returns jsonb language sql as $$
+  select '{"title":"Settings saved","audience":"level","level_id":"preparatory-3","time_limit_minutes":20,
+    "parts":[{"title":"Written","kind":"written_work","questions":[{"prompt":"Explain","max_score":"2"}]}]}'::jsonb
+$$;
+create function pg_temp.settings(kind text, target uuid, version integer, draft jsonb, opens timestamptz, closes timestamptz)
+returns jsonb language plpgsql as $$
+begin
+  if kind = 'quiz' then return public.save_quiz_settings(pg_temp.id('academy'), target, version, draft, opens, closes); end if;
+  return public.save_exam_settings(pg_temp.id('academy'), target, version, draft, opens, closes);
+end $$;
+create function pg_temp.settings_record(kind text, target uuid) returns jsonb language plpgsql as $$
+begin
+  if kind = 'quiz' then return public.get_quiz(pg_temp.id('academy'), target); end if;
+  return public.get_exam(pg_temp.id('academy'), target);
+end $$;
+
+select pg_temp.check(not has_function_privilege('anon', 'public.save_quiz_settings(uuid,uuid,integer,jsonb,timestamptz,timestamptz)', 'execute'), 'quiz settings anon grant');
+select pg_temp.check(not has_function_privilege('anon', 'public.save_exam_settings(uuid,uuid,integer,jsonb,timestamptz,timestamptz)', 'execute'), 'exam settings anon grant');
+select pg_temp.act('outsider');
+set local role authenticated;
+select pg_temp.expect_error($s$ select pg_temp.settings('quiz',pg_temp.id('q1'),1,pg_temp.settings_draft(),now()+interval '1 day',now()+interval '2 days') $s$, 'forbidden');
+select pg_temp.expect_error($s$ select pg_temp.settings('exam',pg_temp.id('x1'),1,pg_temp.settings_draft(),now()+interval '1 day',now()+interval '2 days') $s$, 'forbidden');
+select set_config('request.jwt.claim.sub', '', true);
+select pg_temp.expect_error($s$ select pg_temp.settings('quiz',pg_temp.id('q1'),1,pg_temp.settings_draft(),null,null) $s$, 'forbidden');
+reset role;
+select pg_temp.act('owner');
+set local role authenticated;
+do $$ declare kind text; target uuid; before jsonb; after jsonb; saved jsonb; version integer; begin
+  foreach kind in array array['quiz','exam'] loop
+    target := case kind when 'quiz' then pg_temp.id('q1') else pg_temp.id('x1') end;
+    before := pg_temp.settings_record(kind,target);
+    version := (before->>'version')::integer;
+    begin
+      perform pg_temp.settings(kind,target,version,pg_temp.settings_draft(),now()+interval '2 days',now()+interval '1 day');
+      raise exception 'Invalid window accepted' using errcode='XX001';
+    exception when sqlstate 'P0001' then if sqlerrm <> 'validation' then raise; end if; end;
+    after := pg_temp.settings_record(kind,target);
+    perform pg_temp.check(after->>'version'=before->>'version' and after->>'title'=before->>'title' and after->'parts'=before->'parts',kind||' failed window rolls back preparation');
+    saved := pg_temp.settings(kind,target,version,pg_temp.settings_draft(),now()+interval '1 day',now()+interval '2 days');
+    perform pg_temp.check(saved->>'title'='Settings saved' and (saved->>'version')::integer=version+2 and saved->>'opens_at' is not null,kind||' details and window saved together');
+    begin
+      perform pg_temp.settings(kind,target,version,pg_temp.settings_draft(),null,null);
+      raise exception 'Stale settings accepted' using errcode='XX001';
+    exception when sqlstate 'P0001' then if sqlerrm <> kind||'_conflict' then raise; end if; end;
+  end loop;
+end $$;
+reset role;
+-- An instructor may prepare either type but cannot change availability; the whole save rolls back.
+select pg_temp.act('owner');
+insert into public.academy_memberships(academy_id,user_id,role,created_by)
+values(pg_temp.id('academy'),pg_temp.id('outsider'),'instructor',pg_temp.id('owner'));
+select pg_temp.act('outsider');
+set local role authenticated;
+do $$ declare kind text; target uuid; before jsonb; after jsonb; begin
+  foreach kind in array array['quiz','exam'] loop
+    target := case kind when 'quiz' then pg_temp.id('q1') else pg_temp.id('x1') end;
+    before := pg_temp.settings_record(kind,target);
+    begin
+      perform pg_temp.settings(kind,target,(before->>'version')::integer,jsonb_set(pg_temp.settings_draft(),'{title}','"Instructor edit"'),now()+interval '1 day',now()+interval '3 days');
+      raise exception 'Instructor changed window' using errcode='XX001';
+    exception when sqlstate 'P0001' then if sqlerrm <> 'forbidden' then raise; end if; end;
+    after := pg_temp.settings_record(kind,target);
+    perform pg_temp.check(after->>'version'=before->>'version' and after->>'title'=before->>'title',kind||' instructor save rolled back');
+  end loop;
+end $$;
+reset role;
+
 rollback;
