@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Separate-session race tests for staff access, schedule/group/slot, student-record, import,
-# student-code, check-in, attendance-correction, quiz and exam locking. Run only through `npm run test:db`, which validates the isolated target and
+# student-code, check-in, attendance-correction, quiz and exam locking, and label assignment/deletion. Run only through `npm run test:db`, which validates the isolated target and
 # exports its connection. Races need real concurrent transactions, so fixtures are committed under a
 # run-specific academy, admin and ids. They are retained: preserved history (sessions, attendance,
 # code ledger) cannot be removed through normal flows. Fresh identities keep reruns collision-free.
@@ -1268,6 +1268,35 @@ psqlx -tA -c "select student_learning_start_source || ':' || (closed_at is not n
   || fail "year start and closure did not both apply in order"
 { [ "$(rc b5c)" = 0 ] || grep -q year_unavailable "$OUT/b5c"; } || fail "a repeated start failed unexpectedly: $(out b5c)"
 grep -qi deadlock "$OUT"/b1a "$OUT"/b1b "$OUT"/b2a "$OUT"/b2b "$OUT"/b3a "$OUT"/b3b "$OUT"/b4a "$OUT"/b4b "$OUT"/b5a "$OUT"/b5b "$OUT"/b5c && fail "a booking race deadlocked"
+
+# LB1-LB3. Labels. Applying a label takes a share lock on it and deletion an exclusive one, so a label
+#     that gains a use while deletion runs is never removed without confirmation.
+LABEL_A="$(uuid)"; LABEL_B="$(uuid)"
+psqlx >/dev/null -c "$as_admin select public.create_label('$ACADEMY','$LABEL_A','Race A','red'); select public.create_label('$ACADEMY','$LABEL_B','Race B','blue');"
+label_uses() { psqlx -tA -c "select count(*) from public.quiz_labels where label_id = '$1'"; }
+# LB1. An application holds the label; an unconfirmed deletion waits, then sees the use and changes nothing.
+hold lb1a lb1b "$as_admin select public.set_assessment_label('$ACADEMY','quiz','$QUIZ','$LABEL_A',true);"
+start lb1b "$as_admin select public.delete_label('$ACADEMY','$LABEL_A',false);"
+wait
+expect_ok lb1a "the label application holding the label failed"
+expect_ok lb1b "the deletion queued behind the application failed"
+grep -q '"confirm"' "$OUT/lb1b" || fail "a label that gained a use was deleted without confirmation: $(out lb1b)"
+[ "$(label_uses "$LABEL_A")" = 1 ] || fail "the unconfirmed deletion removed the new use"
+# LB2. A deletion holds the unused label; a concurrent application waits, then finds it gone. No dangling use.
+hold lb2a lb2b "$as_admin select public.delete_label('$ACADEMY','$LABEL_B',false);"
+start lb2b "$as_admin select public.set_assessment_label('$ACADEMY','quiz','$QUIZ','$LABEL_B',true);"
+wait
+expect_ok lb2a "the deletion holding the label failed"
+expect_rejected lb2b "a label was applied after its deletion committed" label_not_found
+[ "$(label_uses "$LABEL_B")" = 0 ] || fail "an application survived the deletion"
+# LB3. Two staff apply the same label at once (a retry race); both succeed with one association.
+hold lb3a lb3b "$as_admin select public.set_assessment_label('$ACADEMY','exam','$EXAM','$LABEL_A',true);"
+start lb3b "$as_admin select public.set_assessment_label('$ACADEMY','exam','$EXAM','$LABEL_A',true);"
+wait
+expect_ok lb3a "the first application failed"
+expect_ok lb3b "the repeated application failed"
+psqlx -tA -c "select count(*) from public.exam_labels where label_id = '$LABEL_A'" | grep -qx 1 || fail "a repeated application duplicated the association"
+grep -qi deadlock "$OUT"/lb1a "$OUT"/lb1b "$OUT"/lb2a "$OUT"/lb2b "$OUT"/lb3a "$OUT"/lb3b && fail "a label race deadlocked"
 
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and

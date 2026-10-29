@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, AssignmentsIcon, SearchRemoveIcon } from "@hugeicons/core-free-icons";
 
@@ -13,17 +14,19 @@ import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "@/comp
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AcademyEntry } from "@/modules/academies";
 import { loadYears } from "@/modules/assignments";
-import { AcademyGate, useAuth } from "@/modules/auth";
+import { AcademyGate, useAcademyScope, useAuth } from "@/modules/auth";
+import { canManageLabels, LabelManager, labelsQueryKey, useLabels } from "@/modules/labels";
 import { useCanonicalHref } from "@/modules/navigation";
 import { ALL, DEFAULT_PARAMS, sameStatuses } from "../params";
 import { assessmentListQueryKey, assessmentsRootKey, loadAssessments, type ListFilters } from "../queries";
+import { setAssessmentLabel } from "../labels";
 import { DEFAULT_STATUSES, TYPE_ROUTES, type AssessmentRow } from "../types";
 import { useAssessmentParams } from "../use-params";
 import { useAssessmentView } from "../view";
 import { AssessmentCards } from "./cards";
 import { CreateAssessment } from "./create";
 import { groupRows } from "./groups";
-import type { AssessmentEditHandler, SheetTab } from "./menu";
+import type { AssessmentEditHandler, RowActions, SheetTab } from "./menu";
 import { AssessmentTable } from "./table";
 import { AssessmentToolbar } from "./toolbar";
 import { AssessmentPagination } from "./pagination";
@@ -51,6 +54,27 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   const [view, setView] = useAssessmentView(user?.id);
   const [editing, setEditing] = useState<{ row: AssessmentRow; opener: HTMLElement | null; tab: SheetTab } | null>(null);
   const edit: AssessmentEditHandler = (row, opener, tab) => setEditing({ row, opener, tab });
+  const queryClient = useQueryClient();
+  const isCurrent = useAcademyScope();
+  const labels = useLabels(academyId);
+  const managesLabels = canManageLabels(academy.role);
+  const [managing, setManaging] = useState<{ open: boolean; opener: HTMLElement | null }>({ open: false, opener: null });
+  const refreshList = () => queryClient.invalidateQueries({ queryKey: [...assessmentsRootKey(academyId), "list"] });
+  const actions: RowActions = {
+    academyId,
+    onEdit: edit,
+    onApplyLabel: async (item, labelId, applied) => {
+      try {
+        const result = await setAssessmentLabel({ academyId, type: item.type, assessmentId: item.id, labelId, applied });
+        if (!result.ok && result.code === "label_not_found") void queryClient.invalidateQueries({ queryKey: labelsQueryKey(academyId) });
+        await refreshList();
+        if (!result.ok && isCurrent(academyId)) toast.error(result.message);
+      } catch {
+        if (isCurrent(academyId)) toast.error("Could not reach the server. Check your connection and try again.");
+      }
+    },
+    onManageLabels: managesLabels ? (opener) => setManaging({ open: true, opener }) : undefined,
+  };
   const names = useAudienceNames(academyId);
   useEffect(() => { rememberAssessmentList(academy.slug, query); }, [academy.slug, query]);
 
@@ -59,7 +83,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   const year = yearsQuery.data?.find((option) => option.open)?.id ?? ALL;
   const filters: ListFilters = {
     type: params.type, search: params.search, year, audience: params.audience, level: params.level, track: params.track, groupId: params.groupId,
-    statuses: params.statuses, sort: params.sort, group: params.group, pageSize: params.pageSize,
+    statuses: params.statuses, labels: params.labels, unlabeled: params.unlabeled, sort: params.sort, group: params.group, pageSize: params.pageSize,
   };
   const listQuery = useQuery({
     queryKey: assessmentListQueryKey(academyId, filters, params.page),
@@ -75,7 +99,14 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   const failed = yearsQuery.isError || listQuery.isError;
   const pageCount = Math.max(1, Math.ceil((data?.total ?? 0) / params.pageSize));
   const filtering = params.type !== ALL || params.search.trim() !== "" || params.audience !== ALL || params.level !== null
-    || !sameStatuses(params.statuses, DEFAULT_STATUSES);
+    || params.labels.length > 0 || params.unlabeled || !sameStatuses(params.statuses, DEFAULT_STATUSES);
+
+  // A selected label deleted meanwhile (here or elsewhere) leaves the filter instead of silently matching nothing.
+  useEffect(() => {
+    if (!labels.data) return;
+    const known = params.labels.filter((id) => labels.data.some((label) => label.id === id));
+    if (known.length !== params.labels.length) update({ labels: known });
+  }, [labels.data, params.labels, update]);
 
   // A hand-edited page past the end goes to the last page.
   useEffect(() => {
@@ -101,7 +132,12 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
       {/* The header breadcrumb shows the page name; the heading stays for screen readers. */}
       <h1 className="sr-only">Assessments</h1>
 
-      <AssessmentToolbar params={params} onChange={update} view={view} onView={setView} academyId={academyId} />
+      <AssessmentToolbar params={params} onChange={update} view={view} onView={setView} academyId={academyId} labels={labels.data}
+        manager={managesLabels && (
+          <LabelManager academyId={academyId} open={managing.open} opener={managing.opener} onChanged={() => void refreshList()}
+            // Opening from the toolbar anchors there; closing keeps the opener so focus can return to it.
+            onOpenChange={(open) => setManaging((current) => open ? { open, opener: null } : { ...current, open: false })} />
+        )} />
 
       {failed && (
         <Alert variant="destructive">
@@ -142,8 +178,8 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
       ) : (
         <div className="flex flex-col gap-3" aria-busy={listQuery.isFetching}>
           {view === "table"
-            ? <AssessmentTable groups={groups} collapsed={collapsed} onToggle={toggleGroup} onEdit={edit} />
-            : <AssessmentCards groups={groups} collapsed={collapsed} onToggle={toggleGroup} onEdit={edit} />}
+            ? <AssessmentTable groups={groups} collapsed={collapsed} onToggle={toggleGroup} actions={actions} />
+            : <AssessmentCards groups={groups} collapsed={collapsed} onToggle={toggleGroup} actions={actions} />}
           <AssessmentPagination params={params} total={data.total} disabled={listQuery.isFetching || listQuery.isPlaceholderData} onChange={update} />
         </div>
       ))}

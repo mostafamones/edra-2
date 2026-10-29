@@ -1,5 +1,6 @@
 import { ASSIGNMENT_STATES, type AssignmentState, type PartKind } from "@/modules/assignments";
 import { EXAM_PHASES, type ExamPartKind, type ExamPhase } from "@/modules/exams";
+import type { Label } from "@/modules/labels";
 import { QUIZ_PHASES, type QuizPartKind, type QuizPhase } from "@/modules/quizzes";
 
 export const ASSESSMENT_TYPES = ["assignment", "quiz", "exam"] as const;
@@ -33,6 +34,8 @@ type Common = {
   markedCount: number;
   audienceCount: number;
   createdAt: string;
+  /** Staff-only organizational labels from the academy catalog, by name. */
+  labels: Label[];
 };
 
 /** One row of the staff Assessments list. Identity is type plus ID; each type keeps its own status. */

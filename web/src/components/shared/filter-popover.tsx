@@ -26,13 +26,16 @@ export type FilterField = {
   toggleLabel?: string;
 };
 
+/** Composed filter content beyond single-value fields, such as a multi-select. It counts as one filter while active. */
+export type FilterSection = { id: string; active: boolean; onReset: () => void; content: ReactNode };
+
 /**
  * One Filter button opening a panel of labelled selects, with a count of the filters that are set.
  * `children` (such as a Create button) sit beside it, and the panel aligns to the right edge of the whole group.
  * With `iconOnly`, the trigger is an icon button and `children` join it in a button group; the caller places the group.
  */
-export function FilterPopover({ fields, children, iconOnly = false }: { fields: FilterField[]; children?: ReactNode; iconOnly?: boolean }) {
-  const active = fields.filter((field) => field.value !== field.defaultValue).length;
+export function FilterPopover({ fields, sections = [], children, iconOnly = false }: { fields: FilterField[]; sections?: FilterSection[]; children?: ReactNode; iconOnly?: boolean }) {
+  const active = fields.filter((field) => field.value !== field.defaultValue).length + sections.filter((section) => section.active).length;
   return (
     <Popover>
       <PopoverAnchor asChild>
@@ -71,7 +74,10 @@ export function FilterPopover({ fields, children, iconOnly = false }: { fields: 
         <div className="flex items-center justify-between mb-2">
           <p className="font-heading text-sm font-semibold">Filters</p>
           <Button variant="ghost" size="sm" className="-mr-2 h-7 text-muted-foreground" disabled={active === 0}
-            onClick={() => { for (const field of fields) field.onChange(field.defaultValue); }}>
+            onClick={() => {
+              for (const field of fields) field.onChange(field.defaultValue);
+              for (const section of sections) section.onReset();
+            }}>
             <HugeiconsIcon icon={Cancel01Icon} />Reset
           </Button>
         </div>
@@ -95,6 +101,12 @@ export function FilterPopover({ fields, children, iconOnly = false }: { fields: 
             </Fragment>
           );
         })}
+        {sections.map((section) => (
+          <Fragment key={section.id}>
+            <Separator />
+            {section.content}
+          </Fragment>
+        ))}
       </PopoverContent>
     </Popover>
   );

@@ -4,13 +4,21 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-const mocks = vi.hoisted(() => ({ query: "", replace: vi.fn(), push: vi.fn(), rpc: vi.fn(), role: "admin", details: vi.fn(), saveDetails: vi.fn(), examStudents: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  query: "", replace: vi.fn(), push: vi.fn(), rpc: vi.fn(), role: "admin", details: vi.fn(), saveDetails: vi.fn(), examStudents: vi.fn(),
+  catalog: [] as { id: string; name: string; color: string }[], setLabel: vi.fn(), createLabel: vi.fn(), updateLabel: vi.fn(), deleteLabel: vi.fn(),
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/science/assessments",
   useRouter: () => ({ replace: mocks.replace, push: mocks.push }),
   useSearchParams: () => new URLSearchParams(mocks.query),
 }));
-vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ rpc: mocks.rpc }) }));
+vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({
+  rpc: mocks.rpc,
+  from: () => ({ select: () => ({ eq: async () => ({ data: mocks.catalog, error: null }) }) }),
+}) }));
+vi.mock("../labels", () => ({ setAssessmentLabel: mocks.setLabel }));
+vi.mock("@/modules/labels/actions", () => ({ createLabel: mocks.createLabel, updateLabel: mocks.updateLabel, deleteLabel: mocks.deleteLabel }));
 vi.mock("@/modules/auth", () => {
   const academy = () => ({ id: "academy-id", name: "Science", slug: "science", role: mocks.role });
   return {
@@ -56,12 +64,17 @@ import { assignmentFixture, examFixture, quizFixture } from "../details.fixture"
 
 const row = (type: string, id: string, title: string, status: string, extra: Record<string, unknown> = {}) => ({
   type, id, title, status, academic_year_id: "year", audience: "level", level_id: "preparatory-3", track_id: null, group_ids: [],
-  max_score: "10.50", marked_count: 4, audience_count: 12, created_at: "2026-10-01T10:00:00Z", due_at: null, opens_at: null, closes_at: null, processing_pending: false, parts: [], ...extra,
+  max_score: "10.50", marked_count: 4, audience_count: 12, created_at: "2026-10-01T10:00:00Z", due_at: null, opens_at: null, closes_at: null, processing_pending: false, parts: [], labels: [], ...extra,
 });
+const REVISION = "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a";
+const WEEK = "6b6b6b6b-6b6b-4b6b-8b6b-6b6b6b6b6b6b";
+const PREP = "7c7c7c7c-7c7c-4c7c-8c7c-7c7c7c7c7c7c";
+const CATALOG = [{ id: PREP, name: "Exam prep", color: "green" }, { id: REVISION, name: "Revision", color: "teal" }, { id: WEEK, name: "Week 3", color: "red" }];
 const ITEMS = [
   row("exam", "e1", "Term exam", "open", { opens_at: "2026-10-01T08:00:00Z", closes_at: "2026-10-01T09:00:00Z",
     parts: [{ title: "Choices", kind: "question_sheet" }, { title: "Essay", kind: "written_work" }] }),
-  row("assignment", "a1", "Unit homework", "active", { due_at: "2026-10-02T08:00:00Z", parts: [{ title: "Homework", kind: "file_upload" }] }),
+  row("assignment", "a1", "Unit homework", "active", { due_at: "2026-10-02T08:00:00Z", parts: [{ title: "Homework", kind: "file_upload" }],
+    labels: [{ id: REVISION, name: "Revision", color: "teal" }, { id: WEEK, name: "Week 3", color: "red" }] }),
   row("quiz", "q1", "Weekly quiz", "preparing", { audience: null }),
 ];
 const listCalls = () => mocks.rpc.mock.calls.filter(([name]) => name === "list_assessments");
@@ -92,6 +105,8 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
   window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener() {}, removeEventListener() {} });
   mocks.rpc.mockResolvedValue({ data: { total: 3, items: ITEMS, server_now: "now" }, error: null });
+  mocks.catalog = CATALOG;
+  mocks.setLabel.mockResolvedValue({ ok: true, labelIds: [] });
   mocks.details.mockImplementation(async (_academy: string, type: string) => ({ type, value: type === "assignment" ? assignmentFixture() : type === "quiz" ? quizFixture() : examFixture() }));
   mocks.saveDetails.mockImplementation(async (record: AssessmentDetails, values: QuickValues, availability?: { opensAt: string | null; closesAt: string | null }) => ({ ok: true, record: { ...record, value: { ...record.value, ...availability, title: values.title, version: record.value.version + 1 } } }));
 });
@@ -312,7 +327,7 @@ describe("staff Assessments page", () => {
     show();
     const table = await screen.findByRole("table");
     expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent))
-      .toEqual(["Title", "Type", "Parts", "Status", "Date", "Marked", "Actions"]);
+      .toEqual(["Title", "Labels", "Type", "Parts", "Status", "Date", "Marked", "Actions"]);
     const tableLinks = links(table);
     expect(tableLinks).toEqual([
       ["Term exam", "http://app.lvh.me:3000/science/exams/e1"],
@@ -326,7 +341,8 @@ describe("staff Assessments page", () => {
     fireEvent.click(screen.getByRole("button", { name: /^View options/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "Cards" }));
     await waitFor(() => expect(screen.queryByRole("table")).toBeNull());
-    expect(links(screen.getByRole("list"))).toEqual(tableLinks);
+    // The first list is the card grid; label lists sit inside cards.
+    expect(links(screen.getAllByRole("list")[0])).toEqual(tableLinks);
     expect(localStorage.getItem("edra:assessments-view:user-1")).toBe("cards");
     // The view is not URL state: no navigation and no new request.
     expect(mocks.replace).not.toHaveBeenCalled();
@@ -341,7 +357,7 @@ describe("staff Assessments page", () => {
     expect(exam.textContent).toContain("Open");
     expect(exam.textContent).toMatch(/Opens .*Closes /);
     // A short label, with the full dates for hover and screen readers.
-    const date = within(exam).getAllByRole("cell")[4];
+    const date = within(exam).getAllByRole("cell")[5];
     expect(date.querySelector("[aria-hidden=true]")?.textContent).toBe("Closed 1 Oct noon");
     expect(date.textContent).toContain("Opens Thu, 1 Oct 2026 at 11:00 am, Closes Thu, 1 Oct 2026 at 12:00 pm");
     expect(assignment.textContent).toContain("Active");
@@ -357,15 +373,16 @@ describe("staff Assessments page", () => {
     const title = within(exam).getAllByRole("cell")[0];
     expect(title.textContent).toBe("Term examProgram-wide:Audience level");
     expect(within(quiz).getAllByRole("cell")[0].textContent).toBe("Weekly quizNo audience yet");
-    expect(within(exam).getAllByRole("cell")[1].textContent).toBe("Exam");
-    expect(within(exam).getAllByRole("cell")[5].textContent).toBe("4 / 12");
+    expect(within(exam).getAllByRole("cell")[2].textContent).toBe("Exam");
+    expect(within(exam).getAllByRole("cell")[6].textContent).toBe("4 / 12");
     expect(within(table).getAllByRole("row").slice(1).every((row) => row.classList.contains("h-16"))).toBe(true);
   });
 
   it("shows each card's parts: the kind of a single part, or a count listing them all", async () => {
     localStorage.setItem("edra:assessments-view:user-1", "cards");
     show();
-    const cards = within(await screen.findByRole("list")).getAllByRole("listitem");
+    await screen.findByRole("link", { name: "Term exam" });
+    const cards = screen.getAllByRole("listitem").filter((item) => item.querySelector('[data-slot="card"]'));
     expect(cards[0].textContent).toContain("2 parts: Choices, Question Sheet; Essay, Written Work");
     expect(cards[1].textContent).toContain("Manual marking");
     expect(cards[2].textContent).toContain("No parts yet");
@@ -559,5 +576,162 @@ describe("staff Assessments page", () => {
     show();
     await screen.findByRole("table");
     expect(sessionStorage.getItem("edra:assessments-return:science")).toBe("type=quiz&page=2");
+  });
+});
+
+describe("assessment labels", () => {
+  const openLabels = async (title: string) => {
+    const target = (await screen.findByRole("link", { name: title })).closest("tr")!;
+    fireEvent.contextMenu(target, { button: 2, clientX: 20, clientY: 20 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Labels" }));
+    return target;
+  };
+
+  it.each(["table", "cards"])("shows each assessment's labels in %s view", async (view) => {
+    localStorage.setItem("edra:assessments-view:user-1", view);
+    show();
+    const link = await screen.findByRole("link", { name: "Unit homework" });
+    const item = link.closest(view === "table" ? "tr" : "li") as HTMLElement;
+    const list = within(item).getByRole("list", { name: "Labels" });
+    expect(within(list).getAllByRole("listitem").map((entry) => entry.textContent)).toEqual(["Revision", "Week 3"]);
+    expect(within(list).getByText("Revision").closest('[data-slot="badge"]')?.className).toMatch(/text-teal-800 .*dark:text-teal-200/);
+    const exam = (await screen.findByRole("link", { name: "Term exam" })).closest(view === "table" ? "tr" : "li") as HTMLElement;
+    expect(within(exam).queryByRole("list", { name: "Labels" })).toBeNull();
+  });
+
+  it("shows label management only to managers, beside Filters and View options", async () => {
+    show();
+    await screen.findByRole("table");
+    const group = screen.getByRole("button", { name: "Filters" }).closest('[role="group"]') as HTMLElement;
+    expect(within(group).getByRole("button", { name: "Manage labels" })).toBeTruthy();
+    await openLabels("Unit homework");
+    expect(await screen.findByRole("menuitem", { name: "Manage labels" })).toBeTruthy();
+    cleanup();
+    mocks.role = "instructor";
+    show();
+    await screen.findByRole("table");
+    expect(screen.queryByRole("button", { name: "Manage labels" })).toBeNull();
+    await openLabels("Unit homework");
+    expect(await screen.findByRole("menuitemcheckbox", { name: "Revision" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Manage labels" })).toBeNull();
+  });
+
+  it("keeps the toolbar label editor available when there are no assessments", async () => {
+    mocks.rpc.mockResolvedValue({ data: { total: 0, items: [], server_now: "now" }, error: null });
+    show();
+    await screen.findByText("No assessments yet");
+    fireEvent.click(screen.getByRole("button", { name: "Manage labels" }));
+    const editor = await screen.findByRole("dialog", { name: "Labels" });
+    expect(await within(editor).findByRole("textbox", { name: "Name of Revision" })).toBeTruthy();
+  });
+
+  it.each(["admin", "instructor"])("lets an %s apply and remove labels as a desired state, including on archived items", async (role) => {
+    mocks.role = role;
+    mocks.rpc.mockResolvedValue({ data: { total: 3, items: [...ITEMS.slice(0, 2), { ...ITEMS[2], status: "archived" }], server_now: "now" }, error: null });
+    show();
+    await openLabels("Unit homework");
+    const revision = await screen.findByRole("menuitemcheckbox", { name: "Revision" });
+    expect(revision.getAttribute("aria-checked")).toBe("true");
+    const prep = screen.getByRole("menuitemcheckbox", { name: "Exam prep" });
+    expect(prep.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(prep);
+    await waitFor(() => expect(mocks.setLabel).toHaveBeenCalledWith({ academyId: "academy-id", type: "assignment", assessmentId: "a1", labelId: PREP, applied: true }));
+    fireEvent.click(revision);
+    await waitFor(() => expect(mocks.setLabel).toHaveBeenLastCalledWith(expect.objectContaining({ labelId: REVISION, applied: false })));
+    await waitFor(() => expect(listCalls().length).toBeGreaterThan(1));
+    cleanup();
+    show();
+    await openLabels("Weekly quiz");
+    fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Week 3" }));
+    await waitFor(() => expect(mocks.setLabel).toHaveBeenLastCalledWith(expect.objectContaining({ type: "quiz", assessmentId: "q1", labelId: WEEK, applied: true })));
+  });
+
+  it("opens the editor from a closing context menu beside the row and returns focus to it", async () => {
+    show();
+    const row = await openLabels("Term exam");
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Manage labels" }));
+    const editor = await screen.findByRole("dialog", { name: "Labels" });
+    await waitFor(() => expect(document.activeElement).toBe(within(editor).getByRole("textbox", { name: "New label name" })));
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Labels" })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(row));
+  });
+
+  it("deletes an unused label at once and a used one only after confirmation", async () => {
+    mocks.deleteLabel.mockResolvedValueOnce({ ok: true, deleted: true });
+    show();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: "Manage labels" }));
+    const editor = await screen.findByRole("dialog", { name: "Labels" });
+    fireEvent.click(await within(editor).findByRole("button", { name: "Delete Exam prep" }));
+    await waitFor(() => expect(mocks.deleteLabel).toHaveBeenCalledWith({ academyId: "academy-id", labelId: PREP, confirmed: false }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+
+    mocks.deleteLabel.mockResolvedValueOnce({ ok: true, deleted: false, uses: 2 });
+    fireEvent.click(within(editor).getByRole("button", { name: "Delete Revision" }));
+    const confirm = await screen.findByRole("alertdialog", { name: "Delete “Revision”?" });
+    expect(within(confirm).getByText("Used 2 times. It will be removed everywhere.")).toBeTruthy();
+    fireEvent.click(within(confirm).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(mocks.deleteLabel).toHaveBeenCalledTimes(2);
+
+    mocks.deleteLabel.mockResolvedValueOnce({ ok: true, deleted: false, uses: 2 }).mockResolvedValueOnce({ ok: true, deleted: true });
+    fireEvent.click(within(editor).getByRole("button", { name: "Delete Revision" }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(mocks.deleteLabel).toHaveBeenLastCalledWith({ academyId: "academy-id", labelId: REVISION, confirmed: true }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(within(editor).getByRole("textbox", { name: "New label name" })));
+  });
+
+  it("creates, renames and recolors labels from the editor", async () => {
+    mocks.createLabel.mockImplementation(async (value: { labelId: string; name: string; color: string }) => ({ ok: true, label: { id: value.labelId, name: value.name, color: value.color } }));
+    mocks.updateLabel.mockImplementation(async (value: { labelId: string; name: string; color: string }) => ({ ok: true, label: { id: value.labelId, name: value.name, color: value.color } }));
+    show();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: "Manage labels" }));
+    const editor = await screen.findByRole("dialog", { name: "Labels" });
+    fireEvent.change(await within(editor).findByRole("textbox", { name: "New label name" }), { target: { value: " Unit 4 " } });
+    fireEvent.click(within(editor).getByRole("button", { name: "Add" }));
+    await waitFor(() => expect(mocks.createLabel).toHaveBeenCalledWith(expect.objectContaining({ academyId: "academy-id", name: "Unit 4", color: "gray" })));
+    const name = within(editor).getByRole("textbox", { name: "Name of Week 3" });
+    fireEvent.change(name, { target: { value: "Week 4" } });
+    fireEvent.keyDown(name, { key: "Enter" });
+    await waitFor(() => expect(mocks.updateLabel).toHaveBeenCalledWith({ academyId: "academy-id", labelId: WEEK, name: "Week 4", color: "red" }));
+    mocks.createLabel.mockResolvedValueOnce({ ok: false, code: "duplicate_name", message: "A label with this name already exists." });
+    fireEvent.change(within(editor).getByRole("textbox", { name: "New label name" }), { target: { value: "revision" } });
+    fireEvent.click(within(editor).getByRole("button", { name: "Add" }));
+    expect((await within(editor).findByRole("alert")).textContent).toBe("A label with this name already exists.");
+  });
+
+  it("filters by any selected label or by Unlabeled, never both, and clears with the other filters", async () => {
+    show();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Week 3" }));
+    expect(mocks.replace).toHaveBeenLastCalledWith(`/science/assessments?labels=${WEEK}`, { scroll: false });
+    cleanup();
+    mocks.query = `labels=${WEEK},${REVISION}&page=3`;
+    show();
+    await screen.findByRole("table");
+    expect(listCalls().at(-1)![1]).toMatchObject({ p_label_ids: [REVISION, WEEK], p_unlabeled: false, p_offset: 48 });
+    fireEvent.click(screen.getByRole("button", { name: "Filters, 1 applied" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Unlabeled" }));
+    expect(mocks.replace).toHaveBeenLastCalledWith("/science/assessments?labels=none", { scroll: false });
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(mocks.replace).toHaveBeenLastCalledWith("/science/assessments", { scroll: false });
+  });
+
+  it("drops deleted labels from the filter instead of keeping an invisible one", async () => {
+    mocks.query = `labels=${REVISION},00000000-0000-4000-8000-000000000001`;
+    show();
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith(`/science/assessments?labels=${REVISION}`, { scroll: false }));
+  });
+
+  it("offers Clear filters for a label filter with no results", async () => {
+    mocks.query = "labels=none";
+    mocks.rpc.mockResolvedValue({ data: { total: 0, items: [], server_now: "now" }, error: null });
+    show();
+    fireEvent.click(await screen.findByRole("button", { name: "Clear filters" }));
+    expect(mocks.replace).toHaveBeenLastCalledWith("/science/assessments", { scroll: false });
   });
 });

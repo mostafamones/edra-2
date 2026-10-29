@@ -27,8 +27,8 @@ create function pg_temp.act(label text) returns void language sql as $$ select s
 
 do $$
 begin
-  if not has_function_privilege('authenticated', 'public.list_assessments(uuid, uuid, text[], text, text, text, uuid, uuid, text[], text, text, integer, integer)', 'execute')
-    or has_function_privilege('anon', 'public.list_assessments(uuid, uuid, text[], text, text, text, uuid, uuid, text[], text, text, integer, integer)', 'execute') then
+  if not has_function_privilege('authenticated', 'public.list_assessments(uuid, uuid, text[], text, text, text, uuid, uuid, text[], text, text, integer, integer, uuid[], boolean)', 'execute')
+    or has_function_privilege('anon', 'public.list_assessments(uuid, uuid, text[], text, text, text, uuid, uuid, text[], text, text, integer, integer, uuid[], boolean)', 'execute') then
     raise exception 'Assessment list check failed: grants';
   end if;
 end $$;
