@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 
-import { FilterPopover, type FilterField } from "@/components/shared/filter-popover";
+import { FilterPopover, type FilterField, type FilterSection } from "@/components/shared/filter-popover";
 import { HeaderActions } from "@/components/shared/header-actions";
 import { Segmented } from "@/components/shared/segmented";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { groupListQueryKey, loadGroups, loadStructure, structureQueryKey } from "@/modules/groups";
+import { LabelFilter, type Label } from "@/modules/labels";
 import { ALL, AUDIENCES, MAX_SEARCH, type AssessmentListParams } from "../params";
 import type { AssessmentView } from "../view";
 import { CreateAssessment } from "./create";
@@ -26,10 +27,14 @@ type Props = {
   view: AssessmentView;
   onView: (view: AssessmentView) => void;
   academyId: string;
+  /** The academy's label catalog, once loaded. */
+  labels: Label[] | undefined;
+  /** The label manager button, for label managers only. */
+  manager?: ReactNode;
 };
 
 /** Header type tabs, search and audience (URL state), view options and Create assessment. */
-export function AssessmentToolbar({ params, onChange, view, onView, academyId }: Props) {
+export function AssessmentToolbar({ params, onChange, view, onView, academyId, labels, manager }: Props) {
   const [text, setText] = useState(params.search);
   // Follow outside changes, such as Clear filters or Back.
   const [applied, setApplied] = useState(params.search);
@@ -57,14 +62,26 @@ export function AssessmentToolbar({ params, onChange, view, onView, academyId }:
           <InputGroupAddon><HugeiconsIcon icon={Search01Icon} strokeWidth={1.5} aria-hidden="true" /></InputGroupAddon>
         </InputGroup>
         <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-          <FilterPopover iconOnly fields={useAudienceFields(academyId, params, onChange)}>
+          <FilterPopover iconOnly fields={useAudienceFields(academyId, params, onChange)} sections={labelSections(labels, params, onChange)}>
             <ViewOptions params={params} onChange={onChange} view={view} onView={onView} />
+            {manager}
           </FilterPopover>
           <CreateAssessment />
         </div>
       </div>
     </div>
   );
+}
+
+/** Label selection, shown once the academy has labels (or while a label filter is still set). */
+function labelSections(labels: Label[] | undefined, params: AssessmentListParams, onChange: Props["onChange"]): FilterSection[] {
+  const active = params.labels.length > 0 || params.unlabeled;
+  if (!active && !labels?.length) return [];
+  return [{
+    id: "labels", active, onReset: () => onChange({ labels: [], unlabeled: false }),
+    content: <LabelFilter options={labels ?? []} labels={params.labels} unlabeled={params.unlabeled}
+      onChange={(selection) => onChange({ labels: [...selection.labels].sort(), unlabeled: selection.unlabeled })} />,
+  }];
 }
 
 /**

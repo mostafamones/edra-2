@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
 import { ASSIGNMENT_STATES, PART_KINDS } from "@/modules/assignments";
 import { EXAM_PART_KINDS, EXAM_PHASES } from "@/modules/exams";
+import { labelSchema } from "@/modules/labels";
 import { QUIZ_PART_KINDS, QUIZ_PHASES } from "@/modules/quizzes";
 import { ALL, type AssessmentListParams } from "./params";
 import { ASSESSMENT_TYPES, type AssessmentPage } from "./types";
@@ -20,7 +21,7 @@ const common = {
   id: z.string(), title: z.string(), academic_year_id: z.string(), audience: z.enum(["level", "program", "groups"]).nullable(),
   level_id: z.string().nullable(), track_id: z.string().nullable(), group_ids: z.array(z.string()),
   max_score: z.string(), marked_count: z.number().int(), audience_count: z.number().int(), created_at: z.string(), due_at: z.string().nullable(), opens_at: z.string().nullable(), closes_at: z.string().nullable(),
-  processing_pending: z.boolean(),
+  processing_pending: z.boolean(), labels: z.array(labelSchema),
 };
 const parts = <K extends z.ZodType>(kind: K) => z.array(z.object({ title: z.string(), kind }));
 const pageSchema = z.object({
@@ -41,7 +42,7 @@ export function toAssessmentPage(value: unknown): AssessmentPage {
       const base = {
         id: row.id, title: row.title, academicYearId: row.academic_year_id, audience: row.audience, levelId: row.level_id,
         trackId: row.track_id, groupIds: row.group_ids, maxScore: row.max_score, markedCount: row.marked_count, audienceCount: row.audience_count,
-        createdAt: row.created_at,
+        createdAt: row.created_at, labels: row.labels,
       };
       return row.type === "assignment"
         ? { ...base, type: row.type, status: row.status, dueAt: row.due_at, parts: row.parts }
@@ -64,6 +65,8 @@ export async function loadAssessments(academyId: string, filters: ListFilters, p
     p_track_id: filters.track as string,
     p_group_id: filters.groupId as string,
     p_statuses: filters.statuses,
+    p_label_ids: filters.labels,
+    p_unlabeled: filters.unlabeled,
     p_sort: filters.sort,
     p_group: filters.group,
     p_limit: filters.pageSize,

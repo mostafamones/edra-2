@@ -11,6 +11,9 @@ export const PAGE_SIZE = 24;
 export const PAGE_SIZES = [12, 24, 48, 96] as const;
 export type PageSize = (typeof PAGE_SIZES)[number];
 export const MAX_SEARCH = 200;
+export const MAX_LABELS = 100;
+/** The `labels` URL value meaning Unlabeled. */
+export const UNLABELED = "none";
 const LEVEL = z.string().regex(/^[a-z0-9-]{1,40}$/);
 
 export type AssessmentListParams = {
@@ -24,6 +27,9 @@ export type AssessmentListParams = {
   groupId: string | null;
   /** Shown statuses, in `STATUS_KEYS` order. */
   statuses: StatusKey[];
+  /** Label IDs, sorted; an assessment with any of them matches. Never set together with `unlabeled`. */
+  labels: string[];
+  unlabeled: boolean;
   sort: (typeof SORTS)[number];
   group: (typeof GROUPS)[number];
   /** Zero-based; the URL shows it one-based. */
@@ -31,7 +37,7 @@ export type AssessmentListParams = {
   pageSize: PageSize;
 };
 
-export const DEFAULT_PARAMS: AssessmentListParams = { type: ALL, search: "", audience: ALL, level: null, track: null, groupId: null, statuses: [...DEFAULT_STATUSES], sort: "newest", group: "none", page: 0, pageSize: PAGE_SIZE };
+export const DEFAULT_PARAMS: AssessmentListParams = { type: ALL, search: "", audience: ALL, level: null, track: null, groupId: null, statuses: [...DEFAULT_STATUSES], labels: [], unlabeled: false, sort: "newest", group: "none", page: 0, pageSize: PAGE_SIZE };
 
 const oneOf = <T extends string>(values: readonly T[], raw: string | null): T | null =>
   raw !== null && (values as readonly string[]).includes(raw) ? raw as T : null;
@@ -42,6 +48,14 @@ function readStatuses(raw: string | null): StatusKey[] {
   const chosen = new Set(raw === "" ? [] : raw.split(","));
   if ([...chosen].some((key) => !(STATUS_KEYS as readonly string[]).includes(key))) return [...DEFAULT_STATUSES];
   return STATUS_KEYS.filter((key) => chosen.has(key));
+}
+
+/** `none` is Unlabeled; otherwise a comma list of label IDs. Anything invalid means no label filter. */
+function readLabels(raw: string | null): Pick<AssessmentListParams, "labels" | "unlabeled"> {
+  if (raw === UNLABELED) return { labels: [], unlabeled: true };
+  const ids = [...new Set(raw ? raw.split(",") : [])];
+  if (ids.length > MAX_LABELS || !ids.every((id) => z.guid().safeParse(id).success)) return { labels: [], unlabeled: false };
+  return { labels: ids.map((id) => id.toLowerCase()).sort(), unlabeled: false };
 }
 
 export const sameStatuses = (a: readonly StatusKey[], b: readonly StatusKey[]) => a.length === b.length && a.every((key) => b.includes(key));
@@ -59,6 +73,7 @@ export function readParams(query: URLSearchParams): AssessmentListParams {
     track: z.guid().safeParse(query.get("track")).success ? query.get("track") : null,
     groupId: z.guid().safeParse(query.get("groupId")).success ? query.get("groupId") : null,
     statuses: readStatuses(query.get("statuses")),
+    ...readLabels(query.get("labels")),
     sort: oneOf(SORTS, query.get("sort")) ?? "newest",
     group: oneOf(GROUPS, query.get("group")) ?? "none",
     page: Number.isInteger(page) && page >= 1 && page <= 10_000 ? page - 1 : 0,
@@ -76,6 +91,8 @@ export function writeParams(params: AssessmentListParams): URLSearchParams {
   if (params.track) query.set("track", params.track);
   if (params.groupId) query.set("groupId", params.groupId);
   if (!sameStatuses(params.statuses, DEFAULT_STATUSES)) query.set("statuses", params.statuses.join(","));
+  if (params.unlabeled) query.set("labels", UNLABELED);
+  else if (params.labels.length) query.set("labels", [...params.labels].sort().join(","));
   if (params.sort !== "newest") query.set("sort", params.sort);
   if (params.group !== "none") query.set("group", params.group);
   if (params.pageSize !== PAGE_SIZE) query.set("pageSize", String(params.pageSize));
