@@ -75,14 +75,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Keep accessibility, loading, empty, error, and responsive states consistent with the chosen primitives.
 - All tables must have an empty state that replaces the table and does not sit inside it. For both no records and no matching search/filter results, conditionally render a composed shadcn empty state instead of the entire table, including its headers, body, and table scroll container. Never put the empty state inside a table row or cell. Keep relevant surrounding controls available, including clear filters and permitted create actions.
 
-## Migrating older UI components into Edra
-
-- The owner chooses and provides the older UI elements to reuse. Do not search old projects for candidates or import an old design wholesale.
-- For each supplied component, identify its purpose, dependencies, interactions, data assumptions, and where it belongs in the current route/module structure. Discuss any ambiguous behavior or design change with the owner before implementing it.
-- Rebuild the component around Edra's current architecture and shadcn primitives. Preserve the approved visual/interaction intent, but do not carry over obsolete data logic, permissions, styling infrastructure, or duplicated components by default.
-- Prefer adapting an existing reusable Edra component or adding a variant when multiple old components serve the same purpose.
-- Never paste older code into `src/components/ui/` or modify protected shadcn files as part of a UI migration.
-
 ## Verification and change safety
 
 - Run `npm run lint`, `npm run build`, and relevant tests for implementation changes. Add an appropriate test setup when the first feature needs one.
