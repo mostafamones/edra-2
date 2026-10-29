@@ -20,6 +20,7 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 
 ## Documentation and planning
 
+- Deliver requested plans as complete, self-contained copy-paste text in the chat by default, including in Master threads. Do not create or update a plan file unless the owner explicitly requests one. Plans must be usable to start an implementation thread in a different worktree without relying on an uncommitted plan file. An explicitly requested plan file remains unstaged and uncommitted unless the owner explicitly asks to commit it.
 - Use `web/docs/README.md` and `mobile/docs/README.md` for references; shared constraints live in `docs/engineering/`. Preserve the existing setup and agreed product rules. Review worksheets and temporary plans are not new development requirements.
 - Master threads use product context and current technical evidence. Before exporting an implementation plan, settle relevant open decisions with the owner and update the affected documentation to the latest agreed terms. Do not invent restrictions or workflows to fill gaps.
 - Implementation plans are self-contained. Implementation agents read the engineering/API references and only the final product sections assigned by their plan; unresolved discussions and review queues are not requirements. Ask about genuine consequential conflicts, not routine factual documentation corrections.
@@ -41,7 +42,8 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 ## UI copy and helper text
 
 - Do not add helper text by default anywhere in either application. This includes descriptions under fields, page subtitles, section introductions, card descriptions, and explanatory text beside controls. Add helper text only when the owner explicitly requests it.
-- Use clear, concise labels and self-explanatory controls instead of explaining each field or part of a screen. Do not replace omitted helper text with unsolicited tooltips, info icons, or placeholder instructions.
+- Use clear, concise labels and self-explanatory controls instead of explaining each field or part of a screen. Do not replace omitted helper text with unsolicited info icons or placeholder instructions.
+- Tooltips for buttons and actions, and where useful for icons that communicate a state, are encouraged. Show them after a short, consistent delay. These tooltips are permitted without an explicit request for helper text; preserve accessible labels independently of tooltips.
 - Keep actionable validation errors, required status feedback, and accessible labels available; these are functional UI feedback, not optional helper text.
 
 ## Table empty states
