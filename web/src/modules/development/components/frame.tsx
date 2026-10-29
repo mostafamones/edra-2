@@ -7,6 +7,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { ACADEMY_ROLE_LABELS } from "@/modules/academies";
+import { requestSessionRecovery } from "@/modules/auth";
 
 import { onIdentityChange } from "../client";
 import { FailurePanel } from "../failures/components/panel";
@@ -21,6 +22,13 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
   const active = Boolean(preview);
 
   useEffect(() => onIdentityChange(() => window.location.reload()), []);
+  useEffect(() => {
+    if (!preview || preview.current.kind === "original") return;
+    const remaining = new Date(preview.expiresAt).getTime() - Date.now();
+    if (!Number.isFinite(remaining)) return;
+    const timer = setTimeout(() => requestSessionRecovery("preview"), Math.max(0, remaining));
+    return () => clearTimeout(timer);
+  }, [preview]);
 
   useEffect(() => {
     const element = bar.current;

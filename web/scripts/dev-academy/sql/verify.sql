@@ -123,9 +123,11 @@ with run as (
         select 'attendance_effects' t, x.id, x.processed_at from public.attendance_effects x, run where x.academy_id = run.academy_id
         union all select 'assignment_result_effects', x.id, x.processed_at from public.assignment_result_effects x, run where x.academy_id = run.academy_id
         union all select 'exam_result_effects', x.id, x.processed_at from public.exam_result_effects x, run where x.academy_id = run.academy_id) e
-      where e.processed_at is not null or not exists (
+      where (e.processed_at is not null and not (e.t='attendance_effects' and exists (
+        select 1 from public.attendance_effects a where a.id=e.id and a.effect_type='explanation_access'
+          and exists(select 1 from edra_private.attendance_learning_outcomes o where o.effect_id=a.id)))) or not exists (
         select 1 from edra_private.dev_effect_suppressions d where d.source_table = e.t and d.effect_id = e.id))
-      then 'a synthetic outbox effect is unsuppressed or marked processed' end
+      then 'a synthetic outbox effect is unsuppressed or processed without an internal learning outcome' end
   ], null) as value
 ), baseline as (
   select array_remove(array[

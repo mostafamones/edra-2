@@ -24,11 +24,13 @@ Supporting documents require the same active explanation access as the unit's ex
 
 An attached assignment shows an open action only after the student has current or expired, unrevoked unit entitlement and the assignment's own student visibility checks pass. A never-unlocked or revoked unit shows the assignment as locked. An assignment that cannot be opened under its own visibility/readiness rules remains unavailable even when unit access exists. Expired explanation access does not by itself prevent finishing an otherwise eligible assignment; assessment windows and online participation rules still apply.
 
-The existing attendance-access policy remains seven days from qualifying attendance finalization. Saving draft attendance does not start access. Applying configurable unit durations to attendance-generated grants has not been agreed and is outside the current direct-grant/code delivery slice.
+Qualifying finalized Present/Late attendance grants explanation access to the session's frozen taught units, using each unit's published default duration at finalization (confirmed 2026-10-26). The period starts at the original qualifying attendance publication; saving draft attendance does not start access. Retries never restart the period. Attendance preserves any later existing, unrevoked expiry rather than shortening access or adding durations together. Source publications, taught revisions and grant outcomes remain auditable. Missing prerequisites or incompatible placement do not grant access and do not prevent attendance finalization.
+
+Attendance grants are internal learning effects and also run in registered generated Developer-mode academies. Synthetic notifications and other external effects remain suppressed. Existing historical attendance is not automatically replayed when deploying this consumer.
 
 Each grant retains its source, issue time, duration and revocation history. The latest issued grant controls access. Durations are not added together. When that grant expires or is revoked, an older grant does not become active again, even if its original expiry was later.
 
-Issuing a new full-access grant starts its own period rather than adding time to the existing period. A shorter new grant can therefore replace a longer remaining period; staff must be able to see that effect before issuing it. An explicit instructor/manager extension follows the additive rule below instead of resetting the period.
+Issuing an explicit new full-access grant starts its own period rather than adding time to the existing period. A shorter explicit grant can therefore replace a longer remaining period; staff must be able to see that effect before issuing it. Automatic attendance grants instead preserve a later existing expiry. An explicit instructor/manager extension follows the additive rule below instead of resetting the period.
 
 ## Extensions and manual grants
 

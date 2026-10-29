@@ -19,7 +19,7 @@ beforeEach(() => { state.claims = null; state.signOut.mockReset(); state.endPrev
 afterEach(() => vi.unstubAllEnvs());
 describe("platform sign-out", () => {
   it("expires both cookie scopes and chunks even without a valid token", async () => {
-    const response = await POST();
+    const response = await POST(new Request("http://learn.lvh.me:3000/auth/signout"));
     expect(response.headers.get("location")).toBe("http://learn.lvh.me:3000/auth/login");
     const auth = response.headers.getSetCookie().filter(cookie => cookie.startsWith("edra-auth-v1"));
     expect(auth).toHaveLength(4);
@@ -29,15 +29,23 @@ describe("platform sign-out", () => {
   });
   it("preserves global revocation for an authenticated sign-out", async () => {
     state.claims = { sub: "user" };
-    await POST();
+    await POST(new Request("http://learn.lvh.me:3000/auth/signout"));
     expect(state.signOut).toHaveBeenCalledWith({ scope: "global" });
   });
   it("ends a Developer mode control before revoking the session and clears its cookie", async () => {
     state.claims = { sub: "user" };
-    const response = await POST();
+    const response = await POST(new Request("http://learn.lvh.me:3000/auth/signout"));
     expect(state.endPreview).toHaveBeenCalledOnce();
     expect(state.endPreview.mock.invocationCallOrder[0]).toBeLessThan(state.signOut.mock.invocationCallOrder[0]);
     expect(response.headers.getSetCookie().some(cookie => cookie.startsWith("edra-dev-control=;") && cookie.includes("Max-Age=0"))).toBe(true);
     expect(response.headers.getSetCookie().some(cookie => cookie.startsWith("edra-dev-failure=;") && cookie.includes("Max-Age=0"))).toBe(true);
+  });
+  it("preserves a safe destination for signing in again", async () => {
+    const response = await POST(new Request("http://learn.lvh.me:3000/auth/signout?next=%2Facademy%2Flearning%3Funit%3D123"));
+    expect(new URL(response.headers.get("location")!).searchParams.get("next")).toBe("/academy/learning?unit=123");
+  });
+  it("rejects external recovery destinations", async () => {
+    const response = await POST(new Request("http://learn.lvh.me:3000/auth/signout?next=https%3A%2F%2Fevil.example"));
+    expect(new URL(response.headers.get("location")!).searchParams.get("next")).toBe("/");
   });
 });

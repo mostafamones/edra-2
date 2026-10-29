@@ -16,6 +16,8 @@ import type { Platform } from "@/lib/routing";
 import { AuthLoadError } from "./load-error";
 import { AuthLoadingOverlay } from "./loading-overlay";
 import { MembershipGuard } from "./membership-guard";
+import { SessionRecovery } from "./session-recovery";
+import { SESSION_RECOVERY_EVENT, type SessionEndReason } from "../session-recovery";
 
 type AuthContextValue = {
   user: User | null;
@@ -52,6 +54,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [preferredAcademyId, setPreferredAcademyId] = useState<string | null>(readPreferredAcademyId);
+  const [ended, setEnded] = useState<SessionEndReason | null>(null);
 
   const refreshRoute = useEffectEvent(() => router.refresh());
 
@@ -62,6 +65,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
     let receivedAuthEvent = false;
     let previousUserId: string | null = null;
     let identityEpoch = 0;
+    let previewRecovery = false;
     let supabase: ReturnType<typeof createClient>;
 
     try {
@@ -84,7 +88,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
       previousUserId = nextUserId;
 
       if (accountChanged) {
-        clearBrowserQueryCache();
+        if (!previewRecovery) clearBrowserQueryCache();
         setPreferredAcademyId(null);
         try { window.localStorage.removeItem(LAST_ACADEMY_KEY); } catch { /* Storage may be unavailable. */ }
         // Auth callbacks run while Supabase holds its session lock. Refresh once
@@ -100,10 +104,14 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
       setLoading(false);
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
       receivedAuthEvent = true;
       identityEpoch += 1;
+      if (event === "SIGNED_OUT" || (previousUserId !== null && nextSession?.user.id !== previousUserId)) {
+        previewRecovery = false;
+        setEnded(null);
+      }
       applySession(nextSession);
     });
 
@@ -121,7 +129,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
     let lastCheck = 0;
     let scheduled: ReturnType<typeof setTimeout> | undefined;
     const revalidate = async () => {
-      if (!mounted || inFlight) return;
+      if (!mounted || inFlight || previewRecovery) return;
       if (Date.now() - lastCheck < 1500) {
         if (!scheduled) scheduled = setTimeout(() => { scheduled = undefined; if (mounted) void revalidate(); }, 1500);
         return;
@@ -138,7 +146,8 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
         const { data: verified, error: userError } = candidate
           ? await supabase.auth.getUser()
           : { data: { user: null }, error: null };
-        if (!mounted || identityEpoch !== startedAtEpoch || userError) return;
+        if (!mounted || identityEpoch !== startedAtEpoch) return;
+        if (userError) return;
         const next = verified.user && candidate?.user.id === verified.user.id ? candidate : null;
         applySession(next);
       } catch {
@@ -148,7 +157,17 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
       }
     };
     const removeSignOutCleanup = installExamSignOutCleanup();
+    function recover(reason: SessionEndReason) {
+      if (!mounted || previewRecovery) return;
+      previewRecovery = true;
+      clearBrowserQueryCache();
+      setEnded(reason);
+    }
+    const endedEvent = (event: Event) => {
+      if ((event as CustomEvent).detail === "preview") recover("preview");
+    };
     const visible = () => { if (document.visibilityState === "visible") void revalidate(); };
+    window.addEventListener(SESSION_RECOVERY_EVENT, endedEvent);
     window.addEventListener("focus", revalidate);
     window.addEventListener("edra-session-revalidate", revalidate);
     document.addEventListener("visibilitychange", visible);
@@ -158,6 +177,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
       removeSignOutCleanup();
       if (scheduled) clearTimeout(scheduled);
       if (refreshTimer) clearTimeout(refreshTimer);
+      window.removeEventListener(SESSION_RECOVERY_EVENT, endedEvent);
       window.removeEventListener("focus", revalidate);
       window.removeEventListener("edra-session-revalidate", revalidate);
       document.removeEventListener("visibilitychange", visible);
@@ -170,7 +190,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
   const academiesQuery = useQuery({
     queryKey: academyQueryKeys.forUser(user?.id ?? ""),
     queryFn: () => listUserAcademies(user!.id),
-    enabled: Boolean(user),
+    enabled: Boolean(user) && !ended,
   });
   const academies = user ? academiesQuery.data ?? [] : [];
   const activeAcademy =
@@ -194,6 +214,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
   // Academy membership is authorized by the server per URL; only the session gates rendering here.
   const waiting = loading && isAppRoute;
   const loadError = authError;
+  const protectedSurface = isAppRoute || (initialPlatform === "student" && !/^(?:\/auth|\/invite)(?:\/|$)/.test(pathname));
 
   return (
     <AuthContext.Provider value={{
@@ -209,7 +230,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
       activeAcademy,
       setActiveAcademy,
     }}>
-      {isAppRoute && loading ? null : isAppRoute && loadError ? (
+      {ended && protectedSurface ? <SessionRecovery reason={ended} /> : isAppRoute && loading ? null : isAppRoute && loadError ? (
         <AuthLoadError message={loadError} onRetry={() => window.location.reload()} retrying={false} />
       ) : children}
       <AnimatePresence>
