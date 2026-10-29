@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, ArrowLeft01Icon, ArrowRight01Icon, AssignmentsIcon, SearchRemoveIcon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, AssignmentsIcon, SearchRemoveIcon } from "@hugeicons/core-free-icons";
 
 import { rememberAssessmentList } from "@/components/shared/assessment/list/return";
 import { describeAudience, useAudienceNames } from "@/components/shared/assessment/workspace/names";
@@ -15,7 +15,7 @@ import type { AcademyEntry } from "@/modules/academies";
 import { loadYears } from "@/modules/assignments";
 import { AcademyGate, useAuth } from "@/modules/auth";
 import { useCanonicalHref } from "@/modules/navigation";
-import { ALL, DEFAULT_PARAMS, PAGE_SIZE, sameStatuses } from "../params";
+import { ALL, DEFAULT_PARAMS, sameStatuses } from "../params";
 import { assessmentListQueryKey, assessmentsRootKey, loadAssessments, type ListFilters } from "../queries";
 import { DEFAULT_STATUSES, TYPE_ROUTES, type AssessmentRow } from "../types";
 import { useAssessmentParams } from "../use-params";
@@ -23,8 +23,11 @@ import { useAssessmentView } from "../view";
 import { AssessmentCards } from "./cards";
 import { CreateAssessment } from "./create";
 import { groupRows } from "./groups";
+import type { AssessmentEditHandler, SheetTab } from "./menu";
 import { AssessmentTable } from "./table";
 import { AssessmentToolbar } from "./toolbar";
+import { AssessmentPagination } from "./pagination";
+import { QuickEditSheet } from "./quick-edit";
 
 /** `/app/assessments`: every assignment, quiz and exam in the academy, as a table or cards. */
 export function AssessmentsPage() {
@@ -46,6 +49,8 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   const academyId = academy.id;
   const [params, update, query] = useAssessmentParams();
   const [view, setView] = useAssessmentView(user?.id);
+  const [editing, setEditing] = useState<{ row: AssessmentRow; opener: HTMLElement | null; tab: SheetTab } | null>(null);
+  const edit: AssessmentEditHandler = (row, opener, tab) => setEditing({ row, opener, tab });
   const names = useAudienceNames(academyId);
   useEffect(() => { rememberAssessmentList(academy.slug, query); }, [academy.slug, query]);
 
@@ -54,7 +59,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   const year = yearsQuery.data?.find((option) => option.open)?.id ?? ALL;
   const filters: ListFilters = {
     type: params.type, search: params.search, year, audience: params.audience, level: params.level, track: params.track, groupId: params.groupId,
-    statuses: params.statuses, sort: params.sort, group: params.group,
+    statuses: params.statuses, sort: params.sort, group: params.group, pageSize: params.pageSize,
   };
   const listQuery = useQuery({
     queryKey: assessmentListQueryKey(academyId, filters, params.page),
@@ -68,7 +73,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   // Previous results for other filters are never shown as the answer to a failed request.
   const data = listQuery.isError && listQuery.isPlaceholderData ? undefined : listQuery.data;
   const failed = yearsQuery.isError || listQuery.isError;
-  const pageCount = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil((data?.total ?? 0) / params.pageSize));
   const filtering = params.type !== ALL || params.search.trim() !== "" || params.audience !== ALL || params.level !== null
     || !sameStatuses(params.statuses, DEFAULT_STATUSES);
 
@@ -137,19 +142,12 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
       ) : (
         <div className="flex flex-col gap-3" aria-busy={listQuery.isFetching}>
           {view === "table"
-            ? <AssessmentTable groups={groups} collapsed={collapsed} onToggle={toggleGroup} />
-            : <AssessmentCards groups={groups} collapsed={collapsed} onToggle={toggleGroup} />}
-          {pageCount > 1 && (
-            <nav aria-label="Assessment pages" className="flex items-center justify-end gap-2 text-sm">
-              <span className="tabular-nums text-muted-foreground">Page {params.page + 1} of {pageCount}</span>
-              <Button variant="outline" size="icon-sm" aria-label="Previous page" disabled={params.page === 0 || listQuery.isFetching}
-                onClick={() => update({ page: params.page - 1 })}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} /></Button>
-              <Button variant="outline" size="icon-sm" aria-label="Next page" disabled={params.page >= pageCount - 1 || listQuery.isFetching}
-                onClick={() => update({ page: params.page + 1 })}><HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={1.5} /></Button>
-            </nav>
-          )}
+            ? <AssessmentTable groups={groups} collapsed={collapsed} onToggle={toggleGroup} onEdit={edit} />
+            : <AssessmentCards groups={groups} collapsed={collapsed} onToggle={toggleGroup} onEdit={edit} />}
+          <AssessmentPagination params={params} total={data.total} disabled={listQuery.isFetching || listQuery.isPlaceholderData} onChange={update} />
         </div>
       ))}
+      {editing && <QuickEditSheet academy={academy} row={editing.row} tab={editing.tab} opener={editing.opener} onClose={() => setEditing(null)} />}
     </main>
   );
 }

@@ -11,7 +11,7 @@ const row = (type: string, id: string, status: string, extra: Record<string, unk
   type, id, status, title: id, academic_year_id: "year", audience: "level", level_id: "preparatory-3", track_id: null, group_ids: [],
   max_score: "10", marked_count: 2, audience_count: 7, created_at: "2026-10-01T10:00:00Z", due_at: null, opens_at: null, closes_at: null, processing_pending: false, parts: [], ...extra,
 });
-const filters: ListFilters = { type: DEFAULT_PARAMS.type, search: " unit ", year: "year", audience: "all", level: null, track: null, groupId: null, statuses: [...DEFAULT_STATUSES], sort: "newest", group: "none" };
+const filters: ListFilters = { type: DEFAULT_PARAMS.type, search: " unit ", year: "year", audience: "all", level: null, track: null, groupId: null, statuses: [...DEFAULT_STATUSES], sort: "newest", group: "none", pageSize: 24 };
 
 beforeEach(() => rpc.mockReset());
 
@@ -48,6 +48,8 @@ describe("combined assessment page", () => {
     expect(rpc).toHaveBeenLastCalledWith("list_assessments", expect.objectContaining({
       p_academic_year_id: null, p_types: ["exam"], p_audience: "groups", p_statuses: ["exam:archived"], p_sort: "title", p_group: "status", p_offset: 0,
     }));
+    await loadAssessments("academy", { ...filters, pageSize: 48 }, 2);
+    expect(rpc).toHaveBeenLastCalledWith("list_assessments", expect.objectContaining({ p_limit: 48, p_offset: 96 }));
   });
 
   it("fails instead of returning an empty list when the read fails or is refused", async () => {

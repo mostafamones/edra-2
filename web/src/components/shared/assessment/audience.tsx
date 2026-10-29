@@ -32,13 +32,14 @@ type Props = {
   optional?: boolean;
   /** The advisory count of matching students, shown once the audience is complete. */
   count?: ReactNode;
+  levelTrackClassName?: string;
 };
 
 type Option = { value: string; label: string; hint: string };
 type Kind = "none" | "groups" | "program";
 
 /** Who it's for: selected groups, or a level optionally narrowed to one track. */
-export function AudienceFields({ idPrefix, groups, levels, tracks, levelNames, disabled, optional, count }: Props) {
+export function AudienceFields({ idPrefix, groups, levels, tracks, levelNames, disabled, optional, count, levelTrackClassName }: Props) {
   const { control, setValue, formState: { errors } } = useFormContext<AudienceValues>();
   const [audience, trackId] = useWatch({ control, name: ["audience", "trackId"] });
   const kind: Kind = audience === "" ? "none" : audience === "groups" ? "groups" : "program";
@@ -84,7 +85,7 @@ export function AudienceFields({ idPrefix, groups, levels, tracks, levelNames, d
           name="levelId"
           render={({ field }) => (
             <LevelTrackSelect
-              id={idPrefix} levels={levels} tracks={tracks} levelNames={levelNames} disabled={disabled}
+              id={idPrefix} levels={levels} tracks={tracks} levelNames={levelNames} disabled={disabled} className={levelTrackClassName}
               levelId={field.value} trackId={trackId}
               levelError={errors.levelId?.message} trackError={errors.trackId?.message}
               onChange={(next) => {

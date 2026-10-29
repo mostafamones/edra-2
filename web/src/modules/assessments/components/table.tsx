@@ -4,15 +4,15 @@ import { Fragment } from "react";
 import Link from "next/link";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatScore } from "@/lib/score";
 import { itemKey } from "../types";
-import { AssessmentDate, AssessmentStatus, AssessmentTypeLabel, AudienceLine, MarkedCount } from "./facts";
+import { AssessmentDate, AssessmentStatus, AssessmentTypeLabel, AudienceLine, MarkedCount, PartsSummary } from "./facts";
 import { GroupToggle, type RowGroup } from "./groups";
+import { AssessmentActions, AssessmentMenu, type AssessmentEditHandler } from "./menu";
 
 /** Table view. The caller renders the empty state instead of this when there are no rows. */
-type Props = { groups: RowGroup[]; collapsed: ReadonlySet<string>; onToggle: (key: string) => void };
+type Props = { groups: RowGroup[]; collapsed: ReadonlySet<string>; onToggle: (key: string) => void; onEdit: AssessmentEditHandler };
 
-export function AssessmentTable({ groups, collapsed, onToggle }: Props) {
+export function AssessmentTable({ groups, collapsed, onToggle, onEdit }: Props) {
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -20,10 +20,11 @@ export function AssessmentTable({ groups, collapsed, onToggle }: Props) {
           <TableRow>
             <TableHead>Title</TableHead>
             <TableHead>Type</TableHead>
+            <TableHead>Parts</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>
             <TableHead className="text-right">Marked</TableHead>
-            <TableHead className="text-right">Maximum marks</TableHead>
+            <TableHead className="w-12"><span className="sr-only">Actions</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -31,25 +32,31 @@ export function AssessmentTable({ groups, collapsed, onToggle }: Props) {
             <Fragment key={group.key}>
               {group.type && (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={6} className="h-10 bg-muted/40">
+                  <TableCell colSpan={7} className="h-10 bg-muted/40">
                     <GroupToggle group={group} open={!collapsed.has(group.key)} onClick={() => onToggle(group.key)} />
                   </TableCell>
                 </TableRow>
               )}
-              {!collapsed.has(group.key) && group.rows.map(({ item, href, audience }) => (
+              {!collapsed.has(group.key) && group.rows.map((row) => {
+                const { item, href, audience } = row;
+                return (
                 // Fixed height so rows line up whatever their date or status wraps to.
-                <TableRow key={itemKey(item)} className="h-16">
-                  <TableCell className="max-w-80">
-                    <Link href={href} className="block truncate rounded-sm font-medium outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">{item.title}</Link>
-                    <AudienceLine audience={item.audience} name={audience} />
-                  </TableCell>
-                  <TableCell><AssessmentTypeLabel type={item.type} /></TableCell>
-                  <TableCell><AssessmentStatus item={item} /></TableCell>
-                  <TableCell className="text-xs text-muted-foreground"><AssessmentDate item={item} /></TableCell>
-                  <TableCell className="text-right"><MarkedCount item={item} /></TableCell>
-                  <TableCell className="text-right tabular-nums">{formatScore(item.maxScore)}</TableCell>
-                </TableRow>
-              ))}
+                <AssessmentMenu key={itemKey(item)} row={row} onEdit={onEdit}>
+                  <TableRow className="h-16 outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                    <TableCell className="max-w-80">
+                      <Link href={href} className="block truncate rounded-sm font-medium outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">{item.title}</Link>
+                      <AudienceLine audience={item.audience} name={audience} />
+                    </TableCell>
+                    <TableCell><AssessmentTypeLabel type={item.type} /></TableCell>
+                    <TableCell className="text-xs text-muted-foreground"><PartsSummary item={item} /></TableCell>
+                    <TableCell><AssessmentStatus item={item} /></TableCell>
+                    <TableCell className="text-xs text-muted-foreground"><AssessmentDate item={item} /></TableCell>
+                    <TableCell className="text-right"><MarkedCount item={item} /></TableCell>
+                    <TableCell className="text-right"><AssessmentActions row={row} onEdit={onEdit} /></TableCell>
+                  </TableRow>
+                </AssessmentMenu>
+              );
+              })}
             </Fragment>
           ))}
         </TableBody>

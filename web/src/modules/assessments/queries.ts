@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ASSIGNMENT_STATES, PART_KINDS } from "@/modules/assignments";
 import { EXAM_PART_KINDS, EXAM_PHASES } from "@/modules/exams";
 import { QUIZ_PART_KINDS, QUIZ_PHASES } from "@/modules/quizzes";
-import { ALL, PAGE_SIZE, type AssessmentListParams } from "./params";
+import { ALL, type AssessmentListParams } from "./params";
 import { ASSESSMENT_TYPES, type AssessmentPage } from "./types";
 
 /** Staff read in the browser. The RPC checks academy membership, like the per-type lists. */
@@ -66,8 +66,8 @@ export async function loadAssessments(academyId: string, filters: ListFilters, p
     p_statuses: filters.statuses,
     p_sort: filters.sort,
     p_group: filters.group,
-    p_limit: PAGE_SIZE,
-    p_offset: page * PAGE_SIZE,
+    p_limit: filters.pageSize,
+    p_offset: page * filters.pageSize,
   });
   if (error) throw new Error(error.message);
   if (data === null) throw new Error("forbidden");

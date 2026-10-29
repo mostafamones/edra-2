@@ -6,6 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 
 import { FilterPopover, type FilterField } from "@/components/shared/filter-popover";
+import { HeaderActions } from "@/components/shared/header-actions";
 import { Segmented } from "@/components/shared/segmented";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { groupListQueryKey, loadGroups, loadStructure, structureQueryKey } from "@/modules/groups";
@@ -27,7 +28,7 @@ type Props = {
   academyId: string;
 };
 
-/** Type, search and audience (URL state), view options and Create assessment. */
+/** Header type tabs, search and audience (URL state), view options and Create assessment. */
 export function AssessmentToolbar({ params, onChange, view, onView, academyId }: Props) {
   const [text, setText] = useState(params.search);
   // Follow outside changes, such as Clear filters or Back.
@@ -44,9 +45,11 @@ export function AssessmentToolbar({ params, onChange, view, onView, academyId }:
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex justify-end overflow-x-auto">
-        <Segmented label="Type" value={params.type} options={[...TYPE_OPTIONS]} onChange={(type) => onChange({ type })} />
-      </div>
+      <HeaderActions>
+        <div className="max-w-[calc(100vw-10rem)] overflow-x-auto">
+          <Segmented label="Type" value={params.type} options={[...TYPE_OPTIONS]} onChange={(type) => onChange({ type })} />
+        </div>
+      </HeaderActions>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <InputGroup className="sm:max-w-sm">
           <InputGroupInput type="search" placeholder="Search assessments" aria-label="Search assessments" maxLength={MAX_SEARCH}
@@ -54,8 +57,9 @@ export function AssessmentToolbar({ params, onChange, view, onView, academyId }:
           <InputGroupAddon><HugeiconsIcon icon={Search01Icon} strokeWidth={1.5} aria-hidden="true" /></InputGroupAddon>
         </InputGroup>
         <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-          <FilterPopover iconOnly fields={useAudienceFields(academyId, params, onChange)} />
-          <ViewOptions params={params} onChange={onChange} view={view} onView={onView} />
+          <FilterPopover iconOnly fields={useAudienceFields(academyId, params, onChange)}>
+            <ViewOptions params={params} onChange={onChange} view={view} onView={onView} />
+          </FilterPopover>
           <CreateAssessment />
         </div>
       </div>

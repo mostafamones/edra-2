@@ -8,6 +8,8 @@ export const AUDIENCES = ["program", "groups"] as const;
 export const SORTS = ["newest", "title"] as const;
 export const GROUPS = ["none", "type", "status"] as const;
 export const PAGE_SIZE = 24;
+export const PAGE_SIZES = [12, 24, 48, 96] as const;
+export type PageSize = (typeof PAGE_SIZES)[number];
 export const MAX_SEARCH = 200;
 const LEVEL = z.string().regex(/^[a-z0-9-]{1,40}$/);
 
@@ -26,9 +28,10 @@ export type AssessmentListParams = {
   group: (typeof GROUPS)[number];
   /** Zero-based; the URL shows it one-based. */
   page: number;
+  pageSize: PageSize;
 };
 
-export const DEFAULT_PARAMS: AssessmentListParams = { type: ALL, search: "", audience: ALL, level: null, track: null, groupId: null, statuses: [...DEFAULT_STATUSES], sort: "newest", group: "none", page: 0 };
+export const DEFAULT_PARAMS: AssessmentListParams = { type: ALL, search: "", audience: ALL, level: null, track: null, groupId: null, statuses: [...DEFAULT_STATUSES], sort: "newest", group: "none", page: 0, pageSize: PAGE_SIZE };
 
 const oneOf = <T extends string>(values: readonly T[], raw: string | null): T | null =>
   raw !== null && (values as readonly string[]).includes(raw) ? raw as T : null;
@@ -47,6 +50,7 @@ export const sameStatuses = (a: readonly StatusKey[], b: readonly StatusKey[]) =
 export function readParams(query: URLSearchParams): AssessmentListParams {
   const page = Number(query.get("page"));
   const search = query.get("q") ?? "";
+  const size = Number(query.get("pageSize"));
   return {
     type: oneOf([ALL, ...ASSESSMENT_TYPES], query.get("type")) ?? ALL,
     search: search.length <= MAX_SEARCH ? search : "",
@@ -58,6 +62,7 @@ export function readParams(query: URLSearchParams): AssessmentListParams {
     sort: oneOf(SORTS, query.get("sort")) ?? "newest",
     group: oneOf(GROUPS, query.get("group")) ?? "none",
     page: Number.isInteger(page) && page >= 1 && page <= 10_000 ? page - 1 : 0,
+    pageSize: PAGE_SIZES.includes(size as PageSize) ? size as PageSize : PAGE_SIZE,
   };
 }
 
@@ -73,6 +78,7 @@ export function writeParams(params: AssessmentListParams): URLSearchParams {
   if (!sameStatuses(params.statuses, DEFAULT_STATUSES)) query.set("statuses", params.statuses.join(","));
   if (params.sort !== "newest") query.set("sort", params.sort);
   if (params.group !== "none") query.set("group", params.group);
+  if (params.pageSize !== PAGE_SIZE) query.set("pageSize", String(params.pageSize));
   if (params.page > 0) query.set("page", String(params.page + 1));
   return query;
 }
