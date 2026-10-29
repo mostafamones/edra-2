@@ -15,6 +15,8 @@ These are intended product permissions. Current source enforces the Owner, Head 
 | Record taught units before first attendance finalization | Yes | Yes | Yes | Yes |
 | Archive/restore sessions in an open academic year | Yes | Yes | Yes | Read preserved history only |
 | Prepare assessments; mark/announce complete results | Yes | Yes | Yes | Yes |
+| Apply/remove labels on assessments, including archived assessments and closed years | Yes | Yes | Yes | Yes |
+| Create, rename, recolor and delete academy labels | Yes | Yes | Yes | No |
 | Prepare/edit content units, including working changes to published units | Yes | Yes | Yes | Own units only; may edit during review and submit changes |
 | Review submitted units; publish working changes | Yes | Yes | Yes | No |
 | Publish changes; archive/restore content (restores as draft) | Yes | Yes | Yes | No |
@@ -28,4 +30,4 @@ These are intended product permissions. Current source enforces the Owner, Head 
 | Notes | Manage | Manage | Manage | Create; manage own notes under sharing rules |
 | Delivery diagnostics/retries | Yes | Yes | Yes | Basic delivery outcome only |
 
-Role descriptions do not override domain conditions, year closure, tenant isolation, structure locks or academic history. Staff administration excludes self-role/self-removal changes. Read [academy](domains/academy.md), [students](domains/students.md), [teaching](domains/teaching.md), [learning](domains/learning.md), [assessments](domains/assessments.md) and [family](domains/family.md) for conditions.
+Role descriptions do not override domain conditions, year closure, tenant isolation, structure locks or academic history. Applying/removing labels on assessments is an explicit organizational-metadata exception to archived/closed-year read-only rules; global label changes update historical uses while preserving academic work and official results. Staff administration excludes self-role/self-removal changes. Read [academy](domains/academy.md), [students](domains/students.md), [teaching](domains/teaching.md), [learning](domains/learning.md), [labels](domains/labels.md), [assessments](domains/assessments.md) and [family](domains/family.md) for conditions.
