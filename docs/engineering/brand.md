@@ -20,6 +20,12 @@ Web theme tokens and design-system configuration remain owner-controlled. Native
 
 Arabic text and direction, accessibility and platform text sizing must be considered when applying typography and layouts. Brand consistency must preserve legibility rather than force identical dimensions on every platform.
 
+## Reusable color palette
+
+Confirmed by the owner, 2026-10-29: color-coded features use a fixed named palette with coordinated light and dark appearances. Define palette values in one central implementation source and reference stable color keys from records and components, so refining a color updates all its uses. Include the foreground, background, border and indicator appearances needed for legible controls and badges; color alone must not replace a text label or selected state.
+
+[Labels](../../web/docs/product/domains/labels.md) are the first consumer, initially integrated with assessments. Keep this palette reusable for labels in additional modules, other color-coded features and academy colors without implementing those features now. Users choose named palette entries rather than arbitrary custom colors. Exact palette shades remain refinable; this decision does not declare a final agency brand identity or authorize changing protected web theme tokens, design-system configuration or primitives. Web implements the palette outside those protected foundations; native adoption follows when a native consumer is in scope.
+
 ## Context for the assisting agent
 
 Edra serves academies, their staff, students and parents. Staff manage teaching and academic work; students navigate learning content, complete assessments and follow performance; parents consult reports and receive official communication. The identity must serve these connected experiences and the native staff companion.

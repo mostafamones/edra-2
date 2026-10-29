@@ -128,6 +128,20 @@ Owners, Head Admins, Admins and Instructors may prepare assignments, record work
 
 Owners, Head Admins and Admins manage submission availability and archival. Locked structure applies to all roles. Only Owners, Head Admins and Admins may correct the shared answer key or exclude questions after work has begun, for assignments, quizzes and exams. Instructors retain ordinary marking and announcement permissions, including announcing complete recalculated corrections; they cannot change the shared answer key or exclusion rules. No role may bypass scoring maxima, result completeness or history-preservation rules.
 
+## Labels
+
+Confirmed by the owner, 2026-10-29. These are approved requirements, not a statement of implementation or deployment. The UI reference is the current `ui/unified-assessments-view` Assessments area, including its row/card context menus and existing Filters and View options controls.
+
+Assessments are the first integration of the shared [Labels](labels.md) feature. Assignments, quizzes and exams use the academy's label catalog; each assessment may have multiple labels. The shared reference owns label definitions, management permissions, global changes, deletion and palette behavior. Labels for students and other modules are planned for later deliveries.
+
+All active academy staff, including Instructors, may apply and remove existing labels through a Labels submenu in each assessment row/card context menu. This remains permitted for archived assessments and assessments in closed academic years. Labels are organizational metadata: their changes do not change assessment preparation, audience, availability, submissions, marking, official results or academic history. Other academic read-only rules remain in force.
+
+Only Owners, Head Admins and Admins may create, rename, recolor or delete label definitions. Managers open the same label editor popover from either a label-icon button beside the existing Filters and View options buttons or a Manage labels entry in the context menu's Labels submenu. Both management entry points and the editor itself are hidden from Instructors. The toolbar entry remains available when there are no assessments. Label assignment does not require opening an assessment form or quick-edit sheet.
+
+Global label changes also update archived and closed-year assessments. Deletion and its conditional confirmation follow the shared [label rules](labels.md#changes-and-deletion), preserving all assessments, academic work and results.
+
+Display colored labels in both Table and Cards views. Add label filtering to the existing Filters popover; multiple selected labels match any selected label, with an Unlabeled option. Label filtering combines with the current type, search, audience and status filters and preserves the unified list's URL state, reset, return navigation, sorting, grouping and pagination behavior. Label changes apply across years without expanding which academic years the unified list displays.
+
 ## Student web assignment flow — EDRA-81
 
 Confirmed during owner shaping, 2026-10-22, with conflict and photo-format decisions settled 2026-10-23. These are approved product requirements, not a statement of deployment.
