@@ -15,7 +15,7 @@ export async function createNewQuiz(value: { academyId: string; academicYearId: 
   return invalid(value) ? failure("validation") : createQuiz(value);
 }
 
-export async function saveQuiz(value: { academyId: string; quizId: string; expectedVersion: number; draft: QuizDraft }): Promise<QuizResult> {
+export async function saveQuiz(value: { academyId: string; quizId: string; expectedVersion: number; draft: QuizDraft; availability?: { opensAt: string | null; closesAt: string | null } }): Promise<QuizResult> {
   return invalid(value) ? failure("validation") : updateQuiz(value);
 }
 

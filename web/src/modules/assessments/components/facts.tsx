@@ -33,14 +33,15 @@ const PART_ICONS: Record<string, Icon> = {
   question_sheet: LeftToRightListBulletIcon, written_work: PencilEdit01Icon,
 };
 
+export function partKindLabel(type: AssessmentType, kind: string | null) {
+  const key = kind ?? "legacy";
+  return type === "assignment" ? PART_KIND_LABELS[key as keyof typeof PART_KIND_LABELS]
+    : (type === "quiz" ? QUIZ_KIND_LABELS : EXAM_KIND_LABELS)[key as keyof typeof QUIZ_KIND_LABELS];
+}
+
 /** Each part's kind label and icon, using the owning type's own names. */
 function describeParts(item: AssessmentListItem) {
-  return item.parts.map((part) => {
-    const kind = part.kind ?? "legacy";
-    const label = item.type === "assignment" ? PART_KIND_LABELS[kind as keyof typeof PART_KIND_LABELS]
-      : (item.type === "quiz" ? QUIZ_KIND_LABELS : EXAM_KIND_LABELS)[kind as keyof typeof QUIZ_KIND_LABELS];
-    return { title: part.title, label, icon: PART_ICONS[kind] };
-  });
+  return item.parts.map((part) => ({ title: part.title, label: partKindLabel(item.type, part.kind), icon: PART_ICONS[part.kind ?? "legacy"] }));
 }
 
 /** One part: its kind ("Manual marking"). Several: "3 parts", listed on a delayed hover. */
