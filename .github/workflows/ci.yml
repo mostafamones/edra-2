@@ -54,6 +54,29 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:ui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-review
+          path: |
+            web/playwright-report/ui
+            web/test-results/ui
+          retention-days: 7
+          if-no-files-found: ignore
+
   database:
     runs-on: ubuntu-latest
     # Each run builds its own disposable Supabase database on this runner from the checkout's

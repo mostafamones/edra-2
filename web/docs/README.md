@@ -19,6 +19,7 @@ Product references preserve the full reviewed wording and subsequent confirmed d
 ## Engineering and current integration
 
 - [Web engineering](engineering.md).
+- [UI implementation guide](ui/README.md): source-backed component patterns, cache/request rules, feature contracts, verification and current gaps.
 - [Shared app boundaries](../../docs/engineering/application-boundaries.md) and [brand](../../docs/engineering/brand.md).
 - [Current API](api/README.md), [routing](technical/routing.md), [deployment](technical/deployment.md), the [standalone student exam release record](technical/student-exam-release.md) and the [development academy verification record](technical/development-academy-verification.md).
 - Existing module READMEs describe public APIs and implementation limits beside their source.

@@ -73,8 +73,8 @@ export function CouponTypeList({ academyId, programs, allTypes, manager, onChang
 }
 
 // Fixed columns keep inputs aligned whatever badge or action a row has.
-const ROW = "flex items-center gap-2 px-3 py-3";
-const NAME = "h-8 w-64 min-w-0 shrink";
+const ROW = "flex flex-wrap items-center gap-2 px-3 py-3";
+const NAME = "h-9 w-full min-w-0 sm:h-8 sm:w-64 sm:shrink";
 const ICON = "text-muted-foreground";
 
 function TypeRow({ type, busy, canDelete, onSave, onDelete, action }: { type: ScopedType; busy: boolean; canDelete: boolean; onSave: (name: string, prefix: string) => void; onDelete: () => void; action?: React.ReactNode }) {
