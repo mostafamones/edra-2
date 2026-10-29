@@ -33,6 +33,7 @@ import {
   findStaffItem,
   NAV_ICONS,
   STAFF_MANAGEMENT_NAV,
+  ASSESSMENT_PATHS,
   STAFF_WORKSPACE_SECTIONS,
   type ManagementEntry,
   type NavItem,
@@ -56,15 +57,17 @@ function activeFor(pathname: string, href: string) {
 
 type WorkspaceIcon = ComponentProps<typeof HugeiconsIcon>["icon"];
 
-function StaffLink({ item, icon, pathname, closeMobile }: {
+function StaffLink({ item, icon, pathname, closeMobile, also = [] }: {
   item: NavItem;
   icon?: WorkspaceIcon;
   pathname: string;
   closeMobile: () => void;
+  /** Other pages that keep this entry active. */
+  also?: readonly string[];
 }) {
   const href = useCanonicalHref();
   const Icon = NAV_ICONS[item.icon];
-  const active = activeFor(pathname, item.href);
+  const active = [item.href, ...also].some((target) => activeFor(pathname, target));
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild tooltip={item.label} isActive={active} className={icon ? "text-sidebar-foreground/75" : undefined}>
@@ -80,7 +83,6 @@ function StaffLink({ item, icon, pathname, closeMobile }: {
 const workspaceIcons: Record<string, WorkspaceIcon> = {
   Teaching: TeachingIcon,
   Content: FolderLibraryIcon,
-  Assessments: AssignmentsIcon,
 };
 
 function WorkspaceSection({ label, icon, items, pathname, closeMobile, sidebarOpen, expandSidebar, savedOpen, onToggle }: {
@@ -170,6 +172,7 @@ function WorkspaceNavigation({ pathname, role, closeMobile, sidebarOpen, expandS
                 />
               );
             })}
+            <StaffLink item={pageFor("/app/assessments")} icon={AssignmentsIcon} pathname={pathname} closeMobile={closeMobile} also={ASSESSMENT_PATHS} />
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

@@ -10,7 +10,14 @@ it("does not offer academy mutations without academy context", () => {
 it("uses real creation forms and matches commands as well as pages", () => {
   const matches = filteredCommands(commandEntries("staff", "academy", "admin"), "assignment");
   expect(matches.some(item => item.group === "Actions" && item.href.endsWith("/academy/assignments/new"))).toBe(true);
-  expect(matches.some(item => item.group === "Pages" && item.href.endsWith("/academy/assignments"))).toBe(true);
+  expect(matches.some(item => item.group === "Pages" && item.href.endsWith("/academy/assessments"))).toBe(true);
+  for (const [query, path] of [["quiz", "/academy/quizzes/new"], ["exam", "/academy/exams/new"]]) {
+    const found = filteredCommands(commandEntries("staff", "academy", "instructor"), query);
+    expect(found.some(item => item.group === "Actions" && item.href.endsWith(path))).toBe(true);
+    expect(found.some(item => item.group === "Pages" && item.href.endsWith("/academy/assessments"))).toBe(true);
+  }
+  // The separate staff list pages are gone; Assessments is the one destination.
+  expect(commandEntries("staff", "academy", "admin").filter(item => item.group === "Pages" && /\/academy\/(assignments|quizzes|exams)$/.test(item.href))).toEqual([]);
 });
 it("opens the groups panel on the Students page for the Groups command", () => {
   const groups = commandEntries("staff", "academy", "admin").find(item => item.title === "Groups");

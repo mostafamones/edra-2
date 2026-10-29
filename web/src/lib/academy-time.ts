@@ -57,3 +57,45 @@ const display = new Intl.DateTimeFormat("en-GB", {
 export function formatAcademyDateTime(iso: string): string {
   return display.format(new Date(iso));
 }
+
+const longDate = new Intl.DateTimeFormat("en-GB", { timeZone: ACADEMY_TIME_ZONE, weekday: "short", day: "numeric", month: "short", year: "numeric" });
+const longTime = new Intl.DateTimeFormat("en-GB", { timeZone: ACADEMY_TIME_ZONE, hour: "numeric", minute: "2-digit", hour12: true });
+
+/** "Fri, 30 Oct 2026 at 10:00 pm" in the academy time zone. */
+export function formatAcademyLong(iso: string): string {
+  const instant = new Date(iso);
+  return `${longDate.format(instant)} at ${longTime.format(instant)}`;
+}
+
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * A short academy-time label relative to `now`: "Today 3pm", "Tonight 10pm", "Midnight tonight",
+ * "Tomorrow noon", "Friday 10:30am", "Next Monday 9am", "Last night 8pm", "Last Friday 10pm", "30 Oct 10pm",
+ * "30 Oct 2025 10pm". 00:00 reads as midnight at the end of the previous day; evening is from 6pm.
+ */
+export function formatAcademyRelative(iso: string, now: Date = new Date()): string {
+  const local = academyDateTime(iso);
+  const today = academyDateTime(now.toISOString()).date;
+  const [hour, minute] = local.time.split(":").map(Number);
+  const midnight = hour === 0 && minute === 0;
+  const [y, m, d] = local.date.split("-").map(Number);
+  // Midnight belongs to the night before.
+  const day = new Date(Date.UTC(y, m - 1, d - (midnight ? 1 : 0)));
+  const [ty, tm, td] = today.split("-").map(Number);
+  const diff = Math.round((day.getTime() - Date.UTC(ty, tm - 1, td)) / 86_400_000);
+  const evening = midnight || hour >= 18;
+  const clock = midnight ? "midnight" : hour === 12 && minute === 0 ? "noon"
+    : `${hour % 12 || 12}${minute ? `:${String(minute).padStart(2, "0")}` : ""}${hour < 12 ? "am" : "pm"}`;
+  const weekday = WEEKDAYS[day.getUTCDay()];
+  const label = diff === 0 ? (evening ? "Tonight" : "Today")
+    : diff === 1 ? "Tomorrow"
+    : diff === -1 ? (evening ? "Last night" : "Yesterday")
+    : diff >= 2 && diff <= 6 ? weekday
+    : diff >= 7 && diff <= 13 ? `Next ${weekday}`
+    : diff <= -2 && diff >= -6 ? `Last ${weekday}`
+    : `${day.getUTCDate()} ${MONTHS[day.getUTCMonth()]}${day.getUTCFullYear() === ty ? "" : ` ${day.getUTCFullYear()}`}`;
+  if (midnight && (label === "Tonight" || label === "Last night")) return `Midnight ${label.toLowerCase()}`;
+  return `${label} ${clock}`;
+}

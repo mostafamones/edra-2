@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ASSESSMENT_PATHS,
+  STAFF_CREATE_ITEMS,
+  STAFF_WORKSPACE_SECTIONS,
   allStaffItems,
   allStudentItems,
   canViewStaffItem,
@@ -37,5 +40,15 @@ describe("portal navigation manifest", () => {
       expect(canViewStaffItem(item!, "head_admin")).toBe(true);
       expect(canViewStaffItem(item!, "admin")).toBe(true);
     }
+  });
+
+  it("gives staff one Assessments destination and keeps student work pages separate", () => {
+    expect(findStaffItem("/app/assessments")?.label).toBe("Assessments");
+    for (const href of ["/app/assignments", "/app/quizzes", "/app/exams"]) expect(findStaffItem(href)).toBeUndefined();
+    expect(STAFF_WORKSPACE_SECTIONS.some((section) => section.label === "Assessments")).toBe(false);
+    expect(ASSESSMENT_PATHS).toEqual(["/app/assessments", "/app/assignments", "/app/quizzes", "/app/exams"]);
+    expect(STAFF_CREATE_ITEMS.filter((item) => ["assignments", "quizzes", "exams"].includes(item.icon)).map((item) => item.href))
+      .toEqual(["/app/assignments/new", "/app/quizzes/new", "/app/exams/new"]);
+    for (const href of ["/learn/assignments", "/learn/quizzes", "/learn/exams"]) expect(findStudentItem(href)).toBeDefined();
   });
 });

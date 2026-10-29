@@ -7,10 +7,13 @@ export function commandEntries(platform: "staff" | "student", slug: string | und
   if (platform === "student") return allStudentItems().map(item => ({ title: item.label, href: publicHref(item.href), group: "Pages", icon: item.icon }));
   const pages = STAFF_GROUPS.flatMap(group => group.items.flatMap(item => [item, ...(item.children ?? [])]));
   return [
-    ...(slug ? pages.filter(item => canViewStaffItem(item, role)).map(item => ({ title: item.label, href: publicHref(item.href, slug), group: "Pages", icon: item.icon })) : []),
+    ...(slug ? pages.filter(item => canViewStaffItem(item, role)).map(item => ({
+      title: item.label, href: publicHref(item.href, slug), group: "Pages", icon: item.icon,
+      ...(item.href === "/app/assessments" ? { keywords: "assignments quizzes exams homework" } : {}),
+    })) : []),
     { title: STAFF_ACCOUNT.label, href: publicHref(STAFF_ACCOUNT.href, slug), group: "Pages", icon: STAFF_ACCOUNT.icon },
     ...(slug ? STAFF_CREATE_ITEMS.filter(item => canViewStaffItem(item, role)).map(item => ({
-      title: item.label === "Assignment" ? "Create assignment" : item.label, href: publicHref(item.href, slug), group: "Actions",
+      title: ["Assignment", "Quiz", "Exam"].includes(item.label) ? `Create ${item.label.toLowerCase()}` : item.label, href: publicHref(item.href, slug), group: "Actions",
       icon: item.icon,
       ...(item.href === "/app/attendance/new" ? { command: "start-session" as const, keywords: "class begin attendance schedule audience حصة بدء ابدا ابدأ حضور" } : {}),
     })) : []),

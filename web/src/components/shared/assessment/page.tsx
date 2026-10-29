@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { useCanonicalHref } from "@/modules/navigation";
 import { DiscardDialog } from "./discard";
+import { useAssessmentListReturn } from "./list/return";
 
 export type FormStatus = { dirty: boolean; saving: boolean; uncertain?: boolean; discard?: () => Promise<boolean> };
 
@@ -27,11 +28,12 @@ export function AssessmentFormPage<E extends { id: string }>({ noun, route, titl
   const router = useRouter();
   const [status, setStatus] = useState<FormStatus>({ dirty: false, saving: false });
   const [confirming, setConfirming] = useState(false);
-  useBreadcrumbTitle(`${entity ? "Edit" : "New"} ${noun}`);
+  const back = useAssessmentListReturn(route);
+  useBreadcrumbTitle(`${entity ? "Edit" : "New"} ${noun}`, { label: "Assessments", href: back });
   const onStatusChange = useCallback((next: FormStatus) => {
     setStatus((before) => before.dirty === next.dirty && before.saving === next.saving && before.uncertain === next.uncertain ? before : next);
   }, []);
-  const leave = () => router.push(href(entity ? `/app/${route}/${entity.id}` : `/app/${route}`));
+  const leave = () => router.push(entity ? href(`/app/${route}/${entity.id}`) : back);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">

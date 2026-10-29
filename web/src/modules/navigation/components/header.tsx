@@ -62,10 +62,11 @@ export function PortalHeader({ portal, academies = [] }: { portal: "staff" | "st
               <BreadcrumbSeparator />
             </>
           ) : null}
-          {parentItem ? (
+          {overrideParent || parentItem ? (
             <>
               <BreadcrumbItem>
-                <BreadcrumbLink asChild><Link href={href(parentItem.href)}>{parentItem.label}</Link></BreadcrumbLink>
+                {/* A page-published parent is already a public href, such as the Assessments list with its state. */}
+                <BreadcrumbLink asChild>{overrideParent ? <Link href={overrideParent.href}>{overrideParent.label}</Link> : <Link href={href(parentItem!.href)}>{parentItem!.label}</Link>}</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
             </>

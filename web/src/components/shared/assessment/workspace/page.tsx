@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AcademyEntry } from "@/modules/academies";
 import { AcademyGate } from "@/modules/auth";
+import { useAssessmentListReturn } from "../list/return";
 import { WorkspaceMissing } from "./missing";
 
 type Props<E extends { title: string }> = {
@@ -41,7 +42,8 @@ export function AssessmentWorkspacePage<E extends { title: string }>({ id, noun,
 
 function Content<E extends { title: string }>({ academy, id, noun, route, queryKey, load, refetchMs, children }: Props<E> & { academy: AcademyEntry }) {
   const query = useQuery({ queryKey: queryKey(academy.id, id), queryFn: () => load(academy.id, id), refetchInterval: refetchMs });
-  useBreadcrumbTitle(query.data?.title ?? noun[0].toUpperCase() + noun.slice(1));
+  const back = useAssessmentListReturn(route);
+  useBreadcrumbTitle(query.data?.title ?? noun[0].toUpperCase() + noun.slice(1), { label: "Assessments", href: back });
   return (
     <main className="page-shell">
       {query.isPending && (
