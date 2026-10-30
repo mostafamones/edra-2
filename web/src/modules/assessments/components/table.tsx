@@ -19,8 +19,7 @@ export function AssessmentTable({ groups, collapsed, onToggle, actions }: Props)
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Title</TableHead>
-            <TableHead>Labels</TableHead>
+            <TableHead>Details</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Parts</TableHead>
             <TableHead>Status</TableHead>
@@ -34,7 +33,7 @@ export function AssessmentTable({ groups, collapsed, onToggle, actions }: Props)
             <Fragment key={group.key}>
               {group.type && (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={8} className="h-10 bg-muted/40">
+                  <TableCell colSpan={7} className="h-10 bg-muted/40">
                     <GroupToggle group={group} open={!collapsed.has(group.key)} onClick={() => onToggle(group.key)} />
                   </TableCell>
                 </TableRow>
@@ -45,11 +44,13 @@ export function AssessmentTable({ groups, collapsed, onToggle, actions }: Props)
                 // Fixed height so rows line up whatever their date or status wraps to.
                 <AssessmentMenu key={itemKey(item)} row={row} actions={actions}>
                   <TableRow className="h-16 outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-                    <TableCell className="max-w-80">
-                      <Link href={href} className="block truncate rounded-sm font-medium outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">{item.title}</Link>
+                    <TableCell className="max-w-96">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Link href={href} className="block min-w-0 truncate rounded-sm font-medium outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">{item.title}</Link>
+                        <LabelBadges labels={item.labels} className="flex-nowrap" />
+                      </div>
                       <AudienceLine audience={item.audience} name={audience} />
                     </TableCell>
-                    <TableCell className="max-w-56"><LabelBadges labels={item.labels} /></TableCell>
                     <TableCell><AssessmentTypeLabel type={item.type} /></TableCell>
                     <TableCell className="text-xs text-muted-foreground"><PartsSummary item={item} /></TableCell>
                     <TableCell><AssessmentStatus item={item} /></TableCell>

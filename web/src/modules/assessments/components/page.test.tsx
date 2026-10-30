@@ -357,7 +357,7 @@ describe("staff Assessments page", () => {
     expect(exam.textContent).toContain("Open");
     expect(exam.textContent).toMatch(/Opens .*Closes /);
     // A short label, with the full dates for hover and screen readers.
-    const date = within(exam).getAllByRole("cell")[5];
+    const date = within(exam).getAllByRole("cell")[4];
     expect(date.querySelector("[aria-hidden=true]")?.textContent).toBe("Closed 1 Oct noon");
     expect(date.textContent).toContain("Opens Thu, 1 Oct 2026 at 11:00 am, Closes Thu, 1 Oct 2026 at 12:00 pm");
     expect(assignment.textContent).toContain("Active");
@@ -373,8 +373,8 @@ describe("staff Assessments page", () => {
     const title = within(exam).getAllByRole("cell")[0];
     expect(title.textContent).toBe("Term examProgram-wide:Audience level");
     expect(within(quiz).getAllByRole("cell")[0].textContent).toBe("Weekly quizNo audience yet");
-    expect(within(exam).getAllByRole("cell")[2].textContent).toBe("Exam");
-    expect(within(exam).getAllByRole("cell")[6].textContent).toBe("4 / 12");
+    expect(within(exam).getAllByRole("cell")[1].textContent).toBe("Exam");
+    expect(within(exam).getAllByRole("cell")[5].textContent).toBe("4 / 12");
     expect(within(table).getAllByRole("row").slice(1).every((row) => row.classList.contains("h-16"))).toBe(true);
   });
 
