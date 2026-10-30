@@ -145,7 +145,7 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
               {record.type === "assignment" ? (
                 <Field orientation="horizontal" className="items-center!" data-invalid={Boolean(errors.dueAt) || undefined}>
                   <FieldLabel htmlFor="quick-due" className="min-w-24 flex-none!">Due date</FieldLabel>
-                  <FieldContent className="min-w-0 max-w-sm">
+                  <FieldContent className="ml-auto min-w-0 max-w-sm">
                     <Controller control={form.control} name="dueAt" render={({ field }) => (
                       <AssessmentDateTime id="quick-due" label="Due date" value={field.value} onChange={field.onChange}
                         defaultTime="23:59" disabled={disabled} invalid={Boolean(errors.dueAt)} />
@@ -156,7 +156,7 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
               ) : <>
                 <Field orientation="horizontal" className="items-center!" data-invalid={Boolean(errors.timeLimit) || undefined}>
                   <FieldLabel htmlFor="quick-timer" className="min-w-24 flex-none!">Timer</FieldLabel>
-                  <FieldContent className="min-w-0 max-w-sm">
+                  <FieldContent className="ml-auto min-w-0 max-w-sm">
                     <Controller control={form.control} name="timeLimit" render={({ field }) => (
                       <AssessmentTimer id="quick-timer" value={field.value} onChange={field.onChange} onBlur={field.onBlur}
                         disabled={disabled || !permissions.timer} invalid={Boolean(errors.timeLimit)} />
@@ -165,13 +165,13 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
                   </FieldContent>
                 </Field>
                 <Field orientation="horizontal"><FieldLabel htmlFor="quick-opens" className="min-w-24 flex-none!">Opens</FieldLabel>
-                  <div className="min-w-0 max-w-sm flex-1">
+                  <div className="ml-auto min-w-0 max-w-sm flex-1">
                     <AssessmentDateTime id="quick-opens" label="Opens" disabled={disabled || !permissions.availability || opened}
                       value={window.opensAt} onChange={(opensAt) => setWindow({ ...window, opensAt })} />
                   </div>
                 </Field>
                 <Field orientation="horizontal"><FieldLabel htmlFor="quick-closes" className="min-w-24 flex-none!">Closes</FieldLabel>
-                  <div className="min-w-0 max-w-sm flex-1">
+                  <div className="ml-auto min-w-0 max-w-sm flex-1">
                     <AssessmentDateTime id="quick-closes" label="Closes" disabled={disabled || !permissions.availability}
                       value={window.closesAt} onChange={(closesAt) => setWindow({ ...window, closesAt })} />
                   </div>
@@ -194,7 +194,7 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
                   <FieldLabel htmlFor={`quick-part-${part.id}`}>Part {index + 1}</FieldLabel>
                   <p className="text-xs text-muted-foreground">{partKindLabel(record.type, part.kind)}</p>
                 </div>
-                <FieldContent className="min-w-0 max-w-sm">
+                <FieldContent className="ml-auto min-w-0 max-w-sm">
                   <Input id={`quick-part-${part.id}`} dir="auto" maxLength={200} disabled={disabled || !permissions.parts} aria-invalid={Boolean(errors.parts?.[index]?.title)} {...form.register(`parts.${index}.title`)} />
                   <FieldError>{errors.parts?.[index]?.title?.message}</FieldError>
                 </FieldContent>

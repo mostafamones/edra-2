@@ -134,13 +134,16 @@ function GroupPicker({ id, options, value, onChange, disabled }: {
           )}
         </ComboboxValue>
       </ComboboxChips>
-      <ComboboxContent anchor={anchor}>
+      {/* May open in a modal sheet, which disables pointer events outside itself. */}
+      <ComboboxContent anchor={anchor} className="pointer-events-auto">
         <ComboboxEmpty>No matching groups.</ComboboxEmpty>
         <ComboboxList>
           {(option: Option) => (
             <ComboboxItem key={option.value} value={option}>
-              <span className="flex-1 truncate">{option.label}</span>
-              <span className="text-xs text-muted-foreground">{option.hint}</span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate">{option.label}</span>
+                <span className="truncate text-xs text-muted-foreground">{option.hint}</span>
+              </span>
             </ComboboxItem>
           )}
         </ComboboxList>
