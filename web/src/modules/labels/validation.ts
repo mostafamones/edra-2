@@ -16,5 +16,6 @@ export const labelSchema = z.object({
 });
 
 export const toLabel = (value: unknown): Label => labelSchema.parse(value);
-export const toLabels = (value: unknown): Label[] => z.array(labelSchema).parse(value)
+export const sortLabels = (labels: Label[]): Label[] => [...labels]
   .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.id.localeCompare(b.id));
+export const toLabels = (value: unknown): Label[] => sortLabels(z.array(labelSchema).parse(value));
