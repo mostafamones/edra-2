@@ -1,33 +1,28 @@
 "use client";
 
-import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
+import { FieldLegend, FieldSet } from "@/components/ui/field";
+import { Toggle } from "@/components/ui/toggle";
 import type { Label } from "../types";
 import { LabelSwatch } from "./badge";
 
 export type LabelSelection = { labels: string[]; unlabeled: boolean };
+const TOGGLE = "h-6 min-w-0 max-w-40 gap-1.5 rounded-sm bg-muted/60 px-2 text-xs font-normal text-muted-foreground aria-pressed:bg-primary/15 aria-pressed:text-foreground aria-pressed:hover:bg-primary/20";
 type Props = LabelSelection & { options: readonly Label[]; onChange: (selection: LabelSelection) => void };
 
-/** Label selection for a filter panel: any of the checked labels, or Unlabeled instead of them. */
+/** Label selection for a filter panel: any of the pressed labels, or Unlabeled instead of them. */
 export function LabelFilter({ options, labels, unlabeled, onChange }: Props) {
   const toggle = (id: string, checked: boolean) =>
     onChange({ labels: checked ? [...labels, id] : labels.filter((item) => item !== id), unlabeled: false });
   return (
     <FieldSet className="gap-2">
       <FieldLegend variant="label" className="mb-0 text-xs text-muted-foreground">Labels</FieldLegend>
-      <div className="flex max-h-48 flex-col gap-2 overflow-y-auto">
+      <div className="flex max-h-48 flex-wrap gap-1 overflow-y-auto">
         {options.map((label) => (
-          <Field key={label.id} orientation="horizontal" className="gap-2">
-            <Checkbox id={`label-filter-${label.id}`} checked={labels.includes(label.id)} onCheckedChange={(checked) => toggle(label.id, checked === true)} />
-            <FieldLabel htmlFor={`label-filter-${label.id}`} className="min-w-0 gap-2 font-normal">
-              <LabelSwatch color={label.color} /><span className="truncate">{label.name}</span>
-            </FieldLabel>
-          </Field>
+          <Toggle key={label.id} size="sm" className={TOGGLE} pressed={labels.includes(label.id)} onPressedChange={(pressed) => toggle(label.id, pressed)}>
+            <LabelSwatch color={label.color} /><span className="truncate">{label.name}</span>
+          </Toggle>
         ))}
-        <Field orientation="horizontal" className="gap-2">
-          <Checkbox id="label-filter-none" checked={unlabeled} onCheckedChange={(checked) => onChange({ labels: [], unlabeled: checked === true })} />
-          <FieldLabel htmlFor="label-filter-none" className="font-normal">Unlabeled</FieldLabel>
-        </Field>
+        <Toggle size="sm" className={TOGGLE} pressed={unlabeled} onPressedChange={(pressed) => onChange({ labels: [], unlabeled: pressed })}>Unlabeled</Toggle>
       </div>
     </FieldSet>
   );
