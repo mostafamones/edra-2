@@ -61,13 +61,13 @@ export function AssessmentToolbar({ params, onChange, view, onView, academyId, l
           ]} />
         </div>
       </HeaderActions>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <InputGroup className="sm:max-w-sm">
+      <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2 sm:items-center sm:gap-3 lg:grid-cols-3">
+        <InputGroup>
           <InputGroupInput type="search" placeholder="Search assessments" aria-label="Search assessments" maxLength={MAX_SEARCH}
             value={text} onChange={(event) => setText(event.target.value)} />
           <InputGroupAddon><HugeiconsIcon icon={Search01Icon} strokeWidth={1.5} aria-hidden="true" /></InputGroupAddon>
         </InputGroup>
-        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto lg:col-span-2">
           <FilterPopover iconOnly fields={useAudienceFields(academyId, params, onChange)} sections={labelSections(labels, params, onChange)}>
             <ViewOptions params={params} onChange={onChange} view={view} onView={onView} />
             {manager}

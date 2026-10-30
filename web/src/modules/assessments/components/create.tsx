@@ -16,7 +16,7 @@ export function CreateAssessment({ size = "default" }: { size?: "default" | "sm"
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size={size}><HugeiconsIcon icon={Add01Icon} strokeWidth={1.5} aria-hidden="true" />Create assessment</Button>
+        <Button size={size} className="gap-1" ><HugeiconsIcon icon={Add01Icon} strokeWidth={1.5} aria-hidden="true" />Create</Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-44">
         {ASSESSMENT_TYPES.map((type) => (

@@ -494,7 +494,7 @@ describe("staff Assessments page", () => {
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.queryByRole("columnheader")).toBeNull();
     expect(screen.getByRole("searchbox", { name: "Search assessments" })).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "Create assessment" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Create" })).toHaveLength(2);
   });
 
   it("offers Clear filters when filters match nothing", async () => {
@@ -524,7 +524,7 @@ describe("staff Assessments page", () => {
   it("creates each type through its existing create page", async () => {
     show();
     await screen.findByRole("table");
-    const trigger = screen.getByRole("button", { name: "Create assessment" });
+    const trigger = screen.getByRole("button", { name: "Create" });
     fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: "mouse" });
     const menu = await screen.findByRole("menu");
     expect(within(menu).getAllByRole("menuitem").map((item) => [item.textContent, item.getAttribute("href")])).toEqual([

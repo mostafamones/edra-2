@@ -228,7 +228,6 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     <div className="relative flex flex-1">
       <main className="page-shell min-w-0">
         <HeaderActions>
-          <AddStudentMenu academyId={academyId} canImport={canImportStudents(academy.role)} />
           <Tooltip>
             <TooltipTrigger asChild>
               <Toggle className="size-9 p-0" aria-label="Groups" pressed={groupsOpen} onPressedChange={setGroupsOpen}>
@@ -248,6 +247,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
           levelNames={structureQuery.data?.levelNames ?? {}}
           tracks={structureQuery.data?.tracks ?? []}
           groups={groupsQuery.data?.groups ?? []}
+          actions={<AddStudentMenu academyId={academyId} canImport={canImportStudents(academy.role)} />}
         >
           <ColumnsPopover
             order={codesEnabled ? preferences.order : preferences.order.filter((id) => id !== CODE_COLUMN)}
