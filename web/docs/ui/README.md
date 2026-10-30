@@ -8,6 +8,8 @@ The owner subsequently authorized implementation: [the first pilot](pilot.md) is
 
 ## Start here
 
+Repository skills are available in `.agents/skills/` for Codex and `.claude/skills/` for Claude: `edra-ui` routes to Edra's source references; `frontend-design` supplies external design critique. Read [record design](record-design.md) for admin detail pages. Existing owner rules take precedence over broad external styling suggestions.
+
 Updated 2026-10-29: use [design decisions](decisions.md) to choose the surface and information hierarchy, [annotated references](references.md) to borrow from Mones's flows, and [review](review.md) to evaluate the result. [External research](research.md) explains the reasoning. For a new composition, compare two approaches briefly and state why the chosen one fits the task. Small changes within a proven family only need their relevant difference.
 
 Read only the applicable family and examples after this entry point. The owner runs the app/preview from VS Code: agents must not start or restart servers, including indirectly through tests. Use the running instance; CI may manage its disposable servers. Record visual review as pending when unavailable.
@@ -24,7 +26,7 @@ Use [finished interaction references](quality.md) to carry forward the decisions
 
 - Existing shadcn primitives first. Do not hand-build equivalent dialogs, selects, menus or inputs. Compose Edra behavior outside `src/components/ui/`; protected primitives, `components.json` and theme tokens retain their approval rules.
 - Hugeicons, stroke width 1.5. Official brand assets are the exception. Older Tabler imports are migration debt, not permission to add more.
-- No unsolicited helper paragraphs, subtitles, tooltips or info icons. Use concise labels. Validation, access restrictions and recovery feedback are functional information and remain available.
+- No unsolicited helper paragraphs, subtitles or info icons. Use concise labels. Short-delay action/status tooltips are permitted by the current owner rules and must preserve independent accessible labels. Validation, access restrictions and recovery feedback remain available.
 - Empty datasets and no matching results replace the entire table, including headers and scroll wrapper. Keep relevant controls available.
 - Server-side authorization and tenant boundaries remain mandatory, regardless of what a cached screen displays.
 - Domain UI belongs in its module; shared compositions belong in `src/components/shared/`. Reuse the public module API rather than importing another module's internals.
