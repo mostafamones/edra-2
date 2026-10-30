@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "cn";
-import { Cancel01Icon, GridViewIcon, SlidersHorizontalIcon, TableIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, GridViewIcon, PreferenceHorizontalIcon, TableIcon } from "@hugeicons/core-free-icons";
 
 import { Segmented } from "@/components/shared/segmented";
 import { ToggleBadge } from "@/components/shared/toggle-badge";
@@ -74,7 +74,7 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <Button variant="outline" size="icon" className="relative" aria-label={changed ? "View options, changed" : "View options"}>
-              <HugeiconsIcon icon={SlidersHorizontalIcon} strokeWidth={1.5} />
+              <HugeiconsIcon icon={PreferenceHorizontalIcon} strokeWidth={1.5} />
               {changed && <span aria-hidden="true" className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />}
             </Button>
           </PopoverTrigger>
@@ -82,12 +82,19 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
         <TooltipContent>View options</TooltipContent>
       </Tooltip>
       <PopoverContent align="end" className="w-80 gap-3">
-        <div className="mb-1 flex items-center justify-between">
+        <div className="mb-1 flex min-h-7 items-center justify-between">
           <p className="font-heading text-sm font-semibold">View options</p>
-          <Button variant="ghost" size="sm" className="-mr-2 h-7 text-muted-foreground" disabled={!changed}
-            onClick={() => { setIsolated(null); onChange({ group: DEFAULT_PARAMS.group, sort: DEFAULT_PARAMS.sort, statuses: [...DEFAULT_STATUSES] }); }}>
-            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.5} />Reset
-          </Button>
+          {changed && (
+            <Button variant="ghost" size="sm" className="-mr-2 h-7 text-muted-foreground"
+              onClick={(event) => {
+                // The button is about to disappear; keep focus inside the panel.
+                event.currentTarget.closest<HTMLElement>("[data-slot=popover-content]")?.focus();
+                setIsolated(null);
+                onChange({ group: DEFAULT_PARAMS.group, sort: DEFAULT_PARAMS.sort, statuses: [...DEFAULT_STATUSES] });
+              }}>
+              <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.5} />Reset
+            </Button>
+          )}
         </div>
         <Segmented fill label="View" value={view} onChange={onView} options={[
           { value: "table", label: <><HugeiconsIcon icon={TableIcon} strokeWidth={1.5} className="mr-1.5 size-4" aria-hidden="true" />Table</> },

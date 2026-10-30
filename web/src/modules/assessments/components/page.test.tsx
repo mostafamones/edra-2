@@ -583,6 +583,26 @@ describe("staff Assessments page", () => {
     expect(mocks.replace).toHaveBeenLastCalledWith("/science/assessments", { scroll: false });
   });
 
+  it("shows Reset only once the filters or view options have changed", async () => {
+    show();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    expect(await screen.findByText("Audience type")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Reset" })).toBeNull();
+    cleanup();
+    show();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: /^View options/ }));
+    expect(await screen.findByText("Group by")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Reset" })).toBeNull();
+    cleanup();
+    mocks.query = "sort=title";
+    show();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: /^View options/ }));
+    expect(await screen.findByRole("button", { name: "Reset" })).toBeTruthy();
+  });
+
   it("remembers the list state for workspace back links", async () => {
     mocks.query = "type=quiz&page=2";
     show();
