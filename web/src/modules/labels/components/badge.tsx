@@ -11,8 +11,7 @@ export function LabelSwatch({ color, className }: { color: PaletteKey; className
 /** One label, in its palette colors with its name. */
 export function LabelBadge({ label }: { label: Label }) {
   return (
-    <Badge variant="outline" className={cn("max-w-40 gap-1.5 font-normal", paletteChip(label.color))}>
-      <LabelSwatch color={label.color} className="size-1.5" />
+    <Badge variant="secondary" className={cn("max-w-40 font-normal", paletteChip(label.color))}>
       <span className="truncate">{label.name}</span>
     </Badge>
   );
