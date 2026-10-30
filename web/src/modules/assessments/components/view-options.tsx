@@ -2,11 +2,10 @@
 
 import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { cn } from "cn";
 import { Cancel01Icon, GridViewIcon, PreferenceHorizontalIcon, TableIcon } from "@hugeicons/core-free-icons";
 
 import { Segmented } from "@/components/shared/segmented";
-import { ToggleBadge } from "@/components/shared/toggle-badge";
+import { ToggleBadge, ToggleBadgeGroup } from "@/components/shared/toggle-badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -49,7 +48,7 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
     : types.map((type) => ({ id: type, type, toggles: TYPE_STATUSES[type].map((status) => ({ id: statusKey(type, status), label: statusLabel(type, status), keys: [statusKey(type, status)] })) }));
 
   // Double-click shows only that status; the next click restores the selection from before (as in student courses).
-  const [isolated, setIsolated] = useState<{ id: string; previous: StatusKey[] } | null>(null);
+  const [isolated, setIsolated] = useState<StatusKey[] | null>(null);
   const beforeClick = useRef<StatusKey[]>(params.statuses);
   const setStatuses = (keys: Iterable<StatusKey>) => {
     const next = new Set(keys);
@@ -58,7 +57,7 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
   };
   const toggle = (toggle: StatusToggle) => {
     if (isolated) {
-      onChange({ statuses: isolated.previous });
+      onChange({ statuses: isolated });
       setIsolated(null);
       return;
     }
@@ -124,35 +123,30 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
               options={[{ value: "all", label: "All types" }, { value: "type", label: "Per type" }]} />
           )}
           {sections.map((section) => (
-            <fieldset key={section.id} className="flex flex-col gap-1.5">
-              <legend className={section.type ? "mb-1.5 flex items-center gap-1.5 pl-1 text-xs font-medium text-muted-foreground" : "sr-only"}>
-                {section.type && <HugeiconsIcon icon={TYPE_ICONS[section.type]} strokeWidth={1.5} className="size-3.5" aria-hidden="true" />}
-                {section.type ? TYPE_PLURALS[section.type] : "Statuses"}
-              </legend>
-              <div className="flex flex-wrap gap-1.5">
-                {section.toggles.map((item) => {
-                  const count = item.keys.filter((key) => params.statuses.includes(key)).length;
-                  const pressed = count === item.keys.length ? true : count === 0 ? false : "mixed";
-                  return (
-                    // Same toggles as the student courses view settings; "mixed" when only some types show it.
-                    <ToggleBadge key={item.id} pressed={pressed === true} aria-pressed={pressed}
-                      className={cn(pressed === "mixed" && "border border-dashed border-input text-foreground",
-                        isolated?.id === item.id && "aria-pressed:bg-primary/10 aria-pressed:hover:bg-primary/15")}
-                      onClick={(event) => {
-                        if (event.detail > 1) return;
-                        beforeClick.current = [...params.statuses];
-                        toggle(item);
-                      }}
-                      onDoubleClick={() => {
-                        setIsolated({ id: item.id, previous: beforeClick.current });
-                        setStatuses(item.keys);
-                      }}>
-                      {item.label}
-                    </ToggleBadge>
-                  );
-                })}
-              </div>
-            </fieldset>
+            <ToggleBadgeGroup key={section.id} legend={section.type
+              ? <><HugeiconsIcon icon={TYPE_ICONS[section.type]} strokeWidth={1.5} className="size-3.5" aria-hidden="true" />{TYPE_PLURALS[section.type]}</>
+              : "Status"}>
+              {section.toggles.map((item) => {
+                const count = item.keys.filter((key) => params.statuses.includes(key)).length;
+                const pressed = count === item.keys.length ? true : count === 0 ? false : "mixed";
+                return (
+                  // "Mixed" when only some types show it.
+                  <ToggleBadge key={item.id} pressed={pressed === true} aria-pressed={pressed}
+                    className={pressed === "mixed" ? "border border-dashed border-input text-foreground" : undefined}
+                    onClick={(event) => {
+                      if (event.detail > 1) return;
+                      beforeClick.current = [...params.statuses];
+                      toggle(item);
+                    }}
+                    onDoubleClick={() => {
+                      setIsolated(beforeClick.current);
+                      setStatuses(item.keys);
+                    }}>
+                    {item.label}
+                  </ToggleBadge>
+                );
+              })}
+            </ToggleBadgeGroup>
           ))}
         </div>
       </PopoverContent>

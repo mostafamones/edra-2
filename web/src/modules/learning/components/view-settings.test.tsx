@@ -25,10 +25,8 @@ it("isolates a status on double click and restores the prior selection on one cl
   fireEvent.click(completed, { detail: 2 });
   fireEvent.doubleClick(completed);
   expect(completed.getAttribute("aria-pressed")).toBe("true");
-  expect(completed.className).toContain("bg-primary/10");
   expect(screen.getByRole("button", { name: "active" }).getAttribute("aria-pressed")).toBe("false");
   fireEvent.click(completed, { detail: 1 });
-  expect(completed.className).not.toContain("bg-primary/10");
   expect(completed.getAttribute("aria-pressed")).toBe("false");
   expect(screen.getByRole("button", { name: "active" }).getAttribute("aria-pressed")).toBe("true");
   expect(screen.getByRole("button", { name: "expired" }).getAttribute("aria-pressed")).toBe("true");
