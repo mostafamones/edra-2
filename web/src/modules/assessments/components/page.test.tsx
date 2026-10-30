@@ -327,7 +327,7 @@ describe("staff Assessments page", () => {
     show();
     const table = await screen.findByRole("table");
     expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent))
-      .toEqual(["Details", "Type", "Parts", "Status", "Date", "Marked", "Actions"]);
+      .toEqual(["Details", "Type", "Parts", "Date", "Status", "Marked", "Actions"]);
     const tableLinks = links(table);
     expect(tableLinks).toEqual([
       ["Term exam", "http://app.lvh.me:3000/science/exams/e1"],
@@ -357,7 +357,7 @@ describe("staff Assessments page", () => {
     expect(exam.textContent).toContain("Open");
     expect(exam.textContent).toMatch(/Opens .*Closes /);
     // A short label, with the full dates for hover and screen readers.
-    const date = within(exam).getAllByRole("cell")[4];
+    const date = within(exam).getAllByRole("cell")[3];
     expect(date.querySelector("[aria-hidden=true]")?.textContent).toBe("Closed 1 Oct noon");
     expect(date.textContent).toContain("Opens Thu, 1 Oct 2026 at 11:00 am, Closes Thu, 1 Oct 2026 at 12:00 pm");
     expect(assignment.textContent).toContain("Active");

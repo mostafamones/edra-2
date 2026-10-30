@@ -22,8 +22,8 @@ export function AssessmentTable({ groups, collapsed, onToggle, actions }: Props)
             <TableHead>Details</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Parts</TableHead>
-            <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead className="text-right">Marked</TableHead>
             <TableHead className="w-12"><span className="sr-only">Actions</span></TableHead>
           </TableRow>
@@ -53,8 +53,8 @@ export function AssessmentTable({ groups, collapsed, onToggle, actions }: Props)
                     </TableCell>
                     <TableCell><AssessmentTypeLabel type={item.type} /></TableCell>
                     <TableCell className="text-xs text-muted-foreground"><PartsSummary item={item} /></TableCell>
-                    <TableCell><AssessmentStatus item={item} /></TableCell>
                     <TableCell className="text-xs text-muted-foreground"><AssessmentDate item={item} /></TableCell>
+                    <TableCell><AssessmentStatus item={item} /></TableCell>
                     <TableCell className="text-right"><MarkedCount item={item} /></TableCell>
                     <TableCell className="text-right"><AssessmentActions row={row} actions={actions} /></TableCell>
                   </TableRow>
