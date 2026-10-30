@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
+import { cn } from "cn";
 
 import { FilterPopover, type FilterField, type FilterSection } from "@/components/shared/filter-popover";
 import { HeaderActions } from "@/components/shared/header-actions";
@@ -14,12 +15,11 @@ import { LabelFilter, type Label } from "@/modules/labels";
 import { ALL, AUDIENCES, MAX_SEARCH, type AssessmentListParams } from "../params";
 import type { AssessmentView } from "../view";
 import { CreateAssessment } from "./create";
-import { AUDIENCE_KINDS } from "./facts";
+import { AUDIENCE_KINDS, TYPE_ICONS } from "./facts";
 import { ViewOptions } from "./view-options";
 
-const TYPE_OPTIONS = [
-  { value: ALL, label: "All" }, { value: "assignment", label: "Assignments" }, { value: "quiz", label: "Quizzes" }, { value: "exam", label: "Exams" },
-] as const;
+const TYPE_LABELS = { assignment: "Assignments", quiz: "Quizzes", exam: "Exams" } as const;
+const TYPES = ["assignment", "quiz", "exam"] as const;
 
 type Props = {
   params: AssessmentListParams;
@@ -52,7 +52,13 @@ export function AssessmentToolbar({ params, onChange, view, onView, academyId, l
     <div className="flex flex-col gap-3">
       <HeaderActions>
         <div className="max-w-[calc(100vw-10rem)] overflow-x-auto">
-          <Segmented label="Type" value={params.type} options={[...TYPE_OPTIONS]} onChange={(type) => onChange({ type })} />
+          <Segmented label="Type" value={params.type} className="h-9" hideSelectedHint onChange={(type) => onChange({ type })} options={[
+            { value: ALL, label: "All" },
+            ...TYPES.map((type) => ({
+              value: type, hint: TYPE_LABELS[type],
+              label: <><HugeiconsIcon icon={TYPE_ICONS[type]} strokeWidth={1.5} className="size-4" aria-hidden="true" /><span className={cn("grid transition-[grid-template-columns,margin-left] duration-200 ease-out motion-reduce:transition-none", params.type === type ? "ml-1.5 grid-cols-[1fr]" : "grid-cols-[0fr]")}><span className="overflow-hidden">{TYPE_LABELS[type]}</span></span></>,
+            })),
+          ]} />
         </div>
       </HeaderActions>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

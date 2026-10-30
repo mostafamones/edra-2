@@ -16,11 +16,13 @@ type Props<T extends string> = {
   disabled?: boolean;
   /** Stretch to the container width with equally sized segments. */
   fill?: boolean;
+  /** Show hints on the other segments only, for segments whose hint just names what the selected one already spells out. */
+  hideSelectedHint?: boolean;
   className?: string;
 };
 
 /** A compact switch for mutually exclusive choices; a pill slides under the selected segment. */
-export function Segmented<T extends string>({ label, value, options, onChange, disabled, fill, className }: Props<T>) {
+export function Segmented<T extends string>({ label, value, options, onChange, disabled, fill, hideSelectedHint, className }: Props<T>) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [thumb, setThumb] = useState<{ left: number; width: number } | null>(null);
 
@@ -29,12 +31,15 @@ export function Segmented<T extends string>({ label, value, options, onChange, d
     const root = rootRef.current;
     if (!root) return;
     const place = () => {
-      const item = root.querySelector<HTMLElement>("[role=radio][data-state=checked]");
+      // Not data-state: a tooltip trigger overwrites it on hinted segments.
+      const item = root.querySelector<HTMLElement>("[role=radio][aria-checked=true]");
       setThumb(item ? { left: item.offsetLeft, width: item.offsetWidth } : null);
     };
     place();
     const observer = new ResizeObserver(place);
     observer.observe(root);
+    // Segments can trade width while the root stays the same size, as when a label animates open.
+    root.querySelectorAll("[role=radio]").forEach((item) => observer.observe(item));
     return () => observer.disconnect();
   }, [value, options]);
 
@@ -56,7 +61,7 @@ export function Segmented<T extends string>({ label, value, options, onChange, d
         return (
           <Tooltip key={option.value}>
             <TooltipTrigger asChild>{item}</TooltipTrigger>
-            <TooltipContent>{option.hint}</TooltipContent>
+            {!(hideSelectedHint && option.value === value) && <TooltipContent>{option.hint}</TooltipContent>}
           </Tooltip>
         );
       })}

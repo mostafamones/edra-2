@@ -401,6 +401,17 @@ describe("staff Assessments page", () => {
     expect(mocks.replace).toHaveBeenLastCalledWith("/science/assessments?type=quiz&q=unit&audience=program", { scroll: false });
   });
 
+  it("spells out only the selected type, leaving the others as named icons", async () => {
+    mocks.query = "type=quiz";
+    mocks.rpc.mockResolvedValue({ data: { total: 3, items: ITEMS, server_now: "now" }, error: null });
+    show();
+    await screen.findByRole("table");
+    const types = within(screen.getByRole("banner"));
+    expect(types.getByRole("radio", { name: "All" }).textContent).toBe("All");
+    expect(types.getByRole("radio", { name: "Quizzes" }).querySelector(".grid-cols-\\[1fr\\]")).toBeTruthy();
+    expect(types.getByRole("radio", { name: "Exams" }).querySelector(".grid-cols-\\[0fr\\]")).toBeTruthy();
+  });
+
   it("replaces the whole table with an empty state and keeps the toolbar", async () => {
     mocks.rpc.mockResolvedValue({ data: { total: 0, items: [], server_now: "now" }, error: null });
     show();
