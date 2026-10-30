@@ -6,15 +6,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenu
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LabelSwatch } from "./badge";
 
-/** A dot inside its field (a `relative` wrapper around an input with `pl-8`) that picks a named palette entry; the selected one is checked and named, not shown by color alone. */
+/** A dot inside its field (a `relative` wrapper around an input with `ps-7`) that picks a named palette entry; the selected one is checked and named, not shown by color alone. */
 export function LabelColorPicker({ value, onChange, label, disabled }: { value: PaletteKey; onChange: (color: PaletteKey) => void; label: string; disabled?: boolean }) {
   return (
     <DropdownMenu modal={false}>
       <Tooltip delayDuration={500}>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" size="icon-xs" className="absolute top-1 left-1" disabled={disabled} aria-label={`${label}: ${PALETTE[value].name}`}>
-              <LabelSwatch color={value} className="size-3" />
+            <Button type="button" variant="ghost" size="icon-xs" className="absolute start-1 top-1 size-5" disabled={disabled} aria-label={`${label}: ${PALETTE[value].name}`}>
+              <LabelSwatch color={value} />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
