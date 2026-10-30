@@ -2,6 +2,7 @@ export {
   announceQuizResults, archiveExistingQuiz, confirmPhysicalWork, correctQuizKey, createNewQuiz, excludeQuizQuestion, saveQuiz,
   savePhysicalAnswers, saveQuizMarks, setQuizAvailability,
 } from "./actions";
+export { QuizMarking } from "./components/marking/sheet";
 export { loadQuiz, loadQuizStudents, loadQuizzes, quizQueryKey, quizzesRootKey } from "./queries";
 export { announceable, quizPermissions } from "./permissions";
 export type { QuizPermissions } from "./permissions";

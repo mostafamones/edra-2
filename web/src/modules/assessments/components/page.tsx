@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AcademyEntry } from "@/modules/academies";
-import { loadYears } from "@/modules/assignments";
+import { isManager, loadYears } from "@/modules/assignments";
 import { AcademyGate, useAcademyScope, useAuth } from "@/modules/auth";
 import { canManageLabels, LabelManager, labelsQueryKey, sortLabels, useLabels } from "@/modules/labels";
 import { useCanonicalHref } from "@/modules/navigation";
@@ -27,6 +27,7 @@ import { useAssessmentView } from "../view";
 import { AssessmentCards } from "./cards";
 import { CreateAssessment } from "./create";
 import { groupRows } from "./groups";
+import { LifecycleDialog, type PendingLifecycle } from "./lifecycle";
 import type { AssessmentEditHandler, RowActions, SheetTab } from "./menu";
 import { AssessmentTable } from "./table";
 import { AssessmentToolbar } from "./toolbar";
@@ -55,6 +56,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   const [view, setView] = useAssessmentView(user?.id);
   const [editing, setEditing] = useState<{ row: AssessmentRow; opener: HTMLElement | null; tab: SheetTab } | null>(null);
   const edit: AssessmentEditHandler = (row, opener, tab) => setEditing({ row, opener, tab });
+  const [lifecycle, setLifecycle] = useState<PendingLifecycle | null>(null);
   const queryClient = useQueryClient();
   const isCurrent = useAcademyScope();
   const labels = useLabels(academyId);
@@ -62,6 +64,9 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   const [managing, setManaging] = useState<{ open: boolean; opener: HTMLElement | null }>({ open: false, opener: null });
   const applying = useRef(0);
   const refreshList = () => queryClient.invalidateQueries({ queryKey: [...assessmentsRootKey(academyId), "list"] });
+  const yearsQuery = useQuery({ queryKey: [...assessmentsRootKey(academyId), "years"], queryFn: () => loadYears(academyId) });
+  // Only the active year is listed; an academy without one shows every year.
+  const year = yearsQuery.data?.find((option) => option.open)?.id ?? ALL;
   const actions: RowActions = {
     academyId,
     onEdit: edit,
@@ -91,13 +96,11 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
       }
     },
     onManageLabels: managesLabels ? (opener) => setManaging({ open: true, opener }) : undefined,
+    onLifecycle: isManager(academy.role) && year !== ALL ? (row, action, opener) => setLifecycle({ row, action, opener }) : undefined,
   };
   const names = useAudienceNames(academyId);
   useEffect(() => { rememberAssessmentList(academy.slug, query); }, [academy.slug, query]);
 
-  const yearsQuery = useQuery({ queryKey: [...assessmentsRootKey(academyId), "years"], queryFn: () => loadYears(academyId) });
-  // Only the active year is listed; an academy without one shows every year.
-  const year = yearsQuery.data?.find((option) => option.open)?.id ?? ALL;
   const filters: ListFilters = {
     type: params.type, search: params.search, year, audience: params.audience, level: params.level, track: params.track, groupId: params.groupId,
     statuses: params.statuses, labels: params.labels, unlabeled: params.unlabeled, sort: params.sort, group: params.group, pageSize: params.pageSize,
@@ -202,6 +205,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
         </div>
       ))}
       {editing && <QuickEditSheet academy={academy} row={editing.row} tab={editing.tab} opener={editing.opener} onClose={() => setEditing(null)} />}
+      <LifecycleDialog academyId={academyId} pending={lifecycle} onClose={() => setLifecycle(null)} />
     </main>
   );
 }

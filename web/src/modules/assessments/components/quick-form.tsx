@@ -15,11 +15,8 @@ import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from "@/compo
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import type { AcademyEntry } from "@/modules/academies";
-import { assignmentsRootKey } from "@/modules/assignments";
 import { useAcademyScope } from "@/modules/auth";
-import { examsRootKey } from "@/modules/exams";
-import { quizzesRootKey } from "@/modules/quizzes";
-import { detailsPermissions, loadDetails, localDate, quickErrors, quickValues, savedInstant, saveDetails, type AssessmentDetails, type DetailsResult, type QuickValues } from "../details";
+import { detailsPermissions, loadDetails, localDate, quickErrors, quickValues, savedInstant, saveDetails, typeRootKey, type AssessmentDetails, type DetailsResult, type QuickValues } from "../details";
 import { assessmentsRootKey } from "../queries";
 import { QuickAudience } from "./quick-audience";
 import { AssessmentDateTime } from "./date-time";
@@ -55,8 +52,7 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: assessmentsRootKey(academy.id) });
-    const key = record.type === "assignment" ? assignmentsRootKey(academy.id) : record.type === "quiz" ? quizzesRootKey(academy.id) : examsRootKey(academy.id);
-    void queryClient.invalidateQueries({ queryKey: key });
+    void queryClient.invalidateQueries({ queryKey: typeRootKey(academy.id, record.type) });
   }
 
   async function commit(run: () => Promise<DetailsResult>) {

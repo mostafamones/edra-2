@@ -3,46 +3,47 @@
 import { useRef, type ReactElement, type RefObject } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { LinkSquare02Icon, MoreHorizontalIcon, PencilEdit01Icon, ViewIcon } from "@hugeicons/core-free-icons";
+import { Archive02Icon, CheckListIcon, LinkSquare02Icon, LockIcon, MoreHorizontalIcon, PencilEdit01Icon, ViewIcon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LabelsSubmenu } from "@/modules/labels";
+import type { LifecycleAction } from "../lifecycle";
 import type { AssessmentListItem, AssessmentRow } from "../types";
 
-export type SheetTab = "edit" | "summary";
+export type SheetTab = "edit" | "summary" | "mark";
 export type AssessmentEditHandler = (row: AssessmentRow, opener: HTMLElement | null, tab: SheetTab) => void;
-/** What a row or card's menus can do. `onManageLabels` is set only for label managers. */
+/** What a row or card's menus can do. `onManageLabels` is set only for label managers, `onLifecycle` for academy managers in an open year. */
 export type RowActions = {
   academyId: string;
   onEdit: AssessmentEditHandler;
   onApplyLabel: (item: AssessmentListItem, labelId: string, applied: boolean) => Promise<void>;
   onManageLabels?: (opener: HTMLElement | null) => void;
+  onLifecycle?: (row: AssessmentRow, action: LifecycleAction, opener: HTMLElement | null) => void;
 };
 
 type Props = { row: AssessmentRow; actions: RowActions };
 
-/** The one set of actions in both menus: Edit, Summary (both in the edit sheet), the type's own editor, then Labels. */
+/** The one set of actions in both menus: Edit, Summary, Mark (all in the edit sheet) and Labels, the type's own editor, then Close and Archive. */
 function Items({ row, actions, menu, openerRef, openingRef }: Props & {
   menu: "context" | "dropdown"; openerRef: RefObject<HTMLElement | null>; openingRef: RefObject<boolean>;
 }) {
   const { item } = row;
-  const { onEdit, onManageLabels } = actions;
+  const { onEdit, onManageLabels, onLifecycle } = actions;
   const Item: typeof ContextMenuItem = menu === "context" ? ContextMenuItem : DropdownMenuItem;
   const Separator: typeof ContextMenuSeparator = menu === "context" ? ContextMenuSeparator : DropdownMenuSeparator;
   const archived = item.status === "archived";
   const open = (tab: SheetTab) => { openingRef.current = true; onEdit(row, openerRef.current, tab); };
+  const change = (action: LifecycleAction) => { openingRef.current = true; onLifecycle?.(row, action, openerRef.current); };
+  // Assignments close from Active; quizzes and exams only while their window is open.
+  const closable = item.status === (item.type === "assignment" ? "active" : "open");
   return (
     <>
       <Item disabled={archived} onSelect={() => open("edit")}><HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={1.5} />Edit</Item>
       <Item onSelect={() => open("summary")}><HugeiconsIcon icon={ViewIcon} strokeWidth={1.5} />Summary</Item>
-      <Separator />
-      <Item asChild disabled={archived}>
-        <Link href={`${row.href}/edit`}><HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={1.5} />Open editor</Link>
-      </Item>
-      <Separator />
+      <Item disabled={archived} onSelect={() => open("mark")}><HugeiconsIcon icon={CheckListIcon} strokeWidth={1.5} />Mark</Item>
       {/* Labels are organizational metadata: available on archived and closed-year assessments too. */}
       <LabelsSubmenu menu={menu} academyId={actions.academyId} applied={item.labels.map((label) => label.id)}
         onApply={(labelId, applied) => void actions.onApplyLabel(item, labelId, applied)}
@@ -52,6 +53,17 @@ function Items({ row, actions, menu, openerRef, openingRef }: Props & {
           // Open after the menu has closed, so its dismissal cannot close the editor.
           requestAnimationFrame(() => onManageLabels(opener));
         })} />
+      <Separator />
+      <Item asChild disabled={archived}>
+        <Link href={`${row.href}/edit`}><HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={1.5} />Open editor</Link>
+      </Item>
+      {onLifecycle && !archived && (
+        <>
+          <Separator />
+          {closable && <Item onSelect={() => change("close")}><HugeiconsIcon icon={LockIcon} strokeWidth={1.5} />Close</Item>}
+          <Item variant="destructive" onSelect={() => change("archive")}><HugeiconsIcon icon={Archive02Icon} strokeWidth={1.5} />Archive</Item>
+        </>
+      )}
     </>
   );
 }

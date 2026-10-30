@@ -2,6 +2,7 @@ export {
   announceExamResults, archiveExistingExam, confirmPhysicalWork, correctExamKey, createNewExam, excludeExamQuestion, saveExam,
   savePhysicalAnswers, saveExamMarks, setExamAvailability,
 } from "./actions";
+export { ExamMarking } from "./components/marking/sheet";
 export { loadExam, loadExamStudents, loadExams, examQueryKey, examsRootKey } from "./queries";
 export { announceable, examPermissions } from "./permissions";
 export type { ExamPermissions } from "./permissions";

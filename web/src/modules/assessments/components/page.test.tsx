@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 const mocks = vi.hoisted(() => ({
   query: "", replace: vi.fn(), push: vi.fn(), rpc: vi.fn(), role: "admin", details: vi.fn(), saveDetails: vi.fn(), examStudents: vi.fn(),
   catalog: [] as { id: string; name: string; color: string }[], setLabel: vi.fn(), createLabel: vi.fn(), updateLabel: vi.fn(), deleteLabel: vi.fn(),
+  setExamAvailability: vi.fn(), archiveExam: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/science/assessments",
@@ -37,7 +38,7 @@ vi.mock("@/modules/assignments", async (original) => ({
 }));
 vi.mock("@/modules/exams", async (original) => ({
   ...await original<typeof import("@/modules/exams")>(),
-  loadExamStudents: mocks.examStudents,
+  loadExamStudents: mocks.examStudents, setExamAvailability: mocks.setExamAvailability, archiveExistingExam: mocks.archiveExam,
 }));
 vi.mock("@/modules/groups", async (original) => ({
   ...await original<typeof import("@/modules/groups")>(),
@@ -174,7 +175,7 @@ describe("staff Assessments page", () => {
     const trigger = screen.getByRole("button", { name: "Actions for Term exam" });
     fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: "mouse" });
     const menu = await screen.findByRole("menu");
-    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Edit", "Summary", "Open editor", "Labels"]);
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Edit", "Summary", "Mark", "Labels", "Open editor", "Close", "Archive"]);
     expect(within(menu).getByRole("menuitem", { name: "Open editor" }).getAttribute("href")).toBe("http://app.lvh.me:3000/science/exams/e1/edit");
     fireEvent.click(within(menu).getByRole("menuitem", { name: "Summary" }));
     const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
@@ -183,6 +184,47 @@ describe("staff Assessments page", () => {
     expect(within(sheet).getByRole("columnheader", { name: "Student" })).toBeTruthy();
     fireEvent.mouseDown(within(sheet).getByRole("tab", { name: "Edit" }), { button: 0, ctrlKey: false });
     expect(((await within(sheet).findByRole("textbox", { name: "Name" })) as HTMLInputElement).value).toBe("Term exam");
+  });
+
+  it("opens the Mark tab from the menu", async () => {
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Mark" }));
+    const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
+    expect(within(sheet).getByRole("tab", { name: "Mark" }).getAttribute("aria-selected")).toBe("true");
+    expect(await within(sheet).findByText(/Pick a student|Couldn’t load the students/)).toBeTruthy();
+  });
+
+  it("closes an open exam early by moving its close just past server time, keeping its opening", async () => {
+    mocks.details.mockResolvedValue({ type: "exam", value: examFixture({ phase: "open", version: 7, opensAt: "2026-10-01T08:00:00Z", serverNow: "2026-10-01T08:30:00.000Z" }) });
+    mocks.setExamAvailability.mockResolvedValue({ ok: true });
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Close" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Close this exam?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(mocks.setExamAvailability).toHaveBeenCalledWith({ academyId: "academy-id", examId: expect.any(String), expectedVersion: 7, opensAt: "2026-10-01T08:00:00Z", closesAt: "2026-10-01T08:30:30.000Z" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  });
+
+  it("keeps the dialog and explains when students have already started", async () => {
+    mocks.details.mockResolvedValue({ type: "exam", value: examFixture({ phase: "open" }) });
+    mocks.setExamAvailability.mockResolvedValue({ ok: false, code: "window_locked", message: "locked" });
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Close" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Close this exam?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(mocks.setExamAvailability).toHaveBeenCalled());
+    expect(screen.getByRole("alertdialog", { name: "Close this exam?" })).toBeTruthy();
+  });
+
+  it("hides Close and Archive from instructors", async () => {
+    mocks.role = "instructor";
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Edit", "Summary", "Mark", "Labels", "Open editor"]);
   });
 
   it.each([[1, false, false], [2, false, true], [3, true, false]])("lays out %i Summary parts", async (count, scrolls, twoColumns) => {
