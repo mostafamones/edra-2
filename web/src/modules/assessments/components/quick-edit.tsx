@@ -31,7 +31,6 @@ const TAB_LABELS: Record<SheetTab, string> = { edit: "Edit", summary: "Summary",
 
 /** The owning type's marking flow, inline under the sheet's guard. */
 function MarkTab({ academy, details, guard }: { academy: AcademyEntry; details: AssessmentDetails; guard: (action: () => void) => void }) {
-  if (!detailsPermissions(academy.role, details).mark) return <p role="status" className="p-6 text-muted-foreground">This assessment can’t be marked.</p>;
   if (details.type === "assignment") return <AssignmentMarking assignment={details.value} manager={isManager(academy.role)} embedded={guard} />;
   return details.type === "quiz" ? <QuizMarking academy={academy} quiz={details.value} embedded={guard} /> : <ExamMarking academy={academy} exam={details.value} embedded={guard} />;
 }
@@ -59,6 +58,11 @@ function Content({ academy, row, tab: initialTab, opener, onClose, guard }: Prop
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+  const canMark = details.data !== undefined && detailsPermissions(academy.role, details.data).mark;
+  // shortcut: list rows don't carry assignment readiness, so the menu's Mark on an unready assignment lands on Summary; add `ready` to list_assessments to hide it there.
+  const shownTab = tab === "mark" && details.isSuccess && !canMark ? "summary" : tab;
+  // Kept while loading if asked for: without it, the dialog's first focus lands on Edit, which selects it.
+  const showMark = canMark || (details.isPending && tab === "mark");
   const fullEditor = href(`/app/${TYPE_ROUTES[item.type]}/${item.id}/edit`);
   /** Marks saved here change the list's counts and the summary. */
   function close() {
@@ -90,17 +94,20 @@ function Content({ academy, row, tab: initialTab, opener, onClose, guard }: Prop
   return (
     <>
       <FloatingSheet open onOpenChange={(open) => { if (!open) leave(); }}>
-        <FloatingSheetContent className="w-2xl gap-0" showCloseButton={false} aria-describedby={undefined} onInteractOutside={(event) => { if (inStudentList(event.target)) event.preventDefault(); }} onCloseAutoFocus={(event) => {
+        <FloatingSheetContent className="w-2xl gap-0" showCloseButton={false} aria-describedby={undefined} onInteractOutside={(event) => { if (inStudentList(event.target)) event.preventDefault(); }} onOpenAutoFocus={(event) => {
+          // Mark has no tab until it's confirmed ready; first focus would land on Edit, which selects it.
+          if (tab === "mark") { event.preventDefault(); (event.currentTarget as HTMLElement).focus(); }
+        }} onCloseAutoFocus={(event) => {
           event.preventDefault();
           if (opener?.isConnected) opener.focus({ preventScroll: true });
         }}>
-          <Tabs value={tab} onValueChange={(value) => changeTab(value as SheetTab)} className="min-h-0 flex-1 gap-0">
+          <Tabs value={shownTab} onValueChange={(value) => changeTab(value as SheetTab)} className="min-h-0 flex-1 gap-0">
             {/* The tabs are the visible title; the dialog keeps a name for assistive technology. */}
             <FloatingSheetHeader className="shrink-0 flex-row items-center justify-between gap-3 border-b px-6 pt-3 pb-0">
               <FloatingSheetTitle className="sr-only">Edit {TYPE_LABELS[item.type].toLowerCase()}</FloatingSheetTitle>
               {/* Line tabs whose active underline sits on the header's bottom border. */}
               <TabsList variant="line" className="h-auto gap-5 p-0">
-                {(["edit", "summary", "mark"] as const).map((value) => (
+                {(["edit", "summary", ...(showMark ? ["mark"] as const : [])] as const).map((value) => (
                   <TabsTrigger key={value} value={value} disabled={value !== "summary" && archived}
                     className="h-auto flex-none rounded-none px-0 pt-1 pb-3 text-base font-semibold group-data-horizontal/tabs:after:bottom-[-1px]">
                     {TAB_LABELS[value]}
@@ -128,9 +135,11 @@ function Content({ academy, row, tab: initialTab, opener, onClose, guard }: Prop
                 <TabsContent value="summary" forceMount className="min-h-0 overflow-y-auto duration-200 ease-out data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-right-8 data-[state=inactive]:hidden">
                   <AssessmentSummary academyId={academy.id} row={row} details={details.data} onViewStudents={() => leave(row.href)} />
                 </TabsContent>
-                <TabsContent value="mark" forceMount className="flex min-h-0 flex-col duration-200 ease-out data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-right-8 data-[state=inactive]:hidden">
-                  {markOpened && <MarkTab academy={academy} details={details.data} guard={guard} />}
-                </TabsContent>
+                {canMark && (
+                  <TabsContent value="mark" forceMount className="flex min-h-0 flex-col duration-200 ease-out data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-right-8 data-[state=inactive]:hidden">
+                    {markOpened && <MarkTab academy={academy} details={details.data} guard={guard} />}
+                  </TabsContent>
+                )}
               </>
             )}
           </Tabs>

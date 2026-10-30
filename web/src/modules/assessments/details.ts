@@ -54,7 +54,7 @@ export function detailsPermissions(role: AcademyRole, record: AssessmentDetails)
     return { edit: permissions.edit, audience: permissions.editStructure, parts: permissions.edit, timer: false, availability: false, mark: permissions.mark };
   }
   const permissions = record.type === "quiz" ? quizPermissions(role, record.value) : examPermissions(role, record.value);
-  return { edit: permissions.edit, audience: permissions.editTarget, parts: permissions.editStructure, timer: permissions.editTarget, availability: permissions.availability, mark: permissions.mark };
+  return { edit: permissions.edit, audience: permissions.editTarget, parts: permissions.editStructure, timer: permissions.editTarget, availability: permissions.availability, mark: permissions.mark && record.value.ready };
 }
 
 export function quickErrors(record: AssessmentDetails, values: QuickValues): Record<string, string> {

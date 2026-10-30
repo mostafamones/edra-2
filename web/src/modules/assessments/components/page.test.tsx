@@ -191,8 +191,25 @@ describe("staff Assessments page", () => {
     fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Mark" }));
     const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
-    expect(within(sheet).getByRole("tab", { name: "Mark" }).getAttribute("aria-selected")).toBe("true");
+    expect((await within(sheet).findByRole("tab", { name: "Mark" })).getAttribute("aria-selected")).toBe("true");
     expect(await within(sheet).findByText(/Pick a student|Couldn’t load the students/)).toBeTruthy();
+  });
+
+  it("hides the Mark tab until the assessment is ready, landing a shortcut on Summary", async () => {
+    mocks.details.mockResolvedValue({ type: "assignment", value: assignmentFixture({ ready: false }) });
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Unit homework" })).closest("tr")!, { button: 2 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Mark" }));
+    const sheet = await screen.findByRole("dialog", { name: "Edit assignment" });
+    await waitFor(() => expect(within(sheet).getByRole("tab", { name: "Summary" }).getAttribute("aria-selected")).toBe("true"));
+    expect(within(sheet).queryByRole("tab", { name: "Mark" })).toBeNull();
+  });
+
+  it("offers no Mark shortcut on a quiz still being prepared", async () => {
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Weekly quiz" })).closest("tr")!, { button: 2 });
+    await screen.findByRole("menuitem", { name: "Summary" });
+    expect(screen.queryByRole("menuitem", { name: "Mark" })).toBeNull();
   });
 
   it("closes an open exam early by moving its close just past server time, keeping its opening", async () => {
