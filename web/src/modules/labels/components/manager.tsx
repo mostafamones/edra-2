@@ -23,13 +23,15 @@ export function LabelManager({ academyId, open, onOpenChange, opener, onChanged 
   const button = useRef<HTMLButtonElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const target = () => (opener?.isConnected ? opener : button.current);
-  // A virtual anchor follows whichever element opened the editor.
-  const anchor = useMemo(() => ({ current: { getBoundingClientRect: () => target()?.getBoundingClientRect() ?? new DOMRect() } }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // A virtual anchor follows the row that opened the editor; an empty rect there falls back to the toolbar button.
+  const anchor = useMemo(() => ({ current: { getBoundingClientRect: () => {
+      const rect = opener?.isConnected ? opener.getBoundingClientRect() : null;
+      return rect && (rect.width || rect.height) ? rect : button.current?.getBoundingClientRect() ?? new DOMRect();
+    } } }),
     [opener]);
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverAnchor virtualRef={anchor} />
+      {opener && <PopoverAnchor virtualRef={anchor} />}
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
