@@ -19,7 +19,7 @@ export function LabelFilter({ options, labels, unlabeled, onChange }: Props) {
       <div className="flex max-h-48 flex-wrap gap-1 overflow-y-auto">
         {options.map((label) => (
           <Toggle key={label.id} size="sm" className={TOGGLE} pressed={labels.includes(label.id)} onPressedChange={(pressed) => toggle(label.id, pressed)}>
-            <LabelSwatch color={label.color} /><span className="truncate">{label.name}</span>
+            <LabelSwatch color={label.color} className="size-1.5" /><span className="truncate">{label.name}</span>
           </Toggle>
         ))}
         <Toggle size="sm" className={TOGGLE} pressed={unlabeled} onPressedChange={(pressed) => onChange({ labels: [], unlabeled: pressed })}>Unlabeled</Toggle>
