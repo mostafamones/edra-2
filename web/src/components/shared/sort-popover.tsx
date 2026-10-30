@@ -21,7 +21,7 @@ export function SortPopover({ value, defaultValue, options, onChange }: {
           <PopoverTrigger asChild>
             <Button variant="outline" size="icon" className="relative" aria-label={active ? "Sort, changed" : "Sort"}>
               <IconArrowsSort />
-              {active && <span aria-hidden="true" className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />}
+              {active && <span aria-hidden="true" className="absolute -top-1 -right-1 z-1 size-2.5 rounded-full bg-primary" />}
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>

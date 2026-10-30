@@ -75,7 +75,7 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
           <PopoverTrigger asChild>
             <Button variant="outline" size="icon" className="relative" aria-label={changed ? "View options, changed" : "View options"}>
               <HugeiconsIcon icon={PreferenceHorizontalIcon} strokeWidth={1.5} />
-              {changed && <span aria-hidden="true" className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />}
+              {changed && <span aria-hidden="true" className="absolute -top-1 -right-1 z-1 size-2.5 rounded-full bg-primary" />}
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
