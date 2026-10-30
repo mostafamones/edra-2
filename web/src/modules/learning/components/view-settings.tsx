@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GridViewIcon, ListViewIcon, Settings02Icon } from "@hugeicons/core-free-icons";
 
+import { ToggleBadge } from "@/components/shared/toggle-badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -86,7 +87,7 @@ export function ViewSettings({ layout, academies, academy, statuses, group, onLa
           <div role="group" aria-label="Course status" className="flex flex-wrap gap-1.5">
             {UNIT_STATUSES.map((status) => {
               const active = statuses.includes(status);
-              return <Button key={status} size="sm" variant={active ? "secondary" : "outline"} aria-pressed={active} className={cn("h-7 px-2 text-xs capitalize", !active && "text-muted-foreground", isolated?.status === status && "bg-primary/10 hover:bg-primary/15")}
+              return <ToggleBadge key={status} pressed={active} className={cn("capitalize", isolated?.status === status && "aria-pressed:bg-primary/10 aria-pressed:hover:bg-primary/15")}
                 onClick={(event) => {
                   if (event.detail > 1) return;
                   beforeClick.current = [...statuses];
@@ -95,7 +96,7 @@ export function ViewSettings({ layout, academies, academy, statuses, group, onLa
                 onDoubleClick={() => {
                   setIsolated({ status, previous: beforeClick.current });
                   onStatusesChange([status]);
-                }}>{status}</Button>;
+                }}>{status}</ToggleBadge>;
             })}
           </div>
         </div>

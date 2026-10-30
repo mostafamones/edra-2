@@ -327,7 +327,7 @@ describe("staff Assessments page", () => {
     show();
     const table = await screen.findByRole("table");
     expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent))
-      .toEqual(["Title", "Labels", "Type", "Parts", "Status", "Date", "Marked", "Actions"]);
+      .toEqual(["Details", "Type", "Parts", "Status", "Date", "Marked", "Actions"]);
     const tableLinks = links(table);
     expect(tableLinks).toEqual([
       ["Term exam", "http://app.lvh.me:3000/science/exams/e1"],
@@ -534,7 +534,7 @@ describe("staff Assessments page", () => {
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: /^View options/ }));
     const archived = await screen.findByRole("button", { name: "Archived", pressed: false });
-    expect(archived.className).toContain("line-through");
+    expect(archived.getAttribute("aria-pressed")).toBe("false");
     const open = screen.getByRole("button", { name: "Open", pressed: true });
     fireEvent.click(open, { detail: 1 });
     fireEvent.click(open, { detail: 2 });
