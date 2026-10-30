@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { cn } from "cn";
 
 import { ScoreDistribution } from "@/components/shared/assessment/workspace/distribution";
 import type { TopStudent } from "@/components/shared/assessment/workspace/top";
@@ -61,30 +62,39 @@ export function AssessmentSummary({ academyId, row: { item }, details, onViewStu
   const max = Number(item.maxScore);
   const shares = loading || max <= 0 ? undefined : query.data!.filter((row) => row.complete).map((row) => (Number(row.total) / max) * 100);
 
+  const parts = partRows(details);
+  const scrolls = parts.length >= 3;
   const ranked = [...(query.data ?? [])].sort((a, b) => Number(b.total) - Number(a.total) || a.name.localeCompare(b.name)).slice(0, SHOWN);
 
   return (
     <div className="flex flex-col gap-4 px-6 py-4">
       <ScoreDistribution scores={loading ? undefined : shares ?? []} className="bg-muted/50 shadow-none ring-0" />
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {partRows(details).map((part, index) => (
-          <li key={part.id}>
-            <Card size="sm" className="h-full gap-1 bg-muted/50 px-4 py-3 shadow-none ring-0">
-              <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                <span className="text-muted-foreground tabular-nums">{index + 1}.</span><span className="truncate">{part.title}</span>
-              </p>
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <HugeiconsIcon icon={PART_ICONS[part.kind ?? "legacy"]} strokeWidth={1.5} className="size-3.5 shrink-0" aria-hidden="true" />
-                {partKindLabel(item.type, part.kind)}
-              </p>
-              <p className="mt-1 flex gap-4 text-xs text-muted-foreground tabular-nums">
-                {part.questions !== null && <span>{number.format(part.questions)} question{part.questions === 1 ? "" : "s"}</span>}
-                <span>{formatScore(part.marks)} marks</span>
-              </p>
-            </Card>
-          </li>
-        ))}
-      </ul>
+      {parts.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium">Parts</h3>
+          {/* Three or more scroll sideways across the sheet, the next card peeking in; focusable for keyboard scrolling. */}
+          <ul aria-label="Parts" tabIndex={scrolls ? 0 : undefined}
+            className={scrolls ? "-mx-6 flex gap-3 overflow-x-auto px-6 pb-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50" : cn("grid gap-3", parts.length > 1 && "sm:grid-cols-2")}>
+            {parts.map((part, index) => (
+              <li key={part.id} className={scrolls ? "w-4/5 shrink-0" : undefined}>
+                <Card size="sm" className="h-full gap-1 bg-muted/50 px-4 py-3 shadow-none ring-0">
+                  <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                    <span className="text-muted-foreground tabular-nums">{index + 1}.</span><span className="truncate">{part.title}</span>
+                  </p>
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <HugeiconsIcon icon={PART_ICONS[part.kind ?? "legacy"]} strokeWidth={1.5} className="size-3.5 shrink-0" aria-hidden="true" />
+                    {partKindLabel(item.type, part.kind)}
+                  </p>
+                  <p className="mt-1 flex gap-4 text-xs text-muted-foreground tabular-nums">
+                    {part.questions !== null && <span>{number.format(part.questions)} question{part.questions === 1 ? "" : "s"}</span>}
+                    <span>{formatScore(part.marks)} marks</span>
+                  </p>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium">Top students</h3>

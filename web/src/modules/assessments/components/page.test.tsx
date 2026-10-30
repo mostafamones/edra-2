@@ -184,6 +184,20 @@ describe("staff Assessments page", () => {
     expect(((await within(sheet).findByRole("textbox", { name: "Name" })) as HTMLInputElement).value).toBe("Term exam");
   });
 
+  it.each([[1, false, false], [2, false, true], [3, true, false]])("lays out %i Summary parts", async (count, scrolls, twoColumns) => {
+    const [part] = examFixture().parts;
+    mocks.details.mockResolvedValue({ type: "exam", value: examFixture({ parts: Array.from({ length: count }, (_, index) => ({ ...part, id: `part-${index}` })) }) });
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Summary" }));
+    const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
+    const list = await within(sheet).findByRole("list", { name: "Parts" });
+    expect(within(list.parentElement!).getByRole("heading", { name: "Parts" })).toBeTruthy();
+    expect(within(list).getAllByRole("listitem")).toHaveLength(count);
+    expect(list.classList.contains("overflow-x-auto")).toBe(scrolls);
+    expect(list.classList.contains("sm:grid-cols-2")).toBe(twoColumns);
+  });
+
   it("keeps the sheet usable when scores fail and allows retrying Summary", async () => {
     mocks.examStudents.mockRejectedValueOnce(new Error("Unavailable"));
     show();
