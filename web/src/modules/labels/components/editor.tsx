@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAcademyScope } from "@/modules/auth";
 import { newUuid } from "@/lib/uuid";
+import { cn } from "@/lib/utils";
 import { createLabel, deleteLabel, updateLabel } from "../actions";
 import { labelsQueryKey, useLabels } from "../queries";
 import type { Label, LabelFailure } from "../types";
@@ -70,10 +71,10 @@ export function LabelEditor({ academyId, onChanged }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <p className="font-heading text-xs font-semibold">Labels</p>
+    <div className="flex flex-col gap-3">
+      <p className="font-heading text-sm font-semibold">Labels</p>
       {labels.isPending ? (
-        <div role="status" aria-label="Loading labels" className="flex flex-col gap-2"><Skeleton className="h-7" /><Skeleton className="h-7" /></div>
+        <div role="status" aria-label="Loading labels" className="flex flex-col gap-2"><Skeleton className="h-8" /><Skeleton className="h-8" /></div>
       ) : labels.isError ? (
         <div role="alert" className="flex items-center justify-between gap-2 text-sm">
           Couldn’t load labels.
@@ -82,7 +83,7 @@ export function LabelEditor({ academyId, onChanged }: Props) {
       ) : labels.data.length === 0 ? (
         <p className="text-sm text-muted-foreground">No labels yet</p>
       ) : (
-        <ul aria-label="Academy labels" className="-mx-1 flex max-h-56 flex-col gap-0.5 overflow-y-auto px-1">
+        <ul aria-label="Academy labels" className="-mx-1 flex max-h-72 flex-col gap-1 overflow-y-auto px-1">
           {labels.data.map((label) => (
             <LabelRow key={`${label.id}:${label.name}:${label.color}`} label={label} busy={busy === label.id} disabled={busy !== null}
               onSave={async (name, color) => { if (await run(label.id, () => updateLabel({ academyId, labelId: label.id, name, color }))) await refresh(); }}
@@ -135,16 +136,14 @@ function LabelRow({ label, busy, disabled, onSave, onDelete }: RowProps) {
     if (event.key === "Escape" && name !== label.name) { event.preventDefault(); event.stopPropagation(); setName(label.name); }
   };
   return (
-    <li className="group/row flex items-center gap-1 rounded-md hover:bg-muted/40" aria-busy={busy}>
-      <div className="relative min-w-0 flex-1">
-        <LabelColorPicker label={`Color of ${label.name}`} value={label.color} disabled={disabled} onChange={(color) => { if (color !== label.color) void onSave(label.name, color); }} />
-        <Input aria-label={`Name of ${label.name}`} className="h-7 border-transparent bg-transparent ps-7 text-xs shadow-none hover:border-input focus-visible:border-ring disabled:opacity-100 md:text-xs dark:bg-transparent" maxLength={LABEL_NAME_MAX} value={name} disabled={disabled}
-          onChange={(event) => setName(event.target.value)} onBlur={save} onKeyDown={keys} />
-      </div>
+    <li className="group/row flex items-center gap-0.5" aria-busy={busy}>
+      <LabelColorPicker label={`Color of ${label.name}`} value={label.color} disabled={disabled} onChange={(color) => { if (color !== label.color) void onSave(label.name, color); }} />
+      <Input aria-label={`Name of ${label.name}`} className="h-8 border-transparent bg-transparent shadow-none hover:border-input focus-visible:border-ring disabled:opacity-100 dark:bg-transparent" maxLength={LABEL_NAME_MAX} value={name} disabled={disabled}
+        onChange={(event) => setName(event.target.value)} onBlur={save} onKeyDown={keys} />
       <Tooltip delayDuration={500}>
         <TooltipTrigger asChild>
           {/* Shows on hover, focus or while saving (always on touch). */}
-          <Button type="button" variant="ghost" size="icon-xs" className={busy ? undefined : "opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 pointer-coarse:opacity-100"} disabled={disabled} aria-label={`Delete ${label.name}`} onClick={onDelete}>
+          <Button type="button" variant="ghost" size="icon-sm" className={cn("shrink-0", busy ? undefined : "opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 pointer-coarse:opacity-100")} disabled={disabled} aria-label={`Delete ${label.name}`} onClick={onDelete}>
             <HugeiconsIcon icon={busy ? Loading03Icon : Delete02Icon} strokeWidth={1.5} className={busy ? "animate-spin" : undefined} aria-hidden="true" />
           </Button>
         </TooltipTrigger>
@@ -176,15 +175,15 @@ function NewLabel({ inputRef, busy, disabled, used, onCreate }: NewProps) {
     }
   };
   return (
-    <form className="flex items-center gap-1 border-t pt-2" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+    <form className="flex items-center gap-1 border-t pt-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
       <div className="relative min-w-0 flex-1">
-        <LabelColorPicker label="New label color" value={chosen} disabled={disabled} onChange={setColor} />
-        <Input ref={inputRef} data-new-label aria-label="New label name" placeholder="New label" className="h-7 ps-7 text-xs md:text-xs" maxLength={LABEL_NAME_MAX} value={name}
+        <LabelColorPicker label="New label color" className="absolute start-0 top-1" value={chosen} disabled={disabled} onChange={setColor} />
+        <Input ref={inputRef} data-new-label aria-label="New label name" placeholder="New label" className="h-8 ps-9" maxLength={LABEL_NAME_MAX} value={name}
           disabled={disabled} onChange={(event) => { setName(event.target.value); setLabelId(newUuid()); }} />
       </div>
       <Tooltip delayDuration={500}>
         <TooltipTrigger asChild>
-          <Button type="submit" variant="ghost" size="icon-xs" disabled={disabled || !parsed.success} aria-label="Add label">
+          <Button type="submit" variant="ghost" size="icon-sm" disabled={disabled || !parsed.success} aria-label="Add label">
             <HugeiconsIcon icon={busy ? Loading03Icon : Add01Icon} strokeWidth={1.5} className={busy ? "animate-spin" : undefined} aria-hidden="true" />
           </Button>
         </TooltipTrigger>
