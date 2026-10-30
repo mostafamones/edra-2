@@ -754,7 +754,7 @@ describe("assessment labels", () => {
     show();
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: "Filters" }));
-    fireEvent.click(await screen.findByRole("checkbox", { name: "Week 3" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Week 3", pressed: false }));
     expect(mocks.replace).toHaveBeenLastCalledWith(`/science/assessments?labels=${WEEK}`, { scroll: false });
     cleanup();
     mocks.query = `labels=${WEEK},${REVISION}&page=3`;
@@ -762,7 +762,8 @@ describe("assessment labels", () => {
     await screen.findByRole("table");
     expect(listCalls().at(-1)![1]).toMatchObject({ p_label_ids: [REVISION, WEEK], p_unlabeled: false, p_offset: 48 });
     fireEvent.click(screen.getByRole("button", { name: "Filters, 1 applied" }));
-    fireEvent.click(await screen.findByRole("checkbox", { name: "Unlabeled" }));
+    expect(await screen.findByRole("button", { name: "Revision", pressed: true })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Unlabeled", pressed: false }));
     expect(mocks.replace).toHaveBeenLastCalledWith("/science/assessments?labels=none", { scroll: false });
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
     expect(mocks.replace).toHaveBeenLastCalledWith("/science/assessments", { scroll: false });
