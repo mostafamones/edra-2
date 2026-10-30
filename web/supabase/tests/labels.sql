@@ -102,7 +102,8 @@ set local role authenticated;
 select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy'),gen_random_uuid(),'Mine','red') $s$, 'forbidden');
 select pg_temp.expect_error($s$ select public.update_label(pg_temp.id('academy'),pg_temp.id('red'),'Renamed','red') $s$, 'forbidden');
 select pg_temp.expect_error($s$ select public.delete_label(pg_temp.id('academy'),pg_temp.id('red'),true) $s$, 'forbidden');
-select pg_temp.check((select count(*) from public.labels) = 3, 'instructor reads only this academy catalog');
+select pg_temp.check((select string_agg(name, ',' order by name) from public.labels where lower(name) in ('online only','ready for in-person','needs review')) = 'Needs review,Online only,Ready for in-person', 'a new academy starts with the default labels');
+select pg_temp.check((select count(*) from public.labels) = 6 and not exists (select 1 from public.labels where academy_id <> pg_temp.id('academy')), 'instructor reads only this academy catalog');
 -- Multiple labels on every type, applied as a desired state: repeating it changes nothing.
 select public.set_assessment_label(pg_temp.id('academy'),'assignment',pg_temp.id('a1'),pg_temp.id('red'),true);
 select public.set_assessment_label(pg_temp.id('academy'),'assignment',pg_temp.id('a1'),pg_temp.id('blue'),true);
