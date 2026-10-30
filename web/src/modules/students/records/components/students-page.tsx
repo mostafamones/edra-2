@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AlertCircleIcon, Archive02Icon, SearchRemoveIcon, SidebarRightIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AlertCircleIcon, Archive02Icon, SearchRemoveIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useCanonicalHref } from "@/modules/navigation";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -14,7 +14,9 @@ import {
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { HeaderActions } from "@/components/shared/header-actions";
+import { SidebarIcon } from "@/components/shared/sidebar-icon";
 import { Button } from "@/components/ui/button";
+import { Toggle } from "@/components/ui/toggle";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -229,9 +231,9 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
           <AddStudentMenu academyId={academyId} canImport={canImportStudents(academy.role)} />
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="Groups" aria-pressed={groupsOpen} onClick={() => setGroupsOpen((open) => !open)}>
-                <HugeiconsIcon icon={SidebarRightIcon} />
-              </Button>
+              <Toggle className="size-9 p-0" aria-label="Groups" pressed={groupsOpen} onPressedChange={setGroupsOpen}>
+                <SidebarIcon side="right" open={groupsOpen} />
+              </Toggle>
             </TooltipTrigger>
             <TooltipContent>Groups</TooltipContent>
           </Tooltip>

@@ -3,10 +3,11 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, Archive02Icon, ArchiveRestoreIcon, CloudSavingDone01Icon, SidebarRightIcon, SentIcon, Tick02Icon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, Archive02Icon, ArchiveRestoreIcon, CloudSavingDone01Icon, SentIcon, Tick02Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { AcademyGate } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
 import { Button } from "@/components/ui/button";
+import { Toggle } from "@/components/ui/toggle";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { HeaderActions } from "@/components/shared/header-actions";
+import { SidebarIcon } from "@/components/shared/sidebar-icon";
 import { QueryContent } from "@/components/shared/query-content";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -175,7 +177,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
     {editable && unpublished && !(canManage && unit.state !== "archived") && <Button disabled={disabled || dirty} onClick={() => perform("submit")}><HugeiconsIcon icon={SentIcon} strokeWidth={1.5} aria-hidden="true" />Submit for review</Button>}
     {canManage && unit.state !== "archived" && unpublished && <Button disabled={disabled} onClick={() => perform("publish")}><HugeiconsIcon icon={Tick02Icon} strokeWidth={1.5} aria-hidden="true" />{unit.published_revision ? "Publish changes" : "Publish unit"}</Button>}
     {canManage && unit.state === "archived" && <Button variant="outline" disabled={busy} onClick={() => perform("restore")}><HugeiconsIcon icon={ArchiveRestoreIcon} strokeWidth={1.5} aria-hidden="true" />Restore as draft</Button>}
-    <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" aria-label="Settings" aria-pressed={settingsOpen} onClick={() => setSettingsOpen(open => !open)}><HugeiconsIcon icon={SidebarRightIcon} strokeWidth={1.5} /></Button></TooltipTrigger><TooltipContent>Settings</TooltipContent></Tooltip>
+    <Tooltip><TooltipTrigger asChild><Toggle className="size-9 p-0" aria-label="Settings" pressed={settingsOpen} onPressedChange={setSettingsOpen}><SidebarIcon side="right" open={settingsOpen} /></Toggle></TooltipTrigger><TooltipContent>Settings</TooltipContent></Tooltip>
   </>;
   // Panels stay mounted so in-flight uploads and field state survive switching tabs.
   const panel = "data-[state=inactive]:hidden";
