@@ -200,7 +200,7 @@ export function PartEntry({ part, saved, fastEnabled, mode, onModeChange, drafts
 
       {typed && mode === "questions" ? (
         <>
-          <ol className={cn("flex flex-col divide-y rounded-xl border outline-none", choice && "focus-visible:ring-3 focus-visible:ring-ring/50")}
+          <ol className="flex flex-col gap-2 outline-none"
             ref={list} tabIndex={choice ? 0 : undefined} onKeyDown={onKeyDown}
             // Keep focus on the list so the keyboard keeps working after a click on a letter.
             onMouseDown={(event) => { if (choice && event.target instanceof Element && event.target.closest("button")) event.preventDefault(); }}>
@@ -209,7 +209,7 @@ export function PartEntry({ part, saved, fastEnabled, mode, onModeChange, drafts
               const index = page * ANSWERS_PER_PAGE + offset;
               return (
                 <li key={question.id} onClick={() => choice && setActive(index)}
-                  className={cn("flex flex-col gap-2 px-4 py-2.5", choice && index === active && "bg-muted/60", question.excluded && "opacity-60")}>
+                  className={cn("flex flex-col gap-2 rounded-xl bg-muted/50 px-4 py-2.5", choice && index === active && "bg-muted", question.excluded && "opacity-60")}>
                   <div className="flex items-center gap-4">
                     <span className="w-8 shrink-0 text-sm font-medium text-muted-foreground tabular-nums" title={question.prompt || undefined}>{question.position}</span>
                     {choice ? (
@@ -219,7 +219,8 @@ export function PartEntry({ part, saved, fastEnabled, mode, onModeChange, drafts
                           return (
                             <Button key={entry.id} type="button" size="icon" role="radio" tabIndex={-1} aria-checked={chosen}
                               variant={chosen ? "default" : "outline"} disabled={question.locked}
-                              className={cn(chosen && !entry.isCorrect && "bg-destructive text-white hover:bg-destructive/90 disabled:opacity-100")}
+                              // The default unselected fill would vanish on the highlighted row.
+                              className={cn(!chosen && "bg-background/60 hover:bg-background", chosen && !entry.isCorrect && "bg-destructive text-white hover:bg-destructive/90 disabled:opacity-100")}
                               title={entry.isCorrect ? "Correct answer" : undefined}
                               onClick={() => onDraftChange(question.id, chosen ? "" : entry.id)}>
                               {letter(entry.position)}

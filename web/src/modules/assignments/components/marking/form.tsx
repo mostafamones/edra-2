@@ -69,5 +69,5 @@ export function AssignmentMarks({ assignment, manager, student, onChanged, onSav
     return { ok: true, saved: true, baseline: baselineFor(result.student) };
   }
 
-  return <div className="flex flex-col gap-4"><ReceivedFiles assignment={assignment} recordId={student.recordId} /><AnswerAccess assignment={assignment} recordId={student.recordId} manager={manager} /><MarksForm parts={parts} baseline={baselineFor(student)} feedback={student.feedback} fast={{ saved: student.marks }} onSave={save} onDone={onSaved} /></div>;
+  return <div className="flex min-h-0 flex-1 flex-col gap-4"><ReceivedFiles assignment={assignment} recordId={student.recordId} /><AnswerAccess assignment={assignment} recordId={student.recordId} manager={manager} /><MarksForm parts={parts} baseline={baselineFor(student)} fast={{ saved: student.marks }} onSave={save} onDone={onSaved} /></div>;
 }

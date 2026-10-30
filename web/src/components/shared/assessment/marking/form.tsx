@@ -1,17 +1,15 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { IconAlertCircle, IconChevronUp } from "@tabler/icons-react";
+import { IconAlertCircle } from "@tabler/icons-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SheetFooter } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { useMarkingGuard } from "./guard";
 import { olderVersion, reconcileSnapshot, sameSnapshot, type MarkBaseline, type MarkSnapshot } from "./snapshot";
 import { answerEdits, invalidMark } from "./draft";
@@ -21,7 +19,6 @@ import type { AnswerEdit, FastMark, MarkEdit, MarkPart, SaveOutcome, SavePayload
 type Props = {
   baseline: MarkBaseline;
   parts: MarkPart[];
-  feedback: string;
   /** Typed part totals and excused adjustments; types without them leave this out. */
   fast?: { saved: FastMark[] };
   /** Nothing can be entered: the viewer may look but not mark. */
@@ -38,11 +35,11 @@ type Props = {
 };
 
 /**
- * One student's marks inside a sheet: the parts (scrolling) and a footer with feedback and Save. Key it
+ * One student's marks inside a sheet: the parts (scrolling) and a footer with Save. Key it
  * by academy, assessment and annual record. Refreshes reconcile with its acknowledged baseline.
  * Types supply the scoring basis, authoritative save result and how a save is sent.
  */
-export function MarksForm({ baseline: incoming, parts: source, feedback: savedFeedback, fast: fastOptions, readOnly = false, notice, confirm, saveLabel = "Save marks", allowEmpty = false, onSave, onDone }: Props) {
+export function MarksForm({ baseline: incoming, parts: source, fast: fastOptions, readOnly = false, notice, confirm, saveLabel = "Save marks", allowEmpty = false, onSave, onDone }: Props) {
   const fastEnabled = fastOptions !== undefined;
   const savedMarks = useMemo(() => fastOptions?.saved ?? [], [fastOptions]);
   const parts = useMemo(() => (readOnly
@@ -198,17 +195,6 @@ export function MarksForm({ baseline: incoming, parts: source, feedback: savedFe
 
       {!readOnly && (
         <SheetFooter className="border-t">
-          {/* Opens upward: the content sits above its trigger, so Save stays at the bottom. */}
-          <Collapsible defaultOpen={savedFeedback !== ""} className="flex flex-col-reverse gap-2">
-            <CollapsibleTrigger asChild>
-              <Button type="button" variant="ghost" size="sm" className="group -ml-2 self-start text-muted-foreground">
-                <IconChevronUp className="transition-transform group-data-[state=open]:rotate-180" />Feedback
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <Textarea id="feedback" aria-label="Feedback" rows={3} maxLength={5000} value={feedback} onChange={(event) => change({ ...live.current, feedback: event.target.value })} />
-            </CollapsibleContent>
-          </Collapsible>
           <Button type="button" disabled={busy || review || (!uncertain && (invalid || (nothing && !allowEmpty)))} onClick={() => (confirm ? setAsking(true) : void save())}>
             {busy ? "Saving…" : uncertain ? "Retry original save" : saveLabel}
           </Button>
