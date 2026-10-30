@@ -2,7 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Tag01Icon } from "@hugeicons/core-free-icons";
+import { LabelIcon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -38,7 +38,7 @@ export function LabelManager({ academyId, open, onOpenChange, opener, onChanged,
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <Button ref={button} variant="outline" size="icon" aria-label="Manage labels">
-              <HugeiconsIcon icon={Tag01Icon} strokeWidth={1.5} aria-hidden="true" />
+              <HugeiconsIcon icon={LabelIcon} strokeWidth={1.5} aria-hidden="true" />
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>

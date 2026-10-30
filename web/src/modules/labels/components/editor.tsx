@@ -173,7 +173,7 @@ function LabelRow({ label, busy, onSave, onDelete }: RowProps) {
   return (
     <li className="group/row flex items-center gap-0.5" aria-busy={busy}>
       <LabelColorPicker label={`Color of ${label.name}`} value={label.color} disabled={busy} onChange={(color) => { if (color !== label.color) onSave(label.name, color); }} />
-      <Input aria-label={`Name of ${label.name}`} className="h-8 border-transparent bg-transparent shadow-none hover:border-input focus-visible:border-ring disabled:opacity-100 dark:bg-transparent" maxLength={LABEL_NAME_MAX} value={name} disabled={busy}
+      <Input variant="line" aria-label={`Name of ${label.name}`} className="disabled:opacity-100" maxLength={LABEL_NAME_MAX} value={name} disabled={busy}
         onChange={(event) => setName(event.target.value)} onBlur={save} onKeyDown={keys} />
       <Tooltip delayDuration={500}>
         <TooltipTrigger asChild>
@@ -215,8 +215,8 @@ function NewLabel({ inputRef, used, onCreate }: NewProps) {
   };
   return (
     <form className="relative" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-      <LabelColorPicker label="New label color" className="absolute start-0 top-1" value={chosen} onChange={setColor} />
-      <Input ref={inputRef} data-new-label aria-label="New label name" placeholder="New label" className="h-8 ps-9" maxLength={LABEL_NAME_MAX} value={name}
+      <LabelColorPicker label="New label color" className="absolute start-0 top-0.5" value={chosen} onChange={setColor} />
+      <Input ref={inputRef} variant="line" data-new-label aria-label="New label name" placeholder="New label" className="ps-7" maxLength={LABEL_NAME_MAX} value={name}
         onChange={(event) => { setName(event.target.value); setLabelId(newUuid()); }} />
     </form>
   );

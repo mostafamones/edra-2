@@ -14,8 +14,7 @@ import type { AssessmentListItem, AssessmentRow } from "../types";
 
 export type SheetTab = "edit" | "summary";
 export type AssessmentEditHandler = (row: AssessmentRow, opener: HTMLElement | null, tab: SheetTab) => void;
-type Props = { row: AssessmentRow; onEdit: AssessmentEditHandler };
-/** What a row or card's context menu can do. `onManageLabels` is set only for label managers. */
+/** What a row or card's menus can do. `onManageLabels` is set only for label managers. */
 export type RowActions = {
   academyId: string;
   onEdit: AssessmentEditHandler;
@@ -23,11 +22,17 @@ export type RowActions = {
   onManageLabels?: (opener: HTMLElement | null) => void;
 };
 
-/** Edit, Summary (both in the edit sheet), then the type's own editor. */
-function Items({ row, onEdit, openerRef, openingRef, Item, Separator }: Props & {
-  openerRef: RefObject<HTMLElement | null>; openingRef: RefObject<boolean>; Item: typeof ContextMenuItem; Separator: typeof ContextMenuSeparator;
+type Props = { row: AssessmentRow; actions: RowActions };
+
+/** The one set of actions in both menus: Edit, Summary (both in the edit sheet), the type's own editor, then Labels. */
+function Items({ row, actions, menu, openerRef, openingRef }: Props & {
+  menu: "context" | "dropdown"; openerRef: RefObject<HTMLElement | null>; openingRef: RefObject<boolean>;
 }) {
-  const archived = row.item.status === "archived";
+  const { item } = row;
+  const { onEdit, onManageLabels } = actions;
+  const Item: typeof ContextMenuItem = menu === "context" ? ContextMenuItem : DropdownMenuItem;
+  const Separator: typeof ContextMenuSeparator = menu === "context" ? ContextMenuSeparator : DropdownMenuSeparator;
+  const archived = item.status === "archived";
   const open = (tab: SheetTab) => { openingRef.current = true; onEdit(row, openerRef.current, tab); };
   return (
     <>
@@ -37,15 +42,23 @@ function Items({ row, onEdit, openerRef, openingRef, Item, Separator }: Props & 
       <Item asChild disabled={archived}>
         <Link href={`${row.href}/edit`}><HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={1.5} />Open editor</Link>
       </Item>
+      <Separator />
+      {/* Labels are organizational metadata: available on archived and closed-year assessments too. */}
+      <LabelsSubmenu menu={menu} academyId={actions.academyId} applied={item.labels.map((label) => label.id)}
+        onApply={(labelId, applied) => void actions.onApplyLabel(item, labelId, applied)}
+        onManage={onManageLabels && (() => {
+          openingRef.current = true;
+          const opener = openerRef.current;
+          // Open after the menu has closed, so its dismissal cannot close the editor.
+          requestAnimationFrame(() => onManageLabels(opener));
+        })} />
     </>
   );
 }
 
 /** Right-click (or the Menu key) on a row or card. */
-export function AssessmentMenu({ row, actions, children }: { row: AssessmentRow; actions: RowActions; children: ReactElement }) {
+export function AssessmentMenu({ row, actions, children }: Props & { children: ReactElement }) {
   const opening = useRef(false);
-  const { item } = row;
-  const { onEdit, onManageLabels } = actions;
   const trigger = useRef<HTMLSpanElement>(null);
   return (
     <ContextMenu>
@@ -58,24 +71,14 @@ export function AssessmentMenu({ row, actions, children }: { row: AssessmentRow;
         {children}
       </ContextMenuTrigger>
       <ContextMenuContent onCloseAutoFocus={(event) => { if (opening.current) { event.preventDefault(); opening.current = false; } }}>
-        <Items row={row} onEdit={onEdit} openerRef={trigger} openingRef={opening} Item={ContextMenuItem} Separator={ContextMenuSeparator} />
-        <ContextMenuSeparator />
-        {/* Labels are organizational metadata: available on archived and closed-year assessments too. */}
-        <LabelsSubmenu academyId={actions.academyId} applied={item.labels.map((label) => label.id)}
-          onApply={(labelId, applied) => void actions.onApplyLabel(item, labelId, applied)}
-          onManage={onManageLabels && (() => {
-            opening.current = true;
-            const opener = trigger.current;
-            // Open after the menu has closed, so its dismissal cannot close the editor.
-            requestAnimationFrame(() => onManageLabels(opener));
-          })} />
+        <Items row={row} actions={actions} menu="context" openerRef={trigger} openingRef={opening} />
       </ContextMenuContent>
     </ContextMenu>
   );
 }
 
 /** The same actions from a row's Actions button. */
-export function AssessmentActions({ row, onEdit }: Props) {
+export function AssessmentActions({ row, actions }: Props) {
   const opening = useRef(false);
   const trigger = useRef<HTMLButtonElement>(null);
   return (
@@ -91,7 +94,7 @@ export function AssessmentActions({ row, onEdit }: Props) {
         <TooltipContent>Actions</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end" onCloseAutoFocus={(event) => { if (opening.current) { event.preventDefault(); opening.current = false; } }}>
-        <Items row={row} onEdit={onEdit} openerRef={trigger} openingRef={opening} Item={DropdownMenuItem} Separator={DropdownMenuSeparator} />
+        <Items row={row} actions={actions} menu="dropdown" openerRef={trigger} openingRef={opening} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
