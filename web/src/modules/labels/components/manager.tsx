@@ -42,7 +42,7 @@ export function LabelManager({ academyId, open, onOpenChange, opener, onChanged 
         </TooltipTrigger>
         <TooltipContent>Labels</TooltipContent>
       </Tooltip>
-      <PopoverContent ref={content} align="end" aria-label="Labels" className="w-64 p-3"
+      <PopoverContent ref={content} align="end" aria-label="Labels" className="w-64"
         // Start in the new-label field rather than on a control whose tooltip would take the first Escape.
         onOpenAutoFocus={(event) => { event.preventDefault(); content.current?.querySelector<HTMLInputElement>("input[data-new-label]")?.focus(); }}
         onCloseAutoFocus={(event) => { event.preventDefault(); target()?.focus({ preventScroll: true }); }}>
