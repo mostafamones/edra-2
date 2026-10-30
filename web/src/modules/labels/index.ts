@@ -5,5 +5,5 @@ export { LabelManager } from "./components/manager";
 export { LabelsSubmenu } from "./components/submenu";
 export { canManageLabels } from "./permissions";
 export { labelsQueryKey, loadLabels, useLabels } from "./queries";
-export { labelSchema } from "./validation";
+export { labelSchema, sortLabels } from "./validation";
 export type { Label, LabelFailure } from "./types";

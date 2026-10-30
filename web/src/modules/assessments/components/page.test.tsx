@@ -690,17 +690,48 @@ describe("assessment labels", () => {
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: "Manage labels" }));
     const editor = await screen.findByRole("dialog", { name: "Labels" });
-    fireEvent.change(await within(editor).findByRole("textbox", { name: "New label name" }), { target: { value: " Unit 4 " } });
-    fireEvent.click(within(editor).getByRole("button", { name: "Add label" }));
+    const field = await within(editor).findByRole("textbox", { name: "New label name" });
+    fireEvent.change(field, { target: { value: " Unit 4 " } });
+    fireEvent.submit(field);
     await waitFor(() => expect(mocks.createLabel).toHaveBeenCalledWith(expect.objectContaining({ academyId: "academy-id", name: "Unit 4", color: "gray" })));
     const name = within(editor).getByRole("textbox", { name: "Name of Week 3" });
     fireEvent.change(name, { target: { value: "Week 4" } });
     fireEvent.keyDown(name, { key: "Enter" });
     await waitFor(() => expect(mocks.updateLabel).toHaveBeenCalledWith({ academyId: "academy-id", labelId: WEEK, name: "Week 4", color: "red" }));
     mocks.createLabel.mockResolvedValueOnce({ ok: false, code: "duplicate_name", message: "A label with this name already exists." });
-    fireEvent.change(within(editor).getByRole("textbox", { name: "New label name" }), { target: { value: "revision" } });
-    fireEvent.click(within(editor).getByRole("button", { name: "Add label" }));
+    fireEvent.change(field, { target: { value: "revision" } });
+    fireEvent.submit(field);
     expect((await within(editor).findByRole("alert")).textContent).toBe("A label with this name already exists.");
+  });
+
+  it("shows a new label before the server answers and gives the name back if refused", async () => {
+    let answer!: (value: unknown) => void;
+    mocks.createLabel.mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }));
+    show();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: "Manage labels" }));
+    const editor = await screen.findByRole("dialog", { name: "Labels" });
+    await within(editor).findByRole("textbox", { name: "Name of Week 3" });
+    const field = within(editor).getByRole<HTMLInputElement>("textbox", { name: "New label name" });
+    fireEvent.change(field, { target: { value: "Unit 5" } });
+    fireEvent.submit(field);
+    await within(editor).findByRole("textbox", { name: "Name of Unit 5" });
+    expect(field.value).toBe("");
+    answer({ ok: false, code: "unavailable", message: "Try again." });
+    await waitFor(() => expect(within(editor).queryByRole("textbox", { name: "Name of Unit 5" })).toBeNull());
+    expect(field.value).toBe("Unit 5");
+    expect(within(editor).getByRole("alert").textContent).toBe("Try again.");
+  });
+
+  it("checks a label on an assessment before the server answers and undoes it if refused", async () => {
+    let answer!: (value: unknown) => void;
+    mocks.setLabel.mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }));
+    show();
+    await openLabels("Weekly quiz");
+    fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Week 3" }));
+    await waitFor(() => expect(screen.getByRole("menuitemcheckbox", { name: "Week 3" }).getAttribute("aria-checked")).toBe("true"));
+    answer({ ok: false, code: "forbidden", message: "Not allowed." });
+    await waitFor(() => expect(screen.getByRole("menuitemcheckbox", { name: "Week 3" }).getAttribute("aria-checked")).toBe("false"));
   });
 
   it("filters by any selected label or by Unlabeled, never both, and clears with the other filters", async () => {

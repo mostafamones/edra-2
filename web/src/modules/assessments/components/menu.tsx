@@ -62,7 +62,7 @@ export function AssessmentMenu({ row, actions, children }: { row: AssessmentRow;
         <ContextMenuSeparator />
         {/* Labels are organizational metadata: available on archived and closed-year assessments too. */}
         <LabelsSubmenu academyId={actions.academyId} applied={item.labels.map((label) => label.id)}
-          onApply={(labelId, applied) => actions.onApplyLabel(item, labelId, applied)}
+          onApply={(labelId, applied) => void actions.onApplyLabel(item, labelId, applied)}
           onManage={onManageLabels && (() => {
             opening.current = true;
             const opener = trigger.current;
