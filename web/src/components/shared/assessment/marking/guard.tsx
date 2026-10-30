@@ -30,7 +30,7 @@ export function MarkingGuard({ children }: { children: (request: (action: () => 
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={saving}>Stay</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" disabled={saving || control?.busy || control?.uncertain} onClick={finish}>Discard unsaved entries</AlertDialogAction>
+            <AlertDialogAction variant="destructive" disabled={saving || control?.busy || control?.uncertain} onClick={finish}>Discard</AlertDialogAction>
             <Button disabled={saving || control?.busy} onClick={async () => {
               setSaving(true);
               try { if (await control?.save()) finish(); } finally { setSaving(false); }

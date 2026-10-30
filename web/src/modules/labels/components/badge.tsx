@@ -11,8 +11,7 @@ export function LabelSwatch({ color, className }: { color: PaletteKey; className
 /** One label, in its palette colors with its name. */
 export function LabelBadge({ label }: { label: Label }) {
   return (
-    <Badge variant="outline" className={cn("max-w-40 gap-1.5 font-normal", paletteChip(label.color))}>
-      <LabelSwatch color={label.color} className="size-1.5" />
+    <Badge variant="secondary" className={cn("max-w-40 shrink font-normal", paletteChip(label.color))}>
       <span className="truncate">{label.name}</span>
     </Badge>
   );
@@ -22,8 +21,8 @@ export function LabelBadge({ label }: { label: Label }) {
 export function LabelBadges({ labels, className }: { labels: readonly Label[]; className?: string }) {
   if (labels.length === 0) return null;
   return (
-    <ul aria-label="Labels" className={cn("flex min-w-0 flex-wrap gap-1", className)}>
-      {labels.map((label) => <li key={label.id} className="min-w-0"><LabelBadge label={label} /></li>)}
+    <ul aria-label="Labels" className={cn("flex min-w-0 flex-wrap items-center gap-1", className)}>
+      {labels.map((label) => <li key={label.id} className="flex min-w-0"><LabelBadge label={label} /></li>)}
     </ul>
   );
 }

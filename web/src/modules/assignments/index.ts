@@ -1,4 +1,5 @@
 export { changeAssignment, createNewAssignment, saveAssignment } from "./actions";
+export { AssignmentMarking } from "./components/marking/sheet";
 export {
   assignmentListQueryKey, assignmentQueryKey, assignmentsRootKey, loadAssignment, loadAssignments, loadAudiencePreview, loadMarks,
   loadRecipients, loadYears, recipientsQueryKey,

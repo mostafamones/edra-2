@@ -4,12 +4,12 @@ import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GridViewIcon, ListViewIcon, Settings02Icon } from "@hugeicons/core-free-icons";
 
+import { ToggleBadge, ToggleBadgeGroup } from "@/components/shared/toggle-badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import { UNIT_STATUSES, type UnitStatus } from "../started";
 
 const ALL = "all";
@@ -28,11 +28,11 @@ export function ViewSettings({ layout, academies, academy, statuses, group, onLa
   onStatusesChange: (value: UnitStatus[]) => void;
   onGroupChange: (value: "none" | "academy" | "status") => void;
 }) {
-  const [isolated, setIsolated] = useState<{ status: UnitStatus; previous: UnitStatus[] } | null>(null);
+  const [isolated, setIsolated] = useState<UnitStatus[] | null>(null);
   const beforeClick = useRef<UnitStatus[]>(statuses);
   const toggle = (status: UnitStatus) => {
     if (isolated) {
-      onStatusesChange(isolated.previous);
+      onStatusesChange(isolated);
       setIsolated(null);
       return;
     }
@@ -81,24 +81,20 @@ export function ViewSettings({ layout, academies, academy, statuses, group, onLa
           </Select>
         </Field>
         <Separator />
-        <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">Status</p>
-          <div role="group" aria-label="Course status" className="flex flex-wrap gap-1.5">
-            {UNIT_STATUSES.map((status) => {
-              const active = statuses.includes(status);
-              return <Button key={status} size="sm" variant={active ? "secondary" : "outline"} aria-pressed={active} className={cn("h-7 px-2 text-xs capitalize", !active && "text-muted-foreground", isolated?.status === status && "bg-primary/10 hover:bg-primary/15")}
-                onClick={(event) => {
-                  if (event.detail > 1) return;
-                  beforeClick.current = [...statuses];
-                  toggle(status);
-                }}
-                onDoubleClick={() => {
-                  setIsolated({ status, previous: beforeClick.current });
-                  onStatusesChange([status]);
-                }}>{status}</Button>;
-            })}
-          </div>
-        </div>
+        <ToggleBadgeGroup legend="Status">
+          {UNIT_STATUSES.map((status) => (
+            <ToggleBadge key={status} pressed={statuses.includes(status)} className="capitalize"
+              onClick={(event) => {
+                if (event.detail > 1) return;
+                beforeClick.current = [...statuses];
+                toggle(status);
+              }}
+              onDoubleClick={() => {
+                setIsolated(beforeClick.current);
+                onStatusesChange([status]);
+              }}>{status}</ToggleBadge>
+          ))}
+        </ToggleBadgeGroup>
       </PopoverContent>
     </Popover>
   );

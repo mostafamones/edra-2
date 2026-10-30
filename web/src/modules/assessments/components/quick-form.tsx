@@ -9,16 +9,14 @@ import { LinkSquare02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
 import { DiscardDialog } from "@/components/shared/assessment/discard";
+import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import type { AcademyEntry } from "@/modules/academies";
-import { assignmentsRootKey } from "@/modules/assignments";
 import { useAcademyScope } from "@/modules/auth";
-import { examsRootKey } from "@/modules/exams";
-import { quizzesRootKey } from "@/modules/quizzes";
-import { detailsPermissions, loadDetails, localDate, quickErrors, quickValues, savedInstant, saveDetails, type AssessmentDetails, type DetailsResult, type QuickValues } from "../details";
+import { detailsPermissions, loadDetails, localDate, quickErrors, quickValues, savedInstant, saveDetails, typeRootKey, type AssessmentDetails, type DetailsResult, type QuickValues } from "../details";
 import { assessmentsRootKey } from "../queries";
 import { QuickAudience } from "./quick-audience";
 import { AssessmentDateTime } from "./date-time";
@@ -54,8 +52,7 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: assessmentsRootKey(academy.id) });
-    const key = record.type === "assignment" ? assignmentsRootKey(academy.id) : record.type === "quiz" ? quizzesRootKey(academy.id) : examsRootKey(academy.id);
-    void queryClient.invalidateQueries({ queryKey: key });
+    void queryClient.invalidateQueries({ queryKey: typeRootKey(academy.id, record.type) });
   }
 
   async function commit(run: () => Promise<DetailsResult>) {
@@ -137,18 +134,15 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
             <FieldError>{errors.title?.message}</FieldError>
           </Field>
           <Separator className="bg-border/70" />
-          <section className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Audience</h3>
-            <QuickAudience academyId={academy.id} yearId={record.value.academicYearId} disabled={disabled || !permissions.audience} optional={record.type !== "assignment"} />
-          </section>
+          <QuickAudience academyId={academy.id} yearId={record.value.academicYearId} disabled={disabled || !permissions.audience} optional={record.type !== "assignment"} />
           <Separator className="bg-border/70" />
           <section className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Timing</h3>
+            <SectionHeader title="Timing" />
             <FieldGroup className="gap-4">
               {record.type === "assignment" ? (
                 <Field orientation="horizontal" className="items-center!" data-invalid={Boolean(errors.dueAt) || undefined}>
                   <FieldLabel htmlFor="quick-due" className="min-w-24 flex-none!">Due date</FieldLabel>
-                  <FieldContent className="min-w-0">
+                  <FieldContent className="ml-auto min-w-0 max-w-sm">
                     <Controller control={form.control} name="dueAt" render={({ field }) => (
                       <AssessmentDateTime id="quick-due" label="Due date" value={field.value} onChange={field.onChange}
                         defaultTime="23:59" disabled={disabled} invalid={Boolean(errors.dueAt)} />
@@ -159,7 +153,7 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
               ) : <>
                 <Field orientation="horizontal" className="items-center!" data-invalid={Boolean(errors.timeLimit) || undefined}>
                   <FieldLabel htmlFor="quick-timer" className="min-w-24 flex-none!">Timer</FieldLabel>
-                  <FieldContent className="min-w-0">
+                  <FieldContent className="ml-auto min-w-0 max-w-sm">
                     <Controller control={form.control} name="timeLimit" render={({ field }) => (
                       <AssessmentTimer id="quick-timer" value={field.value} onChange={field.onChange} onBlur={field.onBlur}
                         disabled={disabled || !permissions.timer} invalid={Boolean(errors.timeLimit)} />
@@ -168,13 +162,13 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
                   </FieldContent>
                 </Field>
                 <Field orientation="horizontal"><FieldLabel htmlFor="quick-opens" className="min-w-24 flex-none!">Opens</FieldLabel>
-                  <div className="min-w-0 flex-1">
+                  <div className="ml-auto min-w-0 max-w-sm flex-1">
                     <AssessmentDateTime id="quick-opens" label="Opens" disabled={disabled || !permissions.availability || opened}
                       value={window.opensAt} onChange={(opensAt) => setWindow({ ...window, opensAt })} />
                   </div>
                 </Field>
                 <Field orientation="horizontal"><FieldLabel htmlFor="quick-closes" className="min-w-24 flex-none!">Closes</FieldLabel>
-                  <div className="min-w-0 flex-1">
+                  <div className="ml-auto min-w-0 max-w-sm flex-1">
                     <AssessmentDateTime id="quick-closes" label="Closes" disabled={disabled || !permissions.availability}
                       value={window.closesAt} onChange={(closesAt) => setWindow({ ...window, closesAt })} />
                   </div>
@@ -184,7 +178,11 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
           </section>
           <Separator className="bg-border/70" />
           <section className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Parts</h3>
+            <SectionHeader title="Part Names" action={
+              <Button type="button" variant="ghost" size="sm" asChild disabled={busy !== null}>
+                <Link href={fullEditor} onClick={onOpenEditor} aria-disabled={busy !== null}>Edit questions<HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={1.5} aria-hidden="true" /></Link>
+              </Button>
+            } />
             {record.value.parts.length === 0 && <p className="text-muted-foreground">No parts yet</p>}
             {record.value.parts.map((part, index) => (
               <Field key={part.id} orientation="horizontal" data-invalid={Boolean(errors.parts?.[index]?.title) || undefined}>
@@ -192,20 +190,13 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
                   <FieldLabel htmlFor={`quick-part-${part.id}`}>Part {index + 1}</FieldLabel>
                   <p className="text-xs text-muted-foreground">{partKindLabel(record.type, part.kind)}</p>
                 </div>
-                <FieldContent className="min-w-0">
+                <FieldContent className="ml-auto min-w-0 max-w-sm">
                   <Input id={`quick-part-${part.id}`} dir="auto" maxLength={200} disabled={disabled || !permissions.parts} aria-invalid={Boolean(errors.parts?.[index]?.title)} {...form.register(`parts.${index}.title`)} />
                   <FieldError>{errors.parts?.[index]?.title?.message}</FieldError>
                 </FieldContent>
               </Field>
             ))}
           </section>
-          <Separator className="bg-border/70" />
-          <Field orientation="horizontal">
-            <FieldLabel>Questions</FieldLabel>
-            <Button type="button" variant="outline" size="sm" asChild disabled={busy !== null}>
-              <Link href={fullEditor} onClick={onOpenEditor} aria-disabled={busy !== null}>Open editor<HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={1.5} aria-hidden="true" /></Link>
-            </Button>
-          </Field>
         </div>
         <div className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
           <Button type="button" variant="outline" className="flex-1" disabled={busy !== null} onClick={onCancel}>Cancel</Button>

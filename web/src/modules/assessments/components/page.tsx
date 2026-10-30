@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -13,19 +13,21 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AcademyEntry } from "@/modules/academies";
-import { loadYears } from "@/modules/assignments";
+import { isManager, loadYears } from "@/modules/assignments";
 import { AcademyGate, useAcademyScope, useAuth } from "@/modules/auth";
-import { canManageLabels, LabelManager, labelsQueryKey, useLabels } from "@/modules/labels";
+import { canManageLabels, LabelManager, labelsQueryKey, sortLabels, useLabels } from "@/modules/labels";
 import { useCanonicalHref } from "@/modules/navigation";
 import { ALL, DEFAULT_PARAMS, sameStatuses } from "../params";
 import { assessmentListQueryKey, assessmentsRootKey, loadAssessments, type ListFilters } from "../queries";
 import { setAssessmentLabel } from "../labels";
+import { patchListLabels } from "../optimistic";
 import { DEFAULT_STATUSES, TYPE_ROUTES, type AssessmentRow } from "../types";
 import { useAssessmentParams } from "../use-params";
 import { useAssessmentView } from "../view";
 import { AssessmentCards } from "./cards";
 import { CreateAssessment } from "./create";
 import { groupRows } from "./groups";
+import { LifecycleDialog, type PendingLifecycle } from "./lifecycle";
 import type { AssessmentEditHandler, RowActions, SheetTab } from "./menu";
 import { AssessmentTable } from "./table";
 import { AssessmentToolbar } from "./toolbar";
@@ -54,33 +56,51 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   const [view, setView] = useAssessmentView(user?.id);
   const [editing, setEditing] = useState<{ row: AssessmentRow; opener: HTMLElement | null; tab: SheetTab } | null>(null);
   const edit: AssessmentEditHandler = (row, opener, tab) => setEditing({ row, opener, tab });
+  const [lifecycle, setLifecycle] = useState<PendingLifecycle | null>(null);
   const queryClient = useQueryClient();
   const isCurrent = useAcademyScope();
   const labels = useLabels(academyId);
   const managesLabels = canManageLabels(academy.role);
   const [managing, setManaging] = useState<{ open: boolean; opener: HTMLElement | null }>({ open: false, opener: null });
+  const applying = useRef(0);
   const refreshList = () => queryClient.invalidateQueries({ queryKey: [...assessmentsRootKey(academyId), "list"] });
+  const yearsQuery = useQuery({ queryKey: [...assessmentsRootKey(academyId), "years"], queryFn: () => loadYears(academyId) });
+  // Only the active year is listed; an academy without one shows every year.
+  const year = yearsQuery.data?.find((option) => option.open)?.id ?? ALL;
   const actions: RowActions = {
     academyId,
     onEdit: edit,
     onApplyLabel: async (item, labelId, applied) => {
+      const label = labels.data?.find((entry) => entry.id === labelId);
+      const show = (on: boolean) => patchListLabels(queryClient, academyId, (row) => {
+        if (row.type !== item.type || row.id !== item.id) return row.labels;
+        const others = row.labels.filter((entry) => entry.id !== labelId);
+        return on && label ? sortLabels([...others, label]) : others;
+      });
+      await show(applied);
+      applying.current += 1;
       try {
         const result = await setAssessmentLabel({ academyId, type: item.type, assessmentId: item.id, labelId, applied });
-        if (!result.ok && result.code === "label_not_found") void queryClient.invalidateQueries({ queryKey: labelsQueryKey(academyId) });
-        await refreshList();
-        if (!result.ok && isCurrent(academyId)) toast.error(result.message);
+        if (!result.ok) {
+          await show(!applied);
+          if (result.code === "label_not_found") void queryClient.invalidateQueries({ queryKey: labelsQueryKey(academyId) });
+          if (isCurrent(academyId)) toast.error(result.message);
+        }
       } catch {
+        await show(!applied);
         if (isCurrent(academyId)) toast.error("Could not reach the server. Check your connection and try again.");
+      } finally {
+        applying.current -= 1;
+        // Refreshing between quick changes would bring back the state before the later ones.
+        if (applying.current === 0) await refreshList();
       }
     },
     onManageLabels: managesLabels ? (opener) => setManaging({ open: true, opener }) : undefined,
+    onLifecycle: isManager(academy.role) && year !== ALL ? (row, action, opener) => setLifecycle({ row, action, opener }) : undefined,
   };
   const names = useAudienceNames(academyId);
   useEffect(() => { rememberAssessmentList(academy.slug, query); }, [academy.slug, query]);
 
-  const yearsQuery = useQuery({ queryKey: [...assessmentsRootKey(academyId), "years"], queryFn: () => loadYears(academyId) });
-  // Only the active year is listed; an academy without one shows every year.
-  const year = yearsQuery.data?.find((option) => option.open)?.id ?? ALL;
   const filters: ListFilters = {
     type: params.type, search: params.search, year, audience: params.audience, level: params.level, track: params.track, groupId: params.groupId,
     statuses: params.statuses, labels: params.labels, unlabeled: params.unlabeled, sort: params.sort, group: params.group, pageSize: params.pageSize,
@@ -135,6 +155,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
       <AssessmentToolbar params={params} onChange={update} view={view} onView={setView} academyId={academyId} labels={labels.data}
         manager={managesLabels && (
           <LabelManager academyId={academyId} open={managing.open} opener={managing.opener} onChanged={() => void refreshList()}
+            onLabelChange={(labelId, label) => void patchListLabels(queryClient, academyId, (row) => sortLabels(row.labels.flatMap((entry) => entry.id !== labelId ? [entry] : label ? [label] : [])))}
             // Opening from the toolbar anchors there; closing keeps the opener so focus can return to it.
             onOpenChange={(open) => setManaging((current) => open ? { open, opener: null } : { ...current, open: false })} />
         )} />
@@ -184,6 +205,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
         </div>
       ))}
       {editing && <QuickEditSheet academy={academy} row={editing.row} tab={editing.tab} opener={editing.opener} onClose={() => setEditing(null)} />}
+      <LifecycleDialog academyId={academyId} pending={lifecycle} onClose={() => setLifecycle(null)} />
     </main>
   );
 }

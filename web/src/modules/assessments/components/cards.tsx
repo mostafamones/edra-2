@@ -4,14 +4,14 @@ import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatScore } from "@/lib/score";
 import { itemKey, TYPE_LABELS } from "../types";
 import { AssessmentDate, AssessmentStatus, AudienceLine, MarkedCount, PartsSummary, TYPE_ICONS } from "./facts";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { GroupToggle, type RowGroup } from "./groups";
 import { LabelBadges } from "@/modules/labels";
-import { AssessmentMenu, type RowActions } from "./menu";
+import { AssessmentActions, AssessmentMenu, type RowActions } from "./menu";
 
 /** Card view of the same rows, in the same order, as the table. Each card opens its workspace. */
 type Props = { groups: RowGroup[]; collapsed: ReadonlySet<string>; onToggle: (key: string) => void; actions: RowActions };
@@ -58,16 +58,19 @@ function Cards({ rows, actions }: { rows: RowGroup["rows"]; actions: RowActions 
                   <Link href={href} className="block truncate font-medium text-foreground outline-none after:absolute after:inset-0 after:rounded-lg">{item.title}</Link>
                   <AudienceLine audience={item.audience} name={audience} />
                 </div>
-                <AssessmentStatus item={item} />
+                {/* Above the stretched link so it can be clicked. */}
+                <div className="relative z-10 -mt-1 -mr-1"><AssessmentActions row={row} actions={actions} /></div>
               </div>
-              <LabelBadges labels={item.labels} className="px-4 pb-3" />
+              {/* Status keeps this line present, so adding the first label doesn't resize the row. */}
+              <div className="mb-3 flex items-start gap-2 px-4">
+                <div className="shrink-0"><AssessmentStatus item={item} /></div>
+                {item.labels.length > 0 && <Separator orientation="vertical" className="mt-1 h-3 data-vertical:self-auto" />}
+                <LabelBadges labels={item.labels} className="flex-nowrap" />
+              </div>
               <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border/70 px-4 py-2.5 text-xs text-muted-foreground">
                 <PartsSummary item={item} />
-                <span><MarkedCount item={item} /> marked</span>
-                <span className="tabular-nums">{formatScore(item.maxScore)} marks</span>
-              </div>
-              <div className="border-t border-border/70 px-4 py-2.5 text-xs text-muted-foreground">
-                <AssessmentDate item={item} />
+                <span><MarkedCount item={item} /><span className="sr-only"> marked</span></span>
+                <div className="ml-auto min-w-0"><AssessmentDate item={item} /></div>
               </div>
             </Card>
           </li>

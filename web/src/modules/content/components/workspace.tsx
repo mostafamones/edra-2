@@ -10,7 +10,6 @@ import { AcademyGate } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
 import { useCanonicalHref } from "@/modules/navigation";
 import { FilterPopover } from "@/components/shared/filter-popover";
-import { HeaderActions } from "@/components/shared/header-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -92,27 +92,31 @@ function WorkspaceContent({ academy, data, published }: { academy: AcademyEntry;
     } catch (e) { setError(e instanceof Error ? e.message : "Could not create the unit. Retry with the same action."); setBusy(false); }
   }
   return <main className="page-shell min-w-0">
-    <HeaderActions>
-      <Button variant="outline" disabled={!writable} onClick={() => open("copy")}><HugeiconsIcon icon={Copy01Icon} aria-hidden="true" />Copy unit</Button>
-      <Button disabled={!writable} onClick={() => open("new")}><HugeiconsIcon icon={Add01Icon} aria-hidden="true" />New unit</Button>
-    </HeaderActions>
-    <h1 className="text-2xl font-bold tracking-tight">{published ? "Published lessons" : "Content library"}</h1>
+    {published && <h1 className="text-2xl font-bold tracking-tight">Published lessons</h1>}
     {year?.closed_at && <Alert><HugeiconsIcon icon={AlertCircleIcon} /><AlertTitle>{yearLabel} is closed</AlertTitle><AlertDescription>Its units are read-only.</AlertDescription></Alert>}
     <Tabs value={tab} onValueChange={setTab} className="gap-5">
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
         <TabsList variant="line" className="min-w-0 flex-1 justify-start overflow-x-auto border-b">
           {TABS.map(t => <TabsTrigger key={t.value} value={t.value} className="flex-none">{t.label}<span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">{scoped.filter(t.match).length}</span></TabsTrigger>)}
         </TabsList>
-        <div className="flex gap-2">
-          <InputGroup className="sm:w-60">
-            <InputGroupInput type="search" className="[&::-webkit-search-cancel-button]:appearance-none" placeholder="Search units..." aria-label="Search units" value={search} onChange={e => setSearch(e.target.value)} />
-            <InputGroupAddon><HugeiconsIcon icon={Search01Icon} /></InputGroupAddon>
-            {search && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" className="text-muted-foreground hover:text-foreground" aria-label="Clear search" onClick={() => setSearch("")}><HugeiconsIcon icon={Cancel01Icon} className="size-3.5" aria-hidden="true" /></InputGroupButton></InputGroupAddon>}
-          </InputGroup>
+        <div className="flex flex-wrap items-center gap-2">
           <FilterPopover iconOnly fields={[
             { id: "year", label: "Year", value: yearId, defaultValue: defaultYear, options: data.years.map(y => ({ value: y.id, label: `${y.start_year}–${y.start_year + 1}${y.closed_at ? " · closed" : ""}` })), onChange: value => { setYear(value); setProgram(ALL); } },
             { id: "program", label: "Program", value: program, defaultValue: ALL, options: [{ value: ALL, label: "All programs" }, ...options.map(p => ({ value: p.key, label: p.label }))], onChange: setProgram },
-          ]} />
+          ]}>
+            <InputGroup className="w-48 sm:w-60">
+              <InputGroupInput type="search" className="[&::-webkit-search-cancel-button]:appearance-none" placeholder="Search units..." aria-label="Search units" value={search} onChange={e => setSearch(e.target.value)} />
+              <InputGroupAddon><HugeiconsIcon icon={Search01Icon} /></InputGroupAddon>
+              {search && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" className="text-muted-foreground hover:text-foreground" aria-label="Clear search" onClick={() => setSearch("")}><HugeiconsIcon icon={Cancel01Icon} className="size-3.5" aria-hidden="true" /></InputGroupButton></InputGroupAddon>}
+            </InputGroup>
+          </FilterPopover>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button disabled={!writable} className="ml-auto shrink-0"><HugeiconsIcon icon={Add01Icon} strokeWidth={1.5} aria-hidden="true" />New</Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onSelect={() => open("new")}><HugeiconsIcon icon={Add01Icon} strokeWidth={1.5} aria-hidden="true" />Start from scratch</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => open("copy")}><HugeiconsIcon icon={Copy01Icon} strokeWidth={1.5} aria-hidden="true" />Clone an existing unit</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       <TabsContent value={tab}>

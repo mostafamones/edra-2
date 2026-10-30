@@ -93,7 +93,7 @@ function Loaded({ academy, quiz, student, detail, onSaved }: Props & { detail: S
 
   return (
     <MarksForm
-      parts={parts} baseline={baseline} feedback={student.feedback} readOnly={!editable.choices && !editable.marks} onSave={save} onDone={onSaved}
+      parts={parts} baseline={baseline} readOnly={!editable.choices && !editable.marks} onSave={save} onDone={onSaved}
       saveLabel={accepted ? "Save marks" : "Confirm and save"} allowEmpty={!accepted}
       confirm={accepted ? undefined : {
         title: `Confirm ${student.fullName}’s physical work?`, action: "Confirm",

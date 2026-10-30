@@ -2,10 +2,10 @@
 
 import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { cn } from "cn";
-import { Cancel01Icon, GridViewIcon, SlidersHorizontalIcon, TableIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, GridViewIcon, PreferenceHorizontalIcon, TableIcon } from "@hugeicons/core-free-icons";
 
 import { Segmented } from "@/components/shared/segmented";
+import { ToggleBadge, ToggleBadgeGroup } from "@/components/shared/toggle-badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -48,7 +48,7 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
     : types.map((type) => ({ id: type, type, toggles: TYPE_STATUSES[type].map((status) => ({ id: statusKey(type, status), label: statusLabel(type, status), keys: [statusKey(type, status)] })) }));
 
   // Double-click shows only that status; the next click restores the selection from before (as in student courses).
-  const [isolated, setIsolated] = useState<{ id: string; previous: StatusKey[] } | null>(null);
+  const [isolated, setIsolated] = useState<StatusKey[] | null>(null);
   const beforeClick = useRef<StatusKey[]>(params.statuses);
   const setStatuses = (keys: Iterable<StatusKey>) => {
     const next = new Set(keys);
@@ -57,7 +57,7 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
   };
   const toggle = (toggle: StatusToggle) => {
     if (isolated) {
-      onChange({ statuses: isolated.previous });
+      onChange({ statuses: isolated });
       setIsolated(null);
       return;
     }
@@ -73,20 +73,27 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <Button variant="outline" size="icon" className="relative" aria-label={changed ? "View options, changed" : "View options"}>
-              <HugeiconsIcon icon={SlidersHorizontalIcon} strokeWidth={1.5} />
-              {changed && <span aria-hidden="true" className="absolute -top-1 -right-1 size-2.5 rounded-full bg-primary" />}
+              <HugeiconsIcon icon={PreferenceHorizontalIcon} strokeWidth={1.5} />
+              {changed && <span aria-hidden="true" className="absolute -top-1 -right-1 z-1 size-2.5 rounded-full bg-primary" />}
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent>View options</TooltipContent>
       </Tooltip>
       <PopoverContent align="end" className="w-80 gap-3">
-        <div className="mb-1 flex items-center justify-between">
+        <div className="mb-1 flex min-h-7 items-center justify-between">
           <p className="font-heading text-sm font-semibold">View options</p>
-          <Button variant="ghost" size="sm" className="-mr-2 h-7 text-muted-foreground" disabled={!changed}
-            onClick={() => { setIsolated(null); onChange({ group: DEFAULT_PARAMS.group, sort: DEFAULT_PARAMS.sort, statuses: [...DEFAULT_STATUSES] }); }}>
-            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.5} />Reset
-          </Button>
+          {changed && (
+            <Button variant="ghost" size="sm" className="-mr-2 h-7 text-muted-foreground"
+              onClick={(event) => {
+                // The button is about to disappear; keep focus inside the panel.
+                event.currentTarget.closest<HTMLElement>("[data-slot=popover-content]")?.focus();
+                setIsolated(null);
+                onChange({ group: DEFAULT_PARAMS.group, sort: DEFAULT_PARAMS.sort, statuses: [...DEFAULT_STATUSES] });
+              }}>
+              <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.5} />Reset
+            </Button>
+          )}
         </div>
         <Segmented fill label="View" value={view} onChange={onView} options={[
           { value: "table", label: <><HugeiconsIcon icon={TableIcon} strokeWidth={1.5} className="mr-1.5 size-4" aria-hidden="true" />Table</> },
@@ -116,35 +123,30 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
               options={[{ value: "all", label: "All types" }, { value: "type", label: "Per type" }]} />
           )}
           {sections.map((section) => (
-            <fieldset key={section.id} className="flex flex-col gap-1.5">
-              <legend className={section.type ? "mb-1.5 flex items-center gap-1.5 pl-1 text-xs font-medium text-muted-foreground" : "sr-only"}>
-                {section.type && <HugeiconsIcon icon={TYPE_ICONS[section.type]} strokeWidth={1.5} className="size-3.5" aria-hidden="true" />}
-                {section.type ? TYPE_PLURALS[section.type] : "Statuses"}
-              </legend>
-              <div className="flex flex-wrap gap-1.5">
-                {section.toggles.map((item) => {
-                  const count = item.keys.filter((key) => params.statuses.includes(key)).length;
-                  const pressed = count === item.keys.length ? true : count === 0 ? false : "mixed";
-                  return (
-                    // Same toggles as the student courses view settings; "mixed" when only some types show it.
-                    <Button key={item.id} size="sm" variant={pressed === false ? "outline" : "secondary"} aria-pressed={pressed}
-                      className={cn("h-7 px-2 text-xs", pressed === false && "text-muted-foreground line-through", pressed === "mixed" && "border-dashed bg-transparent",
-                        isolated?.id === item.id && "bg-primary/10 hover:bg-primary/15")}
-                      onClick={(event) => {
-                        if (event.detail > 1) return;
-                        beforeClick.current = [...params.statuses];
-                        toggle(item);
-                      }}
-                      onDoubleClick={() => {
-                        setIsolated({ id: item.id, previous: beforeClick.current });
-                        setStatuses(item.keys);
-                      }}>
-                      {item.label}
-                    </Button>
-                  );
-                })}
-              </div>
-            </fieldset>
+            <ToggleBadgeGroup key={section.id} legend={section.type
+              ? <><HugeiconsIcon icon={TYPE_ICONS[section.type]} strokeWidth={1.5} className="size-3.5" aria-hidden="true" />{TYPE_PLURALS[section.type]}</>
+              : "Status"}>
+              {section.toggles.map((item) => {
+                const count = item.keys.filter((key) => params.statuses.includes(key)).length;
+                const pressed = count === item.keys.length ? true : count === 0 ? false : "mixed";
+                return (
+                  // "Mixed" when only some types show it.
+                  <ToggleBadge key={item.id} pressed={pressed === true} aria-pressed={pressed}
+                    className={pressed === "mixed" ? "border border-dashed border-input text-foreground" : undefined}
+                    onClick={(event) => {
+                      if (event.detail > 1) return;
+                      beforeClick.current = [...params.statuses];
+                      toggle(item);
+                    }}
+                    onDoubleClick={() => {
+                      setIsolated(beforeClick.current);
+                      setStatuses(item.keys);
+                    }}>
+                    {item.label}
+                  </ToggleBadge>
+                );
+              })}
+            </ToggleBadgeGroup>
           ))}
         </div>
       </PopoverContent>

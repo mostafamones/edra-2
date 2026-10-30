@@ -15,7 +15,7 @@ type Props = {
   onChange: (status: AttendanceStatus) => void;
 };
 
-/** Selected-state colors per status. Every segment stays `outline`; selection never changes the border so shared edges stay intact. */
+/** Selected-state colors per status. Every segment stays `outline`; selection only changes its colors. */
 const SELECTED: Record<AttendanceStatus, string> = {
   present: "bg-primary/20 text-primary hover:bg-primary/25 hover:text-primary dark:bg-primary/30 dark:text-emerald-300 dark:hover:bg-primary/35 dark:hover:text-emerald-300",
   late: "bg-amber-500/20 text-amber-700 hover:bg-amber-500/25 hover:text-amber-700 dark:bg-amber-500/25 dark:text-amber-300 dark:hover:bg-amber-500/30 dark:hover:text-amber-300",

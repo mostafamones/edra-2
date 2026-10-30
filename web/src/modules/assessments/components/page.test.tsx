@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 const mocks = vi.hoisted(() => ({
   query: "", replace: vi.fn(), push: vi.fn(), rpc: vi.fn(), role: "admin", details: vi.fn(), saveDetails: vi.fn(), examStudents: vi.fn(),
   catalog: [] as { id: string; name: string; color: string }[], setLabel: vi.fn(), createLabel: vi.fn(), updateLabel: vi.fn(), deleteLabel: vi.fn(),
+  setExamAvailability: vi.fn(), archiveExam: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/science/assessments",
@@ -37,7 +38,7 @@ vi.mock("@/modules/assignments", async (original) => ({
 }));
 vi.mock("@/modules/exams", async (original) => ({
   ...await original<typeof import("@/modules/exams")>(),
-  loadExamStudents: mocks.examStudents,
+  loadExamStudents: mocks.examStudents, setExamAvailability: mocks.setExamAvailability, archiveExistingExam: mocks.archiveExam,
 }));
 vi.mock("@/modules/groups", async (original) => ({
   ...await original<typeof import("@/modules/groups")>(),
@@ -91,9 +92,10 @@ async function pickNovemberDate(sheet: HTMLElement, label: string, time: string)
   fireEvent.change(within(picker).getByRole("combobox", { name: "Choose the Year" }), { target: { value: "2026" } });
   fireEvent.change(within(picker).getByRole("combobox", { name: "Choose the Month" }), { target: { value: "10" } });
   fireEvent.click(within(picker).getByRole("button", { name: /November 1st, 2026/ }));
-  fireEvent.change(within(picker).getByLabelText(`${label} time`), { target: { value: time } });
-  fireEvent.click(within(picker).getByRole("button", { name: "Done" }));
   await waitFor(() => expect(document.activeElement).toBe(trigger));
+  const field = within(sheet).getByRole("textbox", { name: `${label} time` });
+  fireEvent.change(field, { target: { value: time } });
+  fireEvent.blur(field);
 }
 
 beforeEach(() => {
@@ -146,6 +148,7 @@ describe("staff Assessments page", () => {
     const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
     const name = await within(sheet).findByRole("textbox", { name: "Name" });
     expect((name as HTMLInputElement).value).toBe("Term exam");
+    await waitFor(() => expect(mocks.examStudents).toHaveBeenCalled());
     expect(within(sheet).getByRole("textbox", { name: "Part 1" }).closest('[data-slot="field"]')?.getAttribute("data-orientation")).toBe("horizontal");
     const part = within(sheet).getByRole("textbox", { name: "Part 1" }).closest('[data-slot="field"]')!;
     expect(within(part as HTMLElement).getByText("Question Sheet")).toBeTruthy();
@@ -155,7 +158,7 @@ describe("staff Assessments page", () => {
     expect(within(sheet).getByRole("spinbutton", { name: "Timer" })).toBeTruthy();
     expect(within(sheet).getByLabelText("Opens")).toBeTruthy();
     expect(within(sheet).queryByLabelText(/instructions|question|correct answer/i)).toBeNull();
-    expect(within(sheet).getByRole("link", { name: "Open editor" }).getAttribute("href")).toBe("http://app.lvh.me:3000/science/exams/e1/edit");
+    expect(within(sheet).getByRole("link", { name: "Edit questions" }).getAttribute("href")).toBe("http://app.lvh.me:3000/science/exams/e1/edit");
     fireEvent.change(name, { target: { value: "Renamed exam" } });
     fireEvent.change(within(sheet).getByRole("textbox", { name: "Part 1" }), { target: { value: "New part name" } });
     fireEvent.change(within(sheet).getByRole("spinbutton", { name: "Timer" }), { target: { value: "45" } });
@@ -172,7 +175,7 @@ describe("staff Assessments page", () => {
     const trigger = screen.getByRole("button", { name: "Actions for Term exam" });
     fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: "mouse" });
     const menu = await screen.findByRole("menu");
-    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Edit", "Summary", "Open editor"]);
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Edit", "Summary", "Mark", "Labels", "Open editor", "Close", "Archive"]);
     expect(within(menu).getByRole("menuitem", { name: "Open editor" }).getAttribute("href")).toBe("http://app.lvh.me:3000/science/exams/e1/edit");
     fireEvent.click(within(menu).getByRole("menuitem", { name: "Summary" }));
     const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
@@ -181,6 +184,78 @@ describe("staff Assessments page", () => {
     expect(within(sheet).getByRole("columnheader", { name: "Student" })).toBeTruthy();
     fireEvent.mouseDown(within(sheet).getByRole("tab", { name: "Edit" }), { button: 0, ctrlKey: false });
     expect(((await within(sheet).findByRole("textbox", { name: "Name" })) as HTMLInputElement).value).toBe("Term exam");
+  });
+
+  it("opens the Mark tab from the menu", async () => {
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Mark" }));
+    const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
+    expect((await within(sheet).findByRole("tab", { name: "Mark" })).getAttribute("aria-selected")).toBe("true");
+    expect(await within(sheet).findByText(/Pick a student|Couldn’t load the students/)).toBeTruthy();
+  });
+
+  it("hides the Mark tab until the assessment is ready, landing a shortcut on Summary", async () => {
+    mocks.details.mockResolvedValue({ type: "assignment", value: assignmentFixture({ ready: false }) });
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Unit homework" })).closest("tr")!, { button: 2 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Mark" }));
+    const sheet = await screen.findByRole("dialog", { name: "Edit assignment" });
+    await waitFor(() => expect(within(sheet).getByRole("tab", { name: "Summary" }).getAttribute("aria-selected")).toBe("true"));
+    expect(within(sheet).queryByRole("tab", { name: "Mark" })).toBeNull();
+  });
+
+  it("offers no Mark shortcut on a quiz still being prepared", async () => {
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Weekly quiz" })).closest("tr")!, { button: 2 });
+    await screen.findByRole("menuitem", { name: "Summary" });
+    expect(screen.queryByRole("menuitem", { name: "Mark" })).toBeNull();
+  });
+
+  it("closes an open exam early by moving its close just past server time, keeping its opening", async () => {
+    mocks.details.mockResolvedValue({ type: "exam", value: examFixture({ phase: "open", version: 7, opensAt: "2026-10-01T08:00:00Z", serverNow: "2026-10-01T08:30:00.000Z" }) });
+    mocks.setExamAvailability.mockResolvedValue({ ok: true });
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Close" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Close this exam?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(mocks.setExamAvailability).toHaveBeenCalledWith({ academyId: "academy-id", examId: expect.any(String), expectedVersion: 7, opensAt: "2026-10-01T08:00:00Z", closesAt: "2026-10-01T08:30:30.000Z" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  });
+
+  it("keeps the dialog and explains when students have already started", async () => {
+    mocks.details.mockResolvedValue({ type: "exam", value: examFixture({ phase: "open" }) });
+    mocks.setExamAvailability.mockResolvedValue({ ok: false, code: "window_locked", message: "locked" });
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Close" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Close this exam?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(mocks.setExamAvailability).toHaveBeenCalled());
+    expect(screen.getByRole("alertdialog", { name: "Close this exam?" })).toBeTruthy();
+  });
+
+  it("hides Close and Archive from instructors", async () => {
+    mocks.role = "instructor";
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Edit", "Summary", "Mark", "Labels", "Open editor"]);
+  });
+
+  it.each([[1, false, false], [2, false, true], [3, true, false]])("lays out %i Summary parts", async (count, scrolls, twoColumns) => {
+    const [part] = examFixture().parts;
+    mocks.details.mockResolvedValue({ type: "exam", value: examFixture({ parts: Array.from({ length: count }, (_, index) => ({ ...part, id: `part-${index}` })) }) });
+    show();
+    fireEvent.contextMenu((await screen.findByRole("link", { name: "Term exam" })).closest("tr")!, { button: 2 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Summary" }));
+    const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
+    const list = await within(sheet).findByRole("list", { name: "Parts" });
+    expect(within(list.parentElement!).getByRole("heading", { name: "Parts" })).toBeTruthy();
+    expect(within(list).getAllByRole("listitem")).toHaveLength(count);
+    expect(list.classList.contains("overflow-x-auto")).toBe(scrolls);
+    expect(list.classList.contains("sm:grid-cols-2")).toBe(twoColumns);
   });
 
   it("keeps the sheet usable when scores fail and allows retrying Summary", async () => {
@@ -290,7 +365,7 @@ describe("staff Assessments page", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Discard unsaved changes" }));
     await waitFor(() => expect((name as HTMLInputElement).value).toBe("Latest title"));
     fireEvent.change(name, { target: { value: "Another draft" } });
-    fireEvent.click(within(sheet).getByRole("link", { name: "Open editor" }));
+    fireEvent.click(within(sheet).getByRole("link", { name: "Edit questions" }));
     expect(mocks.push).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Discard unsaved changes" }));
     expect(mocks.push).toHaveBeenCalledWith("http://app.lvh.me:3000/science/assignments/a1/edit");
@@ -327,7 +402,7 @@ describe("staff Assessments page", () => {
     show();
     const table = await screen.findByRole("table");
     expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent))
-      .toEqual(["Title", "Labels", "Type", "Parts", "Status", "Date", "Marked", "Actions"]);
+      .toEqual(["Details", "Type", "Parts", "Date", "Status", "Marked", "Actions"]);
     const tableLinks = links(table);
     expect(tableLinks).toEqual([
       ["Term exam", "http://app.lvh.me:3000/science/exams/e1"],
@@ -357,7 +432,7 @@ describe("staff Assessments page", () => {
     expect(exam.textContent).toContain("Open");
     expect(exam.textContent).toMatch(/Opens .*Closes /);
     // A short label, with the full dates for hover and screen readers.
-    const date = within(exam).getAllByRole("cell")[5];
+    const date = within(exam).getAllByRole("cell")[3];
     expect(date.querySelector("[aria-hidden=true]")?.textContent).toBe("Closed 1 Oct noon");
     expect(date.textContent).toContain("Opens Thu, 1 Oct 2026 at 11:00 am, Closes Thu, 1 Oct 2026 at 12:00 pm");
     expect(assignment.textContent).toContain("Active");
@@ -373,8 +448,8 @@ describe("staff Assessments page", () => {
     const title = within(exam).getAllByRole("cell")[0];
     expect(title.textContent).toBe("Term examProgram-wide:Audience level");
     expect(within(quiz).getAllByRole("cell")[0].textContent).toBe("Weekly quizNo audience yet");
-    expect(within(exam).getAllByRole("cell")[2].textContent).toBe("Exam");
-    expect(within(exam).getAllByRole("cell")[6].textContent).toBe("4 / 12");
+    expect(within(exam).getAllByRole("cell")[1].textContent).toBe("Exam");
+    expect(within(exam).getAllByRole("cell")[5].textContent).toBe("4 / 12");
     expect(within(table).getAllByRole("row").slice(1).every((row) => row.classList.contains("h-16"))).toBe(true);
   });
 
@@ -401,6 +476,17 @@ describe("staff Assessments page", () => {
     expect(mocks.replace).toHaveBeenLastCalledWith("/science/assessments?type=quiz&q=unit&audience=program", { scroll: false });
   });
 
+  it("spells out only the selected type, leaving the others as named icons", async () => {
+    mocks.query = "type=quiz";
+    mocks.rpc.mockResolvedValue({ data: { total: 3, items: ITEMS, server_now: "now" }, error: null });
+    show();
+    await screen.findByRole("table");
+    const types = within(screen.getByRole("banner"));
+    expect(types.getByRole("radio", { name: "All" }).textContent).toBe("All");
+    expect(types.getByRole("radio", { name: "Quizzes" }).querySelector(".grid-cols-\\[1fr\\]")).toBeTruthy();
+    expect(types.getByRole("radio", { name: "Exams" }).querySelector(".grid-cols-\\[0fr\\]")).toBeTruthy();
+  });
+
   it("replaces the whole table with an empty state and keeps the toolbar", async () => {
     mocks.rpc.mockResolvedValue({ data: { total: 0, items: [], server_now: "now" }, error: null });
     show();
@@ -408,7 +494,7 @@ describe("staff Assessments page", () => {
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.queryByRole("columnheader")).toBeNull();
     expect(screen.getByRole("searchbox", { name: "Search assessments" })).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "Create assessment" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Create" })).toHaveLength(2);
   });
 
   it("offers Clear filters when filters match nothing", async () => {
@@ -438,7 +524,7 @@ describe("staff Assessments page", () => {
   it("creates each type through its existing create page", async () => {
     show();
     await screen.findByRole("table");
-    const trigger = screen.getByRole("button", { name: "Create assessment" });
+    const trigger = screen.getByRole("button", { name: "Create" });
     fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: "mouse" });
     const menu = await screen.findByRole("menu");
     expect(within(menu).getAllByRole("menuitem").map((item) => [item.textContent, item.getAttribute("href")])).toEqual([
@@ -534,7 +620,7 @@ describe("staff Assessments page", () => {
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: /^View options/ }));
     const archived = await screen.findByRole("button", { name: "Archived", pressed: false });
-    expect(archived.className).toContain("line-through");
+    expect(archived.getAttribute("aria-pressed")).toBe("false");
     const open = screen.getByRole("button", { name: "Open", pressed: true });
     fireEvent.click(open, { detail: 1 });
     fireEvent.click(open, { detail: 2 });
@@ -571,6 +657,26 @@ describe("staff Assessments page", () => {
     expect(mocks.replace).toHaveBeenLastCalledWith("/science/assessments", { scroll: false });
   });
 
+  it("shows Reset only once the filters or view options have changed", async () => {
+    show();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    expect(await screen.findByText("Audience type")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Reset" })).toBeNull();
+    cleanup();
+    show();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: /^View options/ }));
+    expect(await screen.findByText("Group by")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Reset" })).toBeNull();
+    cleanup();
+    mocks.query = "sort=title";
+    show();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: /^View options/ }));
+    expect(await screen.findByRole("button", { name: "Reset" })).toBeTruthy();
+  });
+
   it("remembers the list state for workspace back links", async () => {
     mocks.query = "type=quiz&page=2";
     show();
@@ -592,9 +698,10 @@ describe("assessment labels", () => {
     show();
     const link = await screen.findByRole("link", { name: "Unit homework" });
     const item = link.closest(view === "table" ? "tr" : "li") as HTMLElement;
+    expect(within(item).getByRole("button", { name: "Actions for Unit homework" })).toBeTruthy();
     const list = within(item).getByRole("list", { name: "Labels" });
     expect(within(list).getAllByRole("listitem").map((entry) => entry.textContent)).toEqual(["Revision", "Week 3"]);
-    expect(within(list).getByText("Revision").closest('[data-slot="badge"]')?.className).toMatch(/text-teal-800 .*dark:text-teal-200/);
+    expect(within(list).getByText("Revision").closest('[data-slot="badge"]')?.className).toMatch(/text-teal-900 .*dark:text-teal-100/);
     const exam = (await screen.findByRole("link", { name: "Term exam" })).closest(view === "table" ? "tr" : "li") as HTMLElement;
     expect(within(exam).queryByRole("list", { name: "Labels" })).toBeNull();
   });
@@ -646,6 +753,22 @@ describe("assessment labels", () => {
     await waitFor(() => expect(mocks.setLabel).toHaveBeenLastCalledWith(expect.objectContaining({ type: "quiz", assessmentId: "q1", labelId: WEEK, applied: true })));
   });
 
+  it("offers the same labels from the Actions button, returning focus there after managing them", async () => {
+    show();
+    await screen.findByRole("table");
+    const trigger = screen.getByRole("button", { name: "Actions for Weekly quiz" });
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: "mouse" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Labels" }));
+    fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Week 3" }));
+    await waitFor(() => expect(mocks.setLabel).toHaveBeenLastCalledWith(expect.objectContaining({ type: "quiz", assessmentId: "q1", labelId: WEEK, applied: true })));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Manage labels" }));
+    const editor = await screen.findByRole("dialog", { name: "Labels" });
+    await waitFor(() => expect(document.activeElement).toBe(within(editor).getByRole("textbox", { name: "New label name" })));
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Labels" })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
   it("opens the editor from a closing context menu beside the row and returns focus to it", async () => {
     show();
     const row = await openLabels("Term exam");
@@ -690,24 +813,55 @@ describe("assessment labels", () => {
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: "Manage labels" }));
     const editor = await screen.findByRole("dialog", { name: "Labels" });
-    fireEvent.change(await within(editor).findByRole("textbox", { name: "New label name" }), { target: { value: " Unit 4 " } });
-    fireEvent.click(within(editor).getByRole("button", { name: "Add" }));
+    const field = await within(editor).findByRole("textbox", { name: "New label name" });
+    fireEvent.change(field, { target: { value: " Unit 4 " } });
+    fireEvent.submit(field);
     await waitFor(() => expect(mocks.createLabel).toHaveBeenCalledWith(expect.objectContaining({ academyId: "academy-id", name: "Unit 4", color: "gray" })));
     const name = within(editor).getByRole("textbox", { name: "Name of Week 3" });
     fireEvent.change(name, { target: { value: "Week 4" } });
     fireEvent.keyDown(name, { key: "Enter" });
     await waitFor(() => expect(mocks.updateLabel).toHaveBeenCalledWith({ academyId: "academy-id", labelId: WEEK, name: "Week 4", color: "red" }));
     mocks.createLabel.mockResolvedValueOnce({ ok: false, code: "duplicate_name", message: "A label with this name already exists." });
-    fireEvent.change(within(editor).getByRole("textbox", { name: "New label name" }), { target: { value: "revision" } });
-    fireEvent.click(within(editor).getByRole("button", { name: "Add" }));
+    fireEvent.change(field, { target: { value: "revision" } });
+    fireEvent.submit(field);
     expect((await within(editor).findByRole("alert")).textContent).toBe("A label with this name already exists.");
+  });
+
+  it("shows a new label before the server answers and gives the name back if refused", async () => {
+    let answer!: (value: unknown) => void;
+    mocks.createLabel.mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }));
+    show();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: "Manage labels" }));
+    const editor = await screen.findByRole("dialog", { name: "Labels" });
+    await within(editor).findByRole("textbox", { name: "Name of Week 3" });
+    const field = within(editor).getByRole<HTMLInputElement>("textbox", { name: "New label name" });
+    fireEvent.change(field, { target: { value: "Unit 5" } });
+    fireEvent.submit(field);
+    await within(editor).findByRole("textbox", { name: "Name of Unit 5" });
+    expect(field.value).toBe("");
+    answer({ ok: false, code: "unavailable", message: "Try again." });
+    await waitFor(() => expect(within(editor).queryByRole("textbox", { name: "Name of Unit 5" })).toBeNull());
+    expect(field.value).toBe("Unit 5");
+    expect(within(editor).getByRole("alert").textContent).toBe("Try again.");
+  });
+
+  it("checks a label on an assessment before the server answers and undoes it if refused", async () => {
+    let answer!: (value: unknown) => void;
+    mocks.setLabel.mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }));
+    show();
+    await openLabels("Weekly quiz");
+    fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Week 3" }));
+    await waitFor(() => expect(screen.getByRole("menuitemcheckbox", { name: "Week 3" }).getAttribute("aria-checked")).toBe("true"));
+    answer({ ok: false, code: "forbidden", message: "Not allowed." });
+    await waitFor(() => expect(screen.getByRole("menuitemcheckbox", { name: "Week 3" }).getAttribute("aria-checked")).toBe("false"));
   });
 
   it("filters by any selected label or by Unlabeled, never both, and clears with the other filters", async () => {
     show();
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: "Filters" }));
-    fireEvent.click(await screen.findByRole("checkbox", { name: "Week 3" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Week 3", pressed: false }));
     expect(mocks.replace).toHaveBeenLastCalledWith(`/science/assessments?labels=${WEEK}`, { scroll: false });
     cleanup();
     mocks.query = `labels=${WEEK},${REVISION}&page=3`;
@@ -715,7 +869,8 @@ describe("assessment labels", () => {
     await screen.findByRole("table");
     expect(listCalls().at(-1)![1]).toMatchObject({ p_label_ids: [REVISION, WEEK], p_unlabeled: false, p_offset: 48 });
     fireEvent.click(screen.getByRole("button", { name: "Filters, 1 applied" }));
-    fireEvent.click(await screen.findByRole("checkbox", { name: "Unlabeled" }));
+    expect(await screen.findByRole("button", { name: "Revision", pressed: true })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Unlabeled", pressed: false }));
     expect(mocks.replace).toHaveBeenLastCalledWith("/science/assessments?labels=none", { scroll: false });
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
     expect(mocks.replace).toHaveBeenLastCalledWith("/science/assessments", { scroll: false });

@@ -14,7 +14,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarTrigger } from "@/components/shared/sidebar-trigger";
 import { useBreadcrumbOverride, useBreadcrumbParent } from "@/components/shared/breadcrumb-title";
 import { HEADER_ACTIONS_ID } from "@/components/shared/header-actions";
 

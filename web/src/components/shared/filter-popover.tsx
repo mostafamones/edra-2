@@ -47,7 +47,7 @@ export function FilterPopover({ fields, sections = [], children, iconOnly = fals
                   <Button variant="outline" size="icon" className="relative" aria-label={active > 0 ? `Filters, ${active} applied` : "Filters"}>
                     <HugeiconsIcon icon={FilterIcon} />
                     {active > 0 && (
-                      <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                      <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 z-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
                         {active}
                       </span>
                     )}
@@ -71,15 +71,19 @@ export function FilterPopover({ fields, sections = [], children, iconOnly = fals
         )}
       </PopoverAnchor>
       <PopoverContent align="end" className="w-72 gap-3">
-        <div className="flex items-center justify-between mb-2">
+        <div className="mb-2 flex min-h-7 items-center justify-between">
           <p className="font-heading text-sm font-semibold">Filters</p>
-          <Button variant="ghost" size="sm" className="-mr-2 h-7 text-muted-foreground" disabled={active === 0}
-            onClick={() => {
-              for (const field of fields) field.onChange(field.defaultValue);
-              for (const section of sections) section.onReset();
-            }}>
-            <HugeiconsIcon icon={Cancel01Icon} />Reset
-          </Button>
+          {active > 0 && (
+            <Button variant="ghost" size="sm" className="-mr-2 h-7 text-muted-foreground"
+              onClick={(event) => {
+                // The button is about to disappear; keep focus inside the panel.
+                event.currentTarget.closest<HTMLElement>("[data-slot=popover-content]")?.focus();
+                for (const field of fields) field.onChange(field.defaultValue);
+                for (const section of sections) section.onReset();
+              }}>
+              <HugeiconsIcon icon={Cancel01Icon} />Reset
+            </Button>
+          )}
         </div>
         <FieldGroup className="gap-2">
           {fields.filter((field) => !field.toggleLabel).map((field) => (

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, DatabaseImportIcon, LeftToRightListBulletIcon, Link01Icon, UserAdd01Icon, UserCheck01Icon } from "@hugeicons/core-free-icons";
+import { DatabaseImportIcon, LeftToRightListBulletIcon, Link01Icon, UserAdd01Icon, UserCheck01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import Link from "next/link";
 
@@ -22,14 +22,14 @@ export function AddStudentMenu({ academyId, canImport }: { academyId: string; ca
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button><HugeiconsIcon icon={UserAdd01Icon} />Add student<HugeiconsIcon icon={ArrowDown01Icon} /></Button>
+          <Button><HugeiconsIcon icon={UserAdd01Icon} />Add</Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
           <DropdownMenuItem asChild>
-            <Link href={href("/app/students/new")}><HugeiconsIcon icon={UserAdd01Icon} />Add a student</Link>
+            <Link href={href("/app/students/new")}><HugeiconsIcon icon={UserAdd01Icon} />Create a student</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href={href("/app/manage/academy/enrollment")}><HugeiconsIcon icon={UserCheck01Icon} />Invite student<HugeiconsIcon icon={Link01Icon} className="ml-auto text-muted-foreground" /></Link>
+            <Link href={href("/app/manage/academy/enrollment")}><HugeiconsIcon icon={UserCheck01Icon} />Invite students<HugeiconsIcon icon={Link01Icon} className="ml-auto text-muted-foreground" /></Link>
           </DropdownMenuItem>
           {canImport && (
             <>

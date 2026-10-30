@@ -22,7 +22,7 @@ afterEach(cleanup);
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>((yes) => { resolve = yes; }); return { promise, resolve }; }
 
 function form(onSave: (payload: SavePayload) => Promise<SaveOutcome>, onDone = vi.fn(), base = baseline()) {
-  return <TooltipProvider><MarksForm parts={parts} baseline={base} feedback="" onSave={onSave} onDone={onDone} /></TooltipProvider>;
+  return <TooltipProvider><MarksForm parts={parts} baseline={base} onSave={onSave} onDone={onDone} /></TooltipProvider>;
 }
 
 describe("marking draft lifecycle", () => {
@@ -83,7 +83,7 @@ describe("marking draft lifecycle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Stay" }));
     expect((screen.getByLabelText("Question 1 mark") as HTMLInputElement).value).toBe("2");
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Discard unsaved entries" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Discard" }));
     expect(close).toHaveBeenCalledOnce();
   });
 });

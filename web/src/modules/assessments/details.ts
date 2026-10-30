@@ -1,8 +1,8 @@
 import { academyDateTime, academyInstant } from "@/lib/academy-time";
 import type { AcademyRole } from "@/modules/academies/roles";
-import { assignmentPermissions, loadAssignment, saveAssignment, type Assignment, type AssignmentDraft } from "@/modules/assignments";
-import { examPermissions, loadExam, saveExam, type Exam, type ExamDraft } from "@/modules/exams";
-import { quizPermissions, loadQuiz, saveQuiz, type Quiz, type QuizDraft } from "@/modules/quizzes";
+import { assignmentPermissions, assignmentsRootKey, loadAssignment, saveAssignment, type Assignment, type AssignmentDraft } from "@/modules/assignments";
+import { examPermissions, examsRootKey, loadExam, saveExam, type Exam, type ExamDraft } from "@/modules/exams";
+import { quizPermissions, quizzesRootKey, loadQuiz, saveQuiz, type Quiz, type QuizDraft } from "@/modules/quizzes";
 import type { AssessmentType } from "./types";
 
 export type AssessmentDetails =
@@ -20,6 +20,10 @@ export type QuickValues = {
   dueAt: string;
   timeLimit: string;
 };
+
+/** The owning module's query root, refreshed after any change to its assessment. */
+export const typeRootKey = (academyId: string, type: AssessmentType) =>
+  type === "assignment" ? assignmentsRootKey(academyId) : type === "quiz" ? quizzesRootKey(academyId) : examsRootKey(academyId);
 
 export function localDate(iso: string | null): string {
   if (!iso) return "";
@@ -47,10 +51,10 @@ export function quickValues(record: AssessmentDetails): QuickValues {
 export function detailsPermissions(role: AcademyRole, record: AssessmentDetails) {
   if (record.type === "assignment") {
     const permissions = assignmentPermissions(role, record.value);
-    return { edit: permissions.edit, audience: permissions.editStructure, parts: permissions.edit, timer: false, availability: false };
+    return { edit: permissions.edit, audience: permissions.editStructure, parts: permissions.edit, timer: false, availability: false, mark: permissions.mark };
   }
   const permissions = record.type === "quiz" ? quizPermissions(role, record.value) : examPermissions(role, record.value);
-  return { edit: permissions.edit, audience: permissions.editTarget, parts: permissions.editStructure, timer: permissions.editTarget, availability: permissions.availability };
+  return { edit: permissions.edit, audience: permissions.editTarget, parts: permissions.editStructure, timer: permissions.editTarget, availability: permissions.availability, mark: permissions.mark && record.value.ready };
 }
 
 export function quickErrors(record: AssessmentDetails, values: QuickValues): Record<string, string> {

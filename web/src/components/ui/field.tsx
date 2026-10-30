@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
+import { SectionHeader } from "@/components/shared/section-header"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 
@@ -23,6 +24,7 @@ function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
 function FieldLegend({
   className,
   variant = "legend",
+  children,
   ...props
 }: React.ComponentProps<"legend"> & { variant?: "legend" | "label" }) {
   return (
@@ -30,11 +32,13 @@ function FieldLegend({
       data-slot="field-legend"
       data-variant={variant}
       className={cn(
-        "mb-3 font-medium data-[variant=label]:text-sm data-[variant=legend]:text-base",
+        "mb-3 text-sm font-medium",
         className
       )}
       {...props}
-    />
+    >
+      {variant === "legend" ? <SectionHeader unpadded size="base" title={children} /> : children}
+    </legend>
   )
 }
 

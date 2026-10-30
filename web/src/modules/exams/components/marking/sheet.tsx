@@ -13,12 +13,13 @@ import { STATUS_LABELS } from "../shared/labels";
 import { ExamMarks } from "./form";
 
 /** The marking flow of the exam, on the shared sheet. */
-export function ExamMarking({ academy, exam }: { academy: AcademyEntry; exam: Exam }) {
+export function ExamMarking({ academy, exam, embedded }: { academy: AcademyEntry; exam: Exam; embedded?: (action: () => void) => void }) {
   const query = useQuery({ queryKey: examStudentsQueryKey(academy.id, exam.id), queryFn: () => loadExamStudents(academy.id, exam.id), refetchInterval: 30_000 });
   const enterWork = examPermissions(academy.role, exam).enterWork;
   const rows = (query.data ?? []).filter((row) => row.submission !== null || (enterWork && row.eligible));
   return (
     <MarkingSheet
+      embedded={embedded}
       unavailable={query.isPending || (query.isSuccess && rows.length === 0)}
       roster={{ isPending: query.isPending, isError: query.isError, rows }}
       summary={(row) => (row.result?.complete ? `${formatScore(row.result.total)} / ${formatScore(row.result.maxScore)}` : STATUS_LABELS[studentStatus(row)])}
