@@ -6,6 +6,7 @@ import { cn } from "cn";
 import { Cancel01Icon, GridViewIcon, SlidersHorizontalIcon, TableIcon } from "@hugeicons/core-free-icons";
 
 import { Segmented } from "@/components/shared/segmented";
+import { ToggleBadge } from "@/components/shared/toggle-badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -127,9 +128,9 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
                   const pressed = count === item.keys.length ? true : count === 0 ? false : "mixed";
                   return (
                     // Same toggles as the student courses view settings; "mixed" when only some types show it.
-                    <Button key={item.id} size="sm" variant={pressed === false ? "outline" : "secondary"} aria-pressed={pressed}
-                      className={cn("h-7 px-2 text-xs", pressed === false && "text-muted-foreground line-through", pressed === "mixed" && "border-dashed bg-transparent",
-                        isolated?.id === item.id && "bg-primary/10 hover:bg-primary/15")}
+                    <ToggleBadge key={item.id} pressed={pressed === true} aria-pressed={pressed}
+                      className={cn(pressed === "mixed" && "border border-dashed border-input text-foreground",
+                        isolated?.id === item.id && "aria-pressed:bg-primary/10 aria-pressed:hover:bg-primary/15")}
                       onClick={(event) => {
                         if (event.detail > 1) return;
                         beforeClick.current = [...params.statuses];
@@ -140,7 +141,7 @@ export function ViewOptions({ params, onChange, view, onView }: Props) {
                         setStatuses(item.keys);
                       }}>
                       {item.label}
-                    </Button>
+                    </ToggleBadge>
                   );
                 })}
               </div>
