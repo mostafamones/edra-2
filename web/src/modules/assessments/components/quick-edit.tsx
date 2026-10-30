@@ -92,7 +92,7 @@ export function QuickEditSheet({ academy, row, tab: initialTab, opener, onClose 
                   {!archived && <QuickEditForm academy={academy} initial={details.data} onStatus={setStatus} onCancel={() => leave()} onSaved={onClose} fullEditor={fullEditor} onOpenEditor={openFullEditor} />}
                 </TabsContent>
                 <TabsContent value="summary" forceMount className="min-h-0 overflow-y-auto duration-200 ease-out data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-right-8 data-[state=inactive]:hidden">
-                  <AssessmentSummary academyId={academy.id} row={row} details={details.data} active={tab === "summary"} onViewStudents={() => leave(row.href)} />
+                  <AssessmentSummary academyId={academy.id} row={row} details={details.data} onViewStudents={() => leave(row.href)} />
                 </TabsContent>
               </>
             )}

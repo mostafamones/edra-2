@@ -146,6 +146,7 @@ describe("staff Assessments page", () => {
     const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
     const name = await within(sheet).findByRole("textbox", { name: "Name" });
     expect((name as HTMLInputElement).value).toBe("Term exam");
+    await waitFor(() => expect(mocks.examStudents).toHaveBeenCalled());
     expect(within(sheet).getByRole("textbox", { name: "Part 1" }).closest('[data-slot="field"]')?.getAttribute("data-orientation")).toBe("horizontal");
     const part = within(sheet).getByRole("textbox", { name: "Part 1" }).closest('[data-slot="field"]')!;
     expect(within(part as HTMLElement).getByText("Question Sheet")).toBeTruthy();

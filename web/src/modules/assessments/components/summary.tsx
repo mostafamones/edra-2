@@ -45,12 +45,12 @@ function partRows({ type, value }: AssessmentDetails) {
   }));
 }
 
-type Props = { academyId: string; row: AssessmentRow; details: AssessmentDetails; active: boolean; onViewStudents: () => void };
+type Props = { academyId: string; row: AssessmentRow; details: AssessmentDetails; onViewStudents: () => void };
 
 /** One layout for every type: the score spread, the parts as cards, then the top students. */
-export function AssessmentSummary({ academyId, row: { item }, details, active, onViewStudents }: Props) {
-  // Students load only once the tab is opened.
-  const query = useQuery({ queryKey: [...assessmentsRootKey(academyId), "summary", item.type, item.id], queryFn: () => loadScored(academyId, details), enabled: active });
+export function AssessmentSummary({ academyId, row: { item }, details, onViewStudents }: Props) {
+  // Mounted hidden behind Edit, so students load in the background and the tab opens ready.
+  const query = useQuery({ queryKey: [...assessmentsRootKey(academyId), "summary", item.type, item.id], queryFn: () => loadScored(academyId, details) });
   if (query.isError) return (
     <div role="alert" className="space-y-3 px-6 py-4">
       <p>Couldn’t load assessment scores.</p>
