@@ -603,6 +603,7 @@ describe("assessment labels", () => {
     show();
     const link = await screen.findByRole("link", { name: "Unit homework" });
     const item = link.closest(view === "table" ? "tr" : "li") as HTMLElement;
+    expect(within(item).getByRole("button", { name: "Actions for Unit homework" })).toBeTruthy();
     const list = within(item).getByRole("list", { name: "Labels" });
     expect(within(list).getAllByRole("listitem").map((entry) => entry.textContent)).toEqual(["Revision", "Week 3"]);
     expect(within(list).getByText("Revision").closest('[data-slot="badge"]')?.className).toMatch(/text-teal-900 .*dark:text-teal-100/);

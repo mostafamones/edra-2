@@ -10,7 +10,7 @@ import { AssessmentDate, AssessmentStatus, AudienceLine, MarkedCount, PartsSumma
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { GroupToggle, type RowGroup } from "./groups";
 import { LabelBadges } from "@/modules/labels";
-import { AssessmentMenu, type RowActions } from "./menu";
+import { AssessmentActions, AssessmentMenu, type RowActions } from "./menu";
 
 /** Card view of the same rows, in the same order, as the table. Each card opens its workspace. */
 type Props = { groups: RowGroup[]; collapsed: ReadonlySet<string>; onToggle: (key: string) => void; actions: RowActions };
@@ -57,10 +57,14 @@ function Cards({ rows, actions }: { rows: RowGroup["rows"]; actions: RowActions 
                   <Link href={href} className="block truncate font-medium text-foreground outline-none after:absolute after:inset-0 after:rounded-lg">{item.title}</Link>
                   <AudienceLine audience={item.audience} name={audience} />
                 </div>
-                <AssessmentStatus item={item} />
+                {/* Above the stretched link so it can be clicked. */}
+                <div className="relative z-10 -mt-1 -mr-1"><AssessmentActions row={row} actions={actions} /></div>
               </div>
-              {/* Reserved even when empty, so adding the first label doesn't resize the row. */}
-              <div className="mb-3 h-5 px-4"><LabelBadges labels={item.labels} className="flex-nowrap" /></div>
+              {/* Status keeps this line present, so adding the first label doesn't resize the row. */}
+              <div className="mb-3 flex items-start gap-2 px-4">
+                <div className="shrink-0"><AssessmentStatus item={item} /></div>
+                <LabelBadges labels={item.labels} className="flex-nowrap" />
+              </div>
               <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border/70 px-4 py-2.5 text-xs text-muted-foreground">
                 <PartsSummary item={item} />
                 <span><MarkedCount item={item} /><span className="sr-only"> marked</span></span>
