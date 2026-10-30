@@ -5,7 +5,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatScore } from "@/lib/score";
 import { itemKey, TYPE_LABELS } from "../types";
 import { AssessmentDate, AssessmentStatus, AudienceLine, MarkedCount, PartsSummary, TYPE_ICONS } from "./facts";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -60,14 +59,12 @@ function Cards({ rows, actions }: { rows: RowGroup["rows"]; actions: RowActions 
                 </div>
                 <AssessmentStatus item={item} />
               </div>
-              <LabelBadges labels={item.labels} className="px-4 pb-3" />
+              {/* Reserved even when empty, so adding the first label doesn't resize the row. */}
+              <div className="mb-3 h-5 px-4"><LabelBadges labels={item.labels} className="flex-nowrap" /></div>
               <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border/70 px-4 py-2.5 text-xs text-muted-foreground">
                 <PartsSummary item={item} />
-                <span><MarkedCount item={item} /> marked</span>
-                <span className="tabular-nums">{formatScore(item.maxScore)} marks</span>
-              </div>
-              <div className="border-t border-border/70 px-4 py-2.5 text-xs text-muted-foreground">
-                <AssessmentDate item={item} />
+                <span><MarkedCount item={item} /><span className="sr-only"> marked</span></span>
+                <div className="ml-auto min-w-0"><AssessmentDate item={item} /></div>
               </div>
             </Card>
           </li>
