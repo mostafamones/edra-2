@@ -21,8 +21,8 @@ export function LabelBadge({ label }: { label: Label }) {
 export function LabelBadges({ labels, className }: { labels: readonly Label[]; className?: string }) {
   if (labels.length === 0) return null;
   return (
-    <ul aria-label="Labels" className={cn("flex min-w-0 flex-wrap gap-1", className)}>
-      {labels.map((label) => <li key={label.id} className="min-w-0"><LabelBadge label={label} /></li>)}
+    <ul aria-label="Labels" className={cn("flex min-w-0 flex-wrap items-center gap-1", className)}>
+      {labels.map((label) => <li key={label.id} className="flex min-w-0"><LabelBadge label={label} /></li>)}
     </ul>
   );
 }

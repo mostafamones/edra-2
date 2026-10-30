@@ -45,7 +45,7 @@ export function AssessmentTable({ groups, collapsed, onToggle, actions }: Props)
                 <AssessmentMenu key={itemKey(item)} row={row} actions={actions}>
                   <TableRow className="h-16 outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
                     <TableCell className="max-w-96">
-                      <div className="flex min-w-0 items-center gap-2">
+                      <div className="mb-0.5 flex min-w-0 items-center gap-2">
                         <Link href={href} className="block min-w-0 truncate rounded-sm font-medium outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">{item.title}</Link>
                         <LabelBadges labels={item.labels} className="flex-nowrap" />
                       </div>
