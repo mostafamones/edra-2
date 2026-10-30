@@ -15,12 +15,12 @@ const OUTCOMES = [
 /** Outcome controls for the part or question selected from the graph. */
 export function FocusFilter({ focus, onChange }: { focus: MarkFocus; onChange: (focus: MarkFocus) => void }) {
   return (
-    <ButtonGroup aria-label="Marks on selected part or question" className="shrink-0 overflow-hidden rounded-md border border-input [&>button]:rounded-none!">
+    <ButtonGroup aria-label="Marks on selected part or question" className="shrink-0">
       {OUTCOMES.map(({ value, label, Icon, color }) => (
         <Tooltip key={value}>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" aria-label={label} aria-pressed={focus.outcome === value}
-              className={`w-11 border-0 aria-pressed:bg-muted ${color}`}
+              className={`w-11 aria-pressed:bg-muted ${color}`}
               onClick={() => onChange({ ...focus, outcome: value })}><Icon className="size-5" /></Button>
           </TooltipTrigger>
           <TooltipContent>{label}</TooltipContent>
