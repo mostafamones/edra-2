@@ -44,10 +44,10 @@ export function FilterPopover({ fields, sections = [], children, iconOnly = fals
             <Tooltip>
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="icon" className="relative" aria-label={active > 0 ? `Filters, ${active} applied` : "Filters"}>
+                  <Button variant="outline" size="icon" className={active > 0 ? "w-auto gap-1.5 px-2" : undefined} aria-label={active > 0 ? `Filters, ${active} applied` : "Filters"}>
                     <HugeiconsIcon icon={FilterIcon} />
                     {active > 0 && (
-                      <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                      <span aria-hidden="true" className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
                         {active}
                       </span>
                     )}
