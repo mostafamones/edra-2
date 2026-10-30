@@ -91,9 +91,10 @@ async function pickNovemberDate(sheet: HTMLElement, label: string, time: string)
   fireEvent.change(within(picker).getByRole("combobox", { name: "Choose the Year" }), { target: { value: "2026" } });
   fireEvent.change(within(picker).getByRole("combobox", { name: "Choose the Month" }), { target: { value: "10" } });
   fireEvent.click(within(picker).getByRole("button", { name: /November 1st, 2026/ }));
-  fireEvent.change(within(picker).getByLabelText(`${label} time`), { target: { value: time } });
-  fireEvent.click(within(picker).getByRole("button", { name: "Done" }));
   await waitFor(() => expect(document.activeElement).toBe(trigger));
+  const field = within(sheet).getByRole("textbox", { name: `${label} time` });
+  fireEvent.change(field, { target: { value: time } });
+  fireEvent.blur(field);
 }
 
 beforeEach(() => {
@@ -156,7 +157,7 @@ describe("staff Assessments page", () => {
     expect(within(sheet).getByRole("spinbutton", { name: "Timer" })).toBeTruthy();
     expect(within(sheet).getByLabelText("Opens")).toBeTruthy();
     expect(within(sheet).queryByLabelText(/instructions|question|correct answer/i)).toBeNull();
-    expect(within(sheet).getByRole("link", { name: "Open editor" }).getAttribute("href")).toBe("http://app.lvh.me:3000/science/exams/e1/edit");
+    expect(within(sheet).getByRole("link", { name: "Edit questions" }).getAttribute("href")).toBe("http://app.lvh.me:3000/science/exams/e1/edit");
     fireEvent.change(name, { target: { value: "Renamed exam" } });
     fireEvent.change(within(sheet).getByRole("textbox", { name: "Part 1" }), { target: { value: "New part name" } });
     fireEvent.change(within(sheet).getByRole("spinbutton", { name: "Timer" }), { target: { value: "45" } });
@@ -305,7 +306,7 @@ describe("staff Assessments page", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Discard unsaved changes" }));
     await waitFor(() => expect((name as HTMLInputElement).value).toBe("Latest title"));
     fireEvent.change(name, { target: { value: "Another draft" } });
-    fireEvent.click(within(sheet).getByRole("link", { name: "Open editor" }));
+    fireEvent.click(within(sheet).getByRole("link", { name: "Edit questions" }));
     expect(mocks.push).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Discard unsaved changes" }));
     expect(mocks.push).toHaveBeenCalledWith("http://app.lvh.me:3000/science/assignments/a1/edit");

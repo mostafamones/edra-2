@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { cn } from "cn";
 
-import { IconClock } from "@tabler/icons-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Clock01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -15,6 +16,7 @@ type Props = {
   onChange: (value: string) => void;
   invalid?: boolean;
   disabled?: boolean;
+  "aria-label"?: string;
   "aria-describedby"?: string;
 };
 
@@ -86,6 +88,7 @@ export function TimeSelect({ id, value, onChange, invalid, disabled, ...props }:
             disabled={disabled}
             value={draft ?? (value ? formatTime(value) : "")}
             aria-invalid={invalid || undefined}
+            aria-label={props["aria-label"]}
             aria-describedby={props["aria-describedby"]}
             onFocus={(event) => event.currentTarget.select()}
             onChange={(event) => setDraft(event.target.value)}
@@ -95,7 +98,7 @@ export function TimeSelect({ id, value, onChange, invalid, disabled, ...props }:
           <InputGroupAddon align="inline-end">
             <PopoverTrigger asChild>
               <InputGroupButton size="icon-xs" aria-label="Pick a time" disabled={disabled} onClick={() => setDraft(null)}>
-                <IconClock />
+                <HugeiconsIcon icon={Clock01Icon} strokeWidth={1.5} aria-hidden="true" />
               </InputGroupButton>
             </PopoverTrigger>
           </InputGroupAddon>

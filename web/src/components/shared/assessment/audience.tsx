@@ -33,13 +33,15 @@ type Props = {
   /** The advisory count of matching students, shown once the audience is complete. */
   count?: ReactNode;
   levelTrackClassName?: string;
+  /** A section title to set beside the audience switch, which then keeps its natural width. */
+  heading?: ReactNode;
 };
 
 type Option = { value: string; label: string; hint: string };
 type Kind = "none" | "groups" | "program";
 
 /** Who it's for: selected groups, or a level optionally narrowed to one track. */
-export function AudienceFields({ idPrefix, groups, levels, tracks, levelNames, disabled, optional, count, levelTrackClassName }: Props) {
+export function AudienceFields({ idPrefix, groups, levels, tracks, levelNames, disabled, optional, count, levelTrackClassName, heading }: Props) {
   const { control, setValue, formState: { errors } } = useFormContext<AudienceValues>();
   const [audience, trackId] = useWatch({ control, name: ["audience", "trackId"] });
   const kind: Kind = audience === "" ? "none" : audience === "groups" ? "groups" : "program";
@@ -65,9 +67,11 @@ export function AudienceFields({ idPrefix, groups, levels, tracks, levelNames, d
     { value: "groups", label: "Groups" },
   ];
 
+  const switcher = <Segmented label="Audience" value={kind} options={kinds} onChange={changeKind} disabled={disabled} fill={!heading} />;
+
   return (
     <div className="flex flex-col gap-5">
-      <Segmented label="Audience" value={kind} options={kinds} onChange={changeKind} disabled={disabled} fill />
+      {heading ? <div className="flex items-center justify-between gap-3">{heading}{switcher}</div> : switcher}
 
       {kind === "groups" && (
         <Field data-invalid={Boolean(errors.groupIds) || undefined}>

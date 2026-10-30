@@ -7,3 +7,4 @@ export type { ScheduleInput } from "./validation";
 export { audienceLabel, buildAudienceLookup } from "./derive";
 export type { AudienceLookup } from "./derive";
 export { ACADEMY_TIME_ZONE, academyNow, formatTime, weekdayName } from "./time";
+export { TimeSelect } from "./components/time-select";
