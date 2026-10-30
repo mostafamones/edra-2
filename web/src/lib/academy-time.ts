@@ -73,16 +73,18 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 /**
  * A short academy-time label relative to `now`: "Today 3pm", "Tonight 10pm", "Midnight tonight",
  * "Tomorrow noon", "Friday 10:30am", "Next Monday 9am", "Last night 8pm", "Last Friday 10pm", "30 Oct 10pm",
- * "30 Oct 2025 10pm". 00:00 reads as midnight at the end of the previous day; evening is from 6pm.
+ * "30 Oct 2025 10pm". 00:00 reads as midnight at the end of the previous day and 23:59 as midnight at the
+ * end of its own day; evening is from 6pm.
  */
 export function formatAcademyRelative(iso: string, now: Date = new Date()): string {
   const local = academyDateTime(iso);
   const today = academyDateTime(now.toISOString()).date;
   const [hour, minute] = local.time.split(":").map(Number);
-  const midnight = hour === 0 && minute === 0;
+  const nextMidnight = hour === 0 && minute === 0;
+  const midnight = nextMidnight || (hour === 23 && minute === 59);
   const [y, m, d] = local.date.split("-").map(Number);
-  // Midnight belongs to the night before.
-  const day = new Date(Date.UTC(y, m - 1, d - (midnight ? 1 : 0)));
+  // 00:00 belongs to the night before.
+  const day = new Date(Date.UTC(y, m - 1, d - (nextMidnight ? 1 : 0)));
   const [ty, tm, td] = today.split("-").map(Number);
   const diff = Math.round((day.getTime() - Date.UTC(ty, tm - 1, td)) / 86_400_000);
   const evening = midnight || hour >= 18;
