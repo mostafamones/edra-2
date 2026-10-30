@@ -7,4 +7,4 @@ export { ContentTaughtReview } from "./teaching/review";
 export { COURSE_ROWS, CourseCard } from "./student/card";
 export { StudentLearningUnit } from "./student/unit";
 export { StudentMaterial } from "./student/material";
-export { loadStaffStudentLearning } from "./progress/staff";
+export { loadStaffStudentLearning, loadStaffUnitMaterials } from "./progress/staff";

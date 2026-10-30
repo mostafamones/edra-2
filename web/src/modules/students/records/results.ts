@@ -1,3 +1,5 @@
+import { formatScore } from "@/lib/score";
+
 export type StudentResult = {
   id: string;
   title: string;
@@ -14,6 +16,12 @@ export function announcedResults(items: StudentResult[], kind: string) {
     const maximum = Number(result.max_score);
     const timestamp = Date.parse(result.published_at);
     if (!result.total.trim() || !Number.isFinite(total) || !Number.isFinite(maximum) || maximum <= 0 || !Number.isFinite(timestamp)) return [];
-    return [{ id: item.id, title: item.title, at: result.published_at, timestamp, percent: total / maximum * 100, score: `${result.total} / ${result.max_score}` }];
+    return [{ id: item.id, title: item.title, at: result.published_at, timestamp, percent: total / maximum * 100, score: formatScore(result.total) + " / " + formatScore(result.max_score!) }];
   }).sort((a, b) => a.timestamp - b.timestamp).slice(-8);
+}
+
+/** A bounded, compatible series; private and missing marks never enter it. */
+export function assessmentSnapshot(items: StudentResult[], kind: string) {
+  const points = announcedResults(items, kind).slice(-4);
+  return { points, latest: points.at(-1), previous: points.at(-2) };
 }
