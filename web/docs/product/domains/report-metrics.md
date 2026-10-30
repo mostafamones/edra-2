@@ -1,10 +1,10 @@
 # Edra — report metrics and history
 
-Pre-approved working draft, 2026-10-11. The owner will re-review it with the master thread before implementation planning. These proposed formulas and closed-year link policies remain decisions to settle, not final implementation requirements.
+Working reference, 2026-10-11, updated 2026-10-29. The attendance formula below is now confirmed for the staff student details page. Assessment aggregation and closed-year report-link policies retain their draft status and are not implementation requirements.
 
 ## Attendance
 
-I recommend calculating mandatory attendance as:
+Confirmed by the owner, 2026-10-29: calculate mandatory attendance on the staff student details page as:
 
 **(Present + Late) ÷ (Present + Late + Absent)**
 
@@ -30,6 +30,6 @@ Academic history remains preserved even when a parent link is revoked. Student a
 
 ## Decisions to review
 
-Approve or revise the attendance formula and closed-year access recommendation. Settle marks weighting and graph definitions before those reporting features are implemented.
+The attendance formula is approved for staff student details. Review the closed-year report-link recommendation and settle assessment weighting and graph definitions before implementing those reporting features.
 
 Evidence: approved attendance meanings and Linear EDRA-166/170. Linear explicitly leaves metrics and closed-year availability open. No runtime or cloud verification.

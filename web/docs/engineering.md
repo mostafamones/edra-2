@@ -14,11 +14,11 @@ The database is cloud Supabase. Routine non-destructive migrations are pre-appro
 
 ## UI
 
-Use Tabler for ordinary application icons and existing shadcn foundations for UI. Official brand logos retain their brand colors unless a different variant is explicitly specified. Feature UI stays in its module; reusable Edra UI lives in src/components/shared/. Protected primitives in src/components/ui/, components.json and theme tokens retain the existing owner-controlled rules. Compose behavior outside protected files. Follow the [shared brand](../../docs/engineering/brand.md) when its final identity is supplied.
+Use Hugeicons at stroke width 1.5 for ordinary application icons and existing shadcn foundations for UI. Official brand logos retain their brand colors unless a different variant is explicitly specified. Feature UI stays in its module; reusable Edra UI lives in src/components/shared/. Protected primitives in src/components/ui/, components.json and theme tokens retain the existing owner-controlled rules. Compose behavior outside protected files. Follow the [shared brand](../../docs/engineering/brand.md) when its final identity is supplied. Use the [UI implementation guide](ui/README.md) for component references, interaction patterns, cache behavior and verification.
 
 Keep accessible loading/error/keyboard states. Empty tables are replaced entirely, including headers/body/scroll container; surrounding filters/search/permitted actions stay available. Use small focused components and avoid duplicate foundations.
 
-Application source uses Tabler icons only; `lucide-react` and `react-icons` are no longer dependencies.
+Legacy icon imports and dependencies still exist; their presence does not override the Hugeicons rule. Migrate them deliberately without manually editing protected primitives or configuration.
 
 ## Verification
 

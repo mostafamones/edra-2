@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { HeaderActions } from "@/components/shared/header-actions";
+import { QueryContent } from "@/components/shared/query-content";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { changeUnit, loadUnit, publishUnitEdits, saveUnit } from "../actions";
@@ -48,8 +49,11 @@ function Editor({ academy, unitId }: { academy: AcademyEntry; unitId: string }) 
       </div>
     </div>
   </main>;
-  if (query.isError) return <main className="page-shell"><Alert variant="destructive"><HugeiconsIcon icon={AlertCircleIcon} strokeWidth={1.5} /><AlertTitle>Couldn’t load unit</AlertTitle><AlertDescription className="flex flex-wrap items-center gap-3">{query.error.message}<Button variant="outline" size="sm" disabled={query.isFetching} onClick={() => void query.refetch()}>{query.isFetching ? "Retrying…" : "Retry"}</Button></AlertDescription></Alert></main>;
-  return <UnitEditor key={unitId} academy={academy} data={query.data} />;
+  return <div className="flex min-w-0 flex-1 flex-col gap-4">
+    <QueryContent query={query} label="unit" isEmpty={() => false} emptyTitle="No unit">
+      {data => <UnitEditor key={unitId} academy={academy} data={data} />}
+    </QueryContent>
+  </div>;
 }
 // Typing in a text field is saved once the field loses focus (Enter does that for material titles).
 const TYPING = "input:not([type=file]):not([type=checkbox]):not([type=radio]), textarea";
@@ -191,7 +195,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
     {error && <Alert variant="destructive" role="alert"><HugeiconsIcon icon={AlertCircleIcon} strokeWidth={1.5} /><AlertTitle>Couldn’t complete the action</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     <Tabs value={tab} onValueChange={setTab} className="gap-6">
       {/* The tab underline stops short of the students search, leaving a gap in the line. */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
       <TabsList variant="line" className="min-w-0 flex-1 justify-start overflow-x-auto border-b">
         <TabsTrigger value="material" className="flex-none">Material<Count value={document.items.length} /></TabsTrigger>
         {unit.published_revision > 0 && <TabsTrigger value="students" className="flex-none">Students</TabsTrigger>}
@@ -206,7 +210,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
     </Tabs>
     <AlertDialog open={archiving} onOpenChange={setArchiving}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Archive this unit?</AlertDialogTitle><AlertDialogDescription>It leaves active student learning. Material and history are preserved, and restoring returns it as a draft.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => perform("archive")}>Archive unit</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </main>
-    {settingsOpen && <OverlayPanel aria-label="Settings" className="w-96">
+    {settingsOpen && <OverlayPanel aria-label="Settings" className="w-96 max-w-full">
       <h2 className="font-semibold">Settings</h2>
       <FieldGroup className="gap-4">
         <Field><FieldLabel htmlFor="content-title">Title</FieldLabel><Input id="content-title" dir="auto" maxLength={200} value={document.title} disabled={disabled} onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }} onChange={e => setDocument({ ...document, title: e.target.value })} /></Field>

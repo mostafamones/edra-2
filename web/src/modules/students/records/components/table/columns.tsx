@@ -1,9 +1,10 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Archive02Icon, IdentityCardIcon, MoreHorizontalIcon, PencilEdit02Icon, RestoreBinIcon, UserIdVerificationIcon, ViewIcon } from "@hugeicons/core-free-icons";
+import { Archive02Icon, ArrowLeftRightIcon, IdentityCardIcon, MoreHorizontalIcon, PencilEdit02Icon, RestoreBinIcon, UserIdVerificationIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
+import Link from "next/link";
 import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ export type ColumnOptions = {
   onToggleRow: (row: StudentRecordRow, selected: boolean) => void;
   onTogglePage: (selected: boolean) => void;
   onOpen: (row: StudentRecordRow) => void;
+  detailsHref: (row: StudentRecordRow) => string;
   onArchive: (row: StudentRecordRow, archive: boolean) => void;
   /** Opens the student code dialog; omitted while student codes are off. */
   onCode?: (row: StudentRecordRow) => void;
@@ -40,26 +42,19 @@ export type ColumnOptions = {
 
 const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
 
-/** The staff record name; when a linked account's own name differs, the cell blurs on hover and swaps names on click. */
-function NameToggle({ recordName, accountName }: { recordName: string; accountName: string | null }) {
+/** The name opens the student; a separate control switches to the linked account name. */
+function NameToggle({ recordName, accountName, href }: { recordName: string; accountName: string | null; href: string }) {
   const [showAccount, setShowAccount] = useState(false);
-  if (!accountName || sameName(accountName, recordName)) return <CellText text={recordName} className="font-medium">{recordName}</CellText>;
+  if (!accountName || sameName(accountName, recordName)) return <Link href={href} className="truncate rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring">{recordName}</Link>;
   const name = showAccount ? accountName : recordName;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
-          type="button"
-          aria-pressed={showAccount}
-          onClick={() => setShowAccount((value) => !value)}
-          className="block min-w-0 truncate rounded-sm text-start font-medium text-foreground outline-none transition-[filter] hover:blur-[2px] focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          {name}
-        </button>
+        <span className="inline-flex min-w-0 items-center gap-1"><Link href={href} className="truncate rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring">{name}</Link><button type="button" aria-label="Switch record and account name" aria-pressed={showAccount} onClick={() => setShowAccount((value) => !value)} className="rounded-sm p-1 text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"><HugeiconsIcon icon={ArrowLeftRightIcon} strokeWidth={1.5} className="size-4" aria-hidden="true" /></button></span>
       </TooltipTrigger>
       <TooltipContent className="max-w-sm break-words">
         <span dir="auto" className="block">{name}</span>
-        <span className="block opacity-70">{showAccount ? "Account name · Click to show record name" : "Record name · Click to show account name"}</span>
+        <span className="block opacity-70">{showAccount ? "Account name" : "Record name"}</span>
       </TooltipContent>
     </Tooltip>
   );
@@ -114,7 +109,7 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
     data("name", ({ row }) => (
       // dir="auto" puts the dot after the name in its reading direction, including Arabic names.
       <div dir="auto" className="inline-flex max-w-full min-w-0 items-center gap-1.5 align-middle">
-        <NameToggle recordName={row.original.fullName} accountName={row.original.accountName} />
+        <NameToggle recordName={row.original.fullName} accountName={row.original.accountName} href={options.detailsHref(row.original)} />
         <AccountDot state={row.original.onlineAccount} />
       </div>
     )),

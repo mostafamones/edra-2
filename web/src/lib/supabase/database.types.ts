@@ -18,38 +18,38 @@ export type Database = {
         Row: {
           academy_id: string
           closed_at: string | null
-          student_learning_start_source: string | null
-          student_learning_started_at: string | null
-          student_learning_started_by: string | null
           created_at: string
           ends_on: string | null
           id: string
           start_year: number
           starts_on: string | null
+          student_learning_start_source: string | null
+          student_learning_started_at: string | null
+          student_learning_started_by: string | null
         }
         Insert: {
           academy_id: string
           closed_at?: string | null
-          student_learning_start_source?: string | null
-          student_learning_started_at?: string | null
-          student_learning_started_by?: string | null
           created_at?: string
           ends_on?: string | null
           id?: string
           start_year: number
           starts_on?: string | null
+          student_learning_start_source?: string | null
+          student_learning_started_at?: string | null
+          student_learning_started_by?: string | null
         }
         Update: {
           academy_id?: string
           closed_at?: string | null
-          student_learning_start_source?: string | null
-          student_learning_started_at?: string | null
-          student_learning_started_by?: string | null
           created_at?: string
           ends_on?: string | null
           id?: string
           start_year?: number
           starts_on?: string | null
+          student_learning_start_source?: string | null
+          student_learning_started_at?: string | null
+          student_learning_started_by?: string | null
         }
         Relationships: [
           {
@@ -57,6 +57,13 @@ export type Database = {
             columns: ["academy_id"]
             isOneToOne: false
             referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_years_student_learning_started_by_fkey"
+            columns: ["student_learning_started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -865,21 +872,21 @@ export type Database = {
       assignment_labels: {
         Row: {
           academy_id: string
+          assignment_id: string
           created_at: string
           label_id: string
-          assignment_id: string
         }
         Insert: {
           academy_id: string
+          assignment_id: string
           created_at?: string
           label_id: string
-          assignment_id: string
         }
         Update: {
           academy_id?: string
+          assignment_id?: string
           created_at?: string
           label_id?: string
-          assignment_id?: string
         }
         Relationships: [
           {
@@ -3398,20 +3405,20 @@ export type Database = {
         Row: {
           academy_id: string
           created_at: string
-          label_id: string
           exam_id: string
+          label_id: string
         }
         Insert: {
           academy_id: string
           created_at?: string
-          label_id: string
           exam_id: string
+          label_id: string
         }
         Update: {
           academy_id?: string
           created_at?: string
-          label_id?: string
           exam_id?: string
+          label_id?: string
         }
         Relationships: [
           {
@@ -4711,17 +4718,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "quiz_labels_academy_id_quiz_id_fkey"
-            columns: ["academy_id", "quiz_id"]
-            isOneToOne: false
-            referencedRelation: "quizzes"
-            referencedColumns: ["academy_id", "id"]
-          },
-          {
             foreignKeyName: "quiz_labels_academy_id_label_id_fkey"
             columns: ["academy_id", "label_id"]
             isOneToOne: false
             referencedRelation: "labels"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_labels_academy_id_quiz_id_fkey"
+            columns: ["academy_id", "quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
             referencedColumns: ["academy_id", "id"]
           },
         ]
@@ -6392,6 +6399,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "student_booking_receipts_academy_id_academic_year_id_fkey"
+            columns: ["academy_id", "academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
             foreignKeyName: "student_booking_receipts_actor_id_fkey"
             columns: ["actor_id"]
             isOneToOne: false
@@ -6413,11 +6427,11 @@ export type Database = {
           academy_id: string
           allow_without_group: boolean
           excluded_group_ids: string[]
-          is_open: boolean
           excluded_level_ids: string[]
+          excluded_track_ids: string[]
+          is_open: boolean
           participation_mode: string
           revision: number
-          excluded_track_ids: string[]
           updated_at: string
           updated_by: string
         }
@@ -6426,11 +6440,11 @@ export type Database = {
           academy_id: string
           allow_without_group?: boolean
           excluded_group_ids?: string[]
-          is_open?: boolean
           excluded_level_ids?: string[]
+          excluded_track_ids?: string[]
+          is_open?: boolean
           participation_mode?: string
           revision?: number
-          excluded_track_ids?: string[]
           updated_at?: string
           updated_by: string
         }
@@ -6439,15 +6453,22 @@ export type Database = {
           academy_id?: string
           allow_without_group?: boolean
           excluded_group_ids?: string[]
-          is_open?: boolean
           excluded_level_ids?: string[]
+          excluded_track_ids?: string[]
+          is_open?: boolean
           participation_mode?: string
           revision?: number
-          excluded_track_ids?: string[]
           updated_at?: string
           updated_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "student_booking_settings_academy_id_academic_year_id_fkey"
+            columns: ["academy_id", "academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["academy_id", "id"]
+          },
           {
             foreignKeyName: "student_booking_settings_updated_by_fkey"
             columns: ["updated_by"]
@@ -7823,11 +7844,7 @@ export type Database = {
         Returns: Json
       }
       delete_label: {
-        Args: {
-          p_academy_id: string
-          p_confirmed: boolean
-          p_label_id: string
-        }
+        Args: { p_academy_id: string; p_confirmed: boolean; p_label_id: string }
         Returns: Json
       }
       delete_my_account: { Args: never; Returns: undefined }
@@ -8145,7 +8162,10 @@ export type Database = {
         Returns: Json
       }
       get_student_booking_form: { Args: { p_token: string }; Returns: Json }
-      get_student_booking_settings: { Args: { p_academy_id: string }; Returns: Json }
+      get_student_booking_settings: {
+        Args: { p_academy_id: string }
+        Returns: Json
+      }
       get_student_code_settings: {
         Args: { p_academy_id: string }
         Returns: Json
@@ -8558,7 +8578,10 @@ export type Database = {
         Returns: Json
       }
       preview_staff_invitation: { Args: { p_token: string }; Returns: Json }
-      preview_student_booking_entry: { Args: { p_token: string }; Returns: Json }
+      preview_student_booking_entry: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       preview_student_code_generation: {
         Args: {
           p_academy_id: string
@@ -8928,12 +8951,12 @@ export type Database = {
           p_academic_year_id: string
           p_academy_id: string
           p_allow_without_group: boolean
-          p_expected_revision: number
           p_excluded_group_ids: string[]
           p_excluded_level_ids: string[]
+          p_excluded_track_ids: string[]
+          p_expected_revision: number
           p_open: boolean
           p_participation_mode: string
-          p_excluded_track_ids: string[]
         }
         Returns: Json
       }
@@ -9041,6 +9064,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      staff_home: { Args: { p_academy_id: string }; Returns: Json }
       staff_invitation_digest: { Args: { p_token: string }; Returns: string }
       staff_invitation_link_ciphertext: {
         Args: { p_academy_id: string; p_invitation_id: string }
@@ -9070,6 +9094,14 @@ export type Database = {
           target_role: Database["public"]["Enums"]["academy_role"]
         }
         Returns: boolean
+      }
+      staff_student_assessments: {
+        Args: { p_academy_id: string; p_offset?: number; p_record_id: string }
+        Returns: Json
+      }
+      staff_student_learning: {
+        Args: { p_academy_id: string; p_offset?: number; p_record_id: string }
+        Returns: Json
       }
       stage_student_import_rows: {
         Args: { p_rows: Json; p_session_id: string }

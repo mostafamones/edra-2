@@ -64,6 +64,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## shadcn and components
 
+- Before implementing web UI, read `docs/ui/README.md`, the applicable pattern and data/cache guidance, and record the feature's acceptance states and verification evidence.
+
 - Use `@hugeicons/react` with `@hugeicons/core-free-icons` for ordinary application UI icons with `strokeWidth={1.5}`. Brand logos use official assets and their brand colors unless a different variant is explicitly specified; the multicolor Google sign-in logo is allowed. Use Hugeicons-compatible types for ordinary icon contracts; brand assets may use a separate image/component. Do not introduce or retain Tabler, Lucide, `react-icons`, or another general UI icon library in application source. Follow the protected-file rules below for shadcn primitives and `components.json`, including icon-library configuration changes.
 - For every new or migrated UI component, first identify the applicable shadcn primitives. If shadcn provides a suitable foundation, agents must use it—either an existing primitive or one added with `npx shadcn@latest add <component>`. Agents must not hand-build an equivalent primitive. If no suitable shadcn primitive exists, explain the gap and ask the owner before creating a custom foundation.
 - Agents must not manually create, edit, delete, rename, or overwrite files in `src/components/ui/`. Do not use CLI overwrite flags. If the CLI proposes changing an existing primitive or protected design-system file, stop and ask the owner.

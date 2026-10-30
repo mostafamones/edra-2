@@ -48,6 +48,28 @@ it("replaces the whole table with an empty state", async () => {
   open(); expect(await screen.findByText("No coupons")).toBeTruthy();
   expect(screen.queryByRole("table")).toBeNull();
 });
+it("does not claim no coupons when the batch read fails", async () => {
+  mocks.loadCouponBatches.mockRejectedValueOnce(new Error("Service unavailable"));
+  open();
+  await screen.findByText("Couldn’t load coupon batches");
+  expect(screen.queryByText("No coupons")).toBeNull();
+  expect(screen.queryByRole("table")).toBeNull();
+  expect(screen.getByRole("searchbox", { name: "Search coupons" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await screen.findByText("No coupons");
+  expect(mocks.loadCouponOptions).toHaveBeenCalledTimes(1);
+});
+it("debounces remote search and reuses fresh results after clearing it", async () => {
+  open(); await screen.findByText("No coupons");
+  const input = screen.getByRole("searchbox", { name: "Search coupons" });
+  fireEvent.change(input, { target: { value: "r" } });
+  fireEvent.change(input, { target: { value: "re" } });
+  fireEvent.change(input, { target: { value: "revision" } });
+  expect(mocks.loadCouponBatches).toHaveBeenCalledTimes(1);
+  await screen.findByText("No matching coupons");
+  expect(mocks.loadCouponBatches).toHaveBeenCalledTimes(2);
+  expect(mocks.loadCouponBatches).toHaveBeenLastCalledWith(expect.objectContaining({ search: "revision", page: 0 }));
+});
 it("defaults generation to the whole academy's Regular and retries with the same request", async () => {
   mocks.generateCoupons.mockResolvedValue({ ok: false, message: "Retry generation." });
   open(); const dialog = await openGenerate();
@@ -117,12 +139,12 @@ it("renames and deletes a custom type", async () => {
 it("does not display batches returned for a different account", async () => {
   mocks.loadCouponBatches.mockResolvedValue({ ok: true, value: { userId: "other", manager: true, hasMore: false, batches: [batch] } });
   open(); expect((await screen.findByRole("alert")).textContent).toContain("Your account changed. Reload this page.");
-  expect(screen.queryByRole("button", { name: "Details" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Details for/ })).toBeNull();
 });
 it("lists batches and opens a batch's coupons in a sheet", async () => {
   mocks.loadCouponBatches.mockResolvedValue({ ok: true, value: { userId: "staff", manager: true, hasMore: false, batches: [batch, { ...batch, id: "academy-batch", level: null, track: null }] } });
-  open(); expect((await screen.findAllByText("Revision", { selector: "td" })).length).toBe(2);
-  fireEvent.click(screen.getAllByRole("button", { name: "Details" })[0]);
+  open(); expect((await screen.findAllByText("Revision", { selector: "td span[dir]" })).length).toBe(2);
+  fireEvent.click(screen.getAllByRole("button", { name: /^Details for/ })[0]);
   expect(await within(await screen.findByRole("dialog")).findByText("REG-AB7K-9M3R")).toBeTruthy();
   expect(mocks.loadCouponBatch).toHaveBeenCalledWith({ academyId: "academy", batchId: "batch" });
 });

@@ -1,6 +1,5 @@
-import { PagePreviewView } from "@/modules/navigation/components/preview";
-import { findStaffItem } from "@/modules/navigation/manifest";
+import { StaffHomePage } from "@/modules/home";
 
 export default function AppHomePage() {
-  return <PagePreviewView preview={findStaffItem("/app")!.preview!} />;
+  return <StaffHomePage />;
 }
