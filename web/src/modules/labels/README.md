@@ -26,6 +26,8 @@ Commands (security definer; each re-checks live membership, suspension and role 
 - `validation.ts`: name/color schemas and `labelSchema` (an unknown stored key shows as gray instead of failing a page).
 - `components/`: `LabelBadge`/`LabelBadges`/`LabelSwatch` (palette colors plus the written name), `LabelColorPicker` (named radio entries), `LabelEditor` (create, rename on Enter/blur with Escape to revert, recolor, delete with the conditional confirmation dialog), `LabelManager` (label icon button and editor popover; a consumer may open it from another element, which anchors it and receives focus back), `LabelsSubmenu` (context-menu checkboxes expressing the desired state, plus Manage labels for managers) and `LabelFilter` (any of several labels, or Unlabeled as an exclusive alternative).
 
+Every academy starts with three editable labels (Online only, Ready for in-person, Needs review), added by a database trigger when the academy is created.
+
 Definition changes refresh the catalog and call the consumer's `onChanged` so it refreshes its own caches. UI results are applied only while the same academy is active (`useAcademyScope`).
 
 SQL coverage: `supabase/tests/labels.sql` and the LB1–LB3 races in `supabase/tests/concurrency.sh`.
