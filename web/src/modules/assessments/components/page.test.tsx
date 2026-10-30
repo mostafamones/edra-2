@@ -691,7 +691,7 @@ describe("assessment labels", () => {
     fireEvent.click(screen.getByRole("button", { name: "Manage labels" }));
     const editor = await screen.findByRole("dialog", { name: "Labels" });
     fireEvent.change(await within(editor).findByRole("textbox", { name: "New label name" }), { target: { value: " Unit 4 " } });
-    fireEvent.click(within(editor).getByRole("button", { name: "Add" }));
+    fireEvent.click(within(editor).getByRole("button", { name: "Add label" }));
     await waitFor(() => expect(mocks.createLabel).toHaveBeenCalledWith(expect.objectContaining({ academyId: "academy-id", name: "Unit 4", color: "gray" })));
     const name = within(editor).getByRole("textbox", { name: "Name of Week 3" });
     fireEvent.change(name, { target: { value: "Week 4" } });
@@ -699,7 +699,7 @@ describe("assessment labels", () => {
     await waitFor(() => expect(mocks.updateLabel).toHaveBeenCalledWith({ academyId: "academy-id", labelId: WEEK, name: "Week 4", color: "red" }));
     mocks.createLabel.mockResolvedValueOnce({ ok: false, code: "duplicate_name", message: "A label with this name already exists." });
     fireEvent.change(within(editor).getByRole("textbox", { name: "New label name" }), { target: { value: "revision" } });
-    fireEvent.click(within(editor).getByRole("button", { name: "Add" }));
+    fireEvent.click(within(editor).getByRole("button", { name: "Add label" }));
     expect((await within(editor).findByRole("alert")).textContent).toBe("A label with this name already exists.");
   });
 

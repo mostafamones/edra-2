@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAcademyScope } from "@/modules/auth";
+import { newUuid } from "@/lib/uuid";
 import { createLabel, deleteLabel, updateLabel } from "../actions";
 import { labelsQueryKey, useLabels } from "../queries";
 import type { Label, LabelFailure } from "../types";
@@ -135,9 +136,11 @@ function LabelRow({ label, busy, disabled, onSave, onDelete }: RowProps) {
   };
   return (
     <li className="flex items-center gap-1" aria-busy={busy}>
-      <LabelColorPicker label={`Color of ${label.name}`} value={label.color} disabled={disabled} onChange={(color) => { if (color !== label.color) void onSave(label.name, color); }} />
-      <Input aria-label={`Name of ${label.name}`} className="h-8" maxLength={LABEL_NAME_MAX} value={name} disabled={disabled}
-        onChange={(event) => setName(event.target.value)} onBlur={save} onKeyDown={keys} />
+      <div className="relative min-w-0 flex-1">
+        <LabelColorPicker label={`Color of ${label.name}`} value={label.color} disabled={disabled} onChange={(color) => { if (color !== label.color) void onSave(label.name, color); }} />
+        <Input aria-label={`Name of ${label.name}`} className="h-8 pl-8" maxLength={LABEL_NAME_MAX} value={name} disabled={disabled}
+          onChange={(event) => setName(event.target.value)} onBlur={save} onKeyDown={keys} />
+      </div>
       <Tooltip delayDuration={500}>
         <TooltipTrigger asChild>
           <Button type="button" variant="ghost" size="icon-sm" disabled={disabled} aria-label={`Delete ${label.name}`} onClick={onDelete}>
@@ -159,7 +162,7 @@ function NewLabel({ inputRef, busy, disabled, used, onCreate }: NewProps) {
   const [name, setName] = useState("");
   const [color, setColor] = useState<PaletteKey | null>(null);
   // One ID per new label, kept across retries so a repeated request cannot create it twice.
-  const [labelId, setLabelId] = useState(() => crypto.randomUUID());
+  const [labelId, setLabelId] = useState(() => newUuid());
   const chosen = color ?? PALETTE_KEYS.find((key) => !used.includes(key)) ?? PALETTE_KEYS[used.length % PALETTE_KEYS.length];
   const parsed = labelNameSchema.safeParse(name);
   const submit = async () => {
@@ -167,18 +170,25 @@ function NewLabel({ inputRef, busy, disabled, used, onCreate }: NewProps) {
     if (await onCreate(labelId, parsed.data, chosen)) {
       setName("");
       setColor(null);
-      setLabelId(crypto.randomUUID());
+      setLabelId(newUuid());
       inputRef.current?.focus();
     }
   };
   return (
     <form className="flex items-center gap-1 border-t pt-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-      <LabelColorPicker label="New label color" value={chosen} disabled={disabled} onChange={setColor} />
-      <Input ref={inputRef} data-new-label aria-label="New label name" placeholder="New label" className="h-8" maxLength={LABEL_NAME_MAX} value={name}
-        disabled={disabled} onChange={(event) => { setName(event.target.value); setLabelId(crypto.randomUUID()); }} />
-      <Button type="submit" size="sm" disabled={disabled || !parsed.success}>
-        <HugeiconsIcon icon={busy ? Loading03Icon : Add01Icon} strokeWidth={1.5} className={busy ? "animate-spin" : undefined} aria-hidden="true" />Add
-      </Button>
+      <div className="relative min-w-0 flex-1">
+        <LabelColorPicker label="New label color" value={chosen} disabled={disabled} onChange={setColor} />
+        <Input ref={inputRef} data-new-label aria-label="New label name" placeholder="New label" className="h-8 pl-8" maxLength={LABEL_NAME_MAX} value={name}
+          disabled={disabled} onChange={(event) => { setName(event.target.value); setLabelId(newUuid()); }} />
+      </div>
+      <Tooltip delayDuration={500}>
+        <TooltipTrigger asChild>
+          <Button type="submit" variant="ghost" size="icon-sm" disabled={disabled || !parsed.success} aria-label="Add label">
+            <HugeiconsIcon icon={busy ? Loading03Icon : Add01Icon} strokeWidth={1.5} className={busy ? "animate-spin" : undefined} aria-hidden="true" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Add label</TooltipContent>
+      </Tooltip>
     </form>
   );
 }
