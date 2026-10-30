@@ -69,8 +69,8 @@ function Menu({ platform, academies = [], slug, disabled, className }: Props & {
     else choose(item.href);
   }
   return <><Button type="button" variant="outline" size="sm" aria-label="Search and commands" disabled={disabled} onClick={() => setOpen(true)}
-    className={`min-w-0 flex-1 justify-start border-border! text-sidebar-foreground/75 ${className ?? ""}`}>
-    <HugeiconsIcon icon={Search01Icon} strokeWidth={1.5} className="size-4 shrink-0" /><span className="truncate font-normal">Search</span><Kbd className="ml-auto" aria-label="Command K or Control K">⌘ K</Kbd>
+    className={`min-w-0 flex-1 justify-start pr-1.75 text-muted-foreground ${className ?? ""}`}>
+    <HugeiconsIcon icon={Search01Icon} strokeWidth={1.5} className="size-4 shrink-0" /><span className="truncate font-normal">Search</span><Kbd className="ml-auto h-4 min-w-4 bg-foreground/10 text-[10px]" aria-label="Command K or Control K">⌘ K</Kbd>
   </Button><Dialog open={open} onOpenChange={value => { if (busy) return; setOpen(value); if (!value) { setSearch(""); setCommand(undefined); } }}>
     <DialogContent aria-describedby={undefined} showCloseButton={false} onOpenAutoFocus={event => { event.preventDefault(); inputRef.current?.focus(); }} onEscapeKeyDown={event => { if (busy || command) { event.preventDefault(); if (!busy) commandRef.current?.back(); } }} onPointerDownOutside={event => { if (busy) event.preventDefault(); }} className="top-[12%] max-h-[80dvh] translate-y-0 gap-3 overflow-hidden p-0 sm:max-w-xl">
       {!busy && <DialogClose asChild><Button variant="ghost" size="icon-sm" aria-label="Close" className="absolute top-3 right-3 text-muted-foreground"><HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.5} className="size-4" /></Button></DialogClose>}
