@@ -74,7 +74,7 @@ export function AssessmentSummary({ academyId, row: { item }, details, onViewStu
           <h3 className="text-sm font-medium">Parts</h3>
           {/* Three or more scroll sideways across the sheet, the next card peeking in; focusable for keyboard scrolling. */}
           <ul aria-label="Parts" tabIndex={scrolls ? 0 : undefined}
-            className={scrolls ? "-mx-6 flex gap-3 overflow-x-auto px-6 pb-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50" : cn("grid gap-3", parts.length > 1 && "sm:grid-cols-2")}>
+            className={scrolls ? "no-scrollbar -mx-6 flex gap-3 overflow-x-auto px-6 outline-none focus-visible:ring-3 focus-visible:ring-ring/50" : cn("grid gap-3", parts.length > 1 && "sm:grid-cols-2")}>
             {parts.map((part, index) => (
               <li key={part.id} className={scrolls ? "w-2/5 shrink-0" : undefined}>
                 <Card size="sm" className="h-full gap-1 bg-muted/50 px-4 py-3 shadow-none ring-0">
