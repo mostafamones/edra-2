@@ -10,9 +10,9 @@ const buttonGroupVariants = cva(
     variants: {
       orientation: {
         horizontal:
-          "[&>*:not(:first-child)]:rounded-l-none [&>*:not(:first-child)]:bg-[linear-gradient(var(--input),var(--input))] [&>*:not(:first-child)]:bg-size-[1px_1rem] [&>*:not(:first-child)]:bg-position-[left_center] [&>*:not(:first-child)]:bg-no-repeat [&>*:not(:last-child)]:rounded-r-none [&>[data-slot]:not(:has(~[data-slot]))]:rounded-r-md!",
+          "[&>*:not(:first-child)]:rounded-l-none [&>*:not(:first-child)]:bg-[linear-gradient(color-mix(in_oklch,var(--input)_60%,transparent),color-mix(in_oklch,var(--input)_60%,transparent))] [&>*:not(:first-child)]:bg-size-[1px_1rem] [&>*:not(:first-child)]:bg-position-[left_center] [&>*:not(:first-child)]:bg-no-repeat [&>*:not(:last-child)]:rounded-r-none [&>[data-slot]:not(:has(~[data-slot]))]:rounded-r-md!",
         vertical:
-          "flex-col [&>*:not(:first-child)]:rounded-t-none [&>*:not(:first-child)]:bg-[linear-gradient(var(--input),var(--input))] [&>*:not(:first-child)]:bg-size-[1rem_1px] [&>*:not(:first-child)]:bg-position-[center_top] [&>*:not(:first-child)]:bg-no-repeat [&>*:not(:last-child)]:rounded-b-none [&>[data-slot]:not(:has(~[data-slot]))]:rounded-b-md!",
+          "flex-col [&>*:not(:first-child)]:rounded-t-none [&>*:not(:first-child)]:bg-[linear-gradient(color-mix(in_oklch,var(--input)_60%,transparent),color-mix(in_oklch,var(--input)_60%,transparent))] [&>*:not(:first-child)]:bg-size-[1rem_1px] [&>*:not(:first-child)]:bg-position-[center_top] [&>*:not(:first-child)]:bg-no-repeat [&>*:not(:last-child)]:rounded-b-none [&>[data-slot]:not(:has(~[data-slot]))]:rounded-b-md!",
       },
     },
     defaultVariants: {
