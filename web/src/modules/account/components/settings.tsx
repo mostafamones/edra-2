@@ -17,6 +17,7 @@ import { AccountDeletion } from "./delete";
 import { ProfileNames } from "./names";
 import { PasswordChange } from "./password";
 import { ProfilePicture } from "./picture";
+import { DisplaySettings } from "./display";
 
 /** Personal account settings, shared by the staff `/account` and student `/profile` pages. */
 export function AccountSettings() {
@@ -70,6 +71,9 @@ export function AccountSettings() {
                 <ContactChange key={`${user.id}:${contacts.data.parentPhone}`} purpose="parent_phone" label="Parent phone"
                   current={contacts.data.parentPhone} resumed={resumed("parent_phone")} onChanged={() => contactChanged(false)} />
               )}
+            </SettingsGroup>
+            <SettingsGroup title="Display">
+              <DisplaySettings key={`display:${user.id}`} />
             </SettingsGroup>
             <SettingsGroup title="Security">
               <PasswordChange key={`password:${user.id}`} />

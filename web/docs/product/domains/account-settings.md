@@ -16,6 +16,10 @@ For students, the academy's annual record name is the primary student name throu
 
 Student school level is not editable in account settings. This does not change staff permissions to maintain academy placement.
 
+## Display preferences
+
+The account stores a 12-hour (AM/PM) or 24-hour time-format preference, shared across devices and academies. Existing accounts default to 24-hour display. Calendar applies the preference to its time axis, event times and event details; timestamps and the academy's Cairo timezone are unchanged. Other existing time displays retain their current formatting until they adopt this preference.
+
 ## Profile picture
 
 Users can upload, replace and remove their profile picture. Before upload, a Discord-style crop dialog lets them drag to reposition the image and zoom within a circular preview, then save or cancel. Use Edra styling and applicable shadcn foundations.

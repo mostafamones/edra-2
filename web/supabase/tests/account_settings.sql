@@ -97,6 +97,13 @@ begin
   update public.profiles set full_name = 'سارة حسن محمود', display_name = 'سارة' where id = '9a111111-1111-4111-8111-111111111111';
   get diagnostics rows = row_count;
   perform pg_temp.check(rows = 1, 'own profile update');
+  perform pg_temp.check((select time_format = '24h' from public.profiles where id = auth.uid()), 'default time format');
+  update public.profiles set time_format = '12h' where id = auth.uid();
+  perform pg_temp.check((select time_format = '12h' from public.profiles where id = auth.uid()), 'own time format update');
+  perform pg_temp.check(pg_temp.fails($s$ update public.profiles set time_format = 'invalid' where id = auth.uid() $s$), 'invalid time format rejected');
+  update public.profiles set time_format = '12h' where id = '9a222222-2222-4222-8222-222222222222';
+  get diagnostics rows = row_count;
+  perform pg_temp.check(rows = 0, 'other account time format protected');
   perform pg_temp.check((select display_name from public.profiles where id = auth.uid()) = 'سارة', 'own profile read');
   update public.profiles set full_name = 'Hijacked' where id = '9a222222-2222-4222-8222-222222222222';
   get diagnostics rows = row_count;
