@@ -6,6 +6,7 @@ import { cn } from "cn";
 
 import { ScoreDistribution } from "@/components/shared/assessment/workspace/distribution";
 import type { TopStudent } from "@/components/shared/assessment/workspace/top";
+import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
@@ -71,7 +72,7 @@ export function AssessmentSummary({ academyId, row: { item }, details, onViewStu
       <ScoreDistribution scores={loading ? undefined : shares ?? []} className="bg-muted/50 shadow-none ring-0" />
       {parts.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">Parts</h3>
+          <SectionHeader title="Parts" />
           {/* Three or more scroll sideways across the sheet, the next card peeking in; focusable for keyboard scrolling. */}
           <ul aria-label="Parts" tabIndex={scrolls ? 0 : undefined}
             className={scrolls ? "no-scrollbar -mx-6 flex gap-3 overflow-x-auto px-6 outline-none focus-visible:ring-3 focus-visible:ring-ring/50" : cn("grid gap-3", parts.length > 1 && "sm:grid-cols-2")}>
@@ -96,10 +97,7 @@ export function AssessmentSummary({ academyId, row: { item }, details, onViewStu
         </section>
       )}
       <section className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium">Top students</h3>
-          <Button variant="ghost" size="sm" onClick={onViewStudents}>View all</Button>
-        </div>
+        <SectionHeader title="Top students" action={<Button variant="ghost" size="sm" onClick={onViewStudents}>View all</Button>} />
         {loading ? <Skeleton className="h-24" /> : ranked.length === 0 ? (
           <Empty className="border py-6"><EmptyHeader><EmptyTitle className="text-sm">No scores yet</EmptyTitle></EmptyHeader></Empty>
         ) : (

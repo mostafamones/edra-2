@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { LevelTrackSelect } from "@/components/shared/level-track";
+import { SectionHeader } from "@/components/shared/section-header";
 import { Segmented } from "@/components/shared/segmented";
 import {
   Combobox, ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxContent, ComboboxEmpty, ComboboxItem, ComboboxList,
@@ -34,14 +35,14 @@ type Props = {
   count?: ReactNode;
   levelTrackClassName?: string;
   /** A section title to set beside the audience switch, which then keeps its natural width. */
-  heading?: ReactNode;
+  title?: string;
 };
 
 type Option = { value: string; label: string; hint: string };
 type Kind = "none" | "groups" | "program";
 
 /** Who it's for: selected groups, or a level optionally narrowed to one track. */
-export function AudienceFields({ idPrefix, groups, levels, tracks, levelNames, disabled, optional, count, levelTrackClassName, heading }: Props) {
+export function AudienceFields({ idPrefix, groups, levels, tracks, levelNames, disabled, optional, count, levelTrackClassName, title }: Props) {
   const { control, setValue, formState: { errors } } = useFormContext<AudienceValues>();
   const [audience, trackId] = useWatch({ control, name: ["audience", "trackId"] });
   const kind: Kind = audience === "" ? "none" : audience === "groups" ? "groups" : "program";
@@ -67,11 +68,11 @@ export function AudienceFields({ idPrefix, groups, levels, tracks, levelNames, d
     { value: "groups", label: "Groups" },
   ];
 
-  const switcher = <Segmented label="Audience" value={kind} options={kinds} onChange={changeKind} disabled={disabled} fill={!heading} />;
+  const switcher = <Segmented label="Audience" value={kind} options={kinds} onChange={changeKind} disabled={disabled} fill={!title} />;
 
   return (
     <div className="flex flex-col gap-5">
-      {heading ? <div className="flex items-center justify-between gap-3">{heading}{switcher}</div> : switcher}
+      {title ? <SectionHeader title={title} action={switcher} /> : switcher}
 
       {kind === "groups" && (
         <Field data-invalid={Boolean(errors.groupIds) || undefined}>

@@ -9,6 +9,7 @@ import { LinkSquare02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
 import { DiscardDialog } from "@/components/shared/assessment/discard";
+import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -140,7 +141,7 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
           <QuickAudience academyId={academy.id} yearId={record.value.academicYearId} disabled={disabled || !permissions.audience} optional={record.type !== "assignment"} />
           <Separator className="bg-border/70" />
           <section className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Timing</h3>
+            <SectionHeader title="Timing" />
             <FieldGroup className="gap-4">
               {record.type === "assignment" ? (
                 <Field orientation="horizontal" className="items-center!" data-invalid={Boolean(errors.dueAt) || undefined}>
@@ -181,12 +182,11 @@ export function QuickEditForm({ academy, initial, onStatus, onCancel, onSaved, f
           </section>
           <Separator className="bg-border/70" />
           <section className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-medium text-muted-foreground">Part Names</h3>
+            <SectionHeader title="Part Names" action={
               <Button type="button" variant="ghost" size="sm" asChild disabled={busy !== null}>
                 <Link href={fullEditor} onClick={onOpenEditor} aria-disabled={busy !== null}>Edit questions<HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={1.5} aria-hidden="true" /></Link>
               </Button>
-            </div>
+            } />
             {record.value.parts.length === 0 && <p className="text-muted-foreground">No parts yet</p>}
             {record.value.parts.map((part, index) => (
               <Field key={part.id} orientation="horizontal" data-invalid={Boolean(errors.parts?.[index]?.title) || undefined}>
