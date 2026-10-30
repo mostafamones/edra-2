@@ -594,7 +594,7 @@ describe("assessment labels", () => {
     const item = link.closest(view === "table" ? "tr" : "li") as HTMLElement;
     const list = within(item).getByRole("list", { name: "Labels" });
     expect(within(list).getAllByRole("listitem").map((entry) => entry.textContent)).toEqual(["Revision", "Week 3"]);
-    expect(within(list).getByText("Revision").closest('[data-slot="badge"]')?.className).toMatch(/text-teal-800 .*dark:text-teal-200/);
+    expect(within(list).getByText("Revision").closest('[data-slot="badge"]')?.className).toMatch(/text-teal-900 .*dark:text-teal-100/);
     const exam = (await screen.findByRole("link", { name: "Term exam" })).closest(view === "table" ? "tr" : "li") as HTMLElement;
     expect(within(exam).queryByRole("list", { name: "Labels" })).toBeNull();
   });
