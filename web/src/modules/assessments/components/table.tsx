@@ -55,7 +55,7 @@ export function AssessmentTable({ groups, collapsed, onToggle, actions }: Props)
                     <TableCell><AssessmentStatus item={item} /></TableCell>
                     <TableCell className="text-xs text-muted-foreground"><AssessmentDate item={item} /></TableCell>
                     <TableCell className="text-right"><MarkedCount item={item} /></TableCell>
-                    <TableCell className="text-right"><AssessmentActions row={row} onEdit={actions.onEdit} /></TableCell>
+                    <TableCell className="text-right"><AssessmentActions row={row} actions={actions} /></TableCell>
                   </TableRow>
                 </AssessmentMenu>
               );

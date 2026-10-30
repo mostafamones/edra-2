@@ -172,7 +172,7 @@ describe("staff Assessments page", () => {
     const trigger = screen.getByRole("button", { name: "Actions for Term exam" });
     fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: "mouse" });
     const menu = await screen.findByRole("menu");
-    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Edit", "Summary", "Open editor"]);
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Edit", "Summary", "Open editor", "Labels"]);
     expect(within(menu).getByRole("menuitem", { name: "Open editor" }).getAttribute("href")).toBe("http://app.lvh.me:3000/science/exams/e1/edit");
     fireEvent.click(within(menu).getByRole("menuitem", { name: "Summary" }));
     const sheet = await screen.findByRole("dialog", { name: "Edit exam" });
@@ -644,6 +644,22 @@ describe("assessment labels", () => {
     await openLabels("Weekly quiz");
     fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Week 3" }));
     await waitFor(() => expect(mocks.setLabel).toHaveBeenLastCalledWith(expect.objectContaining({ type: "quiz", assessmentId: "q1", labelId: WEEK, applied: true })));
+  });
+
+  it("offers the same labels from the Actions button, returning focus there after managing them", async () => {
+    show();
+    await screen.findByRole("table");
+    const trigger = screen.getByRole("button", { name: "Actions for Weekly quiz" });
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: "mouse" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Labels" }));
+    fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Week 3" }));
+    await waitFor(() => expect(mocks.setLabel).toHaveBeenLastCalledWith(expect.objectContaining({ type: "quiz", assessmentId: "q1", labelId: WEEK, applied: true })));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Manage labels" }));
+    const editor = await screen.findByRole("dialog", { name: "Labels" });
+    await waitFor(() => expect(document.activeElement).toBe(within(editor).getByRole("textbox", { name: "New label name" })));
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Labels" })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
   it("opens the editor from a closing context menu beside the row and returns focus to it", async () => {
