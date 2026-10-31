@@ -76,6 +76,8 @@ Confirmed by the owner, 2026-10-16, and extended to instructor-owned units on 20
 
 Confirmed 2026-10-25: managers can publish their current editor changes directly without first pressing Save draft. Save and publication execute atomically with the current version check and all readiness/history validation. Failed publication changes neither the stored draft nor the live snapshot, and the editor retains unsaved changes for correction. The separate Save draft action remains available; instructors still require manager publication.
 
+Confirmed by the owner, 2026-10-31: the author of a working draft can keep it as its own version from version history with Save version, offered until the unit is first published; after that the same place offers publishing the edits. Saves after that form a new draft entry. A kept version is staff history only and changes nothing for students.
+
 ### Scheduled publication and confirmed versions
 
 Confirmed by the owner, 2026-10-31. This defines the scheduled-publication delivery, not a claim that it is implemented.

@@ -9,7 +9,7 @@ All paths below are relative to `web/src/`.
 | Feature family | Start from | Reuse boundary |
 | --- | --- | --- |
 | Staff list | `modules/assessments/components/page.tsx`, `modules/content/coupons/page.tsx`, `components/shared/filter-popover.tsx` | Choose the appropriate paginated list, controls and table/empty replacement; assessment-specific grouping and permissions remain in its module |
-| Color labels | `modules/labels`, `lib/palette.ts` | Reuse the academy label catalog and named shared palette; preserve written labels and selection state |
+| Color labels | `modules/labels`, `lib/palette.ts` | Reuse the module's label catalog and named shared palette; preserve written labels and selection state |
 | Student courses | `modules/learning/components/units-list.tsx`, `view-settings.tsx`, `modules/content/student-cards.tsx` | Reuse course presentation and local view settings; do not treat a loaded page as a complete catalog |
 | Student grouped lists | `modules/learning/components/section.tsx` | Preserve each academy's result/error independently; one failed academy must not hide successful ones |
 | Settings | `components/shared/settings-group.tsx`, `settings-row.tsx` | Reuse group/row composition; optional description props do not authorize helper text; test narrow controls before adopting |

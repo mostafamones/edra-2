@@ -143,7 +143,7 @@ Confirmed by the owner, 2026-10-29. Staff discover assignments, quizzes and exam
 
 Confirmed by the owner, 2026-10-29. These are approved requirements, not a statement of implementation or deployment. The UI reference is the current `ui/unified-assessments-view` Assessments area, including its row/card context menus and existing Filters and View options controls.
 
-Assessments are the first integration of the shared [Labels](labels.md) feature. Assignments, quizzes and exams use the academy's label catalog; each assessment may have multiple labels. The shared reference owns label definitions, management permissions, global changes, deletion and palette behavior. Labels for students and other modules are planned for later deliveries.
+Assessments are the first integration of the shared [Labels](labels.md) feature. Assignments, quizzes and exams share the academy's assessment label catalog; each assessment may have multiple labels. The shared reference owns label definitions, management permissions, global changes, deletion and palette behavior. Labels for students and other modules are planned for later deliveries.
 
 All active academy staff, including Instructors, may apply and remove existing labels through a Labels submenu in each assessment row/card context menu. This remains permitted for archived assessments and assessments in closed academic years. Labels are organizational metadata: their changes do not change assessment preparation, audience, availability, submissions, marking, official results or academic history. Other academic read-only rules remain in force.
 
