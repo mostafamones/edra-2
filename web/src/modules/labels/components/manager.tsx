@@ -7,11 +7,12 @@ import { LabelIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { Label } from "../types";
+import type { Label, LabelDomain } from "../types";
 import { LabelEditor } from "./editor";
 
 type Props = {
   academyId: string;
+  domain: LabelDomain;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** The element that opened the editor from elsewhere (such as a row's context menu): the editor sits beside it and focus returns to it. */
@@ -21,7 +22,7 @@ type Props = {
 };
 
 /** The label icon button and its editor popover. Render it only for label managers. */
-export function LabelManager({ academyId, open, onOpenChange, opener, onChanged, onLabelChange }: Props) {
+export function LabelManager({ academyId, domain, open, onOpenChange, opener, onChanged, onLabelChange }: Props) {
   const button = useRef<HTMLButtonElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const target = () => (opener?.isConnected ? opener : button.current);
@@ -48,7 +49,7 @@ export function LabelManager({ academyId, open, onOpenChange, opener, onChanged,
         // Start in the new-label field rather than on a control whose tooltip would take the first Escape.
         onOpenAutoFocus={(event) => { event.preventDefault(); content.current?.querySelector<HTMLInputElement>("input[data-new-label]")?.focus(); }}
         onCloseAutoFocus={(event) => { event.preventDefault(); target()?.focus({ preventScroll: true }); }}>
-        <LabelEditor academyId={academyId} onChanged={onChanged} onLabelChange={onLabelChange} />
+        <LabelEditor academyId={academyId} domain={domain} onChanged={onChanged} onLabelChange={onLabelChange} />
       </PopoverContent>
     </Popover>
   );

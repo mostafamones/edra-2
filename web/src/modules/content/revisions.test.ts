@@ -47,6 +47,24 @@ it("folds draft saves into the publication they led to", () => {
   expect(historyEntries([{ kind: "saved", document: { bad: true }, at: "2026-10-01T00:00:00Z", by: null }], [])[0].summary).toBeNull();
 });
 
+it("keeps a saved draft as its own version, with later saves after it", () => {
+  const omar = { id: "omar" };
+  const kept = { ...base, title: "Kept" }, later = { ...kept, accessDays: 14 };
+  const entries = historyEntries([
+    { kind: "saved", document: later, at: "2026-10-04T00:00:00Z", by: omar },
+    { kind: "version", document: kept, at: "2026-10-03T00:00:00Z", by: omar },
+    { kind: "saved", document: kept, at: "2026-10-02T00:00:00Z", by: omar },
+    { kind: "created", document: base, at: "2026-10-01T00:00:00Z", by: omar },
+  ], []);
+  expect(entries.map(e => [e.kind, e.version, e.summary?.headline])).toEqual([["draft", false, "Changed access to 14 days"], ["draft", true, "Renamed the unit"]]);
+
+  // Undoing back to the kept version leaves nothing newer; publishing it says so.
+  const undone = historyEntries([{ kind: "saved", document: kept, at: "2026-10-04T00:00:00Z", by: omar }, { kind: "version", document: kept, at: "2026-10-03T00:00:00Z", by: omar }, { kind: "created", document: base, at: "2026-10-01T00:00:00Z", by: omar }], []);
+  expect(undone.map(e => e.version)).toEqual([true]);
+  const published = historyEntries([{ kind: "version", document: kept, at: "2026-10-03T00:00:00Z", by: omar }, { kind: "created", document: base, at: "2026-10-01T00:00:00Z", by: omar }], [{ revision: 1, document: kept, at: "2026-10-04T00:00:00Z", by: omar }]);
+  expect(published.map(e => e.summary?.headline)).toEqual(["Published the saved draft", "Renamed the unit"]);
+});
+
 it("leaves out trailing saves that end where the live publication is", () => {
   const omar = { id: "omar" };
   // jsonb returns keys in its own order; the comparison must not care.

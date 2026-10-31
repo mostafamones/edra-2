@@ -94,6 +94,18 @@ export function MaterialList({ academyId, unitId, version, items, assets, editab
   </div>;
 }
 
+/** The same rows with nothing to change: previews and processing status only. */
+export function MaterialReadOnly({ academyId, items, assets, onRefreshed, onError }: {
+  academyId: string; items: ContentItem[]; assets: Asset[]; onRefreshed: () => Promise<void>; onError: (message: string) => void;
+}) {
+  const row = (item: ContentItem, extra: { child?: boolean; children?: ReactNode[] }) => <MaterialRow key={item.id} academyId={academyId} item={item} asset={assets.find(a => a.id === item.assetId)} disabled framed {...extra}
+    selected={false} drag={null} acceptsFiles={false} onSelect={() => {}} onTitle={() => {}} onDragStart={() => {}} onDragEnd={() => {}} onDrop={() => {}}
+    onRefresh={async () => { try { unwrapContent(await refreshVideo(academyId, item.assetId!)); await onRefreshed(); } catch { onError("Could not refresh processing. Try again."); } }} />;
+  const tree = materialTree(items);
+  if (!tree.length) return <Empty className="min-h-48 rounded-lg bg-card"><EmptyHeader><EmptyMedia variant="icon"><HugeiconsIcon icon={BookOpen01Icon} strokeWidth={1.5} aria-hidden="true" /></EmptyMedia><EmptyTitle>No material yet</EmptyTitle></EmptyHeader></Empty>;
+  return <ol aria-label="Unit material" className="overflow-hidden rounded-lg bg-card [&>li+li]:relative [&>li+li]:before:absolute [&>li+li]:before:start-1/5 [&>li+li]:before:top-0 [&>li+li]:before:h-px [&>li+li]:before:w-3/5 [&>li+li]:before:bg-border/60">{tree.map(node => row(node.item, { children: node.children.map(c => row(c, { child: true })) }))}</ol>;
+}
+
 /** Shown at the end of the list while a row is dragged, so it can be moved last. */
 function EndSlot({ onDrop }: { onDrop: () => void }) {
   const [over, setOver] = useState(false);

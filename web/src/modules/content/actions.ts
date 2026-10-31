@@ -39,6 +39,14 @@ export async function changeUnit(value: unknown) {
   const { error } = await db.rpc("change_content_unit", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_version: input.version, p_action: input.action, p_feedback: input.feedback }); contentError(error);
   });
 }
+export async function saveUnitVersion(value: unknown) {
+  return contentResult(async () => {
+    const input = z.object({ academyId: z.guid(), unitId: z.guid(), version: z.number().int().positive() }).parse(value);
+    const { db } = await contentCaller(input.academyId);
+    const { error } = await db.rpc("save_content_draft_version", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_version: input.version });
+    contentError(error);
+  });
+}
 export async function publishUnitEdits(value: unknown) {
   return contentResult(async () => {
     const input = z.object({ academyId: z.guid(), unitId: z.guid(), version: z.number().int().positive(), document: documentSchema }).parse(value);

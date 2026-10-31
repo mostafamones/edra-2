@@ -4,7 +4,7 @@ import type { NavIcon } from "../manifest";
 const icons = {
   overview: Home01Icon, calendar: Calendar03Icon, schedules: Calendar03Icon, sessions: PlayIcon,
   attendance: CheckListIcon, students: UserGroupIcon, groups: UserGroupIcon, bookings: Calendar03Icon,
-  review: Search01Icon, content: FolderLibraryIcon, releases: BookOpen01Icon, assignments: FileEditIcon,
+  review: Search01Icon, content: FolderLibraryIcon, assignments: FileEditIcon,
   quizzes: CheckListIcon, exams: File01Icon, marking: CheckListIcon, results: ChartHistogramIcon,
   communications: Message01Icon, access: Ticket01Icon, settings: Settings01Icon, academy: Building03Icon,
   structure: School01Icon, studentCodes: Ticket01Icon, studentEnrollment: UserAdd01Icon, team: UserGroupIcon,

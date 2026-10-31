@@ -10,7 +10,7 @@ import { itemKey, TYPE_LABELS } from "../types";
 import { AssessmentDate, AssessmentStatus, AudienceLine, MarkedCount, PartsSummary, TYPE_ICONS } from "./facts";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { GroupToggle, type RowGroup } from "./groups";
-import { LabelBadges } from "@/modules/labels";
+import { LabelOverflow } from "@/modules/labels";
 import { AssessmentActions, AssessmentMenu, type RowActions } from "./menu";
 
 /** Card view of the same rows, in the same order, as the table. Each card opens its workspace. */
@@ -65,7 +65,7 @@ function Cards({ rows, actions }: { rows: RowGroup["rows"]; actions: RowActions 
               <div className="mb-3 flex items-start gap-2 px-4">
                 <div className="shrink-0"><AssessmentStatus item={item} /></div>
                 {item.labels.length > 0 && <Separator orientation="vertical" className="mt-1 h-3 data-vertical:self-auto" />}
-                <LabelBadges labels={item.labels} className="flex-nowrap" />
+                <LabelOverflow labels={item.labels} />
               </div>
               <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border/70 px-4 py-2.5 text-xs text-muted-foreground">
                 <PartsSummary item={item} />

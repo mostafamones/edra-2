@@ -4,6 +4,14 @@
 
 After a unit loads, its editor prefetches history, compatible assessments and reusable published materials in one background request, with parallel server reads. The panels share a one-minute query cache and existing content invalidation refreshes it after changes. Reuse reads only the latest publication document for each published source; selecting a source needs no additional unit-detail request. Each panel reports and retries its own loading failures.
 
+## Library sheet
+
+Edit, History and Content in a library card's menus open `UnitSheet` over the library; the card itself still opens the full editor. Edit shares `UnitSettings` with the editor's Settings panel and autosaves the same draft under the same permissions; closing saves anything pending and only drops a draft that can't be saved after confirmation. History's newest draft entry and the card menus offer one next step (`unitAction`): Save version until the unit is first published, keeping the working draft as its own entry through `save_content_draft_version` without changing the unit's version; after that, Publish changes for managers or Send for review for the author. First publication stays in the editor. Content lists the working draft's material with previews and no editing.
+
+## Labels
+
+Units use their own `content` [label catalog](../labels/README.md), separate from assessment labels. `set_content_unit_label` lets any active staff member apply or remove labels, including on archived units and in closed years, without changing the unit's version, draft or publications. Copies do not inherit labels. Library cards look up their labels in the catalog, so renames and recolors show without refreshing the workspace; selecting labels narrows the library from its view options.
+
 ## Authority and history
 
 All operations use verified cookie authority and live academy membership. Reads retain RLS. Authenticated callers have no direct write grants on content tables. Transactional RPCs enforce ownership, manager powers, open years, optimistic versions, attachment compatibility and source provenance. The database—not disabled controls—decides permission.

@@ -32,16 +32,18 @@ create function pg_temp.act(label text) returns void language sql as $$ select s
 do $$
 declare t text;
 begin
-  foreach t in array array['labels','assignment_labels','quiz_labels','exam_labels'] loop
+  foreach t in array array['labels','assignment_labels','quiz_labels','exam_labels','content_unit_labels'] loop
     if has_table_privilege('anon', 'public.'||t, 'select') or has_table_privilege('authenticated', 'public.'||t, 'insert')
       or has_table_privilege('authenticated', 'public.'||t, 'update') or has_table_privilege('authenticated', 'public.'||t, 'delete')
       or not has_table_privilege('authenticated', 'public.'||t, 'select') then
       raise exception 'Labels check failed: % grants', t;
     end if;
   end loop;
-  if has_function_privilege('anon', 'public.create_label(uuid,uuid,text,text)', 'execute')
+  if has_function_privilege('anon', 'public.create_label(uuid,uuid,text,text,text)', 'execute')
     or has_function_privilege('anon', 'public.set_assessment_label(uuid,text,uuid,uuid,boolean)', 'execute')
     or has_function_privilege('anon', 'public.delete_label(uuid,uuid,boolean)', 'execute')
+    or has_function_privilege('anon', 'public.set_content_unit_label(uuid,uuid,uuid,boolean)', 'execute')
+    or not has_function_privilege('authenticated', 'public.set_content_unit_label(uuid,uuid,uuid,boolean)', 'execute')
     or has_function_privilege('anon', 'public.list_assessments(uuid,uuid,text[],text,text,text,uuid,uuid,text[],text,text,integer,integer,uuid[],boolean)', 'execute')
     or not has_function_privilege('authenticated', 'public.update_label(uuid,uuid,text,text)', 'execute')
     or has_function_privilege('authenticated', 'edra_private.require_label_role(uuid,boolean)', 'execute') then
@@ -103,7 +105,7 @@ select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy')
 select pg_temp.expect_error($s$ select public.update_label(pg_temp.id('academy'),pg_temp.id('red'),'Renamed','red') $s$, 'forbidden');
 select pg_temp.expect_error($s$ select public.delete_label(pg_temp.id('academy'),pg_temp.id('red'),true) $s$, 'forbidden');
 select pg_temp.check((select string_agg(name, ',' order by name) from public.labels where lower(name) in ('online only','ready for in-person','needs review')) = 'Needs review,Online only,Ready for in-person', 'a new academy starts with the default labels');
-select pg_temp.check((select count(*) from public.labels) = 6 and not exists (select 1 from public.labels where academy_id <> pg_temp.id('academy')), 'instructor reads only this academy catalog');
+select pg_temp.check((select count(*) from public.labels) = 9 and not exists (select 1 from public.labels where academy_id <> pg_temp.id('academy')), 'instructor reads only this academy catalog');
 -- Multiple labels on every type, applied as a desired state: repeating it changes nothing.
 select public.set_assessment_label(pg_temp.id('academy'),'assignment',pg_temp.id('a1'),pg_temp.id('red'),true);
 select public.set_assessment_label(pg_temp.id('academy'),'assignment',pg_temp.id('a1'),pg_temp.id('blue'),true);
@@ -255,6 +257,62 @@ drop trigger edra_test_fail_label_delete on public.labels;
 select pg_temp.check(exists (select 1 from public.labels where id = pg_temp.id('red'))
   and (select count(*) from public.assignment_labels where label_id = pg_temp.id('red')) = 1
   and (select count(*) from public.quiz_labels where label_id = pg_temp.id('red')) = 1, 'failed delete kept label and uses');
+
+-- Content units: any staff applies a desired state, the unit never changes, tenants stay apart, and a unit counts as a use.
+insert into label_ids(name) values ('content-year'),('unit'),('other-unit'),('unit-only'),('unit-second');
+insert into public.academic_years(id,academy_id,start_year)
+  select pg_temp.id('content-year'),pg_temp.id('academy'),max(start_year)+1
+  from public.academic_years where academy_id=pg_temp.id('academy');
+insert into public.academy_levels(academy_id,level_id,sort_order) values(pg_temp.id('other'),'preparatory-3',9);
+select pg_temp.act('owner');
+set local role authenticated;
+select public.create_content_unit(pg_temp.id('academy'),pg_temp.id('content-year'),'preparatory-3',null,pg_temp.id('unit'),'Labelled unit');
+select pg_temp.check((select string_agg(name, ',' order by name) from public.labels where academy_id = pg_temp.id('academy') and domain = 'content') = 'Core,Needs update,Revision', 'a new academy starts with the default content labels');
+select public.create_label(pg_temp.id('academy'),pg_temp.id('unit-only'),'Unit only','teal','content');
+-- Each module has its own catalog: names repeat across catalogs but not within one, and a retry cannot switch catalog.
+select public.create_label(pg_temp.id('academy'),pg_temp.id('unit-second'),'Unit second','red','content');
+select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy'),gen_random_uuid(),'REVISION','teal','content') $s$, 'duplicate_name');
+select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy'),pg_temp.id('unit-only'),'Unit only','teal','assessments') $s$, 'validation');
+select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy'),gen_random_uuid(),'Other','teal','students') $s$, 'validation');
+select pg_temp.check((select count(*) from public.labels where lower(name) = 'revision' and academy_id = pg_temp.id('academy')) = 2, 'same name in two catalogs');
+reset role;
+select pg_temp.act('outsider');
+set local role authenticated;
+select public.create_content_unit(pg_temp.id('other'),pg_temp.id('other-year'),'preparatory-3',null,pg_temp.id('other-unit'),'Other unit');
+select pg_temp.check(not exists (select 1 from public.content_unit_labels where academy_id = pg_temp.id('academy')), 'outsider reads no unit labels');
+select pg_temp.expect_error($s$ select public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('unit-only'),true) $s$, 'forbidden');
+reset role;
+create temporary table before_unit on commit drop as select version, updated_at, draft, state from public.content_units where id = pg_temp.id('unit');
+grant select on pg_temp.before_unit to authenticated;
+select pg_temp.act('instructor');
+set local role authenticated;
+select pg_temp.check(public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('unit-only'),true) = jsonb_build_array(pg_temp.id('unit-only')), 'instructor applies');
+select pg_temp.check(jsonb_array_length(public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('unit-only'),true)) = 1, 'repeated apply keeps one');
+select pg_temp.check(jsonb_array_length(public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('unit-second'),true)) = 2, 'multiple labels');
+select pg_temp.check(jsonb_array_length(public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('unit-second'),false)) = 1, 'removes one');
+select pg_temp.check(jsonb_array_length(public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('unit-second'),false)) = 1, 'repeated remove changes nothing');
+select pg_temp.expect_error($s$ select public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('other-unit'),pg_temp.id('unit-only'),true) $s$, 'not_found');
+select pg_temp.expect_error($s$ select public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('foreign'),true) $s$, 'label_not_found');
+-- Labels stay in their own module, through the commands and against the foreign key.
+select pg_temp.expect_error($s$ select public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('red'),true) $s$, 'label_not_found');
+select pg_temp.expect_error($s$ select public.set_assessment_label(pg_temp.id('academy'),'quiz',pg_temp.id('q1'),pg_temp.id('unit-only'),true) $s$, 'label_not_found');
+select pg_temp.check((select count(*) from public.content_units c join pg_temp.before_unit b on c.version = b.version and c.updated_at = b.updated_at and c.draft = b.draft and c.state = b.state where c.id = pg_temp.id('unit')) = 1, 'labelling leaves the unit unchanged');
+reset role;
+select pg_temp.act('suspended');
+set local role authenticated;
+select pg_temp.expect_error($s$ select public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('unit-only'),false) $s$, 'forbidden');
+reset role;
+select pg_temp.act('owner');
+set local role authenticated;
+select public.change_content_unit(pg_temp.id('academy'),pg_temp.id('unit'),(select version from public.content_units where id = pg_temp.id('unit')),'archive','');
+select pg_temp.check(jsonb_array_length(public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('unit-second'),true)) = 2, 'archived unit still takes labels');
+select public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('unit-second'),false);
+select pg_temp.check(public.delete_label(pg_temp.id('academy'),pg_temp.id('unit-only'),false) = '{"status":"confirm","uses":1}'::jsonb, 'a unit counts as a use');
+select pg_temp.check(public.delete_label(pg_temp.id('academy'),pg_temp.id('unit-only'),true) = '{"status":"deleted","uses":1}'::jsonb, 'confirmed delete');
+select pg_temp.check(not exists (select 1 from public.content_unit_labels where unit_id = pg_temp.id('unit')) and exists (select 1 from public.content_units where id = pg_temp.id('unit')), 'delete removes the use, not the unit');
+reset role;
+select pg_temp.expect_error($s$ insert into public.content_unit_labels(academy_id,unit_id,label_id) values (pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('red')) $s$, '%foreign key%');
+select pg_temp.expect_error($s$ insert into public.quiz_labels(academy_id,quiz_id,label_id) values (pg_temp.id('academy'),pg_temp.id('q1'),pg_temp.id('unit-second')) $s$, '%foreign key%');
 
 -- Assessments, versions and the academic record were never touched by any label change.
 select pg_temp.check(not exists (

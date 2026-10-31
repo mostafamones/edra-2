@@ -8,14 +8,10 @@ import { AcademyGate } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OverlayPanel } from "@/components/ui/overlay-panel";
-import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { HeaderActions } from "@/components/shared/header-actions";
@@ -23,7 +19,8 @@ import { SidebarIcon } from "@/components/shared/sidebar-icon";
 import { QueryContent } from "@/components/shared/query-content";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { changeUnit, loadUnit, publishUnitEdits, saveUnit } from "../actions";
+import { changeUnit, loadUnit, publishUnitEdits, saveUnit, saveUnitVersion } from "../actions";
+import { unitAction } from "./unit-action";
 import { refreshVideo } from "../media-actions";
 import type { ContentDetail } from "../data";
 import { canEditUnit, documentSchema, STATE_LABELS, unwrapContent, type ContentDocument, type ContentItem } from "../types";
@@ -31,8 +28,8 @@ import { MaterialList } from "./list";
 import { useMaterialUpload } from "./uploader";
 import { canAttach, linkMaterial } from "./tree";
 import { AccessSearch, accessOptions, UnitAccessPanel } from "../access/manager";
-import { requirementOptions, UnitRequirements } from "../requirements/editor";
-import { AccessDuration } from "./duration";
+import { requirementOptions } from "../requirements/editor";
+import { UnitSettings } from "./settings";
 import { VersionHistory } from "./history";
 import { sameDocument } from "../revisions";
 import { unitPanelOptions } from "../panels";
@@ -150,7 +147,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
       }
       else {
         if (dirty) throw new Error("Wait for your edits to save before this action.");
-        unwrapContent(await changeUnit({ academyId: academy.id, unitId: unit.id, version: saved.version, action }));
+        unwrapContent(action === "version" ? await saveUnitVersion({ academyId: academy.id, unitId: unit.id, version: saved.version }) : await changeUnit({ academyId: academy.id, unitId: unit.id, version: saved.version, action }));
       }
       toast.success("Changes saved."); await reload();
     } catch (e) { setError(e instanceof Error ? e.message : "Could not complete the action."); }
@@ -171,7 +168,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
       : <span role="status" aria-label="Saved" title="Saved" className="flex size-9 items-center justify-center text-muted-foreground"><HugeiconsIcon icon={CloudSavingDone01Icon} strokeWidth={1.5} className="size-4" aria-hidden="true" /></span>)}
     {editable && <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" aria-label="Undo" disabled={disabled || saving || (!dirty && !undo.length)} onClick={revert}><HugeiconsIcon icon={Undo02Icon} strokeWidth={1.5} /></Button></TooltipTrigger><TooltipContent>Undo</TooltipContent></Tooltip>}
     <VersionHistory academyId={academy.id} unitId={unit.id} userId={data.userId} live={unit.state !== "archived"} disabled={disabled || dirty}
-      onSubmit={editable && !canManage && unpublished ? () => perform("submit") : undefined} onPublish={canManage && unit.state !== "archived" && unpublished ? () => perform("publish") : undefined} />
+      action={unitAction(unit, { editable, manager: canManage, changed: unpublished })} onAction={perform} />
     </div>
     {/* Publishing is the review, so whoever can publish only publishes; everyone else submits for review. */}
     {editable && unpublished && !(canManage && unit.state !== "archived") && <Button disabled={disabled || dirty} onClick={() => perform("submit")}><HugeiconsIcon icon={SentIcon} strokeWidth={1.5} aria-hidden="true" />Submit for review</Button>}
@@ -214,17 +211,9 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
   </main>
     {settingsOpen && <OverlayPanel aria-label="Settings" className="w-96 max-w-full">
       <h2 className="font-semibold">Settings</h2>
-      <FieldGroup className="gap-4">
-        <Field><FieldLabel htmlFor="content-title">Title</FieldLabel><Input id="content-title" dir="auto" maxLength={200} value={document.title} disabled={disabled} onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }} onChange={e => setDocument({ ...document, title: e.target.value })} /></Field>
-        <Field><FieldLabel htmlFor="content-description">Description</FieldLabel><Textarea id="content-description" dir="auto" className="min-h-28" maxLength={10000} value={document.description} disabled={disabled} onChange={e => setDocument({ ...document, description: e.target.value })} /></Field>
-      </FieldGroup>
-      <Separator className="bg-border/70" />
-      <section aria-labelledby="unit-access" className="flex flex-col gap-4">
-        <h3 id="unit-access" className="text-sm font-medium text-muted-foreground">Access</h3>
-        <AccessDuration value={document.accessDays} disabled={disabled} onChange={accessDays => setDocument({ ...document, accessDays })} />
-        <UnitRequirements academyId={academy.id} unitId={unit.id} userId={data.userId} document={document} onChange={setDocument} disabled={disabled} />
-      </section>
-      {canManage && unit.state !== "archived" && <><Button variant="outline" className="mt-auto self-end text-destructive hover:text-destructive" disabled={busy || uploading || dirty} onClick={() => setArchiving(true)}><HugeiconsIcon icon={Archive02Icon} strokeWidth={1.5} aria-hidden="true" />Archive unit</Button></>}
+      <UnitSettings academyId={academy.id} unitId={unit.id} userId={data.userId} document={document} disabled={disabled} onChange={setDocument}>
+        {canManage && unit.state !== "archived" && <Button variant="outline" className="mt-auto self-end text-destructive hover:text-destructive" disabled={busy || uploading || dirty} onClick={() => setArchiving(true)}><HugeiconsIcon icon={Archive02Icon} strokeWidth={1.5} aria-hidden="true" />Archive unit</Button>}
+      </UnitSettings>
     </OverlayPanel>}
   </div>;
 }

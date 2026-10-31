@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const file = (path: string) => fileURLToPath(new URL(path, import.meta.url));
@@ -7,9 +8,10 @@ export default defineConfig({
   root: file("./"),
   envDir: false,
   plugins: [{ name: "synthetic-actions", enforce: "pre", resolveId(source, importer) {
-    const path = importer?.replaceAll("\\", "/") ?? "";
-    if (source === "./actions" && path.includes("/content/coupons/")) return file("./coupons.ts");
-    if (source === "./actions" && path.endsWith("/content/panels.ts")) return file("./content.ts");
+    if (!importer || !source.startsWith(".")) return;
+    const target = resolve(dirname(importer), source);
+    if (target === file("../src/modules/content/coupons/actions")) return file("./coupons.ts");
+    if (target === file("../src/modules/content/actions")) return file("./content.ts");
   } }],
   resolve: { alias: [
     { find: "next/link", replacement: file("./link.tsx") },

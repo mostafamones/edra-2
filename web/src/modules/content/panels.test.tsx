@@ -31,7 +31,7 @@ afterEach(cleanup);
 
 function mount(client: QueryClient) {
   render(<QueryClientProvider client={client}><TooltipProvider>
-    <VersionHistory academyId="academy" unitId="unit" userId="author" live disabled={false} />
+    <VersionHistory academyId="academy" unitId="unit" userId="author" live disabled={false} action={null} onAction={() => {}} />
     <ReuseMaterial academyId="academy" unitId="unit" version={1} disabled={false} onChange={async () => {}} />
     <AssessmentPicker academyId="academy" unitId="unit" version={1} items={[]} dirty={false} disabled={false} onAdd={() => {}} onCreated={async () => {}} />
   </TooltipProvider></QueryClientProvider>);

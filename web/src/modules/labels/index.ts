@@ -1,4 +1,5 @@
 export { LabelBadge, LabelBadges, LabelSwatch } from "./components/badge";
+export { LabelOverflow } from "./components/overflow";
 export { LabelEditor } from "./components/editor";
 export { LabelFilter, type LabelSelection } from "./components/filter";
 export { LabelManager } from "./components/manager";
