@@ -11,3 +11,7 @@ export async function loadUnitPanels() {
   };
   return { history: { ok: true, value: history }, assessments: { ok: true, value: [] }, sources: { ok: true, value: [] } };
 }
+
+const noWrite = async () => ({ ok: false as const, message: "Preview only. Changes are not saved." });
+export const changeUnit = noWrite;
+export const saveUnitVersion = noWrite;
