@@ -33,18 +33,21 @@ export function contentError(error: { message?: string } | null) {
 }
 export async function readContentWorkspace(academyId: string) {
   const { db, userId, manager } = await contentCaller(academyId);
-  const [units, programs, years, levels, tracks, names, availableTracks, trackYearLabels] = await Promise.all([
+  const [units, programs, years, levels, tracks, names, availableTracks, trackYearLabels, unitLabels] = await Promise.all([
     fetchAllPages((from, to) => db.from("content_units").select("*").eq("academy_id", academyId).order("updated_at", { ascending: false }).order("id").range(from, to)),
     db.from("content_programs").select("*").eq("academy_id", academyId), db.from("academic_years").select("id,start_year,closed_at").eq("academy_id", academyId).order("start_year", { ascending: false }),
     db.from("academy_levels").select("level_id,sort_order").eq("academy_id", academyId).is("stopped_at", null).order("sort_order"), db.from("academy_tracks").select("id,level_id,name").eq("academy_id", academyId), db.from("global_levels").select("id,name"),
     db.from("academy_tracks").select("id,level_id,name").eq("academy_id", academyId).is("retired_at", null),
     readOfferingTrackLabels(academyId, db),
+    fetchAllPages((from, to) => db.from("content_unit_labels").select("unit_id,label_id").eq("academy_id", academyId).order("unit_id").order("label_id").range(from, to)),
   ]);
   for (const response of [programs, years, levels, tracks, names, availableTracks]) contentError(response.error);
+  const labelIds: Record<string, string[]> = {};
+  for (const { unit_id, label_id } of unitLabels) (labelIds[unit_id] ??= []).push(label_id);
   const offered = new Set((levels.data ?? []).map(level => level.level_id));
   return { units: units.map(u => ({ ...u, draft: documentSchema.parse(u.draft) })) as ContentUnit[], programs: programs.data ?? [], years: years.data ?? [], levels: levels.data ?? [],
     tracks: (availableTracks.data ?? []).filter(track => offered.has(track.level_id)), historicalTracks: tracks.data ?? [], trackYearLabels,
-    levelNames: Object.fromEntries((names.data ?? []).map(l => [l.id, l.name])) as Record<string, string>, userId, manager };
+    levelNames: Object.fromEntries((names.data ?? []).map(l => [l.id, l.name])) as Record<string, string>, labelIds, userId, manager };
 }
 export type ContentWorkspace = Awaited<ReturnType<typeof readContentWorkspace>>;
 export async function readContentUnit(academyId: string, unitId: string) {
@@ -112,7 +115,7 @@ export async function readUnitHistory(academyId: string, unitId: string) {
   const urls = new Map(signed?.flatMap(entry => entry.path && entry.signedUrl ? [[entry.path, entry.signedUrl] as const] : []));
   const people = new Map((profiles.data ?? []).map(p => [p.id, { id: p.id, name: p.display_name || p.full_name, avatarUrl: p.avatar_path ? urls.get(p.avatar_path) : undefined }]));
   return {
-    drafts: (drafts.data ?? []).map(d => ({ kind: d.kind as "created" | "saved", document: d.document, at: d.saved_at, by: (d.saved_by && people.get(d.saved_by)) || null })),
+    drafts: (drafts.data ?? []).map(d => ({ kind: d.kind as "created" | "saved" | "version", document: d.document, at: d.saved_at, by: (d.saved_by && people.get(d.saved_by)) || null })),
     revisions: (revisions.data ?? []).map(r => ({ revision: r.revision, document: r.document, at: r.published_at, by: people.get(r.published_by) || null })),
   };
 }

@@ -45,7 +45,7 @@ function Items({ row, actions, menu, openerRef, openingRef }: Props & {
       <Item onSelect={() => open("summary")}><HugeiconsIcon icon={ViewIcon} strokeWidth={1.5} />Summary</Item>
       {!archived && item.status !== "preparing" && <Item onSelect={() => open("mark")}><HugeiconsIcon icon={CheckListIcon} strokeWidth={1.5} />Mark</Item>}
       {/* Labels are organizational metadata: available on archived and closed-year assessments too. */}
-      <LabelsSubmenu menu={menu} academyId={actions.academyId} applied={item.labels.map((label) => label.id)}
+      <LabelsSubmenu menu={menu} academyId={actions.academyId} domain="assessments" applied={item.labels.map((label) => label.id)}
         onApply={(labelId, applied) => void actions.onApplyLabel(item, labelId, applied)}
         onManage={onManageLabels && (() => {
           openingRef.current = true;

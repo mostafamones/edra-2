@@ -1,6 +1,10 @@
 import type { PaletteKey } from "@/lib/palette";
 
-/** One entry of an academy's shared, staff-only label catalog. `color` is a palette key, never a color value. */
+/** Each module has its own catalog in an academy; labels never cross between them. */
+export const LABEL_DOMAINS = ["assessments", "content"] as const;
+export type LabelDomain = (typeof LABEL_DOMAINS)[number];
+
+/** One entry of a staff-only label catalog. `color` is a palette key, never a color value. */
 export type Label = { id: string; name: string; color: PaletteKey };
 
 export type LabelErrorCode = "validation" | "forbidden" | "not_found" | "label_not_found" | "duplicate_name" | "unavailable";

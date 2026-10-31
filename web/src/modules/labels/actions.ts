@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { labelFailure } from "./errors";
 import { runLabelCommand } from "./server";
-import type { DeleteLabelResult, LabelResult } from "./types";
+import { LABEL_DOMAINS, type DeleteLabelResult, type LabelResult } from "./types";
 import { labelColorSchema, labelNameSchema, toLabel } from "./validation";
 
 /** Label definition commands (Owner, Head Admin and Admin; enforced by the database). */
@@ -13,10 +13,10 @@ const definition = z.object({ academyId: z.guid(), labelId: z.guid(), name: labe
 
 /** `labelId` is chosen by the caller, so a retried create returns the label it already made. */
 export async function createLabel(value: unknown): Promise<LabelResult> {
-  const parsed = definition.safeParse(value);
+  const parsed = definition.extend({ domain: z.enum(LABEL_DOMAINS) }).safeParse(value);
   if (!parsed.success) return labelFailure("validation");
-  const { academyId, labelId, name, color } = parsed.data;
-  return runLabelCommand((db) => db.rpc("create_label", { p_academy_id: academyId, p_label_id: labelId, p_name: name, p_color: color }),
+  const { academyId, labelId, name, color, domain } = parsed.data;
+  return runLabelCommand((db) => db.rpc("create_label", { p_academy_id: academyId, p_label_id: labelId, p_name: name, p_color: color, p_domain: domain }),
     (data) => ({ ok: true as const, label: toLabel(data) }));
 }
 

@@ -34,9 +34,9 @@ export function materialLabel(item: ContentItem, asset?: ContentDetail["assets"]
 /** One material in the unit: kind, editable title and its preview or processing action. Selecting it opens the material bar.
  * The whole row drags. Dropping attaches material to an assessment (answers) or a video (documents), or places it beside the row;
  * children branch from their parent like steps. */
-export function MaterialRow({ academyId, item, asset, disabled, child, children, selected, drag, acceptsFiles,
+export function MaterialRow({ academyId, item, asset, disabled, framed, child, children, selected, drag, acceptsFiles,
   onSelect, onTitle, onRefresh, onDragStart, onDragEnd, onDrop }: {
-  academyId: string; item: ContentItem; asset?: ContentDetail["assets"][number]; disabled: boolean;
+  academyId: string; item: ContentItem; asset?: ContentDetail["assets"][number]; disabled: boolean; framed?: boolean;
   child?: boolean; children?: ReactNode[]; selected: boolean; drag: { link: boolean; place: boolean } | null; acceptsFiles: boolean;
   onSelect: () => void; onTitle: (title: string) => void; onRefresh: () => Promise<void>;
   onDragStart: () => void; onDragEnd: () => void; onDrop: (drop: MaterialDrop) => void;
@@ -75,7 +75,7 @@ export function MaterialRow({ academyId, item, asset, disabled, child, children,
   return <li className={child ? BRANCH : undefined}>
     {child && <Elbow />}
     <div {...handlers} data-selected={selected || undefined}
-      className={`group/row relative flex items-center gap-3 outline-none transition-colors ${child ? "rounded-md py-2 ps-2 pe-3" : "px-3 py-3"} ${!disabled && !editing ? "cursor-grab active:cursor-grabbing" : ""} ${zone === "link" ? "bg-primary/5 ring-1 ring-primary/50 ring-inset" : selected ? "bg-primary/10" : "hover:bg-muted/40 focus-visible:bg-muted/40"}`}>
+      className={`group/row relative flex items-center gap-3 outline-none transition-colors ${child ? "rounded-md py-2 ps-2 pe-3" : "px-3 py-3"} ${!disabled && !editing ? "cursor-grab active:cursor-grabbing" : ""} ${zone === "link" ? "bg-primary/5 ring-1 ring-primary/50 ring-inset" : selected ? "bg-primary/10" : "hover:bg-muted/40 focus-visible:bg-muted/40"} ${framed ? "rounded-lg" : ""}`}>
       {(zone === "before" || zone === "after") && <span aria-hidden="true" className={`pointer-events-none absolute inset-x-3 h-0.5 rounded-full bg-primary ${zone === "before" ? "top-0" : "bottom-0"}`} />}
       <KindIcon kind={item.kind} document={asset?.kind === "document"} small={child} />
       <div className="min-w-0 flex-1">

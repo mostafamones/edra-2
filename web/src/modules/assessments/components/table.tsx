@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { itemKey } from "../types";
 import { AssessmentDate, AssessmentStatus, AssessmentTypeLabel, AudienceLine, MarkedCount, PartsSummary } from "./facts";
 import { GroupToggle, type RowGroup } from "./groups";
-import { LabelBadges } from "@/modules/labels";
+import { LabelOverflow } from "@/modules/labels";
 import { AssessmentActions, AssessmentMenu, type RowActions } from "./menu";
 
 /** Table view. The caller renders the empty state instead of this when there are no rows. */
@@ -19,7 +19,7 @@ export function AssessmentTable({ groups, collapsed, onToggle, actions }: Props)
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Details</TableHead>
+            <TableHead className="pl-4">Details</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Parts</TableHead>
             <TableHead>Date</TableHead>
@@ -33,7 +33,7 @@ export function AssessmentTable({ groups, collapsed, onToggle, actions }: Props)
             <Fragment key={group.key}>
               {group.type && (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={7} className="h-10 bg-muted/40">
+                  <TableCell colSpan={7} className="h-10 bg-muted/40 pl-4">
                     <GroupToggle group={group} open={!collapsed.has(group.key)} onClick={() => onToggle(group.key)} />
                   </TableCell>
                 </TableRow>
@@ -44,10 +44,10 @@ export function AssessmentTable({ groups, collapsed, onToggle, actions }: Props)
                 // Fixed height so rows line up whatever their date or status wraps to.
                 <AssessmentMenu key={itemKey(item)} row={row} actions={actions}>
                   <TableRow className="h-16 outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-                    <TableCell className="max-w-96">
+                    <TableCell className="max-w-96 pl-4">
                       <div className="mb-0.5 flex min-w-0 items-center gap-2">
                         <Link href={href} className="block min-w-0 truncate rounded-sm font-medium outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">{item.title}</Link>
-                        <LabelBadges labels={item.labels} className="flex-nowrap" />
+                        <LabelOverflow labels={item.labels} className="min-w-20" />
                       </div>
                       <AudienceLine audience={item.audience} name={audience} />
                     </TableCell>

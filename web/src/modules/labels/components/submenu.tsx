@@ -10,6 +10,7 @@ import {
   DropdownMenuCheckboxItem, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLabels } from "../queries";
+import type { LabelDomain } from "../types";
 import { LabelSwatch } from "./badge";
 
 const CONTEXT = { Sub: ContextMenuSub, SubTrigger: ContextMenuSubTrigger, SubContent: ContextMenuSubContent, Item: ContextMenuItem, CheckboxItem: ContextMenuCheckboxItem, Separator: ContextMenuSeparator };
@@ -19,6 +20,7 @@ type Props = {
   /** The kind of menu it sits in. */
   menu: "context" | "dropdown";
   academyId: string;
+  domain: LabelDomain;
   /** IDs of the labels the record has. */
   applied: readonly string[];
   /** Applies (true) or removes (false) one label; the caller shows the change in `applied` at once. */
@@ -40,9 +42,9 @@ export function LabelsSubmenu(props: Props) {
   );
 }
 
-function Items({ menu, academyId, applied, onApply, onManage }: Props) {
+function Items({ menu, academyId, domain, applied, onApply, onManage }: Props) {
   const { Item, CheckboxItem, Separator } = menu === "context" ? CONTEXT : DROPDOWN;
-  const labels = useLabels(academyId);
+  const labels = useLabels(academyId, domain);
   return (
     <>
       {labels.isPending ? <Item disabled>Loading labels…</Item>

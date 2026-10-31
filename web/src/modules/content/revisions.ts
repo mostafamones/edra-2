@@ -77,25 +77,25 @@ export function revisionChanges(previous: ContentDocument | null, next: ContentD
 
 type Event<B> = { document: unknown; at: string; by: B };
 type Author = { id: string } | null;
-export type HistoryEntry<B> = { key: string; kind: "published" | "draft"; at: string; creators: B[]; saves: number; summary: ChangeSummary | null };
+export type HistoryEntry<B> = { key: string; kind: "published" | "draft"; at: string; creators: B[]; saves: number; summary: ChangeSummary | null; version: boolean };
 
 /**
  * One timeline, newest first. A publication owns the draft saves made since the previous publication, so a unit
  * sent for review is one event: the people who saved the drafts created it. Saves newer than the latest publication form a leading draft entry,
- * left out when they end where the publication is (edits that were undone).
+ * left out when they end where the publication is (edits that were undone). A draft kept as a version starts its own entry the same way.
  */
-export function historyEntries<B extends Author>(drafts: (Event<B> & { kind: "created" | "saved" })[], revisions: (Event<B> & { revision: number })[]): HistoryEntry<B>[] {
+export function historyEntries<B extends Author>(drafts: (Event<B> & { kind: "created" | "saved" | "version" })[], revisions: (Event<B> & { revision: number })[]): HistoryEntry<B>[] {
   // A save-and-publish stores its draft and publication in one transaction; the publication sorts first.
   const events = [...revisions.map(r => ({ ...r, kind: "published" as const, origin: null })), ...drafts.map(d => ({ ...d, origin: d.kind, kind: "draft" as const }))]
     .sort((a, b) => b.at.localeCompare(a.at) || (a.kind === b.kind ? 0 : a.kind === "published" ? -1 : 1));
   const groups: (typeof events)[] = [];
   for (const event of events) {
-    if (event.kind === "published" || !groups.length) groups.push([event]); else groups.at(-1)!.push(event);
+    if (event.kind === "published" || event.origin === "version" || !groups.length) groups.push([event]); else groups.at(-1)!.push(event);
   }
   const parse = (value: unknown) => { const parsed = documentSchema.safeParse(value); return parsed.success ? parsed.data : undefined; };
   const only = (headline: string): ChangeSummary => ({ headline, fields: [], lines: [], details: [] });
   const unique = (people: B[]) => [...new Map(people.map(person => [person?.id ?? null, person])).values()];
-  if (groups[0]?.[0].kind === "draft" && groups[1] && sameDocument(groups[0][0].document, groups[1][0].document)) groups.shift();
+  if (groups[0]?.[0].kind === "draft" && groups[0][0].origin !== "version" && groups[1] && sameDocument(groups[0][0].document, groups[1][0].document)) groups.shift();
   return groups.map((group, index) => {
     const newest = group[0], saves = group.filter(e => e.kind === "draft");
     const before = groups[index + 1]?.[0];
@@ -105,17 +105,18 @@ export function historyEntries<B extends Author>(drafts: (Event<B> & { kind: "cr
     if (current && previous !== undefined) {
       if (previous) {
         summary = revisionChanges(previous, current);
-        if (!summary.headline) summary = only(newest.kind === "published" ? "Republished without changes" : "No changes since the last version");
+        if (!summary.headline) summary = only(newest.kind === "published" ? before?.origin === "version" ? "Published the saved draft" : "Republished without changes" : "No changes since the last version");
       } else if (newest.kind === "published") summary = revisionChanges(null, current);
       else if (saves.at(-1)?.origin === "created") {
         // The creation snapshot is the starting point of a draft that has never been published.
         const created = parse(saves.at(-1)!.document);
-        summary = created ? { ...(saves.length > 1 ? revisionChanges(created, current) : only("")), headline: "Created the unit" } : null;
+        const changes = created && saves.length > 1 ? revisionChanges(created, current) : only("");
+        summary = created ? { ...changes, headline: (newest.origin === "version" && changes.headline) || "Created the unit" } : null;
       } else summary = only("Updated the draft");
     }
     // Publications from before drafts were recorded have no saves; their publisher is the only known creator.
     const creators = unique(saves.length ? saves.map(e => e.by) : [newest.by]);
-    return { key: newest.kind === "published" ? `revision-${newest.revision}` : `draft-${index}`, kind: newest.kind, at: newest.at, creators, saves: saves.length, summary };
+    return { key: newest.kind === "published" ? `revision-${newest.revision}` : `draft-${index}`, kind: newest.kind, at: newest.at, creators, saves: saves.length, summary, version: newest.origin === "version" };
   });
 }
 

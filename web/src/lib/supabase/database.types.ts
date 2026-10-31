@@ -874,18 +874,21 @@ export type Database = {
           academy_id: string
           assignment_id: string
           created_at: string
+          domain: string
           label_id: string
         }
         Insert: {
           academy_id: string
           assignment_id: string
           created_at?: string
+          domain?: string
           label_id: string
         }
         Update: {
           academy_id?: string
           assignment_id?: string
           created_at?: string
+          domain?: string
           label_id?: string
         }
         Relationships: [
@@ -897,11 +900,11 @@ export type Database = {
             referencedColumns: ["academy_id", "id"]
           },
           {
-            foreignKeyName: "assignment_labels_academy_id_label_id_fkey"
-            columns: ["academy_id", "label_id"]
+            foreignKeyName: "assignment_labels_label_fkey"
+            columns: ["academy_id", "domain", "label_id"]
             isOneToOne: false
             referencedRelation: "labels"
-            referencedColumns: ["academy_id", "id"]
+            referencedColumns: ["academy_id", "domain", "id"]
           },
         ]
       }
@@ -2975,6 +2978,45 @@ export type Database = {
           },
         ]
       }
+      content_unit_labels: {
+        Row: {
+          academy_id: string
+          created_at: string
+          domain: string
+          label_id: string
+          unit_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          domain?: string
+          label_id: string
+          unit_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          domain?: string
+          label_id?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_unit_labels_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_unit_labels_label_fkey"
+            columns: ["academy_id", "domain", "label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["academy_id", "domain", "id"]
+          },
+        ]
+      }
       content_units: {
         Row: {
           academy_id: string
@@ -3405,18 +3447,21 @@ export type Database = {
         Row: {
           academy_id: string
           created_at: string
+          domain: string
           exam_id: string
           label_id: string
         }
         Insert: {
           academy_id: string
           created_at?: string
+          domain?: string
           exam_id: string
           label_id: string
         }
         Update: {
           academy_id?: string
           created_at?: string
+          domain?: string
           exam_id?: string
           label_id?: string
         }
@@ -3429,11 +3474,11 @@ export type Database = {
             referencedColumns: ["academy_id", "id"]
           },
           {
-            foreignKeyName: "exam_labels_academy_id_label_id_fkey"
-            columns: ["academy_id", "label_id"]
+            foreignKeyName: "exam_labels_label_fkey"
+            columns: ["academy_id", "domain", "label_id"]
             isOneToOne: false
             referencedRelation: "labels"
-            referencedColumns: ["academy_id", "id"]
+            referencedColumns: ["academy_id", "domain", "id"]
           },
         ]
       }
@@ -4377,6 +4422,7 @@ export type Database = {
           academy_id: string
           color: string
           created_at: string
+          domain: string
           id: string
           name: string
         }
@@ -4384,6 +4430,7 @@ export type Database = {
           academy_id: string
           color: string
           created_at?: string
+          domain?: string
           id: string
           name: string
         }
@@ -4391,6 +4438,7 @@ export type Database = {
           academy_id?: string
           color?: string
           created_at?: string
+          domain?: string
           id?: string
           name?: string
         }
@@ -4704,35 +4752,38 @@ export type Database = {
         Row: {
           academy_id: string
           created_at: string
+          domain: string
           label_id: string
           quiz_id: string
         }
         Insert: {
           academy_id: string
           created_at?: string
+          domain?: string
           label_id: string
           quiz_id: string
         }
         Update: {
           academy_id?: string
           created_at?: string
+          domain?: string
           label_id?: string
           quiz_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "quiz_labels_academy_id_label_id_fkey"
-            columns: ["academy_id", "label_id"]
-            isOneToOne: false
-            referencedRelation: "labels"
-            referencedColumns: ["academy_id", "id"]
-          },
           {
             foreignKeyName: "quiz_labels_academy_id_quiz_id_fkey"
             columns: ["academy_id", "quiz_id"]
             isOneToOne: false
             referencedRelation: "quizzes"
             referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "quiz_labels_label_fkey"
+            columns: ["academy_id", "domain", "label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["academy_id", "domain", "id"]
           },
         ]
       }
@@ -7767,6 +7818,7 @@ export type Database = {
         Args: {
           p_academy_id: string
           p_color: string
+          p_domain?: string
           p_label_id: string
           p_name: string
         }
@@ -8823,6 +8875,10 @@ export type Database = {
         }
         Returns: Json
       }
+      save_content_draft_version: {
+        Args: { p_academy_id: string; p_unit_id: string; p_version: number }
+        Returns: undefined
+      }
       save_content_unit: {
         Args: {
           p_academy_id: string
@@ -9012,6 +9068,15 @@ export type Database = {
           p_assessment_id: string
           p_label_id: string
           p_type: string
+        }
+        Returns: Json
+      }
+      set_content_unit_label: {
+        Args: {
+          p_academy_id: string
+          p_applied: boolean
+          p_label_id: string
+          p_unit_id: string
         }
         Returns: Json
       }

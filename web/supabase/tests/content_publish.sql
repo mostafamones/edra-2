@@ -95,6 +95,12 @@ select pg_temp.lcheck((select version=5 and published_revision=2 from public.con
 select pg_temp.lact('student');
 select pg_temp.lcheck(public.get_my_content_unit(pg_temp.lid('academy'),pg_temp.lid('unit'))->>'title'='Published directly','student sees the newly published snapshot');
 select pg_temp.lact('owner');
+-- Keeping a draft as a version needs the current version, stores it once and leaves the unit untouched.
+select pg_temp.lerror(format('select public.save_content_draft_version(%L,%L,4)',pg_temp.lid('academy'),pg_temp.lid('unit')),'content_conflict');
+select public.save_content_draft_version(pg_temp.lid('academy'),pg_temp.lid('unit'),5);
+select public.save_content_draft_version(pg_temp.lid('academy'),pg_temp.lid('unit'),5);
+select pg_temp.lcheck((select count(*)=1 and min(document->>'title')='Published directly' and min(saved_by::text)=pg_temp.lid('owner')::text from public.content_drafts where unit_id=pg_temp.lid('unit') and kind='version'),'a draft version is stored once with its document and author');
+select pg_temp.lcheck((select version=5 from public.content_units where id=pg_temp.lid('unit')),'keeping a version does not change the unit');
 select public.change_content_unit(pg_temp.lid('academy'),pg_temp.lid('unit'),5,'archive');
 select pg_temp.lerror(format('select public.publish_content_edits(%L,%L,6,%L::jsonb)',pg_temp.lid('academy'),pg_temp.lid('unit'),'{"title":"Archived","description":"","items":[]}'),'archived');
 reset role;
@@ -102,9 +108,11 @@ update public.academic_years set closed_at=now() where id=pg_temp.lid('year');
 select pg_temp.lact('owner');
 select pg_temp.lerror(format('select public.publish_content_edits(%L,%L,3,%L::jsonb)',pg_temp.lid('academy'),pg_temp.lid('second-unit'),'{"title":"Closed year","description":"","items":[]}'),'year_closed');
 select pg_temp.lcheck(not has_function_privilege('anon','public.publish_content_edits(uuid,uuid,integer,jsonb)','EXECUTE'),'anonymous callers cannot publish');
+select pg_temp.lcheck(not has_function_privilege('anon','public.save_content_draft_version(uuid,uuid,integer)','EXECUTE'),'anonymous callers cannot keep a version');
+select pg_temp.lerror(format('select public.save_content_draft_version(%L,%L,3)',pg_temp.lid('academy'),pg_temp.lid('second-unit')),'year_closed');
 -- Draft history: creation, each stored draft and save-and-publish edits are kept; failed or unchanged writes are not.
-select pg_temp.lcheck((select array_agg(kind order by id)=array['created','saved','saved'] from public.content_drafts where unit_id=pg_temp.lid('unit')),'draft history records creation, the editor save and the save-and-publish edit');
-select pg_temp.lcheck((select document->>'title'='Published directly' and saved_by=pg_temp.lid('owner') and version=4 from public.content_drafts where unit_id=pg_temp.lid('unit') order by id desc limit 1),'draft history keeps the stored document, its author and version');
+select pg_temp.lcheck((select array_agg(kind order by id)=array['created','saved','saved','version'] from public.content_drafts where unit_id=pg_temp.lid('unit')),'draft history records creation, the editor save, the save-and-publish edit and the kept version');
+select pg_temp.lcheck((select document->>'title'='Published directly' and saved_by=pg_temp.lid('owner') and version=4 from public.content_drafts where unit_id=pg_temp.lid('unit') and kind='saved' order by id desc limit 1),'draft history keeps the stored document, its author and version');
 select pg_temp.lcheck(not exists(select 1 from public.content_drafts where document->>'title' in ('Must roll back','Stale edit')),'rolled back saves leave no draft history');
 set local role authenticated;
 select pg_temp.lact('instructor');

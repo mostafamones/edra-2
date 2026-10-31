@@ -13,7 +13,6 @@ export const NAV_ICONS = {
   bookings: ClipboardList,
   review: SearchCheck,
   content: Library,
-  releases: BookOpen,
   assignments: FilePenLine,
   quizzes: ListChecks,
   exams: FileText,
@@ -67,7 +66,6 @@ export type StaffNavSection = {
 
 export const STAFF_WORKSPACE_SECTIONS: readonly (StaffNavSection & { icon: NavIcon })[] = [
   { label: "Teaching", icon: "schedules", hrefs: ["/app/schedules", "/app/attendance"] },
-  { label: "Content", icon: "content", hrefs: ["/app/content", "/app/releases"] },
 ];
 
 /** The Assessments list and the type-specific pages it opens; all keep the Assessments entry active. */
@@ -172,11 +170,11 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
     label: "Learning",
     items: [
       {
-        label: "Content library",
+        label: "Library",
         href: "/app/content",
         icon: "content",
         preview: {
-          title: "Content library",
+          title: "Library",
           purpose: "Prepare reusable teaching material before it is released to students.",
           sections: [
             "Content units indexed by level, track, subject, and preparation state.",
@@ -184,21 +182,6 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
             "Draft assets and links to releases that reuse each unit.",
           ],
           actions: ["Staff can prepare drafts; library organization and archiving follow role permissions."],
-        },
-      },
-      {
-        label: "Published lessons",
-        href: "/app/releases",
-        icon: "releases",
-        preview: {
-          title: "Published lessons",
-          purpose: "Control which prepared content becomes available to the intended students.",
-          sections: [
-            "Draft, published, and archived releases with their source content unit.",
-            "Level and optional track audience, published explanation assets, and availability state.",
-            "Connections to attendance access, coupons, and student entitlement status.",
-          ],
-          actions: ["Instructors prepare drafts; Owners, Head Admins and Admins publish student-facing releases."],
         },
       },
       {

@@ -18,24 +18,25 @@ import { newUuid } from "@/lib/uuid";
 import { cn } from "@/lib/utils";
 import { createLabel, deleteLabel, updateLabel } from "../actions";
 import { labelsQueryKey, useLabels } from "../queries";
-import type { Label, LabelFailure } from "../types";
+import type { Label, LabelDomain, LabelFailure } from "../types";
 import { LABEL_NAME_MAX, labelNameSchema, sortLabels } from "../validation";
 import { LabelColorPicker } from "./color";
 
 type Props = {
   academyId: string;
+  domain: LabelDomain;
   onChanged?: () => void;
   /** A rename, recolor (the new label) or confirmed deletion (null) as it happens, before the server answers. */
   onLabelChange?: (labelId: string, label: Label | null) => void;
 };
 
 /**
- * Creates, renames, recolors and deletes the academy's labels (managers only; the database enforces
+ * Creates, renames, recolors and deletes one catalog's labels (managers only; the database enforces
  * it). Changes apply to every use and show at once, undone if the server refuses. `onChanged` lets
  * the consuming module refresh its own caches once the server has answered.
  */
-export function LabelEditor({ academyId, onChanged, onLabelChange }: Props) {
-  const labels = useLabels(academyId);
+export function LabelEditor({ academyId, domain, onChanged, onLabelChange }: Props) {
+  const labels = useLabels(academyId, domain);
   const queryClient = useQueryClient();
   const isCurrent = useAcademyScope();
   const newName = useRef<HTMLInputElement>(null);
@@ -47,14 +48,14 @@ export function LabelEditor({ academyId, onChanged, onLabelChange }: Props) {
   const sending = useRef(0);
 
   async function patch(change: (labels: Label[]) => Label[]) {
-    const queryKey = labelsQueryKey(academyId);
+    const queryKey = labelsQueryKey(academyId, domain);
     // A catalog request already running would otherwise overwrite the change when it finishes.
     await queryClient.cancelQueries({ queryKey });
     queryClient.setQueryData<Label[]>(queryKey, (labels) => labels && sortLabels(change(labels)));
   }
   async function refresh() {
     onChanged?.();
-    await queryClient.invalidateQueries({ queryKey: labelsQueryKey(academyId) });
+    await queryClient.invalidateQueries({ queryKey: labelsQueryKey(academyId, domain) });
   }
   /** Runs one command and undoes its change on failure; caches refresh when the last command answers, but UI changes only while the academy is current. */
   async function send<T extends { ok: boolean }>(command: () => Promise<T | LabelFailure>, undo: () => void): Promise<T | null> {
@@ -113,7 +114,7 @@ export function LabelEditor({ academyId, onChanged, onLabelChange }: Props) {
       <NewLabel inputRef={newName} used={labels.data?.map((label) => label.color) ?? []}
         onCreate={async (labelId, name, color) => {
           await patch((current) => [...current, { id: labelId, name, color }]);
-          const result = await send(() => createLabel({ academyId, labelId, name, color }), () => void patch((current) => current.filter((entry) => entry.id !== labelId)));
+          const result = await send(() => createLabel({ academyId, domain, labelId, name, color }), () => void patch((current) => current.filter((entry) => entry.id !== labelId)));
           return result !== null;
         }} />
       {labels.isPending ? (

@@ -59,7 +59,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
   const [lifecycle, setLifecycle] = useState<PendingLifecycle | null>(null);
   const queryClient = useQueryClient();
   const isCurrent = useAcademyScope();
-  const labels = useLabels(academyId);
+  const labels = useLabels(academyId, "assessments");
   const managesLabels = canManageLabels(academy.role);
   const [managing, setManaging] = useState<{ open: boolean; opener: HTMLElement | null }>({ open: false, opener: null });
   const applying = useRef(0);
@@ -83,7 +83,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
         const result = await setAssessmentLabel({ academyId, type: item.type, assessmentId: item.id, labelId, applied });
         if (!result.ok) {
           await show(!applied);
-          if (result.code === "label_not_found") void queryClient.invalidateQueries({ queryKey: labelsQueryKey(academyId) });
+          if (result.code === "label_not_found") void queryClient.invalidateQueries({ queryKey: labelsQueryKey(academyId, "assessments") });
           if (isCurrent(academyId)) toast.error(result.message);
         }
       } catch {
@@ -154,7 +154,7 @@ function ListContent({ academy }: { academy: AcademyEntry }) {
 
       <AssessmentToolbar params={params} onChange={update} view={view} onView={setView} academyId={academyId} labels={labels.data}
         manager={managesLabels && (
-          <LabelManager academyId={academyId} open={managing.open} opener={managing.opener} onChanged={() => void refreshList()}
+          <LabelManager academyId={academyId} domain="assessments" open={managing.open} opener={managing.opener} onChanged={() => void refreshList()}
             onLabelChange={(labelId, label) => void patchListLabels(queryClient, academyId, (row) => sortLabels(row.labels.flatMap((entry) => entry.id !== labelId ? [entry] : label ? [label] : [])))}
             // Opening from the toolbar anchors there; closing keeps the opener so focus can return to it.
             onOpenChange={(open) => setManaging((current) => open ? { open, opener: null } : { ...current, open: false })} />

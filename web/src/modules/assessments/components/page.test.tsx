@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({
   rpc: mocks.rpc,
-  from: () => ({ select: () => ({ eq: async () => ({ data: mocks.catalog, error: null }) }) }),
+  from: () => ({ select: () => ({ match: async () => ({ data: mocks.catalog, error: null }) }) }),
 }) }));
 vi.mock("../labels", () => ({ setAssessmentLabel: mocks.setLabel }));
 vi.mock("@/modules/labels/actions", () => ({ createLabel: mocks.createLabel, updateLabel: mocks.updateLabel, deleteLabel: mocks.deleteLabel }));

@@ -82,7 +82,6 @@ function StaffLink({ item, icon, pathname, closeMobile, also = [] }: {
 
 const workspaceIcons: Record<string, WorkspaceIcon> = {
   Teaching: TeachingIcon,
-  Content: FolderLibraryIcon,
 };
 
 function WorkspaceSection({ label, icon, items, pathname, closeMobile, sidebarOpen, expandSidebar, savedOpen, onToggle }: {
@@ -172,6 +171,7 @@ function WorkspaceNavigation({ pathname, role, closeMobile, sidebarOpen, expandS
                 />
               );
             })}
+            <StaffLink item={pageFor("/app/content")} icon={FolderLibraryIcon} pathname={pathname} closeMobile={closeMobile} />
             <StaffLink item={pageFor("/app/assessments")} icon={AssignmentsIcon} pathname={pathname} closeMobile={closeMobile} also={ASSESSMENT_PATHS} />
           </SidebarMenu>
         </SidebarGroupContent>
