@@ -6,7 +6,15 @@ Confirmed by the owner, 2026-10-29. These are approved requirements, not a state
 
 Labels are a shared academy feature intended for use across multiple modules. Each module has its own label catalog in an academy, retained across academic years (owner decision, 2026-10-31): assessment labels are not offered on content units, nor the reverse, and the same name may exist in both. The management rules and label UI are the same in every module.
 
-The first delivery integrates labels with assessments: assignments, quizzes and exams share the assessment catalog, and each assessment may have multiple labels. Content units are the second integration (owner request, 2026-10-31): units have their own catalog, and each unit may have multiple labels, shown on its library card, applied from its menus and filtered from the library's view options. Labels for students and other record types will be added in later deliveries. The [assessment integration](assessments.md#labels) defines the initial UI and assessment-specific behavior.
+The first delivery integrates labels with assessments: assignments, quizzes and exams share the assessment catalog, and each assessment may have multiple labels. Content units are the second integration (owner request, 2026-10-31): units have their own catalog, and each unit may have multiple labels, shown on its library card, applied from its menus and filtered from the library's view options. Student records are the next planned integration, with annual associations as defined below. Other record types remain later deliveries. The [assessment integration](assessments.md#labels) defines the initial UI and assessment-specific behavior.
+
+## Student records
+
+Confirmed by the owner, 2026-10-31, for the planned student-label delivery (EDRA-270): label assignments belong to each annual student record, not the persistent academy student identity. Assignments do not carry across academic years. The student label catalog is separate from the assessment and content catalogs and remains academy-wide across years. The shared staff visibility, application and management permissions below apply.
+
+Individual and bulk application/removal are included. All active staff, including Instructors, may perform these label operations. This does not grant Instructors the student table's administrative bulk actions.
+
+Labels remain editable organizational metadata on archived records and records from closed academic years. Changing labels does not change record versions, placement, access, academic work or official history, and does not reopen a year or restore an archived record.
 
 ## Permissions and management
 
