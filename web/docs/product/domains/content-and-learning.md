@@ -76,6 +76,20 @@ Confirmed by the owner, 2026-10-16, and extended to instructor-owned units on 20
 
 Confirmed 2026-10-25: managers can publish their current editor changes directly without first pressing Save draft. Save and publication execute atomically with the current version check and all readiness/history validation. Failed publication changes neither the stored draft nor the live snapshot, and the editor retains unsaved changes for correction. The separate Save draft action remains available; instructors still require manager publication.
 
+### Scheduled publication and confirmed versions
+
+Confirmed by the owner, 2026-10-31. This defines the scheduled-publication delivery, not a claim that it is implemented.
+
+Owners, Head Admins and Admins may schedule both a unit's first publication and an update to an already-published unit. They may inspect, reschedule or cancel the scheduled publication. Times follow the academy's Cairo time convention and identify an unambiguous instant.
+
+Before scheduled publication, an explicit confirmation saves a version in history. For an already-published unit, this supplies publication approval for the saved changes without making them live immediately. The unit remains in the Review workflow, where staff may continue editing and save further confirmed versions. Ordinary working-draft changes are distinct from these confirmed versions.
+
+When the schedule executes, it publishes the latest confirmed version available at that point, not the mutable working draft and not a version frozen when the schedule was first created. Confirming another version updates the publication candidate without requiring a change to the scheduled time. For an already-published unit, its current published version remains student-visible until the scheduled update succeeds. Earlier confirmed versions and publications remain in history.
+
+Execution rechecks that the scheduling manager still has publication authority and that the unit, academic year and materials remain publishable under the existing rules. Transient errors retry automatically. Lost authority or failed validation stops the schedule with a recorded reason for manual correction. Failed execution does not replace the current publication. Scheduling changes and execution outcomes are recorded, and retries must not create duplicate publications or reset existing access periods.
+
+### Archival
+
 Archiving a unit removes its published release from active student learning while retaining its records. Managers can archive and restore units. Restoration returns a unit to a draft, not directly to student visibility; a manager must explicitly publish it again under the usual readiness and history rules. This does not authorize deleting stored video assets, resetting access periods or rewriting earlier academic history. Closed-year records remain read-only under the academic-year rules.
 
 When a track is removed, affected content units and their current released audiences become level-wide under the approved track-removal rules. Earlier activity and snapshots retain their historical identity.
