@@ -259,11 +259,14 @@ select pg_temp.check(exists (select 1 from public.labels where id = pg_temp.id('
   and (select count(*) from public.quiz_labels where label_id = pg_temp.id('red')) = 1, 'failed delete kept label and uses');
 
 -- Content units: any staff applies a desired state, the unit never changes, tenants stay apart, and a unit counts as a use.
-insert into label_ids(name) values ('unit'),('other-unit'),('unit-only'),('unit-second');
+insert into label_ids(name) values ('content-year'),('unit'),('other-unit'),('unit-only'),('unit-second');
+insert into public.academic_years(id,academy_id,start_year)
+  select pg_temp.id('content-year'),pg_temp.id('academy'),max(start_year)+1
+  from public.academic_years where academy_id=pg_temp.id('academy');
 insert into public.academy_levels(academy_id,level_id,sort_order) values(pg_temp.id('other'),'preparatory-3',9);
 select pg_temp.act('owner');
 set local role authenticated;
-select public.create_content_unit(pg_temp.id('academy'),pg_temp.id('year'),'preparatory-3',null,pg_temp.id('unit'),'Labelled unit');
+select public.create_content_unit(pg_temp.id('academy'),pg_temp.id('content-year'),'preparatory-3',null,pg_temp.id('unit'),'Labelled unit');
 select pg_temp.check((select string_agg(name, ',' order by name) from public.labels where academy_id = pg_temp.id('academy') and domain = 'content') = 'Core,Needs update,Revision', 'a new academy starts with the default content labels');
 select public.create_label(pg_temp.id('academy'),pg_temp.id('unit-only'),'Unit only','teal','content');
 -- Each module has its own catalog: names repeat across catalogs but not within one, and a retry cannot switch catalog.
