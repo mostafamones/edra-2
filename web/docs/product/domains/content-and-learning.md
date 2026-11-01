@@ -86,9 +86,13 @@ Owners, Head Admins and Admins may schedule both a unit's first publication and 
 
 Before scheduled publication, an explicit confirmation saves a version in history. For an already-published unit, this supplies publication approval for the saved changes without making them live immediately. The unit remains in the Review workflow, where staff may continue editing and save further confirmed versions. Ordinary working-draft changes are distinct from these confirmed versions.
 
+Confirmed by the owner, 2026-10-31: only Owners, Head Admins and Admins may confirm a version as eligible for automatic publication. An Instructor's saved history version still requires manager approval; saving a version alone does not approve it for publication.
+
 When the schedule executes, it publishes the latest confirmed version available at that point, not the mutable working draft and not a version frozen when the schedule was first created. Confirming another version updates the publication candidate without requiring a change to the scheduled time. For an already-published unit, its current published version remains student-visible until the scheduled update succeeds. Earlier confirmed versions and publications remain in history.
 
 Execution rechecks that the scheduling manager still has publication authority and that the unit, academic year and materials remain publishable under the existing rules. Transient errors retry automatically. Lost authority or failed validation stops the schedule with a recorded reason for manual correction. Failed execution does not replace the current publication. Scheduling changes and execution outcomes are recorded, and retries must not create duplicate publications or reset existing access periods.
+
+Confirmed by the owner, 2026-10-31: rescheduling transfers execution responsibility to the manager who most recently scheduled or rescheduled the publication. The worker checks that manager's live authority. A successful Publish now cancels the pending schedule atomically with immediate publication; failed publication leaves the schedule unchanged.
 
 ### Archival
 
