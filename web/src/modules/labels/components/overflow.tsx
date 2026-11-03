@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,10 +14,13 @@ export function LabelOverflow({ labels, className }: { labels: readonly Label[];
   // Labels can arrive after the first render, and nothing is mounted to measure until they do.
   const hasLabels = labels.length > 0;
 
-  useEffect(() => {
+  // Measured before paint, so a row that doesn't fit never shows every badge first.
+  useLayoutEffect(() => {
     if (!root.current || !full.current) return;
     const [available, needed] = [root.current, full.current];
-    const observer = new ResizeObserver(() => setOverflowing(needed.offsetWidth > available.clientWidth));
+    const measure = () => setOverflowing(needed.offsetWidth > available.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(available);
     observer.observe(needed);
     return () => observer.disconnect();
