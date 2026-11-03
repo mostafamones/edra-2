@@ -33,6 +33,13 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 - Give each commit a clear subject and a detailed message explaining what changed and why. Include relevant verification results and material limitations.
 - Do not push commits unless the owner explicitly requests it.
 
+### Commit docs
+
+- When the owner requests "Commit docs" (case-insensitive), that is explicit approval to review, commit all pending documentation changes, and push them directly to `main` without further confirmation. This includes `AGENTS.md`, product and engineering documentation, and module READMEs. Preserve restricted-file access rules and any explicit file exclusions.
+- Verify that both the staged changes and the full outgoing commit range contain only documentation changes. Check the actual content, not just file extensions; do not include application code, dependencies, configuration, migrations or generated application files. Leave unrelated non-documentation changes untouched, and do not push existing non-documentation commits under this authorization.
+- Follow the focused-commit and detailed-message rules above. Include `[skip ci]` in every documentation commit subject created by this command.
+- Run documentation-appropriate checks, including `git diff --check` and checking affected references. Application tests/builds are not required for documentation-only changes. Push normally to `main`; this command does not authorize force-pushing or rewriting shared history.
+
 ## Pull request titles
 
 - Name every pull request `type(scope): summary`. Both the type and scope are required, for example `fix(ci): stabilize database runner tests` or `docs(assessments): clarify submission rules`.
