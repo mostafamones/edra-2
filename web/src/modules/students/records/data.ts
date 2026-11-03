@@ -54,6 +54,7 @@ const listRowSchema = z.object({
   version: z.number().int(),
   online_account: z.enum(["not_connected", "connected", "suspended"]),
   account_name: z.string().nullable(),
+  label_ids: z.array(z.string()),
 });
 const listResponseSchema = z.object({ rows: z.array(listRowSchema), total: z.number().int().nonnegative() });
 
@@ -76,6 +77,7 @@ const toRow = (row: z.infer<typeof listRowSchema>): StudentRecordRow => ({
   version: row.version,
   onlineAccount: row.online_account,
   accountName: row.account_name,
+  labelIds: row.label_ids,
 });
 
 /** One page of the academy's records for its open academic year. */
@@ -99,6 +101,8 @@ export async function listStudentRecords(academyId: string, params: StudentListP
       p_sorts: params.sorts,
       p_page_index: params.pageIndex,
       p_page_size: params.pageSize,
+      p_label_ids: params.labels,
+      p_unlabeled: params.unlabeled,
     };
     // The generator types RPC arguments as non-null; the function treats NULL filters as "any".
     const [{ data, error }, year] = await Promise.all([
@@ -132,6 +136,9 @@ export async function getStudentRecord(academyId: string, recordId: string): Pro
   const { data: profile, error: profileError } = await actor.db.from("academy_student_profiles")
     .select("user_id,access_suspended_at").eq("academy_id", academyId).eq("id", data.academy_student_profile_id).maybeSingle();
   if (profileError) return { ok: false, status: 500 };
+  const { data: labels, error: labelsError } = await actor.db.from("annual_student_record_labels")
+    .select("label_id").eq("academy_id", academyId).eq("annual_student_record_id", recordId);
+  if (labelsError) return { ok: false, status: 500 };
   return {
     ok: true,
     data: {
@@ -151,6 +158,7 @@ export async function getStudentRecord(academyId: string, recordId: string): Pro
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       version: data.version,
+      labelIds: (labels ?? []).map((label) => label.label_id),
     },
   };
 }

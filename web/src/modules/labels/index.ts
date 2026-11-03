@@ -3,7 +3,7 @@ export { LabelOverflow } from "./components/overflow";
 export { LabelEditor } from "./components/editor";
 export { LabelFilter, type LabelSelection } from "./components/filter";
 export { LabelManager } from "./components/manager";
-export { LabelsSubmenu } from "./components/submenu";
+export { LabelsMenuItems, LabelsSubmenu } from "./components/submenu";
 export { canManageLabels } from "./permissions";
 export { labelsQueryKey, loadLabels, useLabels } from "./queries";
 export { labelSchema, sortLabels } from "./validation";

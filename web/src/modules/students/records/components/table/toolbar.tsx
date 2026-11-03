@@ -2,11 +2,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { FilterPopover, type FilterField } from "@/components/shared/filter-popover";
+import { FilterPopover, type FilterField, type FilterSection } from "@/components/shared/filter-popover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import type { Group, Level, Track } from "@/modules/groups";
+import { LabelFilter, type Label } from "@/modules/labels";
 import {
   DEFAULT_LIST_PARAMS, MAX_SEARCH_LENGTH, NONE, type StatusFilter, type StudentListParams,
 } from "../../list-params";
@@ -25,6 +26,8 @@ type Props = {
   levelNames: Record<string, string>;
   tracks: Track[];
   groups: Group[];
+  /** The students catalog; undefined until it loads. */
+  labels: readonly Label[] | undefined;
   /** Icon buttons joined to the Filter button in one group. */
   children?: ReactNode;
   /** Standalone buttons after the group, such as Import and Add student. */
@@ -32,7 +35,7 @@ type Props = {
 };
 
 /** Search, the Filter panel, and the badges for every active filter. */
-export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChange, levels, levelNames, tracks, groups, children, actions }: Props) {
+export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChange, levels, levelNames, tracks, groups, labels, children, actions }: Props) {
   const searchRef = useRef<HTMLInputElement>(null);
   // The typed value runs ahead of the URL until the debounce applies it.
   const [draft, setDraft] = useState<string | null>(null);
@@ -118,6 +121,14 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
     },
   ];
 
+  // Shown once the academy has labels, or while a label filter is still set.
+  const labelsActive = params.labels.length > 0 || params.unlabeled;
+  const sections: FilterSection[] = labelsActive || labels?.length ? [{
+    id: "labels", active: labelsActive, onReset: () => onFiltersChange({ labels: [], unlabeled: false }),
+    content: <LabelFilter options={labels ?? []} labels={params.labels} unlabeled={params.unlabeled}
+      onChange={(selection) => onFiltersChange({ labels: [...selection.labels].sort(), unlabeled: selection.unlabeled })} />,
+  }] : [];
+
   const active: { key: string; label: string; clear: () => void }[] = [];
   if (params.status !== "active") {
     active.push({ key: "status", label: params.status === "archived" ? "Archived" : "Active and archived", clear: () => onFiltersChange({ status: "active" }) });
@@ -135,9 +146,16 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
     active.push({ key: "type", label: PARTICIPATION_LABELS[params.participationType], clear: () => onFiltersChange({ participationType: null }) });
   }
 
+  for (const id of params.labels) {
+    // A deleted label stays until removed: dropping it silently would widen the results.
+    const name = labels ? labels.find((label) => label.id === id)?.name ?? "Unknown label" : "Label";
+    active.push({ key: `label-${id}`, label: name, clear: () => onFiltersChange({ labels: params.labels.filter((item) => item !== id) }) });
+  }
+  if (params.unlabeled) active.push({ key: "unlabeled", label: "Unlabeled", clear: () => onFiltersChange({ unlabeled: false }) });
+
   function clearAll() {
     onFiltersChange({
-      status: DEFAULT_LIST_PARAMS.status, levelId: null, track: null, group: null, participationType: null,
+      status: DEFAULT_LIST_PARAMS.status, levelId: null, track: null, group: null, participationType: null, labels: [], unlabeled: false,
     });
   }
 
@@ -182,7 +200,7 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
         )}
       </div>
       <div className="flex shrink-0 gap-2">
-        <FilterPopover fields={fields} iconOnly>{children}</FilterPopover>
+        <FilterPopover fields={fields} sections={sections} iconOnly>{children}</FilterPopover>
         {actions}
       </div>
     </div>

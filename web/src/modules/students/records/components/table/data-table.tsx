@@ -1,4 +1,5 @@
-import { memo, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { memo, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
+import { useRouter } from "@/lib/navigation";
 import { flexRender, type Column, type Row, type Table as TanstackTable } from "@tanstack/react-table";
 import { cn } from "cn";
 
@@ -9,6 +10,7 @@ import type { StudentRecordRow } from "../../types";
 import { COLUMN_LABELS, COLUMN_WIDTHS, isDataColumn, RESIZE_STEP, SELECT_COLUMN } from "../../table/config";
 import { clampTrade, fitWidths } from "../../table/layout";
 import { HeaderMenu } from "./header-menu";
+import { StudentRowMenu, type RowActions } from "./row-menu";
 
 type Props = {
   table: TanstackTable<StudentRecordRow>;
@@ -22,6 +24,9 @@ type Props = {
   /** Rendered instead of the whole table (headers and scroll container included) when a loaded page has no rows. */
   empty: ReactNode;
   isSelected: (id: string) => boolean;
+  rowActions: RowActions;
+  /** Where a row opens. */
+  rowHref: (row: StudentRecordRow) => string;
 };
 
 /**
@@ -36,7 +41,7 @@ export function StudentsDataTable({ empty, ...props }: Props) {
 }
 
 /** Owns the container measurement so the observer attaches whenever the table mounts after an empty state. */
-function PopulatedTable({ table, sorts, onSortsChange, loading, fetching, skeletonRows, isSelected }: Omit<Props, "empty">) {
+function PopulatedTable({ table, sorts, onSortsChange, loading, fetching, skeletonRows, isSelected, rowActions, rowHref }: Omit<Props, "empty">) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const [available, setAvailable] = useState(0);
@@ -131,6 +136,8 @@ function PopulatedTable({ table, sorts, onSortsChange, loading, fetching, skelet
             rows={rows}
             fetching={fetching}
             isSelected={isSelected}
+            rowActions={rowActions}
+            rowHref={rowHref}
             layoutKey={columns.map((column) => column.id).join(",")}
             columnDefs={table.options.columns}
           />
@@ -144,6 +151,8 @@ type BodyProps = {
   rows: Row<StudentRecordRow>[];
   fetching: boolean;
   isSelected: (id: string) => boolean;
+  rowActions: RowActions;
+  rowHref: (row: StudentRecordRow) => string;
   /** Visible column ids in order; re-renders the body when columns are shown, hidden, or moved. */
   layoutKey: string;
   /** Column definitions; new definitions (for example a changed selection) re-render the body. */
@@ -151,17 +160,33 @@ type BodyProps = {
 };
 
 /** Rows re-render only for new data or a changed column layout, never while a width is being dragged. */
-const Body = memo(function Body({ rows, fetching, isSelected }: BodyProps) {
+const Body = memo(function Body({ rows, fetching, isSelected, rowActions, rowHref }: BodyProps) {
+  const router = useRouter();
+  /** Opens the row, unless the click belongs to a control, a menu portaled from the row, or a text selection. */
+  const openRow = (event: MouseEvent<HTMLTableRowElement>, row: StudentRecordRow) => {
+    const target = event.target as Element;
+    if (!event.currentTarget.contains(target) || target.closest("a, button, input, [data-row-static]") || window.getSelection()?.toString()) return;
+    if (event.ctrlKey || event.metaKey || event.button === 1) window.open(rowHref(row), "_blank", "noopener");
+    else router.push(rowHref(row));
+  };
   return (
     <TableBody className={cn("transition-opacity", fetching && "opacity-60")}>
       {rows.map((row) => (
-        <TableRow key={row.id} data-state={isSelected(row.id) ? "selected" : undefined}>
-          {row.getVisibleCells().map((cell) => (
-            <TableCell key={cell.id} className={cn("h-12 min-w-0 overflow-hidden", isDataColumn(cell.column.id) ? "pl-4" : "pl-2", cell.column.id === "name" && "text-left", cell.column.id === SELECT_COLUMN && "px-0")}>
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </TableCell>
-          ))}
-        </TableRow>
+        <StudentRowMenu key={row.id} row={row.original} actions={rowActions}>
+          <TableRow
+            data-state={isSelected(row.id) ? "selected" : undefined}
+            className="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            onClick={(event) => openRow(event, row.original)}
+            onAuxClick={(event) => { if (event.button === 1) openRow(event, row.original); }}
+            onKeyDown={(event) => { if (event.key === "Enter" && event.target === event.currentTarget) router.push(rowHref(row.original)); }}
+          >
+            {row.getVisibleCells().map((cell) => (
+              <TableCell key={cell.id} data-row-static={isDataColumn(cell.column.id) ? undefined : ""} className={cn("h-12 min-w-0 overflow-hidden", isDataColumn(cell.column.id) ? "pl-4" : "pl-2", cell.column.id === "name" && "text-left", cell.column.id === SELECT_COLUMN && "px-0")}>
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
+            ))}
+          </TableRow>
+        </StudentRowMenu>
       ))}
     </TableBody>
   );
@@ -169,6 +194,8 @@ const Body = memo(function Body({ rows, fetching, isSelected }: BodyProps) {
   previous.rows === next.rows
   && previous.fetching === next.fetching
   && previous.isSelected === next.isSelected
+  && previous.rowActions === next.rowActions
+  && previous.rowHref === next.rowHref
   && previous.layoutKey === next.layoutKey
   && previous.columnDefs === next.columnDefs);
 

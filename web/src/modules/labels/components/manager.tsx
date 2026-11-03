@@ -17,10 +17,12 @@ type Props = {
   opener: HTMLElement | null;
   onChanged?: () => void;
   onLabelChange?: (labelId: string, label: Label | null) => void;
+  /** No icon button, for a page that only opens the editor from `opener`. */
+  hideTrigger?: boolean;
 };
 
 /** The label icon button and its editor popover. Render it only for label managers. */
-export function LabelManager({ academyId, domain, open, onOpenChange, opener, onChanged, onLabelChange }: Props) {
+export function LabelManager({ academyId, domain, open, onOpenChange, opener, onChanged, onLabelChange, hideTrigger }: Props) {
   const button = useRef<HTMLButtonElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const target = () => (opener?.isConnected ? opener : button.current);
@@ -33,16 +35,18 @@ export function LabelManager({ academyId, domain, open, onOpenChange, opener, on
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       {opener && <PopoverAnchor virtualRef={anchor} />}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <PopoverTrigger asChild>
-            <Button ref={button} variant="outline" size="icon" aria-label="Manage labels">
-              <HugeiconsIcon icon={LabelIcon} strokeWidth={1.5} aria-hidden="true" />
-            </Button>
-          </PopoverTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Labels</TooltipContent>
-      </Tooltip>
+      {!hideTrigger && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button ref={button} variant="outline" size="icon" aria-label="Manage labels">
+                <HugeiconsIcon icon={LabelIcon} strokeWidth={1.5} aria-hidden="true" />
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Labels</TooltipContent>
+        </Tooltip>
+      )}
       <PopoverContent ref={content} align="end" aria-label="Labels" className="w-64"
         // Start in the new-label field rather than on a control whose tooltip would take the first Escape.
         onOpenAutoFocus={(event) => { event.preventDefault(); content.current?.querySelector<HTMLInputElement>("input[data-new-label]")?.focus(); }}

@@ -34,13 +34,14 @@ export function LabelsSubmenu(props: Props) {
     <Sub>
       <SubTrigger className="gap-2"><HugeiconsIcon icon={LabelIcon} strokeWidth={1.5} aria-hidden="true" />Labels</SubTrigger>
       <SubContent className="max-h-80 min-w-44 overflow-y-auto">
-        <Items {...props} />
+        <LabelsMenuItems {...props} />
       </SubContent>
     </Sub>
   );
 }
 
-function Items({ menu, academyId, domain, applied, onApply, onManage }: Props) {
+/** The submenu's items, for a menu that holds only labels. */
+export function LabelsMenuItems({ menu, academyId, domain, applied, onApply, onManage }: Props) {
   const { Item, CheckboxItem, Separator } = menu === "context" ? CONTEXT : DROPDOWN;
   const labels = useLabels(academyId, domain);
   return (

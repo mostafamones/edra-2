@@ -7,6 +7,7 @@ import { isAcademyManager, type AcademyRole } from "@/modules/academies/roles";
  * - Every staff role reads records and contacts, creates records, and edits names and phones.
  * - Owners, Head Admins and Admins also change placement (level, track, group) and student type, archive or restore,
  *   import students, and change groups in bulk.
+ * - Every staff role selects records and applies or removes existing labels, individually and in bulk.
  */
 export type StaffRole = AcademyRole;
 
@@ -18,3 +19,4 @@ export const canEditStudentPlacement = (role: StaffRole) => isManager(role);
 export const canArchiveStudentRecords = (role: StaffRole) => isManager(role);
 export const canImportStudents = (role: StaffRole) => isManager(role);
 export const canChangeStudentGroups = (role: StaffRole) => isManager(role);
+export const canApplyStudentLabels = (role: StaffRole) => Boolean(role);

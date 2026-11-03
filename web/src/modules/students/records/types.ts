@@ -22,6 +22,8 @@ export type StudentRecordRow = {
   onlineAccount: OnlineAccount;
   /** The linked account's own name (display name, else full name); null when no account is linked. */
   accountName: string | null;
+  /** The annual record's staff-only labels, resolved from the academy's students catalog for display. */
+  labelIds: string[];
 };
 
 export type OnlineAccount = "not_connected" | "connected" | "suspended";

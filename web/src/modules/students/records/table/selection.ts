@@ -1,3 +1,4 @@
+import type { StudentListParams } from "../list-params";
 import type { RecordVersion, StudentRecordRow } from "../types";
 
 /**
@@ -30,6 +31,11 @@ export function pageSelectionState(selection: Selection, rows: StudentRecordRow[
   if (selected === 0) return false;
   return selected === rows.length ? true : "indeterminate";
 }
+
+/** What a selection belongs to: changing any of it clears the selection, so hidden records are never acted on. Paging and sorting keep it. */
+export const selectionScope = (params: StudentListParams, userId: string | undefined, academicYearId: string | null | undefined) => JSON.stringify([
+  userId, academicYearId, params.search, params.status, params.levelId, params.track, params.group, params.participationType, params.labels, params.unlabeled,
+]);
 
 /** Refreshes versions and statuses for selected rows that were just reloaded. */
 export function syncSelection(selection: Selection, rows: StudentRecordRow[]): Selection {

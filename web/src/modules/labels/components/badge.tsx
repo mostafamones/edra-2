@@ -12,7 +12,7 @@ export function LabelSwatch({ color, className }: { color: PaletteKey; className
 export function LabelBadge({ label }: { label: Label }) {
   return (
     <Badge variant="secondary" className={cn("max-w-40 shrink font-normal", paletteChip(label.color))}>
-      <span className="truncate">{label.name}</span>
+      <span dir="auto" title={label.name} className="truncate">{label.name}</span>
     </Badge>
   );
 }
