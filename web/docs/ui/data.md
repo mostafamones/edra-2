@@ -1,17 +1,17 @@
 # Data and cache contract
 
-The objective is to reuse work without confusing cached display data with current authority. This is implementation guidance grounded in the current code, not a mandate to convert all Server Components to client queries.
+The objective is to reuse work without confusing cached display data with current authority. This is implementation guidance grounded in the current code, not a mandate to convert all server-rendered lists to client queries.
 
 ## What exists today
 
 | Layer | Evidence | Meaning |
 | --- | --- | --- |
-| Browser query cache | `src/lib/query-client.ts`, `components/providers/query-provider.tsx` | One browser QueryClient; global query stale time 60 seconds, retry 1. The server gets a new client. This is memory reuse, not a persistent/offline database |
+| Browser query cache | `src/lib/query-client.ts`, `src/router.tsx`, `src/routes/__root.tsx` | One browser QueryClient; global query stale time 60 seconds, retry 1. The server gets a new client. Router context supplies the client to the root provider. Use Router Query integration when needed for prefetch/hydration. This is memory reuse, not a persistent/offline database |
 | Shared panel options | `modules/content/panels.ts` | `unitPanelOptions(academyId, unitId)` supplies the same key, loader and freshness to prefetch and consumers |
 | Paginated assessment list | `modules/assessments/queries.ts`, `modules/assessments/README.md` | Server-filtered pages and totals; its zero stale time is deliberate so workspace edits appear on return |
 | Academy labels | `modules/labels/queries.ts` | Shared academy-scoped catalog; definition changes refresh the catalog and consuming lists |
 | Lookup reuse | `modules/sessions/components/use-schedule-options.ts` | Existing group/structure keys and public APIs are shared; the startable schedule variant has a distinct result shape/key |
-| Request-level server reuse | `modules/students/enrollment/server.ts` | `listMyStudentAcademies` uses React `cache`; repeated calls in a server render are not automatically repeated database reads |
+| Request-level server reuse | `src/lib/server/request.ts` | `requestCache` memoizes repeated sensitive reads for one request, as `listMyStudentAcademies` does in `modules/students/enrollment/server.ts`; never share tenant data process-wide |
 | Local presentation state | `modules/learning/components/units-list.tsx` | Layout/status/grouping/search operate on loaded items; changing academy/paging navigates for new data |
 | Durable unsaved work | `modules/assignments/student/local.ts`, `modules/exams/student/answering/` | Account-scoped draft recovery and pending operations, not submitted work or permission grants |
 | Expiring media URLs | `components/shared/assessment/images/context.tsx` | In-memory keys, expiry-aware freshness; student resolver scope separates account/attempt context |

@@ -1,13 +1,3 @@
-<!-- BEGIN:nextjs-agent-rules -->
-
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
-
 # Edra engineering rules
 
 ## Workspace planning rules
@@ -25,21 +15,21 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Architecture and repository
 
 - This repository supports the `web/` application/API and a sibling `mobile/` native Swift/SwiftUI instructor client, with native Kotlin Android planned under its confirmed milestone. The backend remains a modular monolith, not a collection of microservices. Supabase provides Postgres, Auth, Row Level Security (RLS), Storage where appropriate, and Realtime where useful. Each application keeps its own dependencies, build, verification, and release process; do not migrate the web toolchain or introduce root workspace orchestration solely for mobile setup.
-- Mobile uses the documented token-authenticated API and Supabase Auth. Keep business rules and trusted mutations in the web domain modules/database; do not expose server actions as a native API, import mobile UI into web, or duplicate backend rules in the mobile client. Share deliberate API contracts rather than module internals.
-- Follow the root guidance's owner-authorized native instructor companion scope despite older product documents excluding native apps. This scoped clarification does not authorize building the whole web dashboard on mobile or performing implementation in a Master thread. Mobile-specific engineering guidance lives in `../mobile/AGENTS.md`; this file's Next.js and shadcn requirements remain scoped to `web/`.
+- Mobile uses the documented token-authenticated API and Supabase Auth. Keep business rules and trusted mutations in the web domain modules/database; do not expose server functions as a native API, import mobile UI into web, or duplicate backend rules in the mobile client. Share deliberate API contracts rather than module internals.
+- Follow the root guidance's owner-authorized native instructor companion scope despite older product documents excluding native apps. This scoped clarification does not authorize building the whole web dashboard on mobile or performing implementation in a Master thread. Mobile-specific engineering guidance lives in `../mobile/AGENTS.md`; this file's TanStack Start and shadcn requirements remain scoped to `web/`.
 - The database is cloud-hosted Supabase. Use the configured cloud project and available Supabase connection or tools; do not look for a running local database, start a local Supabase/Docker stack, or require local database setup unless the owner explicitly requests it. Local migration files and Supabase configuration are not evidence of a local database.
 - Automated GitHub Actions database tests create, migrate, verify, and discard a fresh Supabase instance on the GitHub runner. Use these disposable CI databases for SQL assertions, RLS, constraints, transactions, concurrency, and migration replay. Do not seek, provision, or require a separate cloud test project or branch. This does not authorize local developer stacks, shared-database resets, or changes to shared cloud databases. Hosted integration checks use the configured application development project when relevant and authorized.
 - Keep related business logic in `src/modules/<domain>/` (for example, `academies`, `students`, `attendance`, and `content`). A module owns its validation, authorization rules, queries, mutations, domain services, and feature-specific components.
-- Keep `src/app/` focused on routes, layouts, page composition, and Next.js boundary files. Do not place substantial business rules in pages or route handlers.
+- Keep `src/routes/` focused on routes, layouts, page composition, and server routes. Do not place substantial business rules in pages or route handlers.
 - Keep `src/components/ui/` for CLI-added shadcn primitives. Put reusable Edra components in `src/components/shared/`; put feature-specific components inside their owning module.
 - Keep small cross-cutting infrastructure in `src/lib/`. Keep external video and messaging providers behind adapters so provider-specific details do not spread through domain code.
 - Give each module a small, explicit public API. Do not import another module's internal queries, policies, or components directly. When modules need to collaborate, use their public services or a deliberately shared domain contract.
 - Prefer ordinary functions and clear module boundaries over unnecessary abstraction. Do not introduce a new package, service, queue, or framework solely for hypothetical future scale.
 
-## Next.js and application boundaries
+## TanStack Start and application boundaries
 
-- Follow the installed Next.js documentation as required by the preserved block above. Do not rely on remembered APIs or conventions.
-- Default to Server Components. Use Client Components only for browser interaction, local state, or browser-only APIs; keep the client boundary as small as practical.
+- Follow current TanStack Start, Router, Vite, and Cloudflare documentation and installed APIs; do not rely on remembered conventions.
+- Use ordinary components and serializable loader data. Keep sensitive work in validated server functions or server routes; protect server-only imports.
 - Perform trusted mutations and sensitive reads on the server. Validate inputs at trust boundaries, authorize each operation, and keep secrets out of client code.
 - Do not use a hidden button or client-side filtering as an authorization mechanism.
 
@@ -69,7 +59,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Use `@hugeicons/react` with `@hugeicons/core-free-icons` for ordinary application UI icons with `strokeWidth={1.5}`. Brand logos use official assets and their brand colors unless a different variant is explicitly specified; the multicolor Google sign-in logo is allowed. Use Hugeicons-compatible types for ordinary icon contracts; brand assets may use a separate image/component. Do not introduce or retain Tabler, Lucide, `react-icons`, or another general UI icon library in application source. Follow the protected-file rules below for shadcn primitives and `components.json`, including icon-library configuration changes.
 - For every new or migrated UI component, first identify the applicable shadcn primitives. If shadcn provides a suitable foundation, agents must use it—either an existing primitive or one added with `npx shadcn@latest add <component>`. Agents must not hand-build an equivalent primitive. If no suitable shadcn primitive exists, explain the gap and ask the owner before creating a custom foundation.
 - Agents must not manually create, edit, delete, rename, or overwrite files in `src/components/ui/`. Do not use CLI overwrite flags. If the CLI proposes changing an existing primitive or protected design-system file, stop and ask the owner.
-- `components.json` and the shadcn theme tokens in `src/app/globals.css` are owner-only. Agents may edit unrelated application CSS without altering those tokens.
+- `components.json` and the shadcn theme tokens in `src/styles/globals.css` are owner-only. Agents may edit unrelated application CSS without altering those tokens.
 - Build Edra-specific behavior, styling, and variants through wrappers or composed components outside `src/components/ui/`; do not fork or patch the shadcn primitive.
 - Give each file one clear purpose. A component file should have one primary exported component; small private helpers or inseparable subcomponents are fine.
 - Keep filenames as short as the containing path allows. Let folders carry the context: use `src/modules/onboarding/components/footer.tsx` and `src/modules/auth/components/forms/login.tsx`, not `onboarding-footer.tsx` or `login-form.tsx`. Avoid repeating a parent folder name or adding generic filename suffixes such as `-component` or `-form`; add a qualifier only when needed to distinguish sibling files. Keep exported component names descriptive, such as `LoginForm` inside `forms/login.tsx`.
@@ -79,7 +69,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Verification and change safety
 
-- Run `npm run lint`, `npm run build`, and relevant tests for implementation changes. Add an appropriate test setup when the first feature needs one.
+- Run `npm run lint`, `npm run typecheck`, `npm run build` (Vite), and relevant tests for implementation changes. Add an appropriate test setup when the first feature needs one.
 - During implementation, run checks appropriate to the changed behavior. Verify database behavior, authorization, tenant isolation, and concurrency through the disposable GitHub Actions database job. Documentation-only and presentation-only changes do not require manual database testing. Hosted integration checks use the configured application development project when relevant and authorized; they do not require a separate cloud test database. Do not manually repeat a passing CI run unless subsequent changes or unresolved concerns justify it.
 - Test security-sensitive paths from an unauthorized and a cross-academy perspective, not only the happy path.
 - Report what was tested, what could not be tested, and why.

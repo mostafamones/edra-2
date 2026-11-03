@@ -34,7 +34,7 @@ Private Broadcast channel `attendance:<academyId>:<sessionId>`. A trigger on `at
 
 ## Public API
 
-Client-safe (`index.ts`): `recordCheckIn`, `saveAttendanceChanges`, `markRemainingAbsent`, `findAttendees`, `addSessionAttendee`, `publishReviewedAttendance` server actions; `fetchAttendance` and query keys; types.
+Client-safe (`index.ts`): `recordCheckIn`, `saveAttendanceChanges`, `markRemainingAbsent`, `findAttendees`, `addSessionAttendee`, `publishReviewedAttendance` web commands; `fetchAttendance` and query keys; types.
 
 Server (`server.ts`): `getAttendance`, `checkIn`, `changeAttendance`, `markUnrecordedAbsent`, `searchAttendees`, `addAttendee`, `publishAttendance` (each takes an optional `Authority`; default is the cookie session), and the `/api/v1` response builders.
 

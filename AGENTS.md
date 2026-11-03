@@ -4,11 +4,11 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 
 ## Repository and application boundaries
 
-- Edra supports two applications in one repository: `web/` is the Next.js web application and trusted API; `mobile/` contains the native Swift/SwiftUI instructor companion; future Android support is native Kotlin under its approved milestone. Each application has its own dependencies, build, verification, and release process.
+- Edra supports two applications in one repository: `web/` is the TanStack Start web application and trusted API; `mobile/` contains the native Swift/SwiftUI instructor companion; future Android support is native Kotlin under its approved milestone. Each application has its own dependencies, build, verification, and release process.
 - The backend remains a modular monolith in `web/` with cloud Supabase. The mobile application consumes the documented authenticated API and Supabase Auth; it must not duplicate attendance rules, import web server internals, or introduce a second backend.
 - Do not add root workspace orchestration, shared packages, or migrate the existing web toolchain merely because both applications share a repository. Add shared contracts/tooling only when a concrete need justifies them.
 - The owner has authorized mobile setup planning and repository guidance for the instructor companion scope. This clarification supersedes older product-document exclusions of native mobile for that scope only. It does not authorize implementing an app in a Master thread or expanding it into the full staff/student product.
-- Keep app-specific rules scoped to the relevant folder. Next.js/shadcn web rules do not require native components to use browser-only primitives. Preserve shared tenant authority, history, verification, destructive-change approval, and planning-only rules.
+- Keep app-specific rules scoped to the relevant folder. TanStack Start/shadcn web rules do not require native components to use browser-only primitives. Preserve shared tenant authority, history, verification, destructive-change approval, and planning-only rules.
 - The repository-root `plans.md` remains restricted deferred context: do not read, search, or use it unless the owner directs you.
 
 ## Database environment

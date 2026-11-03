@@ -1,6 +1,6 @@
 # Edra web
 
-Next.js staff/student application and the modular backend using cloud Supabase. Native clients use its authenticated HTTP API.
+TanStack Start staff/student application and the modular backend using cloud Supabase. Native clients use its authenticated HTTP API.
 
 ## Development
 
@@ -38,20 +38,20 @@ npx playwright show-report
 npx playwright show-trace <path-to-trace.zip>
 ```
 
-Keep port 3100 free; stop any server using it first. The suite starts and stops its own Next.js development server on `127.0.0.1:3100`, never reuses an existing server, and uses `.next-e2e` to isolate its output. Normal development remains on port 3000 with `.next`. Do not run two smoke suites in the same checkout at once. Chromium routes `lvh.me`, `app.lvh.me` and `learn.lvh.me` on port 3100 to loopback without public DNS. Readiness warms the login page through a Node loopback request with the canonical staff Host header, preserving host validation. The harness supplies dummy Supabase configuration over inherited/`.env.local` public values, matching development origins and cookie domain, and no tunnel alias. No secrets, test accounts or database service are needed; attempted browser Supabase requests fail the suite.
+The suite builds with Vite, then starts its own Worker preview through workerd on `127.0.0.1:3100`, never reuses an existing server, and writes to `dist/`. The harness has executed locally; hosted CI on the migration commit remains required.
 
-These three scenarios cover login rendering/validation, signed-out redirects and a public 404 in the development runtime. Production builds remain a separate check; this suite does not verify production HTTPS/cookies or authenticated/database flows. Compilation may download Google fonts. See [browser verification](docs/engineering.md#browser-smoke-tests) for scope and troubleshooting.
+The four scenarios target login rendering/validation, signed-out redirects and a public 404 against the built Worker preview. Release build verification remains a separate check; this suite does not verify production HTTPS/cookies or authenticated/database flows. See [browser verification](docs/engineering.md#browser-smoke-tests) for scope and troubleshooting.
 
 PR/main CI runs an independent Chromium job and uploads `playwright-failure` (HTML report and `test-results`, including screenshots/traces) on failure, retained for seven days. Generated reports are ignored. Playwright has no license cost; private-repository Actions minutes/storage remain quota-limited.
 
 ## References
 
 - [Documentation index](docs/README.md).
-- [Engineering](docs/engineering.md), [current API](docs/api/README.md), [deployment](docs/technical/deployment.md).
+- [Engineering](docs/engineering.md), [current API](docs/api/README.md), [deployment](docs/technical/deployment.md), [migration verification](docs/technical/framework-migration.md).
 - [Native app](../mobile/README.md).
 
 Source/API documentation does not establish deployment readiness. Follow AGENTS.md and keep application implementation separate from Master-thread planning.
 
 Authenticated attendance CI uses `bash scripts/attendance-e2e-ci.sh` on a disposable **GitHub-hosted runner only**. It creates its own migrated Supabase Auth/API/PostgREST/Realtime/database instance, synthetic password accounts and three academies, runs `npm run test:e2e:attendance`, and destroys the complete instance. The Playwright command requires private CI-generated manifests; it has no placeholder or cloud fallback. This is separate from secret-free `npm run test:e2e` and the database-only SQL/concurrency job.
 
-Keep 3100 free; the authenticated and smoke suites share `.next-e2e` and must run serially. Test origins remain `lvh.me`, `app.lvh.me`, `learn.lvh.me` on 3100; isolated Supabase API/DB use 54321/54322. No local Supabase/Docker setup is authorized. Failure artifacts include phase logs and scoped Playwright reports/traces for seven days, excluding private manifests/status/env/database dumps. Traces may contain synthetic credentials. See [Verification](docs/engineering.md#authenticated-attendance-integration) for lifecycle, diagnosis, outstanding runner/hosted acceptance evidence and coverage limits. The job verifies persisted draft Present plus signed-out/cross-academy denial; finalization, delivery and production HTTPS/cookies remain separate checks.
+The authenticated and smoke suites share `dist/` and must run serially. Pending gate: not yet exercised in CI after the harness migration. Test origins remain `lvh.me`, `app.lvh.me`, `learn.lvh.me` on 3100; isolated Supabase API/DB use 54321/54322. No local Supabase/Docker setup is authorized. Failure artifacts include phase logs and scoped Playwright reports/traces for seven days, excluding private manifests/status/env/database dumps. Traces may contain synthetic credentials. See [Verification](docs/engineering.md#authenticated-attendance-integration) for lifecycle, diagnosis, outstanding runner/hosted acceptance evidence and coverage limits. The job verifies persisted draft Present plus signed-out/cross-academy denial; finalization, delivery and production HTTPS/cookies remain separate checks.

@@ -34,7 +34,7 @@ Authenticated users can only `select` the tables (through RLS). Every write goes
 
 ## Contracts
 
-- Server Actions (`actions.ts`, `imports/actions.ts`) return `{ ok: true, data }` or `{ ok: false, code, message, fieldErrors? }` with codes `validation`, `forbidden`, `duplicate_student_phone`, `invalid_placement`, `stale_record`, `archived_record`, `year_unavailable`, `not_found`, `unavailable`, `incompatible_selection`, `import_state`, `stale_revision`, `stage_conflict`, `incomplete_staging`, and `outcome_changed`.
+- Web commands (`actions.ts`, `imports/actions.ts`) return `{ ok: true, data }` or `{ ok: false, code, message, fieldErrors? }` with codes `validation`, `forbidden`, `duplicate_student_phone`, `invalid_placement`, `stale_record`, `archived_record`, `year_unavailable`, `not_found`, `unavailable`, `incompatible_selection`, `import_state`, `stale_revision`, `stage_conflict`, `incomplete_staging`, and `outcome_changed`.
 - Updates and archive/restore send the version the caller last saw; a changed record returns `stale_record` and nothing is written. Batches are all-or-nothing.
 - Reads: `GET /api/students` (list parameters in the query string, see `list-params.ts`) and `GET /api/students/[id]`, both scoped by `academy` and checked against membership. Import reads live under `GET /api/students/imports` (the caller's unfinished import), `/imports/[id]` (summary and counts), `/imports/[id]/rows` (paginated rows); they require an owner or admin.
 - Table layout preferences live in localStorage under `edra.students.table.v1:<user>:<academy>`; no student data is stored.

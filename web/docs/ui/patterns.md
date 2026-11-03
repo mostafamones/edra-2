@@ -21,7 +21,7 @@ All paths below are relative to `web/src/`.
 
 ## Page and visual composition
 
-- Start with `page-shell`, defined in `src/app/globals.css`, instead of recreating page padding and maximum width. Use existing semantic classes (`bg-card`, `text-muted-foreground`, `border-border`, etc.). Do not invent per-feature colors or edit owner-controlled tokens.
+- Start with `page-shell`, defined in `src/styles/globals.css`, instead of recreating page padding and maximum width. Use existing semantic classes (`bg-card`, `text-muted-foreground`, `border-border`, etc.). Do not invent per-feature colors or edit owner-controlled tokens.
 - For color-coded features use the central named palette in `src/lib/palette.ts`; see `docs/engineering/brand.md`. Existing assessment tooltips do not authorize adding unsolicited helper tooltips to new features.
 - Staff pages already have `HeaderActions`, which portals actions into the site header. Use that slot for the same page family rather than adding duplicate action bars. Test the real header at narrow widths: a mocked portal does not prove the action is visible.
 - Student lists place discovery/filter controls beside the title. Do not force them into a staff-only header slot.

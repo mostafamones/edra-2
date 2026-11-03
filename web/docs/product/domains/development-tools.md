@@ -36,7 +36,7 @@ Actions in preview persist to the synthetic academy. Normal authorization, tenan
 
 Preview retains its two-hour authority limit. When it expires, the client stops protected interactions and offers sign-in with a safe return destination. Session checks also run on focus, navigation and while the page is visible. Connectivity failures do not themselves sign the user out; recovery never extends preview authority or retries a failed mutation.
 
-First implementation target: local Next development execution against the configured cloud development project. Hosted preview activation is separate work; no production activation is included.
+First implementation target: local web development execution against the configured cloud development project. Hosted preview activation is separate work; no production activation is included.
 
 ## Failure simulator
 

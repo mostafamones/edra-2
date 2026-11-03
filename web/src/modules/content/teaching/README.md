@@ -12,7 +12,7 @@ Every changed save bumps the existing attendance revision. A finalization opened
 
 ## UI and contracts
 
-`types.ts` validates trusted inputs/results and defines account/academy/session-scoped cache keys. `data.ts` owns live membership, RPC calls, paginated options and safe error mapping. `actions.ts` exposes cookie-authorized server actions. The session route composes the public UI; no new native API is introduced.
+`types.ts` validates trusted inputs/results and defines account/academy/session-scoped cache keys. `data.ts` owns live membership, RPC calls, paginated options and safe error mapping. `actions.ts` exposes cookie-authorized web commands. The session route composes the public UI; no new native API is introduced.
 
 Persisted academy/session/unit identifiers use PostgreSQL GUID syntax, including deterministic generated-academy identifiers without RFC UUID version/variant bits. This matches the existing membership and content boundaries; actor authority and database/RLS checks remain unchanged. New client request keys retain UUID validation.
 
