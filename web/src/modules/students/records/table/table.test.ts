@@ -4,7 +4,8 @@ import type { StudentRecordRow } from "../types";
 import { COLUMN_WIDTHS, DATA_COLUMNS } from "./config";
 import { clampTrade, fitWidths } from "./layout";
 import { defaultPreferences, moveColumn, preferencesKey, readPreferences, sanitizePreferences } from "./preferences";
-import { bulkTargets, pageSelectionState, syncSelection, togglePage, toggleRow } from "./selection";
+import { DEFAULT_LIST_PARAMS } from "../list-params";
+import { bulkTargets, pageSelectionState, selectionScope, syncSelection, togglePage, toggleRow } from "./selection";
 
 describe("table preferences", () => {
   it("are scoped by schema version, user, and academy", () => {
@@ -74,7 +75,7 @@ const row = (id: string, version = 1, archived = false): StudentRecordRow => ({
   id, academyStudentProfileId: `p-${id}`, fullName: id, studentPhone: "+201012345678", parentPhone: "+201112223333",
   levelId: "preparatory-3", levelName: "Third Preparatory", trackId: null, trackName: null, primaryGroupId: null, groupName: null,
   participationType: "in_person", archivedAt: archived ? "2030-10-01T00:00:00Z" : null,
-  createdAt: "2030-09-01T00:00:00Z", updatedAt: "2030-09-01T00:00:00Z", version, onlineAccount: "not_connected", accountName: null,
+  createdAt: "2030-09-01T00:00:00Z", updatedAt: "2030-09-01T00:00:00Z", version, onlineAccount: "not_connected", accountName: null, labelIds: [],
 });
 
 describe("selection", () => {
@@ -96,6 +97,14 @@ describe("selection", () => {
     const selection = togglePage(togglePage({}, pageOne, true), pageTwo, true);
     expect(bulkTargets(selection, true).map((target) => target.id).sort()).toEqual(["a", "b", "d"]);
     expect(bulkTargets(selection, false)).toEqual([{ id: "c", version: 1 }]);
+  });
+
+  it("clears on identity, year and filter changes, but not on paging or sorting", () => {
+    const scope = (change = {}, user = "u", year = "y") => selectionScope({ ...DEFAULT_LIST_PARAMS, ...change }, user, year);
+    expect(scope({ pageIndex: 3, sorts: [{ id: "level", desc: true }], pageSize: 50 })).toBe(scope());
+    for (const other of [scope({ labels: ["l"] }), scope({ unlabeled: true }), scope({ search: "a" }), scope({ group: "g" }), scope({}, "other"), scope({}, "u", "other")]) {
+      expect(other).not.toBe(scope());
+    }
   });
 
   it("refreshes versions of reloaded rows and keeps identity when nothing changed", () => {

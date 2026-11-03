@@ -29,8 +29,10 @@ These describe source behavior. The product reference owns intended changes. Hea
 | Archive/restore, single or bulk | Allowed | Denied |
 | Import students (CSV, JSON, Excel) | Allowed | Denied |
 | Change or remove groups in bulk | Allowed | Denied |
+| Select records; apply or remove existing labels, single or bulk | Allowed | Allowed |
+| Create, rename, recolor or delete label definitions | Allowed | Denied |
 
-Authenticated users can only `select` the tables (through RLS). Every write goes through the RPCs `create_student_record`, `update_student_record`, `set_student_records_archived`, `set_student_records_group`, and the import RPCs below, which check membership and role. `list_student_records` runs with the caller's permissions.
+Authenticated users can only `select` the tables (through RLS). Every write goes through the RPCs `create_student_record`, `update_student_record`, `set_student_records_archived`, `set_student_records_group`, `set_student_records_label`, and the import RPCs below, which check membership and role. `list_student_records` runs with the caller's permissions.
 
 ## Contracts
 
@@ -43,6 +45,19 @@ Authenticated users can only `select` the tables (through RLS). Every write goes
 ## Bulk group changes
 
 `Change group` in the selection bar opens a compact modal that reads the selected records fresh (`previewStudentGroupChange`); the selection itself only holds versions. `set_student_records_group` takes up to 500 records with their versions and either one destination group or `null` (Unassigned). It locks the records in id order and the destination group, and rejects the whole selection if any record is missing, stale, archived, or (for a group) outside the group's level, or outside its track when the group is track-specific. Only `primary_group_id` changes; records already in the target are reported as unchanged. Removing a group may span programs. Capacity is not checked.
+
+## Labels
+
+Labels belong to the annual record (`annual_student_record_labels`), never to `academy_student_profiles`, so a new year's record starts unlabeled and the academy-wide `students` catalog is reused without copying associations. They are staff-only metadata: writes never change the record, its version, placement, access or history, and need no expected version. Archived and closed-year records take labels without relaxing any record-editing guard.
+
+- Write: `setStudentRecordsLabel` (`labels.ts`, a server function over `labels.server.ts`) and `set_student_records_label(academy, record_ids, label_id, applied)`, used for one record and for a selection. It sets one label's desired state on up to 500 explicit records (`label-limits.ts`; duplicates collapse) and returns how many associations changed. Other labels are never replaced, a repeat changes nothing, and one record that is missing or in another academy rejects the whole call (`not_found`). It takes a share lock on the label, so deletion and assignment serialize, then locks records and associations in id order. `delete_label` counts these uses across every year and archive state.
+- Read: list rows and `GET /api/students/[id]` return `labelIds`; names and colors come from one `useLabels(academyId, "students")` catalog, so a rename or recolor needs no record refetch. Direct record reads have no year or archive restriction, so historical records show labels; the list still targets the open year, and there is no history browser.
+- Filter: the `labels` URL/API parameter holds comma-separated IDs (at most 100, any of them matches, canonical order) or `none` for Unlabeled, an exclusive value. Anything else is `400` from the API and dropped from a hand-edited page URL. `list_student_records` filters before counting and paging; `total` is the matching count and `yearTotal` is unchanged. A selected label that was deleted stays as an "Unknown label" chip and matches nothing until removed, so the results never widen silently.
+- Table and page: labels beside the name in the Name column, a Labels submenu in each row's menu (the same actions on right-click or the Menu key and from the Actions button), a Labels control beside the student page's identity, and the catalog's `LabelManager` for managers.
+- Bulk: the selection bar's Labels menu has explicit Apply label and Remove label lists for all staff; Instructors get no other bulk action. It targets the explicit selection only, shows the change after the server accepts it, clears the selection on success and keeps it on failure. "Select page" covers loaded rows only, and there is no "select every matching student". The selection clears when identity, year, search or any filter changes.
+- Cache (`use-labels.ts`): a single-record change shows at once and undoes only that label on failure. One record and label pair never has two writes in flight, and lists and details refresh when the last write answers. A confirmed label deletion refreshes them too; a rename or recolor does not. Results reach the UI only while the same academy is active.
+
+SQL coverage: `supabase/tests/labels.sql` and the LB4–LB7 races in `supabase/tests/concurrency.sh`.
 
 ## Importing
 
@@ -63,7 +78,7 @@ CSV, JSON, and Excel templates include an example for every academy level/track,
 
 ## Deferred
 
-Updating existing records through imports, general exports, bulk changes other than groups, deletion and custom fields. Public booking lives in `booking/`. Student academy onboarding lives in enrollment.
+Updating existing records through imports, general exports, bulk changes other than groups and labels, deletion and custom fields. Public booking lives in `booking/`. Student academy onboarding lives in enrollment.
 
 ## Provenance
 

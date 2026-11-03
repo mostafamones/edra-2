@@ -32,7 +32,7 @@ create function pg_temp.act(label text) returns void language sql as $$ select s
 do $$
 declare t text;
 begin
-  foreach t in array array['labels','assignment_labels','quiz_labels','exam_labels','content_unit_labels'] loop
+  foreach t in array array['labels','assignment_labels','quiz_labels','exam_labels','content_unit_labels','annual_student_record_labels'] loop
     if has_table_privilege('anon', 'public.'||t, 'select') or has_table_privilege('authenticated', 'public.'||t, 'insert')
       or has_table_privilege('authenticated', 'public.'||t, 'update') or has_table_privilege('authenticated', 'public.'||t, 'delete')
       or not has_table_privilege('authenticated', 'public.'||t, 'select') then
@@ -44,6 +44,10 @@ begin
     or has_function_privilege('anon', 'public.delete_label(uuid,uuid,boolean)', 'execute')
     or has_function_privilege('anon', 'public.set_content_unit_label(uuid,uuid,uuid,boolean)', 'execute')
     or not has_function_privilege('authenticated', 'public.set_content_unit_label(uuid,uuid,uuid,boolean)', 'execute')
+    or has_function_privilege('anon', 'public.set_student_records_label(uuid,uuid[],uuid,boolean)', 'execute')
+    or not has_function_privilege('authenticated', 'public.set_student_records_label(uuid,uuid[],uuid,boolean)', 'execute')
+    or has_function_privilege('anon', 'public.list_student_records(uuid,uuid,text,text,text,text,text,text,jsonb,integer,integer,uuid[],boolean)', 'execute')
+    or not has_function_privilege('authenticated', 'public.list_student_records(uuid,uuid,text,text,text,text,text,text,jsonb,integer,integer,uuid[],boolean)', 'execute')
     or has_function_privilege('anon', 'public.list_assessments(uuid,uuid,text[],text,text,text,uuid,uuid,text[],text,text,integer,integer,uuid[],boolean)', 'execute')
     or not has_function_privilege('authenticated', 'public.update_label(uuid,uuid,text,text)', 'execute')
     or has_function_privilege('authenticated', 'edra_private.require_label_role(uuid,boolean)', 'execute') then
@@ -105,7 +109,10 @@ select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy')
 select pg_temp.expect_error($s$ select public.update_label(pg_temp.id('academy'),pg_temp.id('red'),'Renamed','red') $s$, 'forbidden');
 select pg_temp.expect_error($s$ select public.delete_label(pg_temp.id('academy'),pg_temp.id('red'),true) $s$, 'forbidden');
 select pg_temp.check((select string_agg(name, ',' order by name) from public.labels where lower(name) in ('online only','ready for in-person','needs review')) = 'Needs review,Online only,Ready for in-person', 'a new academy starts with the default labels');
-select pg_temp.check((select count(*) from public.labels) = 9 and not exists (select 1 from public.labels where academy_id <> pg_temp.id('academy')), 'instructor reads only this academy catalog');
+select pg_temp.check((select count(*) from public.labels where domain = 'assessments') = 6
+  and (select count(*) from public.labels where domain = 'content') = 3
+  and (select count(*) from public.labels where domain = 'students') = 3, 'instructor reads all three academy catalogs');
+select pg_temp.check(not exists (select 1 from public.labels where academy_id <> pg_temp.id('academy')), 'instructor reads only this academy catalog');
 -- Multiple labels on every type, applied as a desired state: repeating it changes nothing.
 select public.set_assessment_label(pg_temp.id('academy'),'assignment',pg_temp.id('a1'),pg_temp.id('red'),true);
 select public.set_assessment_label(pg_temp.id('academy'),'assignment',pg_temp.id('a1'),pg_temp.id('blue'),true);
@@ -144,6 +151,9 @@ begin
     + (select count(*) from public.quiz_labels where academy_id = pg_temp.id('academy'))
     + (select count(*) from public.exam_labels where academy_id = pg_temp.id('academy')) = 0, who||' reads no label uses');
   perform pg_temp.expect_error($s$ select public.set_assessment_label(pg_temp.id('academy'),'assignment',pg_temp.id('a1'),pg_temp.id('red'),false) $s$, 'forbidden');
+  perform pg_temp.expect_error($s$ select public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('a1')],pg_temp.id('red'),false) $s$, 'forbidden');
+  perform pg_temp.check((select count(*) from public.annual_student_record_labels where academy_id = pg_temp.id('academy')) = 0, who||' reads no student label uses');
+  perform pg_temp.expect_error($s$ select public.list_student_records(pg_temp.id('academy'),pg_temp.id('year'),null,'all',null,null,null,null,null,0,10) $s$, 'forbidden');
   perform pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy'),gen_random_uuid(),'Sneaky','red') $s$, 'forbidden');
   perform pg_temp.expect_error($s$ select public.delete_label(pg_temp.id('academy'),pg_temp.id('green'),true) $s$, 'forbidden');
   perform pg_temp.check(public.list_assessments(pg_temp.id('academy'),null,array['assignment','quiz','exam'],'',null,null,null,null,array['quiz:preparing'],'newest','none',25,0) is null, who||' list denied');
@@ -273,7 +283,7 @@ select public.create_label(pg_temp.id('academy'),pg_temp.id('unit-only'),'Unit o
 select public.create_label(pg_temp.id('academy'),pg_temp.id('unit-second'),'Unit second','red','content');
 select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy'),gen_random_uuid(),'REVISION','teal','content') $s$, 'duplicate_name');
 select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy'),pg_temp.id('unit-only'),'Unit only','teal','assessments') $s$, 'validation');
-select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy'),gen_random_uuid(),'Other','teal','students') $s$, 'validation');
+select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy'),gen_random_uuid(),'Other','teal','nonsense') $s$, 'validation');
 select pg_temp.check((select count(*) from public.labels where lower(name) = 'revision' and academy_id = pg_temp.id('academy')) = 2, 'same name in two catalogs');
 reset role;
 select pg_temp.act('outsider');
@@ -313,6 +323,119 @@ select pg_temp.check(not exists (select 1 from public.content_unit_labels where 
 reset role;
 select pg_temp.expect_error($s$ insert into public.content_unit_labels(academy_id,unit_id,label_id) values (pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('red')) $s$, '%foreign key%');
 select pg_temp.expect_error($s$ insert into public.quiz_labels(academy_id,quiz_id,label_id) values (pg_temp.id('academy'),pg_temp.id('q1'),pg_temp.id('unit-second')) $s$, '%foreign key%');
+
+-- Student records: associations belong to the annual record; any staff member applies a desired state, one
+-- label at a time and atomically; the record never changes, including when archived or in a closed year.
+insert into label_ids(name) values ('next-year'),('s1'),('s2'),('s3'),('r1'),('r2'),('r3'),('r-next'),('r-other');
+select pg_temp.act('owner');
+set local role authenticated;
+select pg_temp.check((select string_agg(name, ',' order by name) from public.labels where academy_id = pg_temp.id('academy') and domain = 'students') = 'Needs follow-up,Scholarship,Top student', 'the student catalog starts with its three defaults');
+select set_config('test.r1', id::text, true) from public.create_student_record(pg_temp.id('academy'),pg_temp.id('content-year'),'Amal','01012340001','01112223333','preparatory-3',null,null,'in_person');
+select set_config('test.r2', id::text, true) from public.create_student_record(pg_temp.id('academy'),pg_temp.id('content-year'),'Basma','01012340002','01112223333','preparatory-3',null,null,'in_person');
+select set_config('test.r3', id::text, true) from public.create_student_record(pg_temp.id('academy'),pg_temp.id('content-year'),'Camelia','01012340003','01112223333','preparatory-3',null,null,'online_only');
+select public.create_label(pg_temp.id('academy'),pg_temp.id('s1'),'Revision','red','students');
+select public.create_label(pg_temp.id('academy'),pg_temp.id('s2'),'Sponsored','blue','students');
+select public.create_label(pg_temp.id('academy'),pg_temp.id('s3'),'Unused here','green','students');
+reset role;
+select pg_temp.act('outsider');
+set local role authenticated;
+select set_config('test.r_other', id::text, true) from public.create_student_record(pg_temp.id('other'),pg_temp.id('other-year'),'Other student','01012340009','01112223333','preparatory-3',null,null,'in_person');
+reset role;
+update label_ids set id = current_setting('test.'||replace(name,'-','_'))::uuid where name in ('r1','r2','r3','r-other');
+create temporary table before_students on commit drop as select id, version, updated_at, primary_group_id, archived_at, full_name from public.annual_student_records where academy_id = pg_temp.id('academy');
+grant select on pg_temp.before_students to authenticated;
+create function pg_temp.students(label_filter uuid[] default null, unlabeled boolean default false, year uuid default null, lim integer default 10, skip integer default 0, stat text default 'all')
+returns jsonb language sql as $$
+  select public.list_student_records(pg_temp.id('academy'), coalesce(year, pg_temp.id('content-year')), null, stat, null, null, null, null, '[{"id":"name","desc":false}]'::jsonb, skip, lim, label_filter, unlabeled)
+$$;
+create function pg_temp.student_names(page jsonb) returns text language sql as $$
+  select coalesce(string_agg(e.item->>'full_name', ',' order by e.ordinality), '') from jsonb_array_elements(page->'rows') with ordinality e(item, ordinality)
+$$;
+select pg_temp.act('instructor');
+set local role authenticated;
+-- An Instructor applies and removes in bulk; duplicates collapse, repeats change nothing, other labels stay.
+select pg_temp.check(public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r1'),pg_temp.id('r2'),pg_temp.id('r1')],pg_temp.id('s1'),true) = 2, 'bulk apply with a duplicate id');
+select pg_temp.check(public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r1'),pg_temp.id('r2')],pg_temp.id('s1'),true) = 0, 'repeated apply changes nothing');
+select pg_temp.check(public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r1')],pg_temp.id('s2'),true) = 1, 'a second label on one record');
+select pg_temp.check(public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r2'),pg_temp.id('r3')],pg_temp.id('s1'),false) = 1, 'mixed removal removes only where present');
+select pg_temp.check(public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r2'),pg_temp.id('r3')],pg_temp.id('s1'),false) = 0, 'repeated removal changes nothing');
+select pg_temp.check((select count(*) from public.annual_student_record_labels where annual_student_record_id = pg_temp.id('r1')) = 2, 'removal elsewhere kept this record''s labels');
+-- One invalid target rejects the whole call, and nothing else is written.
+select pg_temp.expect_error($s$ select public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r3'),pg_temp.id('r-other')],pg_temp.id('s1'),true) $s$, 'not_found');
+select pg_temp.expect_error($s$ select public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r3'),gen_random_uuid()],pg_temp.id('s1'),false) $s$, 'not_found');
+select pg_temp.check(not exists (select 1 from public.annual_student_record_labels where annual_student_record_id = pg_temp.id('r3')), 'a rejected bulk call wrote nothing');
+select pg_temp.expect_error($s$ select public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r3'),null],pg_temp.id('s1'),true) $s$, 'validation');
+select pg_temp.expect_error($s$ select public.set_student_records_label(pg_temp.id('academy'),'{}',pg_temp.id('s1'),true) $s$, 'validation');
+select pg_temp.expect_error($s$ select public.set_student_records_label(pg_temp.id('academy'),array(select gen_random_uuid() from generate_series(1,501)),pg_temp.id('s1'),true) $s$, 'validation');
+-- Catalogs and academies stay apart. Removing a label of another catalog is already the desired state.
+select pg_temp.expect_error($s$ select public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r3')],pg_temp.id('red'),true) $s$, 'label_not_found');
+select pg_temp.expect_error($s$ select public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r3')],pg_temp.id('foreign'),true) $s$, 'label_not_found');
+select pg_temp.expect_error($s$ select public.set_content_unit_label(pg_temp.id('academy'),pg_temp.id('unit'),pg_temp.id('s1'),true) $s$, 'label_not_found');
+select pg_temp.check(public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r3')],pg_temp.id('red'),false) = 0, 'removing another catalog''s label');
+-- Instructors still cannot manage definitions or write directly.
+select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy'),gen_random_uuid(),'Mine','red','students') $s$, 'forbidden');
+select pg_temp.expect_error($s$ delete from public.annual_student_record_labels $s$, 'permission denied%');
+-- Filters run in the database before paging: any selected label, or Unlabeled, with correct totals.
+select pg_temp.check(pg_temp.students()->'rows'->0->'label_ids' @> jsonb_build_array(pg_temp.id('s1'),pg_temp.id('s2')), 'row label ids');
+select pg_temp.check(pg_temp.student_names(pg_temp.students(array[pg_temp.id('s1')])) = 'Amal', 'one label');
+select public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r2')],pg_temp.id('s2'),true);
+select pg_temp.check(pg_temp.student_names(pg_temp.students(array[pg_temp.id('s1'),pg_temp.id('s2')])) = 'Amal,Basma', 'any of several, each record once');
+select pg_temp.check((pg_temp.students(array[pg_temp.id('s1'),pg_temp.id('s2')])->>'total')::integer = 2, 'no duplicate totals');
+select pg_temp.check(pg_temp.student_names(pg_temp.students(array[pg_temp.id('s1'),pg_temp.id('s2')], lim => 10, skip => 1)) = '' and (pg_temp.students(array[pg_temp.id('s1'),pg_temp.id('s2')], skip => 1)->>'total')::integer = 2, 'a later page keeps the matching total');
+select pg_temp.check(pg_temp.student_names(public.list_student_records(pg_temp.id('academy'),pg_temp.id('content-year'),null,'all',null,null,null,'online_only',null,0,10,array[pg_temp.id('s2')],false)) = '', 'combined with other filters using AND');
+select pg_temp.check(pg_temp.student_names(pg_temp.students(unlabeled => true)) = 'Camelia', 'unlabeled');
+select pg_temp.check(pg_temp.student_names(pg_temp.students(array[pg_temp.id('s3')])) = '', 'an unused label matches nothing');
+select pg_temp.check(pg_temp.student_names(pg_temp.students(array[gen_random_uuid()])) = '', 'a deleted or unknown label matches nothing, never everything');
+select pg_temp.check(pg_temp.student_names(pg_temp.students(array[pg_temp.id('foreign')])) = '', 'another academy label matches nothing');
+select pg_temp.expect_error($s$ select pg_temp.students(array[pg_temp.id('s1')], true) $s$, 'validation');
+select pg_temp.expect_error($s$ select pg_temp.students(array(select gen_random_uuid() from generate_series(1,101))) $s$, 'validation');
+select pg_temp.expect_error($s$ select pg_temp.students(null, null) $s$, 'validation');
+-- Archived records take labels without being restored.
+reset role;
+select pg_temp.act('owner');
+set local role authenticated;
+select public.set_student_records_archived(pg_temp.id('academy'),pg_temp.id('content-year'),jsonb_build_array(jsonb_build_object('id',pg_temp.id('r3'),'version',1)),true);
+reset role;
+select pg_temp.act('instructor');
+set local role authenticated;
+select pg_temp.check(public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r3')],pg_temp.id('s1'),true) = 1, 'archived record takes a label');
+select pg_temp.check(pg_temp.student_names(pg_temp.students(array[pg_temp.id('s1')], stat => 'archived')) = 'Camelia', 'label filter within archived records');
+select pg_temp.check((select archived_at is not null from public.annual_student_records where id = pg_temp.id('r3')), 'still archived');
+select pg_temp.check(not exists (select 1 from public.annual_student_records r join pg_temp.before_students b on b.id = r.id
+  where r.id <> pg_temp.id('r3') and (r.version, r.updated_at, r.primary_group_id, r.archived_at, r.full_name) is distinct from (b.version, b.updated_at, b.primary_group_id, b.archived_at, b.full_name)), 'labels changed no record');
+select pg_temp.check((select version from public.annual_student_records where id = pg_temp.id('r3')) = 2, 'labelling did not bump the archived record');
+reset role;
+-- Annual ownership: the next year's record of the same profile starts unlabeled, and closed-year records still take labels.
+update public.academic_years set closed_at = now() where id = pg_temp.id('content-year');
+insert into public.academic_years(id,academy_id,start_year)
+  select pg_temp.id('next-year'),pg_temp.id('academy'),max(start_year)+1 from public.academic_years where academy_id=pg_temp.id('academy');
+insert into public.annual_student_records(id,academy_id,academic_year_id,academy_student_profile_id,full_name,student_phone,parent_phone,level_id,participation_type,created_by)
+  select pg_temp.id('r-next'),academy_id,pg_temp.id('next-year'),academy_student_profile_id,full_name,student_phone,parent_phone,level_id,participation_type,pg_temp.id('owner')
+  from public.annual_student_records where id = pg_temp.id('r1');
+select pg_temp.act('instructor');
+set local role authenticated;
+select pg_temp.check(pg_temp.student_names(pg_temp.students(unlabeled => true, year => pg_temp.id('next-year'))) = 'Amal', 'a new annual record starts unlabeled');
+select pg_temp.check(pg_temp.student_names(pg_temp.students(array[pg_temp.id('s1')], year => pg_temp.id('next-year'))) = '', 'another year''s association does not match');
+select pg_temp.check(public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r-next')],pg_temp.id('s3'),true) = 1, 'the catalog spans years');
+select pg_temp.check(public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r1')],pg_temp.id('s3'),true) = 1, 'closed-year record takes a label');
+select pg_temp.check(public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r2')],pg_temp.id('s2'),false) = 1, 'closed-year record loses a label');
+select pg_temp.check((select count(*) from public.annual_student_record_labels where annual_student_record_id = pg_temp.id('r-next')) = 1, 'each year keeps its own labels');
+select pg_temp.expect_error($s$ select public.update_student_record(pg_temp.id('r1'),1,pg_temp.id('academy'),'Renamed','01012340001','01112223333','preparatory-3',null,null,'in_person') $s$, 'year_unavailable');
+select pg_temp.check((select version from public.annual_student_records where id = pg_temp.id('r1')) = 1, 'closed-year labelling left the version alone');
+reset role;
+-- Deletion counts uses across years and archive states, then removes only associations.
+select pg_temp.act('admin');
+set local role authenticated;
+select pg_temp.check(public.delete_label(pg_temp.id('academy'),pg_temp.id('s3'),false) = '{"status":"confirm","uses":2}'::jsonb, 'uses counted across years');
+select pg_temp.check(public.delete_label(pg_temp.id('academy'),pg_temp.id('s1'),false) = '{"status":"confirm","uses":2}'::jsonb, 'an archived record counts as a use');
+select pg_temp.check(public.delete_label(pg_temp.id('academy'),pg_temp.id('s3'),true) = '{"status":"deleted","uses":2}'::jsonb, 'confirmed delete');
+select pg_temp.check(not exists (select 1 from public.annual_student_record_labels where label_id = pg_temp.id('s3'))
+  and (select count(*) from public.annual_student_records where id in (pg_temp.id('r1'),pg_temp.id('r-next'))) = 2, 'delete removes the uses, not the records');
+select pg_temp.check(public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r1')],pg_temp.id('s3'),false) = 0, 'removing a deleted label is already done');
+select pg_temp.expect_error($s$ select public.set_student_records_label(pg_temp.id('academy'),array[pg_temp.id('r1')],pg_temp.id('s3'),true) $s$, 'label_not_found');
+reset role;
+select pg_temp.expect_error($s$ insert into public.annual_student_record_labels(academy_id,annual_student_record_id,label_id) values (pg_temp.id('academy'),pg_temp.id('r1'),pg_temp.id('red')) $s$, '%foreign key%');
+select pg_temp.expect_error($s$ insert into public.annual_student_record_labels(academy_id,annual_student_record_id,label_id) values (pg_temp.id('other'),pg_temp.id('r1'),pg_temp.id('foreign')) $s$, '%foreign key%');
 
 -- Assessments, versions and the academic record were never touched by any label change.
 select pg_temp.check(not exists (

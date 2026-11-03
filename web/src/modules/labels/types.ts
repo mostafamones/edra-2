@@ -1,7 +1,7 @@
 import type { PaletteKey } from "@/lib/palette";
 
 /** Each module has its own catalog in an academy; labels never cross between them. */
-export const LABEL_DOMAINS = ["assessments", "content"] as const;
+export const LABEL_DOMAINS = ["assessments", "content", "students"] as const;
 export type LabelDomain = (typeof LABEL_DOMAINS)[number];
 
 /** One entry of a staff-only label catalog. `color` is a palette key, never a color value. */

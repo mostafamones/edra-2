@@ -14,6 +14,7 @@ export type PageSize = (typeof PAGE_SIZES)[number];
 export const DEFAULT_PAGE_SIZE: PageSize = 10;
 export const MAX_SORTS = 3;
 export const MAX_SEARCH_LENGTH = 100;
+export const MAX_LABEL_FILTERS = 100;
 
 export const STATUS_FILTERS = ["active", "archived", "all"] as const;
 export type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -28,6 +29,9 @@ export type StudentListParams = {
   track: string | null;
   group: string | null;
   participationType: ParticipationType | null;
+  /** Label IDs, sorted; a record with any of them matches. Never set together with `unlabeled`. */
+  labels: string[];
+  unlabeled: boolean;
   sorts: SortDescriptor[];
   pageIndex: number;
   pageSize: PageSize;
@@ -42,12 +46,14 @@ export const DEFAULT_LIST_PARAMS: StudentListParams = {
   track: null,
   group: null,
   participationType: null,
+  labels: [],
+  unlabeled: false,
   sorts: DEFAULT_SORTS,
   pageIndex: 0,
   pageSize: DEFAULT_PAGE_SIZE,
 };
 
-const KEYS = { search: "q", status: "status", level: "level", track: "track", group: "group", type: "type", sort: "sort", page: "page", size: "size" } as const;
+const KEYS = { search: "q", status: "status", level: "level", track: "track", group: "group", type: "type", labels: "labels", sort: "sort", page: "page", size: "size" } as const;
 
 const isSortField = (value: string): value is SortField => (SORT_FIELDS as readonly string[]).includes(value);
 const isPageSize = (value: number): value is PageSize => (PAGE_SIZES as readonly number[]).includes(value);
@@ -71,6 +77,14 @@ export function parseSorts(value: string | null): SortDescriptor[] | null {
 export const serializeSorts = (sorts: SortDescriptor[]) =>
   sorts.map((sort) => `${sort.id}.${sort.desc ? "desc" : "asc"}`).join(",");
 
+/** "<id>,<id>" for any of those labels, or "none" for Unlabeled; duplicates collapse and order is canonical. */
+function parseLabels(raw: string): Pick<StudentListParams, "labels" | "unlabeled"> | null {
+  if (raw === NONE) return { labels: [], unlabeled: true };
+  const labels = [...new Set(raw.split(",").map((id) => id.toLowerCase()))];
+  if (labels.length > MAX_LABEL_FILTERS || !labels.every((id) => z.guid().safeParse(id).success)) return null;
+  return { labels: labels.sort(), unlabeled: false };
+}
+
 /**
  * Reads list parameters from a query string. Invalid values fall back to their defaults and mark
  * the result invalid, so the page can sanitize a hand-edited URL while the API rejects it.
@@ -91,13 +105,14 @@ export function readListParams(query: URLSearchParams, fallbackPageSize: PageSiz
   const track = pick(KEYS.track, (raw) => (idOrNone.safeParse(raw).success ? raw : null), null as string | null);
   const group = pick(KEYS.group, (raw) => (idOrNone.safeParse(raw).success ? raw : null), null as string | null);
   const type = pick(KEYS.type, (raw) => (isParticipationType(raw) ? raw : null), null as ParticipationType | null);
+  const labels = pick(KEYS.labels, parseLabels, { labels: [], unlabeled: false });
   const sorts = pick(KEYS.sort, parseSorts, DEFAULT_SORTS);
   const page = pick(KEYS.page, (raw) => (/^[1-9]\d{0,5}$/.test(raw) ? Number(raw) : null), 1);
   const size = pick(KEYS.size, (raw) => { const value = Number(raw); return isPageSize(value) ? value : null; }, fallbackPageSize);
 
   // A track or group filter only makes sense within a level (track) or alongside it (group).
   const params: StudentListParams = {
-    search, status, levelId: level, track: level ? track : null, group, participationType: type,
+    search, status, levelId: level, track: level ? track : null, group, participationType: type, ...labels,
     sorts, pageIndex: page - 1, pageSize: size,
   };
   if (!level && track) valid = false;
@@ -113,6 +128,8 @@ export function writeListParams(params: StudentListParams, extra?: Record<string
   if (params.levelId && params.track) query.set(KEYS.track, params.track);
   if (params.group) query.set(KEYS.group, params.group);
   if (params.participationType) query.set(KEYS.type, params.participationType);
+  if (params.unlabeled) query.set(KEYS.labels, NONE);
+  else if (params.labels.length) query.set(KEYS.labels, [...params.labels].sort().join(","));
   if (serializeSorts(params.sorts) !== serializeSorts(DEFAULT_SORTS)) query.set(KEYS.sort, serializeSorts(params.sorts));
   if (params.pageIndex > 0) query.set(KEYS.page, String(params.pageIndex + 1));
   if (params.pageSize !== DEFAULT_PAGE_SIZE) query.set(KEYS.size, String(params.pageSize));
@@ -121,7 +138,7 @@ export function writeListParams(params: StudentListParams, extra?: Record<string
 
 /** True when search or any filter narrows the list, not counting the default Active status. */
 export const isFiltering = (params: StudentListParams) =>
-  Boolean(params.search.trim() || params.status !== "active" || params.levelId || params.track || params.group || params.participationType);
+  Boolean(params.search.trim() || params.status !== "active" || params.levelId || params.track || params.group || params.participationType || params.labels.length || params.unlabeled);
 
 /** The last valid page index for a total, so a page emptied by archiving moves back. */
 export const clampPageIndex = (pageIndex: number, total: number, pageSize: number) =>

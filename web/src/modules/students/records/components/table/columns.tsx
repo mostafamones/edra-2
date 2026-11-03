@@ -1,17 +1,12 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Archive02Icon, ArrowLeftRightIcon, IdentityCardIcon, MoreHorizontalIcon, PencilEdit02Icon, RestoreBinIcon, UserIdVerificationIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
-import Link from "@/components/shared/link";
 import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { LabelOverflow, type Label } from "@/modules/labels";
 import type { StudentRecordRow } from "../../types";
 import { formatPhone, PARTICIPATION_LABELS } from "../../validation";
 import {
@@ -19,40 +14,44 @@ import {
 } from "../../table/config";
 import { AccountDot } from "./account-dot";
 import { CellText } from "./cell-text";
+import { StudentRowActions, type RowActions } from "./row-menu";
 
-export type ColumnOptions = {
-  /** Owners and admins get the selection column and archive/restore actions. */
-  canManage: boolean;
+export type ColumnOptions = RowActions & {
+  /** Staff who may apply labels get the selection column. */
+  canSelect: boolean;
+  /** The students catalog; undefined until it loads. */
+  catalog: readonly Label[] | undefined;
+  catalogFailed: boolean;
   isSelected: (id: string) => boolean;
   pageSelection: boolean | "indeterminate";
   onToggleRow: (row: StudentRecordRow, selected: boolean) => void;
   onTogglePage: (selected: boolean) => void;
-  onOpen: (row: StudentRecordRow) => void;
-  detailsHref: (row: StudentRecordRow) => string;
-  onArchive: (row: StudentRecordRow, archive: boolean) => void;
-  /** Opens the student code dialog; omitted while student codes are off. */
-  onCode?: (row: StudentRecordRow) => void;
-  /** Developer mode student entry for generated linked students; undefined otherwise. */
-  viewAsStudent?: (row: StudentRecordRow) => (() => void) | undefined;
   /** Current code per record id for the rows on this page; the column is hidden while codes are off. */
   codes: Record<string, string>;
 };
 
 const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
 
-/** The name opens the student; a separate control switches to the linked account name. */
-function NameToggle({ recordName, accountName, href }: { recordName: string; accountName: string | null; href: string }) {
-  const [showAccount, setShowAccount] = useState(false);
-  if (!accountName || sameName(accountName, recordName)) return <Link href={href} className="truncate rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring">{recordName}</Link>;
+/** The linked account's own name when it differs from the record name; the cell blurs on hover and swaps names on click, until the page reloads. */
+function NameToggle({ recordName, accountName }: { recordName: string; accountName: string | null }) {
+  const [showAccount, setShowAccount] = useState(true);
+  if (!accountName || sameName(accountName, recordName)) return <CellText text={recordName} className="font-medium">{recordName}</CellText>;
   const name = showAccount ? accountName : recordName;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="inline-flex min-w-0 items-center gap-1"><Link href={href} className="truncate rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring">{name}</Link><button type="button" aria-label="Switch record and account name" aria-pressed={showAccount} onClick={() => setShowAccount((value) => !value)} className="rounded-sm p-1 text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"><HugeiconsIcon icon={ArrowLeftRightIcon} strokeWidth={1.5} className="size-4" aria-hidden="true" /></button></span>
+        <button
+          type="button"
+          aria-pressed={showAccount}
+          onClick={() => setShowAccount((value) => !value)}
+          className="block min-w-0 truncate rounded-sm text-start font-medium text-foreground outline-none transition-[filter] hover:blur-[2px] focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          {name}
+        </button>
       </TooltipTrigger>
       <TooltipContent className="max-w-sm break-words">
         <span dir="auto" className="block">{name}</span>
-        <span className="block opacity-70">{showAccount ? "Account name" : "Record name"}</span>
+        <span className="block opacity-70">{showAccount ? "Account name · Click to show record name" : "Record name · Click to show account name"}</span>
       </TooltipContent>
     </Tooltip>
   );
@@ -73,7 +72,7 @@ const data = (id: DataColumnId, cell: ColumnDef<StudentRecordRow>["cell"]): Colu
 
 export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow>[] {
   const columns: ColumnDef<StudentRecordRow>[] = [];
-  if (options.canManage) {
+  if (options.canSelect) {
     columns.push({
       id: SELECT_COLUMN,
       size: SELECT_WIDTH,
@@ -104,13 +103,21 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
       const code = options.codes[row.original.id];
       return code ? <CellText text={code} className="font-mono">{code}</CellText> : muted("—", "No code");
     }),
-    data("name", ({ row }) => (
-      // dir="auto" puts the dot after the name in its reading direction, including Arabic names.
-      <div dir="auto" className="inline-flex max-w-full min-w-0 items-center gap-1.5 align-middle">
-        <NameToggle recordName={row.original.fullName} accountName={row.original.accountName} href={options.detailsHref(row.original)} />
-        <AccountDot state={row.original.onlineAccount} />
-      </div>
-    )),
+    data("name", ({ row }) => {
+      const { labelIds } = row.original;
+      return (
+        <div className="flex min-w-0 items-center gap-2">
+          {/* dir="auto" puts the dot after the name in its reading direction, including Arabic names. */}
+          <div dir="auto" className="inline-flex min-w-0 items-center gap-1.5">
+            <NameToggle recordName={row.original.fullName} accountName={row.original.accountName} />
+            <AccountDot state={row.original.onlineAccount} />
+          </div>
+          {labelIds.length > 0 && (options.catalog
+            ? <LabelOverflow labels={options.catalog.filter((label) => labelIds.includes(label.id))} className="min-w-20" />
+            : !options.catalogFailed && <Skeleton className="h-5 w-16" />)}
+        </div>
+      );
+    }),
     data("studentPhone", ({ row }) => (
       <CellText text={formatPhone(row.original.studentPhone)} dir="ltr" className="tabular-nums">{formatPhone(row.original.studentPhone)}</CellText>
     )),
@@ -144,38 +151,7 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
     enableResizing: false,
     enableHiding: false,
     header: () => <span className="sr-only">Actions</span>,
-    cell: ({ row }) => {
-      const archived = Boolean(row.original.archivedAt);
-      const view = archived ? undefined : options.viewAsStudent?.(row.original);
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label={`Actions for ${row.original.fullName}`}>
-              <HugeiconsIcon icon={MoreHorizontalIcon} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem onSelect={() => options.onOpen(row.original)}>
-              {archived ? <><HugeiconsIcon icon={ViewIcon} />View</> : <><HugeiconsIcon icon={PencilEdit02Icon} />Edit</>}
-            </DropdownMenuItem>
-            {options.onCode && !archived && (
-              <DropdownMenuItem onSelect={() => options.onCode?.(row.original)}><HugeiconsIcon icon={IdentityCardIcon} />Student code</DropdownMenuItem>
-            )}
-            {view && <DropdownMenuItem onSelect={view}><HugeiconsIcon icon={UserIdVerificationIcon} />View as student</DropdownMenuItem>}
-            {options.canManage && (
-              <>
-                <DropdownMenuSeparator />
-                {archived ? (
-                  <DropdownMenuItem onSelect={() => options.onArchive(row.original, false)}><HugeiconsIcon icon={RestoreBinIcon} />Restore</DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem variant="destructive" onSelect={() => options.onArchive(row.original, true)}><HugeiconsIcon icon={Archive02Icon} />Archive</DropdownMenuItem>
-                )}
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    cell: ({ row }) => <StudentRowActions row={row.original} actions={options} />,
   });
   return columns;
 }

@@ -3,6 +3,7 @@ import { Add01Icon, AlertCircleIcon, Archive02Icon, SearchRemoveIcon, UserGroupI
 import { useCanonicalHref } from "@/modules/navigation";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import Link from "@/components/shared/link";
 import { useSearchParams } from "@/lib/navigation";
 import { z } from "zod";
@@ -23,17 +24,20 @@ import { OverlayPanel } from "@/components/ui/overlay-panel";
 import { AcademyGate, useAuth } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
 import { GroupsBoard, groupListQueryKey, loadGroups, loadStructure, structureQueryKey } from "@/modules/groups";
+import { canManageLabels, LabelManager, useLabels, type Label } from "@/modules/labels";
 import {
   clampPageIndex, DEFAULT_PAGE_SIZE, isFiltering, NONE, type PageSize, type SortDescriptor, type StudentListParams,
 } from "../list-params";
-import { canArchiveStudentRecords, canChangeStudentGroups, canImportStudents } from "../permissions";
+import { canApplyStudentLabels, canArchiveStudentRecords, canChangeStudentGroups, canImportStudents } from "../permissions";
 import { fetchStudentList, studentListQueryKey } from "../queries";
 import type { GroupChangeRow, RecordVersion, StudentRecordRow } from "../types";
 import { ACTIONS_COLUMN, CODE_COLUMN, SELECT_COLUMN } from "../table/config";
 import { defaultLayout, withColumnAt, type TablePreferences } from "../table/preferences";
-import { bulkTargets, pageSelectionState, syncSelection, togglePage, toggleRow, type Selection } from "../table/selection";
+import { bulkTargets, pageSelectionState, selectionScope, syncSelection, togglePage, toggleRow, type Selection } from "../table/selection";
 import { useListParams } from "../table/use-list-params";
 import { useTablePreferences } from "../table/use-preferences";
+import { MAX_LABEL_TARGETS } from "../label-limits";
+import { useStudentLabels } from "../use-labels";
 import { ArchiveDialog, type ArchiveRequest } from "./archive-dialog";
 import { StudentCodeDialog, type CodeTarget } from "../../codes/components/dialog";
 import { fetchStudentCodes, studentCodeQueryKeys } from "../../codes/queries";
@@ -43,9 +47,11 @@ import { useViewAsStudent } from "@/modules/development";
 import { GroupChangeDialog } from "./group-dialog";
 import { AddStudentMenu } from "./add-menu";
 import { BulkBar } from "./table/bulk-bar";
+import { BulkLabels } from "./table/bulk-labels";
 import { buildColumns } from "./table/columns";
 import { ColumnsPopover } from "./table/columns-popover";
 import { StudentsDataTable } from "./table/data-table";
+import type { RowActions } from "./table/row-menu";
 import { StudentsPagination } from "./table/pagination";
 import { StudentsToolbar } from "./table/toolbar";
 
@@ -73,6 +79,8 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   const academyId = academy.id;
   const { user } = useAuth();
   const canManage = canArchiveStudentRecords(academy.role);
+  const canSelect = canApplyStudentLabels(academy.role);
+  const labelManager = canManageLabels(academy.role);
   const { preferences, hydrated, update: updatePreferences } = useTablePreferences(user?.id, academyId);
   const [params, updateParams] = useListParams(preferences.pageSize ?? DEFAULT_PAGE_SIZE);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -101,13 +109,19 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   const groupsQuery = useQuery({ queryKey: groupListQueryKey(academyId, false), queryFn: () => loadGroups(academyId) });
   const list = listQuery.data;
   const rows = list?.rows ?? NO_ROWS;
+  const catalogQuery = useLabels(academyId, "students");
+  const catalog = catalogQuery.data;
+  const labelWrites = useStudentLabels(academyId);
+  const { applyToRecord } = labelWrites;
+  const [managingLabels, setManagingLabels] = useState<{ open: boolean; opener: HTMLElement | null }>({ open: false, opener: null });
+  const openLabelManager = useCallback((opener: HTMLElement | null) => setManagingLabels({ open: true, opener }), []);
 
-  // Selection survives paging and sorting, and clears whenever search, status, or filters change.
+  // Selection survives paging and sorting, and clears whenever identity, year, search, status, or filters change.
   const [selection, setSelection] = useState<Selection>({});
-  const selectionScope = JSON.stringify([params.search, params.status, params.levelId, params.track, params.group, params.participationType]);
-  const [currentScope, setCurrentScope] = useState(selectionScope);
-  if (currentScope !== selectionScope) {
-    setCurrentScope(selectionScope);
+  const scope = selectionScope(params, user?.id, list?.academicYearId);
+  const [currentScope, setCurrentScope] = useState(scope);
+  if (currentScope !== scope) {
+    setCurrentScope(scope);
     setSelection({});
   }
   // Keep selected rows' versions current as pages reload, so bulk actions target what is shown.
@@ -147,23 +161,35 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   const codes = codesQuery.data ?? NO_CODES;
   const [codeTarget, setCodeTarget] = useState<CodeTarget | null>(null);
   const viewAsStudent = useViewAsStudent();
-  const columns = useMemo(() => buildColumns({
+  const rowActions = useMemo<RowActions>(() => ({
+    academyId,
     canManage,
+    onApplyLabel: (row, labelId, applied) => void applyToRecord(row.id, labelId, applied),
+    onManageLabels: labelManager ? openLabelManager : undefined,
+    onOpen: (row) => setEditingId(row.id),
+    onArchive: (row, archive) => setArchiveRequest({ archive, records: [{ id: row.id, version: row.version }], name: row.fullName }),
+    onCode: codesEnabled ? (row) => setCodeTarget({ id: row.id, fullName: row.fullName, levelId: row.levelId }) : undefined,
+    viewAsStudent: (row) => viewAsStudent(row.id),
+  }), [academyId, applyToRecord, canManage, codesEnabled, labelManager, openLabelManager, viewAsStudent]);
+  const columns = useMemo(() => buildColumns({
+    ...rowActions,
+    canSelect,
+    catalog,
+    catalogFailed: catalogQuery.isError,
     isSelected,
     pageSelection,
     onToggleRow: (row, selected) => setSelection((current) => toggleRow(current, row, selected)),
     onTogglePage: (selected) => setSelection((current) => togglePage(current, rows, selected)),
-    onOpen: (row) => setEditingId(row.id),
-    detailsHref: (row) => href(`/app/students/${row.id}?from=${encodeURIComponent(searchParams.toString())}`),
-    onArchive: (row, archive) => setArchiveRequest({ archive, records: [{ id: row.id, version: row.version }], name: row.fullName }),
     codes,
-    onCode: codesEnabled ? (row) => setCodeTarget({ id: row.id, fullName: row.fullName, levelId: row.levelId }) : undefined,
-    viewAsStudent: (row) => viewAsStudent(row.id),
-  }), [canManage, codes, codesEnabled, isSelected, pageSelection, rows, viewAsStudent, href, searchParams]);
+  }), [canSelect, catalog, catalogQuery.isError, codes, isSelected, pageSelection, rowActions, rows]);
+  const rowHref = useCallback(
+    (row: StudentRecordRow) => href(`/app/students/${row.id}?from=${encodeURIComponent(searchParams.toString())}`),
+    [href, searchParams],
+  );
 
   const columnOrder = useMemo(
-    () => [...(canManage ? [SELECT_COLUMN] : []), ...preferences.order, ACTIONS_COLUMN],
-    [canManage, preferences.order],
+    () => [...(canSelect ? [SELECT_COLUMN] : []), ...preferences.order, ACTIONS_COLUMN],
+    [canSelect, preferences.order],
   );
   // TanStack Table returns non-memoizable functions; the body is memoized on rows and layout instead.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -212,6 +238,20 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     });
   }
 
+  /** Applies or removes one label on the explicit selection; a failed write keeps the selection. */
+  async function applyBulkLabel(label: Label, applied: boolean) {
+    const ids = Object.keys(selection);
+    if (ids.length > MAX_LABEL_TARGETS) {
+      toast.error(`Select at most ${MAX_LABEL_TARGETS} students.`);
+      return;
+    }
+    if (!await labelWrites.applyToSelection(ids, label.id, applied)) return;
+    deselect(ids);
+    toast.success(`${applied ? "Applied" : "Removed"} “${label.name}” ${applied ? "to" : "from"} ${ids.length} ${ids.length === 1 ? "student" : "students"}`);
+    // The selection bar is gone; continue from the table.
+    requestAnimationFrame(() => document.querySelector<HTMLElement>('[aria-label="Select all students on this page"]')?.focus());
+  }
+
   /** Takes fresh versions for changed records and drops ones that no longer exist. */
   function onReloadSelection(rows: GroupChangeRow[]) {
     const next: Selection = { ...selection };
@@ -246,6 +286,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
           levelNames={structureQuery.data?.levelNames ?? {}}
           tracks={structureQuery.data?.tracks ?? []}
           groups={groupsQuery.data?.groups ?? []}
+          labels={catalog}
           actions={<AddStudentMenu academyId={academyId} canImport={canImportStudents(academy.role)} />}
         >
           <ColumnsPopover
@@ -260,6 +301,12 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
             onVisibilityChange={(id, visible) => updatePreferences((current) => ({ ...current, visibility: { ...current.visibility, [id]: visible } }))}
             onReset={() => updatePreferences((current) => ({ ...defaultLayout(), pageSize: current.pageSize }))}
           />
+          {labelManager && (
+            <LabelManager academyId={academyId} domain="students" open={managingLabels.open} opener={managingLabels.opener}
+              // Opening from the toolbar anchors there; closing keeps the opener so focus can return to it.
+              onOpenChange={(open) => setManagingLabels((current) => open ? { open, opener: null } : { ...current, open: false })}
+              {...labelWrites.definitionChanges} />
+          )}
         </StudentsToolbar>
 
         {listQuery.isError && (
@@ -270,6 +317,18 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
               {list ? "Showing the last loaded results." : "Check your connection and try again."}
               <Button variant="outline" size="sm" onClick={() => void listQuery.refetch()} disabled={listQuery.isFetching}>
                 {listQuery.isFetching ? "Retrying…" : "Retry"}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {catalogQuery.isError && !catalog && (
+          <Alert variant="destructive">
+            <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={1.5} />
+            <AlertTitle>Couldn’t load labels</AlertTitle>
+            <AlertDescription>
+              <Button variant="outline" size="sm" onClick={() => void catalogQuery.refetch()} disabled={catalogQuery.isFetching}>
+                {catalogQuery.isFetching ? "Retrying…" : "Retry"}
               </Button>
             </AlertDescription>
           </Alert>
@@ -301,6 +360,8 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
               fetching={listQuery.isFetching && Boolean(list)}
               skeletonRows={Math.min(params.pageSize, 10)}
               isSelected={isSelected}
+              rowActions={rowActions}
+              rowHref={rowHref}
               empty={filtering ? (
                 <Empty className="min-h-48 rounded-lg border py-14">
                   <EmptyHeader className="gap-1">
@@ -310,7 +371,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
                   </EmptyHeader>
                   <EmptyContent>
                     <Button size="sm" variant="outline" onClick={() => onFiltersChange({
-                      search: "", status: "active", levelId: null, track: null, group: null, participationType: null,
+                      search: "", status: "active", levelId: null, track: null, group: null, participationType: null, labels: [], unlabeled: false,
                     })}>{params.search.trim() ? "Clear search and filters" : "Clear filters"}</Button>
                   </EmptyContent>
                 </Empty>
@@ -339,14 +400,17 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
             />
           )}
 
-          {canManage && selectedCount > 0 && (
+          {canSelect && selectedCount > 0 && (
             <BulkBar
               selected={selectedCount}
-              archivable={archivable.length}
-              restorable={restorable.length}
-              onArchive={() => setArchiveRequest({ archive: true, records: archivable })}
-              onRestore={() => setArchiveRequest({ archive: false, records: restorable })}
-              onChangeGroup={() => setGroupChange(Object.entries(selection).map(([id, value]) => ({ id, version: value.version })))}
+              labels={<BulkLabels academyId={academyId} pending={labelWrites.bulkPending} onApply={(label, applied) => void applyBulkLabel(label, applied)} onManage={labelManager ? openLabelManager : undefined} />}
+              manager={canManage ? {
+                archivable: archivable.length,
+                restorable: restorable.length,
+                onArchive: () => setArchiveRequest({ archive: true, records: archivable }),
+                onRestore: () => setArchiveRequest({ archive: false, records: restorable }),
+                onChangeGroup: () => setGroupChange(Object.entries(selection).map(([id, value]) => ({ id, version: value.version }))),
+              } : undefined}
               onClear={() => setSelection({})}
             />
           )}

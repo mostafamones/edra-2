@@ -11,6 +11,7 @@ import { fetchStudentRecord, studentRecordQueryKey, StudentRequestError } from "
 import { studentAttendanceOptions, studentLearningOptions } from "../overview";
 import { PARTICIPATION_LABELS } from "../validation";
 import { StudentFacts } from "./facts";
+import { StudentRecordLabels } from "./record-labels";
 import { StudentEditSheet } from "./edit-sheet";
 import { StudentAttendance } from "./attendance";
 import { StudentLearning } from "./learning";
@@ -48,6 +49,7 @@ function Details({ academy, recordId, returnQuery }: { academy: AcademyEntry; re
         <div className="min-w-0 space-y-2">
           <h1 dir="auto" className="break-words text-2xl font-semibold tracking-tight">{student.fullName}</h1>
           <div className="flex flex-wrap items-center gap-2"><Badge variant="secondary">{student.archivedAt ? "Archived" : "Active"}</Badge><Badge variant="secondary">{PARTICIPATION_LABELS[student.participationType]}</Badge>{physical && <span className="text-xs text-muted-foreground">{{ connected: "Account connected", suspended: "Account suspended", not_connected: "Account not connected" }[student.onlineAccount]}</span>}</div>
+          <StudentRecordLabels academy={academy} recordId={student.id} labelIds={student.labelIds} />
         </div>
         <Button variant="secondary" onClick={() => setEditing(true)}>{student.archivedAt ? "View archived record" : "Edit student"}</Button>
       </header>

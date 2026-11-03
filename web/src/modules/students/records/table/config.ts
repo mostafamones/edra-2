@@ -27,7 +27,7 @@ export const RESIZE_STEP = 10;
 
 export const COLUMN_WIDTHS: Record<DataColumnId, { size: number; minSize: number; maxSize: number }> = {
   code: { size: 96, minSize: 72, maxSize: MAX_COLUMN_WIDTH },
-  name: { size: 260, minSize: 180, maxSize: MAX_COLUMN_WIDTH },
+  name: { size: 320, minSize: 180, maxSize: MAX_COLUMN_WIDTH },
   studentPhone: { size: 180, minSize: MIN_COLUMN_WIDTH, maxSize: MAX_COLUMN_WIDTH },
   parentPhone: { size: 180, minSize: MIN_COLUMN_WIDTH, maxSize: MAX_COLUMN_WIDTH },
   level: { size: 180, minSize: MIN_COLUMN_WIDTH, maxSize: MAX_COLUMN_WIDTH },
