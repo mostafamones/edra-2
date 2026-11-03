@@ -15,7 +15,7 @@ do $$ begin
   end if;
   if has_function_privilege('anon', 'public.create_student_record(uuid, uuid, text, text, text, text, uuid, uuid, public.student_participation_type)', 'execute')
     or has_function_privilege('anon', 'public.set_student_records_archived(uuid, uuid, jsonb, boolean)', 'execute')
-    or has_function_privilege('anon', 'public.list_student_records(uuid, uuid, text, text, text, text, text, text, jsonb, integer, integer)', 'execute')
+    or has_function_privilege('anon', 'public.list_student_records(uuid, uuid, text, text, text, text, text, text, jsonb, integer, integer, uuid[], boolean)', 'execute')
     or has_function_privilege('authenticated', 'public.check_student_record_input(text, text, text, text, public.student_participation_type)', 'execute')
     or not has_function_privilege('authenticated', 'public.update_student_record(uuid, integer, uuid, text, text, text, text, uuid, uuid, public.student_participation_type)', 'execute') then
     raise exception 'Student RPC grants are wrong';
