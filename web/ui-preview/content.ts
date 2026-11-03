@@ -15,3 +15,4 @@ export async function loadUnitPanels() {
 const noWrite = async () => ({ ok: false as const, message: "Preview only. Changes are not saved." });
 export const changeUnit = noWrite;
 export const saveUnitVersion = noWrite;
+export const loadUnitPublication = noWrite;

@@ -20,34 +20,38 @@ export async function contentCaller(academyId: string) {
   if (error || !data) throw new Error("You no longer have access to this academy.");
   return { ...caller, manager: isAcademyManager(data.role) };
 }
-export function contentError(error: { message?: string } | null) {
-  if (!error) return;
-  const messages: Record<string, string> = {
+const MESSAGES: Record<string, string> = {
     coupon_type_mismatch: "Choose a coupon type from this unit’s academic scope.",
     invalid_prerequisite: "Choose assignments or quizzes from another published unit in this academic scope.",
     prerequisite_cycle: "These prerequisites would create a circular dependency.",
     asset_in_use: "This video is still used by a saved draft or published history. Remove it from drafts and save first. Published videos must be preserved.", asset_deleting: "This video is being permanently deleted and cannot be attached.",
     forbidden: "You do not have permission to make this change.", content_conflict: "Someone changed this unit. Reload it before saving again.", year_closed: "This academic year is closed. Its content is read-only.", archived: "Restore this unit before editing it.", explanation_required: "Add at least one ready explanation video before publishing.", assets_not_ready: "Wait until every attached upload is ready before publishing.", incompatible_assessment: "The assessment must belong to this academy/year and fit the entire program audience.", assessment_already_attached: "This assessment already belongs to another unit. Copy it instead.", attachment_locked: "This assessment has recorded work and cannot be detached or moved.", published_source_required: "Choose a published unit to copy.", answer_requires_assessment: "Attach the assessment before adding its answer video.", invalid_asset: "This file is not available to this unit.", invalid_attachment: "Attach documents directly under an explanation video.", validation: "Check the unit fields and materials.",
-  };
-  throw new Error(messages[error.message ?? ""] ?? "Could not complete this change. Please retry.");
+    confirmation_required: "Save a version before scheduling.", nothing_to_publish: "Nothing has changed since the live version.", schedule_in_past: "Choose a future time.", schedule_conflict: "This schedule changed. Review it and try again.", scheduler_authority_lost: "The manager who scheduled this no longer has publishing permission. Reschedule it.", retries_exhausted: "Publication kept failing. Reschedule it or publish now.", publication_failed: "Publication failed. Reschedule it or publish now.",
+};
+const contentMessage = (code: string) => MESSAGES[code] ?? "Could not complete this change. Please retry.";
+export function contentError(error: { message?: string } | null) {
+  if (error) throw new Error(contentMessage(error.message ?? ""));
 }
 export async function readContentWorkspace(academyId: string) {
   const { db, userId, manager } = await contentCaller(academyId);
-  const [units, programs, years, levels, tracks, names, availableTracks, trackYearLabels, unitLabels] = await Promise.all([
+  const [units, programs, years, levels, tracks, names, availableTracks, trackYearLabels, unitLabels, openSchedules] = await Promise.all([
     fetchAllPages((from, to) => db.from("content_units").select("*").eq("academy_id", academyId).order("updated_at", { ascending: false }).order("id").range(from, to)),
     db.from("content_programs").select("*").eq("academy_id", academyId), db.from("academic_years").select("id,start_year,closed_at").eq("academy_id", academyId).order("start_year", { ascending: false }),
     db.from("academy_levels").select("level_id,sort_order").eq("academy_id", academyId).is("stopped_at", null).order("sort_order"), db.from("academy_tracks").select("id,level_id,name").eq("academy_id", academyId), db.from("global_levels").select("id,name"),
     db.from("academy_tracks").select("id,level_id,name").eq("academy_id", academyId).is("retired_at", null),
     readOfferingTrackLabels(academyId, db),
     fetchAllPages((from, to) => db.from("content_unit_labels").select("unit_id,label_id").eq("academy_id", academyId).order("unit_id").order("label_id").range(from, to)),
+    manager ? fetchAllPages((from, to) => db.from("content_publication_schedules").select("unit_id,state,scheduled_for").eq("academy_id", academyId).in("state", ["pending", "stopped"]).order("unit_id").range(from, to)) : [],
   ]);
   for (const response of [programs, years, levels, tracks, names, availableTracks]) contentError(response.error);
+  const schedules: Record<string, { state: string; scheduledFor: string }> = {};
+  for (const { unit_id, state, scheduled_for } of openSchedules) schedules[unit_id] = { state, scheduledFor: scheduled_for };
   const labelIds: Record<string, string[]> = {};
   for (const { unit_id, label_id } of unitLabels) (labelIds[unit_id] ??= []).push(label_id);
   const offered = new Set((levels.data ?? []).map(level => level.level_id));
   return { units: units.map(u => ({ ...u, draft: documentSchema.parse(u.draft) })) as ContentUnit[], programs: programs.data ?? [], years: years.data ?? [], levels: levels.data ?? [],
     tracks: (availableTracks.data ?? []).filter(track => offered.has(track.level_id)), historicalTracks: tracks.data ?? [], trackYearLabels,
-    levelNames: Object.fromEntries((names.data ?? []).map(l => [l.id, l.name])) as Record<string, string>, labelIds, userId, manager };
+    levelNames: Object.fromEntries((names.data ?? []).map(l => [l.id, l.name])) as Record<string, string>, labelIds, schedules, userId, manager };
 }
 export type ContentWorkspace = Awaited<ReturnType<typeof readContentWorkspace>>;
 export async function readContentUnit(academyId: string, unitId: string) {
@@ -100,11 +104,13 @@ export async function readUnitHistory(academyId: string, unitId: string) {
   z.guid().parse(unitId);
   const { db } = await contentCaller(academyId);
   // shortcut: only the latest 200 draft saves are shown; page the query if units outgrow that.
-  const [drafts, revisions] = await Promise.all([
+  const [drafts, revisions, candidates] = await Promise.all([
     db.from("content_drafts").select("id,kind,document,saved_by,saved_at").eq("academy_id", academyId).eq("unit_id", unitId).order("saved_at", { ascending: false }).order("id", { ascending: false }).limit(200),
-    db.from("content_revisions").select("revision,document,published_by,published_at").eq("academy_id", academyId).eq("unit_id", unitId).order("revision", { ascending: false }),
+    db.from("content_revisions").select("revision,document,published_by,published_at,candidate_id").eq("academy_id", academyId).eq("unit_id", unitId).order("revision", { ascending: false }),
+    db.from("content_publication_candidates").select("id,confirmed_at").eq("academy_id", academyId).eq("unit_id", unitId),
   ]);
-  contentError(drafts.error); contentError(revisions.error);
+  contentError(drafts.error); contentError(revisions.error); contentError(candidates.error);
+  const savedAt = new Map((candidates.data ?? []).map(c => [c.id, c.confirmed_at]));
   const ids = [...new Set([...(drafts.data ?? []).flatMap(d => d.saved_by ? [d.saved_by] : []), ...(revisions.data ?? []).map(r => r.published_by)])];
   // Profiles are readable for people who share the academy; anyone else shows as an unnamed staff member.
   const profiles = ids.length ? await db.from("profiles").select("id,full_name,display_name,avatar_path").in("id", ids) : { data: [], error: null };
@@ -116,7 +122,27 @@ export async function readUnitHistory(academyId: string, unitId: string) {
   const people = new Map((profiles.data ?? []).map(p => [p.id, { id: p.id, name: p.display_name || p.full_name, avatarUrl: p.avatar_path ? urls.get(p.avatar_path) : undefined }]));
   return {
     drafts: (drafts.data ?? []).map(d => ({ kind: d.kind as "created" | "saved" | "version", document: d.document, at: d.saved_at, by: (d.saved_by && people.get(d.saved_by)) || null })),
-    revisions: (revisions.data ?? []).map(r => ({ revision: r.revision, document: r.document, at: r.published_at, by: people.get(r.published_by) || null })),
+    revisions: (revisions.data ?? []).map(r => ({ revision: r.revision, document: r.document, at: r.published_at, by: people.get(r.published_by) || null, savedAt: r.candidate_id ? savedAt.get(r.candidate_id) : undefined })),
   };
 }
 export type UnitHistory = Awaited<ReturnType<typeof readUnitHistory>>;
+
+/** A manager's view of the unit's schedule and whether a saved version can publish. RLS hides schedules from everyone else. */
+export async function readUnitPublication(academyId: string, unitId: string) {
+  z.guid().parse(unitId);
+  const { db, manager } = await contentCaller(academyId);
+  if (!manager) throw new Error(contentMessage("forbidden"));
+  const { data: unit, error } = await db.from("content_units").select("published_revision").eq("academy_id", academyId).eq("id", unitId).single();
+  contentError(error);
+  const [schedule, candidate] = await Promise.all([
+    db.from("content_publication_schedules").select("generation,state,scheduled_for,next_attempt_at,reason").eq("academy_id", academyId).eq("unit_id", unitId).maybeSingle(),
+    db.from("content_publication_candidates").select("unit_version").eq("academy_id", academyId).eq("unit_id", unitId).eq("base_revision", unit!.published_revision).order("sequence", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  contentError(schedule.error); contentError(candidate.error);
+  const s = schedule.data;
+  return {
+    schedule: s && { generation: s.generation, state: s.state as "pending" | "published" | "cancelled" | "stopped", scheduledFor: s.scheduled_for, nextAttemptAt: s.next_attempt_at, reason: s.state === "stopped" && s.reason ? contentMessage(s.reason) : null },
+    candidate: candidate.data && { unitVersion: candidate.data.unit_version },
+  };
+}
+export type UnitPublication = Awaited<ReturnType<typeof readUnitPublication>>;

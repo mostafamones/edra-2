@@ -108,7 +108,8 @@ it("offers publishing edits from History once the unit is published", async () =
   open({ ...base, unit: { ...base.unit, state: "published", published_revision: 1 }, revisions: [{ revision: 1, document: { ...base.unit.draft, title: "Live" } }] } as unknown as ContentDetail, "history");
   fireEvent.click(await screen.findByRole("button", { name: "Publish" }));
   await waitFor(() => expect(actions.changeUnit).toHaveBeenCalledWith({ academyId: "academy", unitId: "unit", version: 5, action: "publish" }));
-  expect(screen.queryByRole("button", { name: "Save version" })).toBeNull();
+  // Edits to a published unit can still be kept as a version for a schedule.
+  expect(screen.getByRole("button", { name: "Save version" })).toBeTruthy();
 });
 
 it("slides a tab in from the side it sits on", async () => {

@@ -6,11 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ContentDetail } from "../data";
 
-const actions = vi.hoisted(() => ({ loadUnit: vi.fn(), loadUnitPanels: vi.fn(), saveUnit: vi.fn(), changeUnit: vi.fn(), publishUnitEdits: vi.fn() }));
+const actions = vi.hoisted(() => ({ loadUnit: vi.fn(), loadUnitPanels: vi.fn(), saveUnit: vi.fn(), saveUnitVersion: vi.fn(), changeUnit: vi.fn(), publishUnitEdits: vi.fn(), loadUnitPublication: vi.fn(), scheduleUnitPublication: vi.fn(), cancelUnitPublication: vi.fn() }));
 vi.mock("../actions", () => actions);
 vi.mock("../media-actions", () => ({ refreshVideo: vi.fn() }));
 vi.mock("@/modules/auth/components/provider", () => ({ useAuth: () => ({ activeAcademy: { id: "academy" }, user: { id: "author" } }) }));
 vi.mock("@/modules/auth/components/academy-gate", () => ({ AcademyGate: ({ children }: { children: (academy: { id: string }) => ReactNode }) => children({ id: "academy" }) }));
+vi.mock("@/modules/assessments", () => ({ AssessmentDateTime: ({ id, value, onChange }: { id: string; value: string; onChange: (value: string) => void }) => <input id={id} aria-label="Publish at" value={value} onChange={e => onChange(e.target.value)} /> }));
 vi.mock("@/modules/navigation", () => ({ useCanonicalHref: () => (href: string) => href }));
 vi.mock("@/components/shared/link", () => ({ default: ({ href, children, ...props }: { href: string; children: ReactNode }) => <a href={href} {...props}>{children}</a> }));
 vi.mock("@/components/shared/breadcrumb-title", () => ({ useBreadcrumbTitle: vi.fn() }));
@@ -50,6 +51,8 @@ beforeEach(() => {
   actions.saveUnit.mockResolvedValue({ ok: true, value: undefined });
   actions.changeUnit.mockResolvedValue({ ok: true, value: undefined });
   actions.publishUnitEdits.mockResolvedValue({ ok: true, value: undefined });
+  actions.loadUnitPublication.mockResolvedValue({ ok: true, value: { schedule: null, candidate: null } });
+  actions.saveUnitVersion.mockResolvedValue({ ok: true, value: undefined });
   actions.loadUnitPanels.mockResolvedValue({ history: { ok: true, value: { drafts: [], revisions: [] } }, assessments: { ok: true, value: [] }, sources: { ok: true, value: [] } });
 });
 afterEach(cleanup);
@@ -207,4 +210,36 @@ describe("published unit maintenance", () => {
       expect(upload.start).toHaveBeenCalledWith(file, assessment);
     });
   });
+});
+
+describe("scheduled publication", () => {
+  const manager = () => ({ ...detail(), manager: true, userId: "author", unit: { ...detail().unit, published_version: 4 }, revisions: [{ revision: 1, document: { title: "Live", description: "", accessDays: 7, items: [] }, published_at: "2026-10-20T00:00:00Z" }] }) as unknown as ContentDetail;
+
+  it("never reads or offers scheduling for instructors", async () => {
+    open(detail());
+    await screen.findByRole("heading", { name: "Revision" });
+    expect(screen.queryByRole("button", { name: "Schedule" })).toBeFalsy();
+    await waitFor(() => expect(actions.loadUnitPanels).toHaveBeenCalled());
+    expect(actions.loadUnitPublication).not.toHaveBeenCalled();
+  });
+
+  it("offers saving a version beside Publish on a published unit", async () => {
+    actions.loadUnitPanels.mockResolvedValue({ history: { ok: true, value: { drafts: [{ kind: "saved", document: detail().unit.draft, at: "2026-10-21T00:00:00Z", by: { id: "author", name: "Mona" } }], revisions: [] } }, assessments: { ok: true, value: [] }, sources: { ok: true, value: [] } });
+    open(manager());
+    fireEvent.click(await screen.findByRole("button", { name: "History" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Save version" }));
+    await waitFor(() => expect(actions.saveUnitVersion).toHaveBeenCalledWith({ academyId: "academy", unitId: "unit", version: 5 }));
+    expect(screen.getByRole("button", { name: "Publish" })).toBeTruthy();
+  });
+
+  it("opens scheduling from the header without the history sheet", async () => {
+    actions.loadUnitPublication.mockResolvedValue({ ok: true, value: { schedule: null, candidate: { unitVersion: 5 } } });
+    open(manager());
+    const schedule = await screen.findByRole("button", { name: "Schedule" });
+    await waitFor(() => expect((schedule as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(schedule);
+    expect(await screen.findByRole("dialog", { name: "Schedule publication" })).toBeTruthy();
+    expect(screen.queryByText("Version history")).toBeFalsy();
+  });
+
 });

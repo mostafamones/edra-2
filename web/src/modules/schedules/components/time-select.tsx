@@ -75,7 +75,8 @@ export function TimeSelect({ id, value, onChange, invalid, disabled, ...props }:
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    // Modal, so its own scroll lock wins inside a dialog, whose lock would otherwise swallow wheel scrolling here.
+    <Popover modal open={open} onOpenChange={setOpen}>
       <PopoverAnchor asChild>
         <InputGroup>
           <InputGroupInput

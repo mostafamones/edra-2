@@ -1,7 +1,7 @@
 import { useRef, type ReactElement, type RefObject } from "react";
 import Link from "@/components/shared/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Archive02Icon, ArchiveRestoreIcon, Clock01Icon, Copy01Icon, LinkSquare02Icon, MoreHorizontalIcon, PencilEdit01Icon, ViewIcon } from "@hugeicons/core-free-icons";
+import { Archive02Icon, ArchiveRestoreIcon, Calendar03Icon, Clock01Icon, Copy01Icon, LinkSquare02Icon, MoreHorizontalIcon, PencilEdit01Icon, ViewIcon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -22,7 +22,8 @@ export type UnitMenuActions = {
   writable: boolean;
   manager: boolean;
   userId: string;
-  onAction: (unit: ContentUnit, action: UnitAction) => void;
+  onAction: (unit: ContentUnit, action: UnitAction, opener: HTMLElement | null) => void;
+  onSchedule: (unit: ContentUnit, opener: HTMLElement | null) => void;
   onClone: (unit: ContentUnit, opener: HTMLElement | null) => void;
   onArchive: (unit: ContentUnit, opener: HTMLElement | null) => void;
   onRestore: (unit: ContentUnit) => void;
@@ -62,8 +63,10 @@ function Items({ unit, href, actions, menu, openerRef, openingRef }: Props & {
       {writable && unit.state === "published" && (
         <Item onSelect={() => { openingRef.current = true; onClone(unit, openerRef.current); }}><HugeiconsIcon icon={Copy01Icon} strokeWidth={1.5} />Clone</Item>
       )}
-      {(next || lifecycle) && <Separator />}
-      {next && <Item onSelect={() => actions.onAction(unit, next)}><HugeiconsIcon icon={UNIT_ACTIONS[next].icon} strokeWidth={1.5} />{UNIT_ACTIONS[next].label}</Item>}
+      {((next && (next !== "version" || manager)) || lifecycle) && <Separator />}
+      {/* Before a unit's first publication, managers schedule it from here; saving versions stays in History. */}
+      {next === "version" ? manager && <Item onSelect={() => { openingRef.current = true; actions.onSchedule(unit, openerRef.current); }}><HugeiconsIcon icon={Calendar03Icon} strokeWidth={1.5} />Schedule</Item>
+        : next && <Item onSelect={() => { openingRef.current = next === "publish"; actions.onAction(unit, next, openerRef.current); }}><HugeiconsIcon icon={UNIT_ACTIONS[next].icon} strokeWidth={1.5} />{UNIT_ACTIONS[next].label}</Item>}
       {lifecycle && (archived
         ? <Item onSelect={() => onRestore(unit)}><HugeiconsIcon icon={ArchiveRestoreIcon} strokeWidth={1.5} />Restore as draft</Item>
         : <Item variant="destructive" onSelect={() => { openingRef.current = true; onArchive(unit, openerRef.current); }}><HugeiconsIcon icon={Archive02Icon} strokeWidth={1.5} />Archive</Item>)}

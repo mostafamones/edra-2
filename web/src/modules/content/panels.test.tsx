@@ -9,7 +9,7 @@ vi.mock("./actions", () => api);
 vi.mock("@/lib/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/modules/navigation", () => ({ useCanonicalHref: () => (path: string) => path }));
 
-import { unitPanelOptions } from "./panels";
+import { publicationRefresh, unitPanelOptions } from "./panels";
 import { AssessmentPicker } from "./components/assessment-picker";
 import { ReuseMaterial } from "./components/reuse";
 import { VersionHistory } from "./components/history";
@@ -83,4 +83,17 @@ it("keeps assessments usable if history fails and retries the failed panel", asy
   api.loadUnitPanels.mockResolvedValue(result());
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
   expect(await screen.findByText("No history yet.")).toBeTruthy();
+});
+
+it("looks for a worker outcome around the due time and stops when it can't be near", () => {
+  const now = Date.parse("2026-10-31T12:00:00Z");
+  const at = (minutes: number) => new Date(now + minutes * 60_000).toISOString();
+  const pending = (minutes: number) => ({ generation: 1, state: "pending" as const, scheduledFor: at(minutes), scheduledBy: null, attempts: 0, nextAttemptAt: at(minutes), reason: null, publishedRevision: null });
+  expect(publicationRefresh(null, now)).toBe(false);
+  expect(publicationRefresh({ ...pending(0), state: "published" }, now)).toBe(false);
+  expect(publicationRefresh(pending(5), now)).toBe(300_000);
+  expect(publicationRefresh(pending(600), now)).toBe(3_600_000);
+  expect(publicationRefresh(pending(0), now)).toBe(30_000);
+  expect(publicationRefresh(pending(-10), now)).toBe(30_000);
+  expect(publicationRefresh(pending(-16), now)).toBe(false);
 });

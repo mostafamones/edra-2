@@ -96,3 +96,18 @@ it("describes how long ago something happened", () => {
   const ago = (ms: number) => timeAgo(new Date(now.getTime() - ms).toISOString(), now);
   expect([ago(10_000), ago(5 * 60_000), ago(3 * 3_600_000), ago(1 * 86_400_000), ago(40 * 86_400_000)]).toEqual(["just now", "5 minutes ago", "3 hours ago", "1 day ago", "1 month ago"]);
 });
+
+it("keeps saves after a scheduled publication's version as the working draft", () => {
+  const person = { id: "mona" }, doc = (title: string) => ({ title, description: "", accessDays: 7, items: [] });
+  const entries = historyEntries(
+    [
+      { kind: "saved", document: doc("Newer"), at: "2026-10-30T12:00:00Z", by: person },
+      { kind: "version", document: doc("Approved"), at: "2026-10-30T10:00:00Z", by: person },
+      { kind: "created", document: doc("Start"), at: "2026-10-30T09:00:00Z", by: person },
+    ],
+    [{ revision: 1, document: doc("Approved"), at: "2026-10-30T14:00:00Z", by: person, savedAt: "2026-10-30T10:00:00Z" }],
+  );
+  expect(entries.map(e => [e.kind, e.version, e.scheduled])).toEqual([["draft", false, false], ["published", false, true], ["draft", true, false]]);
+  expect(entries[1].at).toBe("2026-10-30T14:00:00Z");
+  expect(entries[1].summary?.headline).toBe("Published the saved draft");
+});

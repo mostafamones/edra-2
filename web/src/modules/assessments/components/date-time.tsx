@@ -6,6 +6,7 @@ import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, Calendar03Icon } fr
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { academyDateTime } from "@/lib/academy-time";
 import { TimeSelect } from "@/modules/schedules";
 
 type Props = {
@@ -17,9 +18,11 @@ type Props = {
   disabled?: boolean;
   invalid?: boolean;
   defaultTime?: string;
+  /** Adds how far the date is from today in Cairo, as in "10 Nov 2026 (in 7d)". */
+  relative?: boolean;
 };
 
-export function AssessmentDateTime({ id, label, value, onChange, disabled, invalid, defaultTime = "12:00" }: Props) {
+export function AssessmentDateTime({ id, label, value, onChange, disabled, invalid, defaultTime = "12:00", relative }: Props) {
   const [open, setOpen] = useState(false);
   const [date, time = defaultTime] = value.split("T");
   const selected = date ? parseISO(date) : undefined;
@@ -31,7 +34,7 @@ export function AssessmentDateTime({ id, label, value, onChange, disabled, inval
           <Button id={id} type="button" variant="outline" disabled={disabled} aria-invalid={invalid || undefined}
             className="min-w-0 flex-1 justify-start font-normal">
             <HugeiconsIcon icon={Calendar03Icon} strokeWidth={1.5} className="text-muted-foreground" aria-hidden="true" />
-            {selected ? format(selected, "d MMM yyyy") : <span className="text-muted-foreground">Not set</span>}
+            {selected ? `${format(selected, "d MMM yyyy")}${relative ? ` (${fromToday(date)})` : ""}` : <span className="text-muted-foreground">Not set</span>}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-auto gap-0 p-0" aria-label={`${label} picker`}>
@@ -51,6 +54,12 @@ export function AssessmentDateTime({ id, label, value, onChange, disabled, inval
       </div>
     </div>
   );
+}
+
+/** Whole Cairo calendar days between today and an ISO date: "today", "in 7d", "2d ago". */
+function fromToday(date: string) {
+  const days = Math.round((Date.parse(date) - Date.parse(academyDateTime(new Date().toISOString()).date)) / 86_400_000);
+  return days === 0 ? "today" : days > 0 ? `in ${days}d` : `${-days}d ago`;
 }
 
 function CalendarChevron({ className, orientation }: { className?: string; orientation?: string }) {

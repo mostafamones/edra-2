@@ -5,8 +5,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const mocks = vi.hoisted(() => ({ loadWorkspace: vi.fn(), setUnitLabel: vi.fn() }));
-vi.mock("../actions", () => ({ loadWorkspace: mocks.loadWorkspace, changeUnit: vi.fn(), createUnit: vi.fn(), copyUnit: vi.fn() }));
+const mocks = vi.hoisted(() => ({ loadWorkspace: vi.fn(), setUnitLabel: vi.fn(), changeUnit: vi.fn() }));
+vi.mock("../actions", () => ({ loadWorkspace: mocks.loadWorkspace, changeUnit: mocks.changeUnit, createUnit: vi.fn(), copyUnit: vi.fn(), saveUnitVersion: vi.fn() }));
 vi.mock("../labels", () => ({ setUnitLabel: mocks.setUnitLabel }));
 vi.mock("@/modules/auth", () => ({ AcademyGate: ({ children }: { children: (academy: object) => ReactNode }) => children({ id: "academy", role: "owner" }), useAcademyScope: () => () => true }));
 vi.mock("@/modules/navigation", () => ({ useCanonicalHref: () => (href: string) => href }));
@@ -14,11 +14,12 @@ vi.mock("@/lib/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/modules/labels", () => ({ canManageLabels: () => false, LabelManager: () => null, LabelOverflow: () => null, labelsQueryKey: () => ["labels"], useLabels: () => ({ data: [] }) }));
 vi.mock("@/components/shared/header-actions", () => ({ HeaderActions: ({ children }: { children: ReactNode }) => children }));
 vi.mock("@/components/shared/link", () => ({ default: ({ children }: { children: ReactNode }) => <span>{children}</span> }));
-vi.mock("./menu", () => ({ UnitMenu: ({ children }: { children: ReactNode }) => children, UnitActions: ({ unit, actions }: { unit: object; actions: { onApplyLabel: (unit: object, label: string, applied: boolean) => void } }) => <><button onClick={() => actions.onApplyLabel(unit, "label", true)}>Apply</button><button onClick={() => actions.onApplyLabel(unit, "label", false)}>Remove</button></> }));
+vi.mock("./menu", () => ({ UnitMenu: ({ children }: { children: ReactNode }) => children, UnitActions: ({ unit, actions }: { unit: object; actions: { onApplyLabel: (unit: object, label: string, applied: boolean) => void; onAction: (unit: object, action: string, opener: null) => void } }) => <><button onClick={() => actions.onAction(unit, "publish", null)}>Menu publish</button><button onClick={() => actions.onApplyLabel(unit, "label", true)}>Apply</button><button onClick={() => actions.onApplyLabel(unit, "label", false)}>Remove</button></> }));
 vi.mock("./sheet", () => ({ UnitSheet: () => null }));
+vi.mock("./publication", () => ({ ScheduleUnitDialog: () => null }));
 import { ContentWorkspacePage } from "./workspace";
 
-const workspaceData = () => ({ years: [{ id: "year", start_year: 2026, closed_at: null }], levels: [], tracks: [], levelNames: {}, programs: [{ id: "program", academic_year_id: "year", level_id: "level", track_id: null }], trackYearLabels: [], historicalTracks: [], labelIds: { unit: [] as string[] }, units: [{ id: "unit", program_id: "program", state: "draft", updated_at: "2026-01-01", draft: { title: "Unit", description: "", items: [] } }] });
+const workspaceData = () => ({ years: [{ id: "year", start_year: 2026, closed_at: null }], levels: [], tracks: [], levelNames: {}, programs: [{ id: "program", academic_year_id: "year", level_id: "level", track_id: null }], trackYearLabels: [], historicalTracks: [], labelIds: { unit: [] as string[] }, schedules: {}, units: [{ id: "unit", program_id: "program", state: "draft", updated_at: "2026-01-01", draft: { title: "Unit", description: "", items: [] } }] });
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 it("orders opposite label clicks and keeps the newer optimistic value after an older failure", async () => {
@@ -56,4 +57,17 @@ it("does not roll a cleared and recreated workspace back from an old request", a
   await act(async () => { client.clear(); client.setQueryData(["content", "academy", "workspace"], { ...data, labelIds: { unit: ["label"] } }); });
   await act(async () => finish({ ok: false, code: "failure", message: "Failed" }));
   expect((client.getQueryData(["content", "academy", "workspace"]) as typeof data).labelIds.unit).toEqual(["label"]);
+});
+
+it("asks before publishing from a card's menu", async () => {
+  globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };
+  mocks.loadWorkspace.mockResolvedValue(workspaceData());
+  mocks.changeUnit.mockResolvedValue({ ok: true, value: undefined });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  render(<QueryClientProvider client={client}><TooltipProvider><ContentWorkspacePage /></TooltipProvider></QueryClientProvider>);
+  fireEvent.click(await screen.findByText("Menu publish"));
+  expect(await screen.findByRole("alertdialog", { name: "Publish this unit?" })).toBeTruthy();
+  expect(mocks.changeUnit).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Publish" }));
+  await waitFor(() => expect(mocks.changeUnit).toHaveBeenCalledWith(expect.objectContaining({ unitId: "unit", action: "publish" })));
 });
