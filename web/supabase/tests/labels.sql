@@ -109,7 +109,10 @@ select pg_temp.expect_error($s$ select public.create_label(pg_temp.id('academy')
 select pg_temp.expect_error($s$ select public.update_label(pg_temp.id('academy'),pg_temp.id('red'),'Renamed','red') $s$, 'forbidden');
 select pg_temp.expect_error($s$ select public.delete_label(pg_temp.id('academy'),pg_temp.id('red'),true) $s$, 'forbidden');
 select pg_temp.check((select string_agg(name, ',' order by name) from public.labels where lower(name) in ('online only','ready for in-person','needs review')) = 'Needs review,Online only,Ready for in-person', 'a new academy starts with the default labels');
-select pg_temp.check((select count(*) from public.labels) = 9 and not exists (select 1 from public.labels where academy_id <> pg_temp.id('academy')), 'instructor reads only this academy catalog');
+select pg_temp.check((select count(*) from public.labels where domain = 'assessments') = 6
+  and (select count(*) from public.labels where domain = 'content') = 3
+  and (select count(*) from public.labels where domain = 'students') = 3, 'instructor reads all three academy catalogs');
+select pg_temp.check(not exists (select 1 from public.labels where academy_id <> pg_temp.id('academy')), 'instructor reads only this academy catalog');
 -- Multiple labels on every type, applied as a desired state: repeating it changes nothing.
 select public.set_assessment_label(pg_temp.id('academy'),'assignment',pg_temp.id('a1'),pg_temp.id('red'),true);
 select public.set_assessment_label(pg_temp.id('academy'),'assignment',pg_temp.id('a1'),pg_temp.id('blue'),true);
