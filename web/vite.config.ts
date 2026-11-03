@@ -23,7 +23,7 @@ export default defineConfig(async ({ mode }) => {
     // Academy slugs may be "assets". Keep framework assets in an invalid slug namespace.
     build: { assetsDir: "_build/assets" },
     resolve: { tsconfigPaths: true },
-    server: { port: 3000, allowedHosts: ["lvh.me", "app.lvh.me", "learn.lvh.me", ...(tunnel ? [tunnel.split(":")[0]] : [])] },
+    server: { host: "127.0.0.1", port: 3000, allowedHosts: ["lvh.me", "app.lvh.me", "learn.lvh.me", ...(tunnel ? [tunnel.split(":")[0]] : [])] },
     plugins: [
       cloudflare({ viteEnvironment: { name: "ssr" } }),
       tanstackStart({ srcDirectory: "src", router: { routeFileIgnorePattern: "\\.test\\.[^.]+$" }, importProtection: { behavior: "error" } }),
