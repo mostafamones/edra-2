@@ -43,7 +43,7 @@ describe("resolveTarget", () => {
 
   it("rejects a mismatched URL", () => {
     const env = { NEXT_PUBLIC_SUPABASE_URL: `https://${OTHER}.supabase.co`, SUPABASE_SERVICE_ROLE_KEY: "svc" };
-    assert.throws(() => resolveTarget(DEV, env), { message: "NEXT_PUBLIC_SUPABASE_URL does not match the selected project." });
+    assert.throws(() => resolveTarget(DEV, env), { message: "VITE_SUPABASE_URL does not match the selected project." });
   });
 
   it("requires a service role key", () => {

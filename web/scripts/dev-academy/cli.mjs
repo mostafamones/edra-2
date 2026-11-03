@@ -260,8 +260,10 @@ function printCounts(counts) {
 function printRun(runId, report, env, slug) {
   console.log(`Run ${runId} state ready`);
   console.log(`Academy ${report.academy_id}`);
-  if (env.NEXT_PUBLIC_EDRA_APP_ORIGIN) console.log(`Staff URL ${env.NEXT_PUBLIC_EDRA_APP_ORIGIN}/${slug}`);
-  if (env.NEXT_PUBLIC_EDRA_LEARN_ORIGIN) console.log(`Student URL ${env.NEXT_PUBLIC_EDRA_LEARN_ORIGIN}/${slug}`);
+  const appOrigin = env.VITE_EDRA_APP_ORIGIN ?? env.NEXT_PUBLIC_EDRA_APP_ORIGIN;
+  const learnOrigin = env.VITE_EDRA_LEARN_ORIGIN ?? env.NEXT_PUBLIC_EDRA_LEARN_ORIGIN;
+  if (appOrigin) console.log(`Staff URL ${appOrigin}/${slug}`);
+  if (learnOrigin) console.log(`Student URL ${learnOrigin}/${slug}`);
   printCounts(report.counts);
 }
 

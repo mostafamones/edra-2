@@ -12,7 +12,7 @@ import { Field, FieldLabel } from "../src/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../src/components/ui/select";
 import { Toaster } from "sonner";
 import { HomeExample } from "./home";
-import "../src/app/globals.css";
+import "../src/styles/globals.css";
 import "./preview.css";
 
 const params = new URLSearchParams(location.search);

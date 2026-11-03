@@ -19,9 +19,9 @@ export function resolveTarget(projectRef, env = process.env) {
     throw new Error("Unknown or disallowed project reference.");
   }
   const url = `https://${projectRef}.supabase.co`;
-  const configured = env.NEXT_PUBLIC_SUPABASE_URL;
+  const configured = env.VITE_SUPABASE_URL ?? env.NEXT_PUBLIC_SUPABASE_URL;
   if (configured !== url && configured !== `${url}/`) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL does not match the selected project.");
+    throw new Error("VITE_SUPABASE_URL does not match the selected project.");
   }
   const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) {
