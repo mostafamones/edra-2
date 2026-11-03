@@ -20,7 +20,13 @@ import { StudentMaterial } from "./material";
 import { LearningProgress } from "../progress/summary";
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 
-export function StudentLearningUnit({ academyId, academySlug, userId, initial }: { academyId: string; academySlug: string; userId: string; initial: LearningUnit }) {
+type Props = { academyId: string; academySlug: string; userId: string; initial: LearningUnit };
+
+export function StudentLearningUnit(props: Props) {
+  return <LearningUnitContent key={JSON.stringify([props.userId, props.academyId, props.initial.id])} {...props} />;
+}
+
+function LearningUnitContent({ academyId, academySlug, userId, initial }: Props) {
   const cache = useQueryClient();
   const [code, setCode] = useState(""), [error, setError] = useState(""), [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false), [extending, setExtending] = useState(false);
