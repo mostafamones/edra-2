@@ -4,3 +4,4 @@ export { assessmentListQueryKey, assessmentsRootKey, loadAssessments } from "./q
 export { ASSESSMENT_TYPES, TYPE_LABELS, TYPE_ROUTES } from "./types";
 export type { AssessmentListItem, AssessmentPage, AssessmentType } from "./types";
 export { loadStudentAssessments } from "./student";
+export { AssessmentDateTime } from "./components/date-time";
