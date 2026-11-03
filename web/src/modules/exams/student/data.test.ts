@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { throughTransport } from "../../transport.test-support";
 
 const ACADEMY = "11111111-1111-4111-8111-111111111111";
 const EXAM = "22222222-2222-4222-8222-222222222222";
@@ -10,7 +11,7 @@ const state = vi.hoisted(() => ({
   calls: [] as { name: string; args: unknown }[],
 }));
 
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({
   cookieAuthority: async () => state.signedIn ? {
     userId: "student-1",
@@ -71,6 +72,7 @@ describe("student exam boundary", () => {
     };
     const result = await getMyExamOverview({ academyId: ACADEMY, examId: EXAM });
     expect(result.ok).toBe(true);
+    expect(await throughTransport(result)).toEqual(result);
     const text = JSON.stringify(result);
     for (const leaked of ["parts", "secret", "answers", "departures", "items", "feedback", "private"]) expect(text).not.toContain(leaked);
     expect(result).toMatchObject({ ok: true, data: { action: "resume", result: { total: "7.50", corrected: true } } });
@@ -84,6 +86,7 @@ describe("student exam boundary", () => {
   it("acknowledges the attempt from the start response without question material", async () => {
     state.response = { data: { attempt, active: true, editor: { status: "claimed", token: "a".repeat(64), generation: 1, expires_at: "2026-10-20T08:10:45Z", heartbeat_seconds: 10, lease_seconds: 45 }, parts: [{ questions: [{ prompt: "secret" }] }] }, error: null };
     const result = await enterMyExam({ academyId: ACADEMY, examId: EXAM, token: null });
+    expect(await throughTransport(result)).toEqual(result);
     expect(result).toMatchObject({ ok: true, active: true, attempt: {
       startedAt: attempt.started_at, deadlineAt: attempt.deadline_at, cutoffAt: attempt.cutoff_at,
       departureCount: 1, finalizedAt: null, finalizationReason: null, superseded: false,
@@ -109,7 +112,9 @@ describe("student exam boundary", () => {
     state.response = { data: null, error: { code: "P0001", message: "not_open" } };
     expect(await enterMyExam({ academyId: ACADEMY, examId: EXAM, token: null })).toMatchObject({ ok: false, code: "not_open", message: "This exam isn’t open for new attempts." });
     state.response = { data: null, error: { code: "P0001", message: "throttled", details: "12" } };
-    expect(await enterMyExam({ academyId: ACADEMY, examId: EXAM, token: null })).toMatchObject({ ok: false, code: "throttled", retryAfter: 12 });
+    const throttled = await enterMyExam({ academyId: ACADEMY, examId: EXAM, token: null });
+    expect(throttled).toMatchObject({ ok: false, code: "throttled", retryAfter: 12 });
+    expect(await throughTransport(throttled)).toEqual(throttled);
     state.response = { data: null, error: { code: "42501", message: "permission denied for function" } };
     expect(await enterMyExam({ academyId: ACADEMY, examId: EXAM, token: null })).toMatchObject({ ok: false, code: "unavailable" });
   });

@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { IconAlertCircle, IconArchive, IconSearch, IconSearchOff } from "@tabler/icons-react";
+import { IconAlertCircle, IconArchive, IconSearch, IconSearchOff } from "@/components/shared/icons";
 import { format } from "date-fns";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

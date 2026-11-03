@@ -1,6 +1,5 @@
-"use client";
 
-import { IconPhotoOff, IconRefresh } from "@tabler/icons-react";
+import { IconPhotoOff, IconRefresh } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,8 +20,7 @@ export function ImageFrame({ id, className }: { id: string; className?: string }
   }
   return (
     <div className={cn("flex w-full items-center justify-center overflow-hidden rounded-md bg-muted/40", className)}>
-      {/* Signed Storage URLs expire, so next/image optimisation and caching don't apply. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* Signed Storage URLs expire, so they are loaded directly. */}
       <img src={url} alt="" className="max-h-full max-w-full object-contain" />
     </div>
   );

@@ -35,7 +35,7 @@ Whole-unit copying and individual-material reuse consume the last published sour
 
 ## Media
 
-Videos upload from the browser directly to Mux through a server-authorized upload URL, with signed-only playback policy. Files never pass through a Next.js server action. The provider adapter is `src/lib/video/mux.ts`. Staff previews require current membership and short-lived RS256 playback tokens. The official Mux player renders playback; this is access control, not DRM.
+Videos upload from the browser directly to Mux through a server-authorized upload URL, with signed-only playback policy. Files upload directly to the provider. The provider adapter is `src/lib/video/mux.ts`. Staff previews require current membership and short-lived RS256 playback tokens. The official Mux player renders playback; this is access control, not DRM.
 
 `content_assets` tracks uploading/processing/ready/failed state. The editor polls pending uploads and verifies their current provider state server-side. An optional `/api/webhooks/mux` handler authenticates the raw body using `MUX_WEBHOOK_SECRET`, checks timestamp tolerance and synchronizes via provider IDs. A webhook endpoint has not been registered automatically because a reachable development deployment URL was not supplied. Polling does not depend on a webhook.
 
@@ -47,7 +47,7 @@ Deletion verification on 2026-10-18: rollback cloud tests cover ownership, cross
 
 Documents use the private `content-documents` bucket, with a 25 MB database Storage limit and an allowlist for PDFs, common Word/PowerPoint documents and images. The backend marks a document ready only after its object exists. Staff receive short-lived signed document URLs. No public bucket or general client delete/update policy is created.
 
-Server configuration: `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_SIGNING_KEY_ID`, `MUX_SIGNING_PRIVATE_KEY` (base64 PEM), and `SUPABASE_SERVICE_ROLE_KEY` for trusted provider-state synchronization. `MUX_WEBHOOK_SECRET` is needed only when configuring callbacks. Credentials stay in ignored local/deployment secrets, without `NEXT_PUBLIC_` prefixes. Privileged state writes happen only after staff authorization or verified provider callbacks.
+Server configuration: `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_SIGNING_KEY_ID`, `MUX_SIGNING_PRIVATE_KEY` (base64 PEM), and `SUPABASE_SERVICE_ROLE_KEY` for trusted provider-state synchronization. `MUX_WEBHOOK_SECRET` is needed only when configuring callbacks. Credentials stay in ignored local/deployment secrets, without `VITE_` prefixes. Privileged state writes happen only after staff authorization or verified provider callbacks.
 
 ## Boundaries and verification
 
@@ -63,7 +63,7 @@ Mux supplies the trusted video duration on processing or first authorized progre
 
 `LearningBrowse` and `StudentLearningUnit` are the client public components; `readLearningList` and `readLearningUnit` are server exports. Connected students enter `/<academy>` on the student host to see published units for their current annual grade/optional track, newest publication first. `/<academy>/units/<id>` shows ordered metadata, access status/expiry, unit-code redemption and the annual extension. Client caches are scoped by account and academy; account changes hide stale learning data. Answers remain locked and attached assessments unavailable until their separate eligibility/execution integration is supplied.
 
-`access/` owns schemas, server actions, bounded data reads and composed staff controls. `UnitAccessPanel` appears on previously published unit editors: staff can search matching records, grant default access, add time, inspect history, generate/copy/export codes; managers revoke grants or unused codes. Draft, archived and closed-year issuance is denied. Confirmation binds the displayed current grant and published revision; stale changes require a fresh review.
+`access/` owns schemas, web commands, bounded data reads and composed staff controls. `UnitAccessPanel` appears on previously published unit editors: staff can search matching records, grant default access, add time, inspect history, generate/copy/export codes; managers revoke grants or unused codes. Draft, archived and closed-year issuance is denied. Confirmation binds the displayed current grant and published revision; stale changes require a fresh review.
 
 The database ledger is append-only, with a single effective grant head per annual record/unit. Expired/revoked heads never fall back to earlier grants. Full grants start at issuance; explicit extensions retain active remaining time or start now after expiry. Revoked access is not restored by an extension. One annual 48-hour student extension is shared across the academy's units, only after a prior grant expires. Mutations use actor/payload-bound request IDs and durable receipts so retries cannot duplicate grants, code sets or time.
 

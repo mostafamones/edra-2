@@ -21,7 +21,7 @@ const state = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
+vi.mock("@/lib/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("@/modules/auth", () => ({
   useAuth: () => ({ user: state.user }),
   resetPasswordSchema: z.object({ password: z.string(), confirmPassword: z.string() }),

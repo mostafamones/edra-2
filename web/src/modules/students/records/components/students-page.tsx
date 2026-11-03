@@ -1,11 +1,10 @@
-"use client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, AlertCircleIcon, Archive02Icon, SearchRemoveIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useCanonicalHref } from "@/modules/navigation";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import Link from "@/components/shared/link";
+import { useSearchParams } from "@/lib/navigation";
 import { z } from "zod";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {

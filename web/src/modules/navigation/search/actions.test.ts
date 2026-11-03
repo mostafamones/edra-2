@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 const mocks = vi.hoisted(() => ({ authority: vi.fn(), member: vi.fn(), academy: vi.fn(), year: vi.fn(), students: vi.fn(), content: vi.fn(), assignments: vi.fn(), quizzes: vi.fn(), exams: vi.fn(), studentAcademy: vi.fn(), learning: vi.fn(), studentAssignments: vi.fn() }));
 vi.mock("@/lib/supabase/authority", () => ({ cookieAuthority: mocks.authority }));
 vi.mock("@/lib/supabase/membership", () => ({ academyMember: mocks.member }));
@@ -8,7 +8,7 @@ vi.mock("@/modules/content/server", () => ({ searchStaffContent: mocks.content, 
 vi.mock("@/modules/assignments/server", () => ({ searchStaffAssignments: mocks.assignments, listMyAssignments: mocks.studentAssignments }));
 vi.mock("@/modules/quizzes/server", () => ({ listQuizzes: mocks.quizzes }));
 vi.mock("@/modules/exams/server", () => ({ listExams: mocks.exams }));
-import { searchAcademy } from "./actions";
+import { searchAcademy } from "./actions.server";
 const academyId = "10000000-0000-4000-8000-000000000001", yearId = "10000000-0000-4000-8000-000000000002";
 beforeEach(() => {
   vi.clearAllMocks();

@@ -1,8 +1,6 @@
-"use client";
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { IconAdjustmentsHorizontal, IconAlertCircle, IconAlertTriangle, IconArrowRight, IconFileUpload } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal, IconAlertCircle, IconAlertTriangle, IconArrowRight, IconFileUpload } from "@/components/shared/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";

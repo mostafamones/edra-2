@@ -1,3 +1,5 @@
+import "@tanstack/react-start/server-only";
+
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 import { platformOrigin, staffInviteHref } from "../../lib/routing";

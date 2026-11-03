@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { throughTransport } from "../transport.test-support";
 
 const USER = "9a111111-1111-4111-8111-111111111111";
 const OLD = `${USER}/9c111111-1111-4111-8111-111111111111.webp`;
@@ -52,9 +53,9 @@ function db() {
 }
 
 vi.mock("../../lib/supabase/authority", () => ({ cookieAuthority: async () => ({ db: db(), userId: USER }) }));
-vi.mock("./image", () => ({ encodeAvatar: async () => Buffer.from("webp") }));
+vi.mock("./image.server", () => ({ encodeAvatar: async () => Buffer.from("webp") }));
 
-const { uploadAvatar, removeAvatar } = await import("./actions");
+const { uploadAvatar, removeAvatar, saveProfile } = await import("./actions.server");
 
 function form(expected?: string) {
   const data = new FormData();
@@ -70,6 +71,23 @@ beforeEach(() => {
 });
 
 describe("avatar upload lifecycle", () => {
+  it("preserves upload and validation results through the server transport", async () => {
+    const success = await uploadAvatar(form());
+    const failure = await uploadAvatar(new FormData());
+    const validation = await saveProfile({ fullName: "", displayName: "valid" });
+    expect(await throughTransport(success)).toEqual(success);
+    expect(await throughTransport(failure)).toEqual(failure);
+    expect(await throughTransport(validation)).toEqual(validation);
+  });
+
+  it("preserves an undefined avatar path in a failed removal through transport", async () => {
+    fake.rpc = { error: { code: "XX000" } };
+    fake.reread = "fail";
+    fake.reads = 1;
+    const result = await removeAvatar(OLD);
+    expect(result).toMatchObject({ ok: false, avatarPath: undefined });
+    expect(await throughTransport(result)).toEqual(result);
+  });
   it("keeps the old avatar and uploads nothing permanent when the upload fails", async () => {
     fake.current = OLD;
     fake.upload = { error: { message: "boom" } };

@@ -41,7 +41,7 @@ npm run dev:academy -- verify --project fgbcjlibwgxylfwmocgx --run <uuid> --mode
 ```
 
 - Run IDs and developer IDs are lowercase UUIDs. The delivery guard probe is required before account provisioning.
-- Environment: `NEXT_PUBLIC_SUPABASE_URL` (must match the project), `SUPABASE_SERVICE_ROLE_KEY`, `EDRA_DEV_ACADEMY_ENCRYPTION_KEY` (base64 32 bytes), `SEND_SMS_HOOK_SECRET`, and `SUPABASE_ACCESS_TOKEN` or `~/.supabase/access-token`. Values come from the process environment, overlaid by `--env` or `./.env.local` when present.
+- Environment: `VITE_SUPABASE_URL` or legacy `NEXT_PUBLIC_SUPABASE_URL` (must match the project), `SUPABASE_SERVICE_ROLE_KEY`, `EDRA_DEV_ACADEMY_ENCRYPTION_KEY` (base64 32 bytes), `SEND_SMS_HOOK_SECRET`, and `SUPABASE_ACCESS_TOKEN` or `~/.supabase/access-token`. Values come from the process environment, overlaid by `--env` or `./.env.local` when present.
 - SQL runs through the Management API query endpoint, because no direct database password or `psql` is provisioned.
 - `create` registers the run, reserves contacts, provisions Auth accounts with random passwords, loads the records and marks the run `ready` after baseline verification. Re-running with the same run and inputs resumes only that run's pre-registered accounts. Ready runs are never re-created; use `inspect` or `verify` instead. Different inputs for an existing run are refused.
 - A failed `create` records `error_stage` and `error_detail` and leaves Auth and registry state in place for inspection. Nothing is deleted automatically.

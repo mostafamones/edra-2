@@ -1,8 +1,6 @@
-"use client";
-
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
-import { IconChartBar } from "@tabler/icons-react";
+import { IconChartBar } from "@/components/shared/icons";
 
 import { Segmented } from "@/components/shared/segmented";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

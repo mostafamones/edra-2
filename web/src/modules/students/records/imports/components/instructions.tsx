@@ -1,8 +1,6 @@
-"use client";
-
 import { useState } from "react";
 
-import { IconChevronDown, IconDownload } from "@tabler/icons-react";
+import { IconChevronDown, IconDownload } from "@/components/shared/icons";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { ImportFormat } from "../types";

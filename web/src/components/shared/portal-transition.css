@@ -7,6 +7,11 @@
   from { translate: var(--slide-offset); }
   to { translate: 0; }
 }
+:root:active-view-transition-type(academy-join) { view-transition-name: none; }
+:active-view-transition-type(academy-join) [data-portal-surface] {
+  view-transition-name: academy-entry;
+  view-transition-class: academy-forward;
+}
 ::view-transition-old(.academy-forward) {
   --slide-offset: -100vw;
   animation: 800ms ease-in both academy-entry-fade reverse,

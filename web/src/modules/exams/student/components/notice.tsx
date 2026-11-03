@@ -1,4 +1,4 @@
-import { IconAlertCircle } from "@tabler/icons-react";
+import { IconAlertCircle } from "@/components/shared/icons";
 
 import { Alert, AlertTitle } from "@/components/ui/alert";
 

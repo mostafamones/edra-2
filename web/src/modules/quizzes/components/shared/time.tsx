@@ -1,5 +1,3 @@
-"use client";
-
 import { formatAcademyDateTime } from "@/lib/academy-time";
 
 /** An academy-time instant, or a dash. Rendered as a <time> element for assistive technology. */

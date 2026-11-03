@@ -1,8 +1,6 @@
-"use client";
-
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { IconInfoCircle } from "@tabler/icons-react";
+import { IconInfoCircle } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

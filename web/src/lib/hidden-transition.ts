@@ -1,7 +1,7 @@
 /**
- * React bundled with Next 16.3.5 recognizes older hidden-document skip messages only.
+ * Browsers can abort view transitions when the document becomes hidden.
  * https://github.com/react/react/issues/37669
- * Remove this compatibility filter once the bundled React handles these messages.
+ * Ignore only these expected skips; unrelated hydration and runtime errors remain visible.
  */
 export function ignoreHiddenTransitionError(event: ErrorEvent) {
   const error: unknown = event.error;

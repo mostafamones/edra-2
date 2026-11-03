@@ -1,9 +1,7 @@
-"use client";
-
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { format, parseISO } from "date-fns";
-import { IconCalendar } from "@tabler/icons-react";
+import { IconCalendar } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";

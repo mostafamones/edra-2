@@ -1,6 +1,4 @@
-"use client";
-
-import { IconAlertCircle } from "@tabler/icons-react";
+import { IconAlertCircle } from "@/components/shared/icons";
 
 import { AssessmentEditGate } from "@/components/shared/assessment/edit";
 import { AssessmentFormPage } from "@/components/shared/assessment/page";

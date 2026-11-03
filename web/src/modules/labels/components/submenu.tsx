@@ -1,5 +1,3 @@
-"use client";
-
 import { HugeiconsIcon } from "@hugeicons/react";
 import { LabelIcon, Settings02Icon } from "@hugeicons/core-free-icons";
 

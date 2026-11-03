@@ -1,6 +1,5 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { IconAlertCircle, IconArrowLeft } from "@tabler/icons-react";
+import Link from "@/components/shared/link";
+import { IconAlertCircle, IconArrowLeft } from "@/components/shared/icons";
 
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -8,15 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatAcademyDateTime } from "@/lib/academy-time";
 import { studentAcademyPath, studentListPath } from "@/lib/routing";
-import { cookieAuthority } from "@/lib/supabase/authority";
 import { StudentMaterial } from "@/modules/content";
 import { BreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 
-import { getMyAssignment } from "../data";
+import type { StudentAssignmentData } from "../page.server";
 import { blockedMessage } from "../errors";
 import type { StudentAssignmentAcademy } from "../types";
 import { StudentAssignmentEditor } from "./editor";
-import { StudentAssignmentStatus } from "./status";
 
 const time = (value: string) => <time dateTime={value}>{formatAcademyDateTime(value)}</time>;
 
@@ -24,28 +21,23 @@ const time = (value: string) => <time dateTime={value}>{formatAcademyDateTime(va
  * One assignment: instructions, receipt, the official result and earned answer videos, then the
  * editor while online work is allowed. Opening the page never creates a draft or selects a source.
  */
-export async function StudentAssignmentPage({ academy, assignmentId }: { academy: StudentAssignmentAcademy; assignmentId: string }) {
-  const [result, caller] = await Promise.all([getMyAssignment({ academyId: academy.id, assignmentId }), cookieAuthority()]);
-  if (!result.ok) {
-    if (result.code === "not_found" || result.code === "validation") notFound();
-    if (result.code === "unavailable") throw new Error(result.message);
-  }
+export function StudentAssignmentPage({ academy, data }: { academy: StudentAssignmentAcademy; data: StudentAssignmentData }) {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
       <Button variant="ghost" size="sm" className="-ml-2 self-start" asChild>
         <Link href={studentListPath("assignments")}><IconArrowLeft aria-hidden="true" />Assignments</Link>
       </Button>
-      {!result.ok ? (
-        <Alert><IconAlertCircle aria-hidden="true" /><AlertTitle>{result.message}</AlertTitle></Alert>
+      {data.kind === "notice" ? (
+        <Alert><IconAlertCircle aria-hidden="true" /><AlertTitle>{data.message}</AlertTitle></Alert>
       ) : (() => {
-        const assignment = result.data;
+        const assignment = data.assignment;
         const unit = assignment.unit;
         return (
           <>
             <BreadcrumbTitle title={assignment.title} />
             <div className="flex items-start justify-between gap-3">
               <h1 className="text-2xl font-semibold tracking-tight">{assignment.title}</h1>
-              <StudentAssignmentStatus item={assignment} />
+              <Badge variant={assignment.status.tone}>{assignment.status.label}</Badge>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
               {unit && <Link className="underline-offset-4 hover:underline" href={studentAcademyPath(academy.slug, `units/${unit.id}`)}>{unit.title}</Link>}
@@ -86,9 +78,9 @@ export async function StudentAssignmentPage({ academy, assignmentId }: { academy
                 </CardContent>
               </Card>
             )}
-            {assignment.canEdit && caller ? (
-              <StudentAssignmentEditor academyId={academy.id} assignmentId={assignment.id} userId={caller.userId} dueAt={assignment.dueAt} />
-            ) : assignment.blockedReason && assignment.blockedReason !== "submitted" && assignment.blockedReason !== "result_announced" ? (
+            {data.userId ? (
+              <StudentAssignmentEditor key={JSON.stringify([academy.id, assignment.id, data.userId])} academyId={academy.id} assignmentId={assignment.id} userId={data.userId} dueAt={assignment.dueAt} />
+            ) : assignment.blockedReason ? (
               <Alert><IconAlertCircle aria-hidden="true" /><AlertTitle>{blockedMessage(assignment.blockedReason)}</AlertTitle></Alert>
             ) : null}
           </>

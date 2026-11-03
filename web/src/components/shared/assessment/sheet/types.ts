@@ -1,4 +1,4 @@
-import { IconListCheck, IconPencil, type Icon } from "@tabler/icons-react";
+import { IconListCheck, IconPencil, type Icon } from "@/components/shared/icons";
 
 import type { PartSummary } from "../parts-list";
 import { sumScores } from "@/lib/score";

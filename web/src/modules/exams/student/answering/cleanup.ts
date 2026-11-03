@@ -1,5 +1,3 @@
-"use client";
-
 import { purgeBreadcrumbs } from "../departures/breadcrumb";
 import { indexedDbJournal, purgeJournals } from "./journal";
 

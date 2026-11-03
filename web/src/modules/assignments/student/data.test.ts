@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { throughTransport } from "../../transport.test-support";
 
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({ cookieAuthority: vi.fn(async () => null) }));
 const { commandSchema, runAssignmentCommand } = await import("./data");
 
@@ -21,6 +22,8 @@ describe("student assignment command validation", () => {
     expect(commandSchema.safeParse({ academyId: id, assignmentId: id, token: id, operation: "submit", version: 0, scoringRevision: 1 }).success).toBe(false);
   });
   it("requires a signed-in caller", async () => {
-    expect(await runAssignmentCommand({ academyId: id, assignmentId: id, token: id, operation: "read" })).toMatchObject({ ok: false, code: "forbidden" });
+    const result = await runAssignmentCommand({ academyId: id, assignmentId: id, token: id, operation: "read" });
+    expect(result).toMatchObject({ ok: false, code: "forbidden" });
+    expect(await throughTransport(result)).toEqual(result);
   });
 });

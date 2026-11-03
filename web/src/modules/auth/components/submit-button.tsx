@@ -1,6 +1,4 @@
-"use client";
-
-import { IconLoader2 } from "@tabler/icons-react";
+import { IconLoader2 } from "@/components/shared/icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

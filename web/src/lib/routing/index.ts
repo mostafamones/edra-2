@@ -1,4 +1,6 @@
-/** Public URLs are independent of the internal App Router namespaces. */
+import { publicEnv } from "@/lib/env/public";
+import { validDevelopmentTunnelHost } from "./development";
+/** Public URLs are independent of the internal route namespaces. */
 export type Platform = "marketing" | "staff" | "student";
 export type RouteDescriptor = { platform: Platform; scope: "global" | "academy"; academySlug?: string; path: string; canonical: string; internalPath: string; legacy?: boolean };
 export const STUDENT_GLOBAL_PATHS = ["profile", "calendar", "content", "discover", "courses", "assignments", "quizzes", "exams", "attendance", "results"] as const;
@@ -16,13 +18,13 @@ function origin(value: string | undefined, fallback: string) {
   if (process.env.NODE_ENV === "production" && url.protocol !== 'https:') throw new Error("Production origins require HTTPS.");
   return url.origin;
 }
-/** NEXT_PUBLIC values are explicit browser configuration; EDRA_* overrides are server-only. */
+/** VITE values are explicit browser configuration; EDRA_* overrides are server-only. */
 export function platformOrigins() {
   const browser = typeof window !== "undefined";
   const values = {
-    marketing: { server: !browser ? process.env.EDRA_MARKETING_ORIGIN : undefined, public: process.env.NEXT_PUBLIC_EDRA_MARKETING_ORIGIN, fallback: "http://lvh.me:3000" },
-    staff: { server: !browser ? process.env.EDRA_APP_ORIGIN : undefined, public: process.env.NEXT_PUBLIC_EDRA_APP_ORIGIN, fallback: "http://app.lvh.me:3000" },
-    student: { server: !browser ? process.env.EDRA_LEARN_ORIGIN : undefined, public: process.env.NEXT_PUBLIC_EDRA_LEARN_ORIGIN, fallback: "http://learn.lvh.me:3000" },
+    marketing: { server: !browser ? process.env.EDRA_MARKETING_ORIGIN : undefined, public: publicEnv.marketingOrigin, fallback: "http://lvh.me:3000" },
+    staff: { server: !browser ? process.env.EDRA_APP_ORIGIN : undefined, public: publicEnv.appOrigin, fallback: "http://app.lvh.me:3000" },
+    student: { server: !browser ? process.env.EDRA_LEARN_ORIGIN : undefined, public: publicEnv.learnOrigin, fallback: "http://learn.lvh.me:3000" },
   };
   const result = {} as Record<Platform, string>;
   for (const platform of ["marketing", "staff", "student"] as const) {
@@ -37,9 +39,7 @@ export function platformOrigin(platform: Platform) { return platformOrigins()[pl
 /** Optional server-only staff alias for a development tunnel: one exact host[:port], never used in production. */
 function developmentTunnelHost() {
   if (process.env.NODE_ENV === "production") return null;
-  const value = process.env.EDRA_DEV_TUNNEL_HOST?.toLowerCase();
-  // Hostname labels plus an optional port only: a scheme, path, userinfo, wildcard or control character is rejected.
-  return value && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*(?::\d{1,5})?$/.test(value) ? value : null;
+  return typeof window === "undefined" ? validDevelopmentTunnelHost(process.env.EDRA_DEV_TUNNEL_HOST) : null;
 }
 export function classifyHost(host: string): Platform | null {
   const origins = platformOrigins();
@@ -89,7 +89,7 @@ export function internalStaffPath(pathname: string, slug?: string) {
 export function internalStudentPath(pathname: string) { return pathname === "/learn" || pathname.startsWith("/learn/") ? pathname : `/learn${pathname === "/" ? "" : pathname}`; }
 export function describeRoute(platform: Platform, path: string): RouteDescriptor {
   const pathname = path.split("?")[0];
-  const common = /^(?:\/auth|\/onboarding|\/invite|\/api|\/_next)(?:\/|$)/.test(pathname);
+  const common = /^(?:\/auth|\/onboarding|\/invite|\/api|\/_next|\/_serverFn|\/_build)(?:\/|$)/.test(pathname);
   let internalPath = pathname;
   let academySlug: string | undefined;
   let legacy = false;
@@ -114,9 +114,9 @@ export function safeRelativePath(value: unknown): string | null {
     for (let i = 0; i < 3; i++) { const next = decodeURIComponent(decoded); if (next === decoded) break; decoded = next; }
     if (decoded.startsWith("//") || /[\\\u0000-\u001f\u007f]/.test(decoded) || /%[0-9a-f]{2}/i.test(decoded)) return null;
     const decodedUrl = new URL(decoded, "https://routing.invalid");
-    if (decodedUrl.origin !== "https://routing.invalid" || /^(?:\/auth|\/api|\/_next|\/invite)(?:\/|$)/.test(decodedUrl.pathname)) return null;
+    if (decodedUrl.origin !== "https://routing.invalid" || /^(?:\/auth|\/api|\/_next|\/_serverFn|\/_build|\/invite)(?:\/|$)/.test(decodedUrl.pathname)) return null;
     const url = new URL(value, "https://routing.invalid");
-    if (url.origin !== "https://routing.invalid" || url.hash || /^(?:\/auth|\/api|\/_next|\/invite)(?:\/|$)/.test(url.pathname)) return null;
+    if (url.origin !== "https://routing.invalid" || url.hash || /^(?:\/auth|\/api|\/_next|\/_serverFn|\/_build|\/invite)(?:\/|$)/.test(url.pathname)) return null;
     return url.pathname + url.search;
   } catch { return null; }
 }

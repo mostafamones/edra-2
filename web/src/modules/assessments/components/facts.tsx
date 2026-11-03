@@ -1,5 +1,3 @@
-"use client";
-
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   AssignmentsIcon, CheckListIcon, CheckmarkSquare02Icon, ComputerIcon, File01Icon, FileUploadIcon, Layers01Icon, LeftToRightListBulletIcon,

@@ -1,4 +1,3 @@
-"use client";
 import type { ReactNode } from "react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";

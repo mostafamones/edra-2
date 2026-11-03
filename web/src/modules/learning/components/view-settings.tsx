@@ -1,5 +1,3 @@
-"use client";
-
 import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GridViewIcon, ListViewIcon, Settings02Icon } from "@hugeicons/core-free-icons";

@@ -1,11 +1,10 @@
-"use client";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { IconArrowsSort } from "@tabler/icons-react";
+import { IconArrowsSort } from "@/components/shared/icons";
 
 export type SortOption = { value: string; label: string };
 

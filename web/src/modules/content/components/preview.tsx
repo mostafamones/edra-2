@@ -1,4 +1,3 @@
-"use client";
 import { useState } from "react";
 import MuxPlayer from "@mux/mux-player-react";
 import { HugeiconsIcon } from "@hugeicons/react";

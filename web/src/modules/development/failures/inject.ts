@@ -1,8 +1,9 @@
-import "server-only";
+// shortcut: Dev-server in-memory failure state is isolate-local on Workers and is not shared across isolates.
+import "@tanstack/react-start/server-only";
 
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-import { cookies, headers } from "next/headers";
+import { cookies, headers } from "@/lib/server/request";
 
 import { PUBLIC_PATH_HEADER } from "@/lib/routing";
 

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { IconClockPlay, IconMapPin, IconUser, IconUsersGroup, type Icon } from "@tabler/icons-react";
+import { IconClockPlay, IconMapPin, IconUser, IconUsersGroup, type Icon } from "@/components/shared/icons";
 
 import { Card, CardAction, CardContent } from "@/components/ui/card";
 import type { SessionDetail } from "../types";

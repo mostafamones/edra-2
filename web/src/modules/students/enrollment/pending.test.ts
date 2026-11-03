@@ -1,3 +1,5 @@
+import { vi } from "vitest";
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 import { describe, expect, it } from "vitest";
 
 import { parsePendingStudentEntry, pendingStudentEntryValue } from "./pending";

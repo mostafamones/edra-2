@@ -1,6 +1,4 @@
-"use client";
-
-import { IconClock } from "@tabler/icons-react";
+import { IconClock } from "@/components/shared/icons";
 
 import { useAudienceNames } from "@/components/shared/assessment/workspace/names";
 import { AudienceFact } from "@/components/shared/assessment/workspace/audience";

@@ -1,8 +1,6 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/navigation";
 import { useEffect, useRef, useState } from "react";
-import { IconAlertCircle, IconLoader2, IconPlayerPlay } from "@tabler/icons-react";
+import { IconAlertCircle, IconLoader2, IconPlayerPlay } from "@/components/shared/icons";
 
 import { useAuth } from "@/modules/auth";
 import { Alert, AlertTitle } from "@/components/ui/alert";

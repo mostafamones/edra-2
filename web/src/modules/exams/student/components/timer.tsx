@@ -1,7 +1,5 @@
-"use client";
-
 import { useEffect, useState } from "react";
-import { IconClock } from "@tabler/icons-react";
+import { IconClock } from "@/components/shared/icons";
 
 import { cn } from "@/lib/utils";
 

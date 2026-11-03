@@ -9,7 +9,7 @@ Follow `../AGENTS.md`, including Master-thread planning-only and cloud-database 
 - Maintain the Xcode project, shared schemes, Swift Package Manager dependency resolution, tests, and release workflow independently of `web/`. Do not migrate web dependencies or introduce root workspace orchestration for native setup.
 - Read the relevant web-owned OpenAPI and `docs/api.md`, then distinguish source support from verified deployment. Use the official Supabase Swift SDK for existing staff phone/password authentication and Edra's bearer HTTP API for academy/session/attendance reads and mutations.
 - Keep business rules on the server/database. No direct attendance-table writes, duplicate backend, web server-module imports, or service-role/provider secrets in the app.
-- Keep feature views/models/services under native feature folders and small infrastructure under a native Core/Infrastructure boundary. Views compose state; they do not own network/auth/business rules. Use clear Swift types and deliberate actor isolation rather than reproducing Next.js directory/API conventions.
+- Keep feature views/models/services under native feature folders and small infrastructure under a native Core/Infrastructure boundary. Views compose state; they do not own network/auth/business rules. Use clear Swift types and deliberate actor isolation rather than reproducing web directory/API conventions.
 
 ## Auth, configuration, and data
 

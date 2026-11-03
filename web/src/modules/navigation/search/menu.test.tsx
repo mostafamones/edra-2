@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useImperativeHandle, type Ref } from "react";
 const mocks = vi.hoisted(() => ({ search: vi.fn(), push: vi.fn(), closeMobile: vi.fn(), auth: vi.fn() }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/academy", useRouter: () => ({ push: mocks.push }) }));
+vi.mock("@/lib/navigation", () => ({ usePathname: () => "/academy", useRouter: () => ({ push: mocks.push }) }));
 vi.mock("./actions", () => ({ searchAcademy: mocks.search }));
 vi.mock("@/modules/auth", () => ({ useAuth: mocks.auth }));
 vi.mock("@/components/ui/sidebar", () => ({ useSidebar: () => ({ setOpenMobile: mocks.closeMobile }) }));

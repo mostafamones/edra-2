@@ -1,6 +1,10 @@
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const built = vi.hoisted(() => ({ supabaseUrl: undefined as string | undefined, supabasePublishableKey: undefined as string | undefined }));
+vi.mock("@/lib/env/public", () => ({ publicEnv: built }));
+beforeEach(() => { built.supabaseUrl = undefined; built.supabasePublishableKey = undefined; });
 
 import { developmentConfig } from "./config";
 
@@ -20,6 +24,21 @@ const valid: NodeJS.ProcessEnv = {
 const withEnv = (patch: Partial<NodeJS.ProcessEnv>) => ({ ...valid, ...patch });
 
 describe("developmentConfig", () => {
+  it("prefers Vite environment values over conflicting legacy aliases", () => {
+    const config = developmentConfig(withEnv({ VITE_SUPABASE_URL: `https://${ref}.supabase.co`, VITE_SUPABASE_PUBLISHABLE_KEY: "vite-key",
+      NEXT_PUBLIC_SUPABASE_URL: "https://zyxwvutsrqponmlkjihg.supabase.co", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "legacy-key" }));
+    expect(config?.url).toBe(`https://${ref}.supabase.co`);
+    expect(config?.publishableKey).toBe("vite-key");
+  });
+
+  it("uses compiled public Vite values before the legacy compatibility fallback", () => {
+    built.supabaseUrl = `https://${ref}.supabase.co`;
+    built.supabasePublishableKey = "built-key";
+    const config = developmentConfig(withEnv({ NEXT_PUBLIC_SUPABASE_URL: "https://zyxwvutsrqponmlkjihg.supabase.co", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "legacy-key" }));
+    expect(config?.url).toBe(built.supabaseUrl);
+    expect(config?.publishableKey).toBe("built-key");
+  });
+
   it("returns null in production even when everything else is valid", () => {
     expect(developmentConfig(withEnv({ NODE_ENV: "production" }))).toBeNull();
   });

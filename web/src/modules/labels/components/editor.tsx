@@ -1,5 +1,3 @@
-"use client";
-
 import { useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -51,6 +49,7 @@ export function LabelEditor({ academyId, domain, onChanged, onLabelChange }: Pro
     const queryKey = labelsQueryKey(academyId, domain);
     // A catalog request already running would otherwise overwrite the change when it finishes.
     await queryClient.cancelQueries({ queryKey });
+    if (!isCurrent(academyId)) return;
     queryClient.setQueryData<Label[]>(queryKey, (labels) => labels && sortLabels(change(labels)));
   }
   async function refresh() {

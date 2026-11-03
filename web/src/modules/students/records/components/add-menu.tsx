@@ -1,9 +1,7 @@
-"use client";
-
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DatabaseImportIcon, LeftToRightListBulletIcon, Link01Icon, UserAdd01Icon, UserCheck01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 
 import { Button } from "@/components/ui/button";
 import {

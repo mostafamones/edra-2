@@ -1,4 +1,4 @@
 import { ignoreHiddenTransitionError } from "./lib/hidden-transition";
 
-// Install before hydration and before recoverable React errors reach the development overlay.
+// Imported by client.tsx before hydration and recoverable React error reporting.
 window.addEventListener("error", ignoreHiddenTransitionError, { capture: true });

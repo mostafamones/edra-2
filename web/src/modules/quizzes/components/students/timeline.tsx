@@ -1,6 +1,4 @@
-"use client";
-
-import { IconInfoCircle } from "@tabler/icons-react";
+import { IconInfoCircle } from "@/components/shared/icons";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";

@@ -1,4 +1,3 @@
-"use client";
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";

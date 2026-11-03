@@ -1,5 +1,3 @@
-"use client";
-
 import { taughtRootKey } from "@/modules/content";
 
 import { useRef, useState } from "react";

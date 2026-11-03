@@ -1,5 +1,3 @@
-"use client";
-
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { AcademyGate } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";

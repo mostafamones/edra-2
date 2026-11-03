@@ -19,7 +19,7 @@ Commands (security definer; each re-checks live membership, suspension and role 
 
 ## Code
 
-- `actions.ts`: `createLabel`, `updateLabel`, `deleteLabel` server actions (zod-validated; run as the cookie session through `server.ts`).
+- `actions.ts`: `createLabel`, `updateLabel`, `deleteLabel` web commands (zod-validated; run as the cookie session through `server.ts`).
 - `server.ts`: `runLabelCommand` and `labelFailure` for consuming modules' trusted label commands.
 - `queries.ts`: `labelsQueryKey(academyId, domain)`, `loadLabels`, `useLabels` (one catalog, browser read under RLS, sorted by name).
 - `permissions.ts`: `canManageLabels(role)`, a UI hint mirroring the database.

@@ -1,5 +1,3 @@
-"use client";
-
 import { cn } from "@/lib/utils";
 import { PALETTE, PALETTE_KEYS, type PaletteKey } from "@/lib/palette";
 import { Button } from "@/components/ui/button";

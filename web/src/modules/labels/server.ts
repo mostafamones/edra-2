@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { cookieAuthority, type Db } from "@/lib/supabase/authority";
 import { labelFailure, labelFailureFromDatabase } from "./errors";

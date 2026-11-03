@@ -1,4 +1,3 @@
-"use client";
 import { format } from "date-fns";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Archive02Icon, Calendar03Icon, MoreHorizontalIcon, PencilEdit02Icon, RestoreBinIcon, UserGroupIcon } from "@hugeicons/core-free-icons";

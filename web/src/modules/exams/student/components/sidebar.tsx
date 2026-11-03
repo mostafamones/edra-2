@@ -1,6 +1,4 @@
-"use client";
-
-import { IconFlagFilled, IconLoader2, IconSend } from "@tabler/icons-react";
+import { IconFlagFilled, IconLoader2, IconSend } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";

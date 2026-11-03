@@ -1,10 +1,9 @@
-"use client";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, Archive02Icon, ArchiveRestoreIcon, CloudSavingDone01Icon, SentIcon, Tick02Icon, Undo02Icon } from "@hugeicons/core-free-icons";
-import { AcademyGate } from "@/modules/auth";
+import { AcademyGate, useAcademyScope } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -58,6 +57,7 @@ function Editor({ academy, unitId }: { academy: AcademyEntry; unitId: string }) 
 const TYPING = "input:not([type=file]):not([type=checkbox]):not([type=radio]), textarea";
 function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDetail }) {
   const cache = useQueryClient();
+  const isCurrent = useAcademyScope();
   const { unit, program } = data;
   const [saved, setSaved] = useState({ version: unit.version, draft: unit.draft });
   const [document, setDocument] = useState<ContentDocument>(unit.draft);
@@ -119,7 +119,8 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
       if (!undoing.current) setUndo(stack => [...stack.slice(-49), saved.draft]);
       undoing.current = false;
       setSaved({ version: latest.unit.version, draft: sent });
-      cache.setQueryData(["content", academy.id, "unit", unit.id], latest);
+      // A late answer must not repopulate a cache that an account change cleared.
+      if (isCurrent(academy.id)) cache.setQueryData(["content", academy.id, "unit", unit.id], latest);
       void reload();
     } catch (e) { setFailed(sent); setError(e instanceof Error ? e.message : "Could not save the draft."); }
     finally { setSaving(false); }

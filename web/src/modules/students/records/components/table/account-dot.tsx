@@ -1,5 +1,3 @@
-"use client";
-
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CircleIcon } from "@hugeicons/core-free-icons";
 import { cn } from "cn";

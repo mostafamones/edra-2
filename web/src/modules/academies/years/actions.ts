@@ -1,31 +1,23 @@
-"use server";
-
+import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  getYearLearning as getYearLearningServer,
+  startYearLearning as startYearLearningServer,
+} from "./actions.server";
 
-import { yearLearningSchema, type YearLearning } from "./types";
+const getYearLearningFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ academyId: z.unknown() }))
+  .handler(({ data }) => getYearLearningServer(data.academyId as Parameters<typeof getYearLearningServer>[0]));
 
-type Result = { ok: true; value: YearLearning } | { ok: false; error: "forbidden" | "year_unavailable" | "unavailable" };
-
-async function result(call: PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<Result> {
-  try {
-    const { data, error } = await call;
-    if (error) return { ok: false, error: error.message === "forbidden" || error.message === "year_unavailable" ? error.message : "unavailable" };
-    return { ok: true, value: yearLearningSchema.parse(data) };
-  } catch {
-    return { ok: false, error: "unavailable" };
-  }
+export async function getYearLearning(academyId: Parameters<typeof getYearLearningServer>[0]): Promise<Awaited<ReturnType<typeof getYearLearningServer>>> {
+  return getYearLearningFn({ data: { academyId } });
 }
 
-/** The open year's student learning state; every staff role may read it. */
-export async function getYearLearning(academyId: string): Promise<Result> {
-  if (!z.guid().safeParse(academyId).success) return { ok: false, error: "forbidden" };
-  return result((await createClient()).rpc("get_year_learning", { p_academy_id: academyId }));
-}
+const startYearLearningFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ academyId: z.unknown(), yearId: z.unknown() }))
+  .handler(({ data }) => startYearLearningServer(data.academyId as Parameters<typeof startYearLearningServer>[0], data.yearId as Parameters<typeof startYearLearningServer>[1]));
 
-/** Owners, Head Admins and Admins start student learning for the open year. Repeating it changes nothing. */
-export async function startYearLearning(academyId: string, yearId: string): Promise<Result> {
-  if (!z.guid().safeParse(academyId).success || !z.guid().safeParse(yearId).success) return { ok: false, error: "forbidden" };
-  return result((await createClient()).rpc("start_year_learning", { p_academy_id: academyId, p_academic_year_id: yearId }));
+export async function startYearLearning(academyId: Parameters<typeof startYearLearningServer>[0], yearId: Parameters<typeof startYearLearningServer>[1]): Promise<Awaited<ReturnType<typeof startYearLearningServer>>> {
+  return startYearLearningFn({ data: { academyId, yearId } });
 }

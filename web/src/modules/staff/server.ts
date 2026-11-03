@@ -1,5 +1,7 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import "@tanstack/react-start/server-only";
+
+import { cookies } from "@/lib/server/request";
+import { redirect } from "@/lib/navigation";
 
 import { createClient } from "../../lib/supabase/server";
 

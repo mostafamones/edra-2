@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import type { Authority } from "@/lib/supabase/authority";
 import { academyMember } from "@/lib/supabase/membership";

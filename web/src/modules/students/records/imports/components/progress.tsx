@@ -1,9 +1,7 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { IconAlertCircle, IconPlayerPause, IconPlayerPlay } from "@tabler/icons-react";
+import { IconAlertCircle, IconPlayerPause, IconPlayerPlay } from "@/components/shared/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -68,12 +66,12 @@ export function ProgressStep({ academyId, summary, autoStart }: Props) {
         let result = await processStudentImportBatch(summary.id, next);
         // A lost response is safe to retry: a finished batch returns its stored outcome.
         if (!result.ok && result.code === "unavailable") result = await processStudentImportBatch(summary.id, next);
-        if (!isCurrentAcademy(targetAcademyId)) return;
         // The students root covers this import's summary and rows as well as the student list.
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: studentsRootKey(targetAcademyId) }),
           queryClient.invalidateQueries({ queryKey: groupDependencyQueryKey(targetAcademyId) }),
         ]);
+        if (!isCurrentAcademy(targetAcademyId)) return;
         if (!result.ok) {
           setError(result.code === "forbidden"
             ? "You no longer have permission to import students. Rows already created stay saved."

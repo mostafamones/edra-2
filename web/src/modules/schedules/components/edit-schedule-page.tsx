@@ -1,9 +1,8 @@
-"use client";
 import { useCanonicalHref } from "@/modules/navigation";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { useQuery } from "@tanstack/react-query";
-import { IconAlertCircle as AlertCircle } from "@tabler/icons-react";
+import { IconAlertCircle as AlertCircle } from "@/components/shared/icons";
 import { z } from "zod";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

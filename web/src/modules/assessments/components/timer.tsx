@@ -1,5 +1,3 @@
-"use client";
-
 import { useRef } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { MinusSignIcon, PlusSignIcon } from "@hugeicons/core-free-icons";

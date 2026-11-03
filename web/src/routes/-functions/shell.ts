@@ -1,0 +1,10 @@
+import { createServerFn } from "@tanstack/react-start";
+export const getPlatform = createServerFn({ method: "GET" }).handler(async () => (await import("./shell.server")).platform());
+export const getSignedIn = createServerFn({ method: "GET" }).handler(async () => (await import("./shell.server")).signedIn());
+export const loadAccount = createServerFn({ method: "GET" }).handler(async () => (await import("./shell.server")).account());
+export const loadOnboarding = createServerFn({ method: "GET" }).handler(async () => (await import("./shell.server")).onboarding());
+export const loadStudent = createServerFn({ method: "GET" }).handler(async () => (await import("./shell.server")).student());
+export const loadStudentJoin = createServerFn({ method: "GET" }).handler(async () => (await import("./shell.server")).studentJoin());
+export const loadInstructorJoin = createServerFn({ method: "GET" }).handler(async () => (await import("./shell.server")).instructorJoin());
+export const loadAcademyCreate = createServerFn({ method: "GET" }).handler(async () => (await import("./shell.server")).academyCreate());
+export const loadBooking = createServerFn({ method: "GET" }).validator((token: string) => { if (typeof token !== "string") throw new Error("Invalid token"); return token; }).handler(async ({ data }) => (await import("./shell.server")).booking(data));

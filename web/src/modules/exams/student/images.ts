@@ -1,4 +1,6 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
+
+import { publicEnv } from "@/lib/env/public";
 
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -32,7 +34,7 @@ const input = z.object({
 function storage() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) return null;
-  return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, { auth: { persistSession: false, autoRefreshToken: false } })
+  return createClient<Database>(publicEnv.supabaseUrl, key, { auth: { persistSession: false, autoRefreshToken: false } })
     .storage.from(IMAGE_BUCKET);
 }
 

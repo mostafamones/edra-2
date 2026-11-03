@@ -1,8 +1,6 @@
-"use client";
-
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { IconBolt, IconX } from "@tabler/icons-react";
+import { IconBolt, IconX } from "@/components/shared/icons";
 
 import { StudentsTable, type AnnounceSpec, type FilterSpec, type SortSpec, type StudentColumn } from "@/components/shared/assessment/workspace/students";
 import { Badge } from "@/components/ui/badge";

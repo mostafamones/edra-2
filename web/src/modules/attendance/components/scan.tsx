@@ -1,8 +1,6 @@
-"use client";
-
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { IconBarcode } from "@tabler/icons-react";
+import { IconBarcode } from "@/components/shared/icons";
 import { toast } from "sonner";
 
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";

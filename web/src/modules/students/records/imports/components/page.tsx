@@ -1,11 +1,10 @@
-"use client";
 import { useCanonicalHref } from "@/modules/navigation";
 
 import { Suspense, useEffect, useState, type ReactNode } from "react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Link from "@/components/shared/link";
+import { usePathname, useRouter, useSearchParams } from "@/lib/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { IconAlertCircle as AlertCircle, IconArrowLeft as ArrowLeft } from "@tabler/icons-react";
+import { IconAlertCircle as AlertCircle, IconArrowLeft as ArrowLeft } from "@/components/shared/icons";
 import { z } from "zod";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

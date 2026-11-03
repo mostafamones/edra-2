@@ -1,5 +1,3 @@
-"use client";
-
 import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon, ZoomInAreaIcon, ZoomOutAreaIcon } from "@hugeicons/core-free-icons";
@@ -122,7 +120,6 @@ export function CropDialog({ source, saving, onCancel, onSave }: {
           onPointerCancel={() => { drag.current = null; }}
         >
           {source && (
-            // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
             <img
               src={source.url}
               alt=""

@@ -1,6 +1,4 @@
-"use client";
-
-import { IconAlertTriangle, IconX } from "@tabler/icons-react";
+import { IconAlertTriangle, IconX } from "@/components/shared/icons";
 
 import { RichText } from "@/components/shared/assessment/images/text";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

@@ -16,6 +16,9 @@ const fullRunnerTimeout = 30_000;
 const fakePsql = readFileSync(join(web, "scripts/fixtures/fake-psql.sh"), "utf8");
 const fakeSupabase = `#!/usr/bin/env bash
 echo "supabase $*" >>"$FAKE_LOG"
+for key in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY DATABASE_URL PGHOSTADDR DOCKER_HOST; do
+  [ -z "\${!key:-}" ] || { echo "unsafe env $key" >>"$FAKE_LOG"; exit 88; }
+done
 case "$*" in
   --version) echo 2.117.0 ;;
   "db start"*)
@@ -69,6 +72,8 @@ function run(env: Record<string, string | undefined> = {}) {
     EDRA_DB_TEST_URL: "postgresql://postgres.cloudref:pw@aws-0-eu.pooler.supabase.com:5432/postgres",
     EDRA_DB_TEST_TARGET: "edra-db-check",
     NEXT_PUBLIC_SUPABASE_URL: "https://cloudref.supabase.co",
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "inherited", VITE_SUPABASE_URL: "https://cloudref.supabase.co",
+    VITE_SUPABASE_PUBLISHABLE_KEY: "inherited", DATABASE_URL: "inherited", PGHOSTADDR: "inherited", DOCKER_HOST: "inherited",
   };
   const merged = { ...base, ...env };
   const result = spawnSync("bash", [wrapper], {

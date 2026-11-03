@@ -1,8 +1,6 @@
-"use client";
-
 import { useLayoutEffect, useRef, useState, useTransition } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { IconLoader2 } from "@tabler/icons-react";
+import { IconLoader2 } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";

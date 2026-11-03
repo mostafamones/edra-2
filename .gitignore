@@ -7,3 +7,7 @@
 
 # Local failure simulator planning document
 /web/planning/failure-simulator.md
+
+/migration-evidence/
+migration-inventory.json
+migration-journal.md

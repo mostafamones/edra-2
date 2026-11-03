@@ -1,4 +1,4 @@
-import { IconUserOff } from "@tabler/icons-react";
+import { IconUserOff } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";

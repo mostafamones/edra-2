@@ -1,10 +1,9 @@
-"use client";
 import { staffAcademyPath } from "@/lib/routing";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { IconArrowLeft, IconArrowRight, IconUser } from "@tabler/icons-react";
+import { IconArrowLeft, IconArrowRight, IconUser } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { GroupSchedule, SeatsLeft } from "@/modules/students/enrollment/components/group-schedule";

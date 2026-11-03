@@ -1,5 +1,4 @@
-"use client";
-
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -10,6 +9,8 @@ import { changeOnlineSetting, loadOnlineSetting } from "../../actions";
 /** Manager control: whether in-person students may submit assignments online (off by default). */
 export function InPersonOnlineSetting({ academyId }: { academyId: string }) {
   const client = useQueryClient();
+  const pending = useRef(false);
+  const [saving, setSaving] = useState(false);
   const key = ["assignments", academyId, "online-setting"];
   const query = useQuery({ queryKey: key, queryFn: async () => {
     const result = await loadOnlineSetting(academyId);
@@ -17,14 +18,21 @@ export function InPersonOnlineSetting({ academyId }: { academyId: string }) {
     return result;
   } });
   async function change(enabled: boolean) {
-    if (!query.data) return;
-    const result = await changeOnlineSetting({ academyId, enabled, version: query.data.version });
-    if (!result.ok) toast.error(result.message);
-    await client.invalidateQueries({ queryKey: key });
+    if (!query.data || pending.current) return;
+    pending.current = true;
+    setSaving(true);
+    try {
+      const result = await changeOnlineSetting({ academyId, enabled, version: query.data.version });
+      if (!result.ok) toast.error(result.message);
+      await client.invalidateQueries({ queryKey: key });
+    } finally {
+      pending.current = false;
+      setSaving(false);
+    }
   }
   return (
     <Field orientation="horizontal" className="w-auto">
-      <Switch id="in-person-online" checked={query.data?.enabled ?? false} disabled={!query.data} onCheckedChange={(value) => void change(value)} />
+      <Switch id="in-person-online" checked={query.data?.enabled ?? false} disabled={!query.data || saving} onCheckedChange={(value) => void change(value)} />
       <FieldLabel htmlFor="in-person-online">Online assignment submission for in-person students</FieldLabel>
     </Field>
   );

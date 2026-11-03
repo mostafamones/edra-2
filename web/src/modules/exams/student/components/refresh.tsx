@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useEffectEvent, useRef, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { IconAlertCircle, IconLoader2, IconRefresh } from "@tabler/icons-react";
+import { useRouter } from "@/lib/navigation";
+import { IconAlertCircle, IconLoader2, IconRefresh } from "@/components/shared/icons";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

@@ -1,10 +1,9 @@
-"use client";
 import { studentHref } from "@/lib/routing";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconCheck as Check } from "@tabler/icons-react";
+import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconCheck as Check } from "@/components/shared/icons";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { toast } from "sonner";
 

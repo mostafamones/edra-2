@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 const api = vi.hoisted(() => ({ loadUnitPanels: vi.fn(), reuseMaterial: vi.fn(), createAttachedAssessment: vi.fn() }));
 vi.mock("./actions", () => api);
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/lib/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/modules/navigation", () => ({ useCanonicalHref: () => (path: string) => path }));
 
 import { unitPanelOptions } from "./panels";

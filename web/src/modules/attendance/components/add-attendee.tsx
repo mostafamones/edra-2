@@ -1,8 +1,6 @@
-"use client";
-
 import { useDeferredValue, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { IconSearch, IconUserPlus } from "@tabler/icons-react";
+import { IconSearch, IconUserPlus } from "@/components/shared/icons";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";

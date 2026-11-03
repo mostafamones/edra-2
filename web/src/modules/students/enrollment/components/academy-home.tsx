@@ -1,4 +1,4 @@
-import { IconAlertCircle, IconCircleCheck } from "@tabler/icons-react";
+import { IconAlertCircle, IconCircleCheck } from "@/components/shared/icons";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";

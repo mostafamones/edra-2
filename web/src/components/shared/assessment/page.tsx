@@ -1,7 +1,6 @@
-"use client";
 
 import { useCallback, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/navigation";
 
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { useCanonicalHref } from "@/modules/navigation";

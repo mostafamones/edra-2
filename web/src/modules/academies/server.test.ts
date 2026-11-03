@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ user: { id: "user" } as { id: string } | null, rows: [] as unknown[], filters: [] as unknown[] }));
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("../../lib/supabase/server", () => ({ createClient: async () => ({
   auth: { getUser: async () => ({ data: { user: state.user }, error: null }) },
   from: () => ({ select: () => ({ eq: (name: string, value: string) => {

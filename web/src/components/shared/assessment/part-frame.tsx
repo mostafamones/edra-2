@@ -1,8 +1,7 @@
-"use client";
 
 import { useState, type ReactNode } from "react";
 import { useFormContext, type FieldValues } from "react-hook-form";
-import { IconArrowLeft, IconChevronDown, IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
+import { IconArrowLeft, IconChevronDown, IconChevronLeft, IconChevronRight, IconX } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";

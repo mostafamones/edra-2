@@ -9,6 +9,7 @@ vi.mock("@/modules/attendance", () => ({ loadStudentAttendance: vi.fn() }));
 vi.mock("@/modules/assessments", () => ({ loadStudentAssessments: vi.fn() }));
 import { studentLearningOptions, type StudentLearningData } from "../overview";
 import { StudentLearning } from "./learning";
+vi.mock("@/components/shared/link", () => ({ default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => <a href={href} {...props}>{children}</a> }));
 
 const data = (offset: number, record = "student"): StudentLearningData => ({
   total: 25, started: 0, completed: 0,

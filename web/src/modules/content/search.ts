@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 import { academyMember } from "@/lib/supabase/membership";
 import { literalSearch, type SearchRecord } from "@/lib/search";
 import { GLOBAL_LEVELS } from "@/modules/academies";

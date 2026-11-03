@@ -13,11 +13,9 @@ const state = vi.hoisted(() => ({
   updated: { data: null as unknown, error: null as unknown },
   reread: { data: null as unknown, error: null as unknown },
   updates: [] as { values: unknown; filters: [string, unknown][] }[],
-  refresh: vi.fn(),
 }));
 
-vi.mock("server-only", () => ({}));
-vi.mock("next/cache", () => ({ refresh: state.refresh }));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("../server", () => ({
   resolveStaffAcademy: async (slug: string) => (state.role && slug === "magd" ? { id: "academy-a", slug, name: "Magd", icon: "school", role: state.role } : null),
 }));
@@ -39,29 +37,20 @@ vi.mock("../../../lib/supabase/server", () => ({
   }),
 }));
 
-const { saveAcademyProfile } = await import("./actions");
+const { saveAcademyProfile } = await import("./actions.server");
 const input = { name: "Magd 2", icon: "science", subject: "Physics", phone: "01012345678", whatsapp: "" };
 
 beforeEach(() => {
   Object.assign(state, { claims: true, role: "owner", updated: { data: null, error: null }, reread: { data: null, error: null }, updates: [] });
-  state.refresh.mockReset();
 });
 
 describe("saveAcademyProfile", () => {
-  it("saves all five normalized fields in one guarded update and refreshes the shell", async () => {
+  it("saves all five normalized fields in one guarded update", async () => {
     state.updated = { data: row({ name: "Magd 2", icon: "science", subject: "Physics", phone: "+201012345678", updated_at: NEWER }), error: null };
     const result = await saveAcademyProfile("magd", BASELINE, input);
     expect(result).toMatchObject({ ok: true, profile: { name: "Magd 2", phone: "+201012345678", whatsapp: null, updatedAt: NEWER, canEdit: true } });
     expect(state.updates).toEqual([{ values: { name: "Magd 2", icon: "science", subject: "Physics", phone: "+201012345678", whatsapp: null },
       filters: [["id", "academy-a"], ["updated_at", BASELINE]] }]);
-    expect(state.refresh).toHaveBeenCalledOnce();
-  });
-
-  it("reports a committed save even if the shell refresh fails", async () => {
-    state.updated = { data: row({ name: "Magd 2", updated_at: NEWER }), error: null };
-    state.refresh.mockImplementation(() => { throw new Error("refresh failed"); });
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-    expect((await saveAcademyProfile("magd", BASELINE, input)).ok).toBe(true);
   });
 
   it("returns field errors without writing", async () => {
@@ -86,7 +75,6 @@ describe("saveAcademyProfile", () => {
     state.reread = { data: row({ name: "Someone else", updated_at: NEWER }), error: null };
     const result = await saveAcademyProfile("magd", BASELINE, input);
     expect(result).toMatchObject({ ok: false, code: "conflict", current: { name: "Someone else", updatedAt: NEWER } });
-    expect(state.refresh).not.toHaveBeenCalled();
   });
 
   it("does not report an RLS-filtered zero-row write as success", async () => {

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ authority: vi.fn(), update: vi.fn(), eq: vi.fn(), single: vi.fn() }));
 vi.mock("@/lib/supabase/authority", () => ({ cookieAuthority: mocks.authority }));
-import { saveTimeFormat } from "./preference-actions";
+import { saveTimeFormat } from "./preference-actions.server";
+import { throughTransport } from "../transport.test-support";
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.single.mockResolvedValue({ data: { time_format: "12h" }, error: null });
@@ -24,5 +25,12 @@ describe("time format writes", () => {
   it("does not acknowledge failed persistence", async () => {
     mocks.single.mockResolvedValue({ data: null, error: { message: "offline" } });
     expect((await saveTimeFormat("12h")).ok).toBe(false);
+  });
+  it("transports actual success and unauthorized results", async () => {
+    const success = await saveTimeFormat("12h");
+    expect(await throughTransport(success)).toEqual(success);
+    mocks.authority.mockResolvedValue(null);
+    const unauthorized = await saveTimeFormat("12h");
+    expect(await throughTransport(unauthorized)).toEqual(unauthorized);
   });
 });

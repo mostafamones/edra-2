@@ -1,7 +1,5 @@
-"use client";
-
 import type { ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/lib/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 
 import { useIsHydrated } from "./use-is-hydrated";

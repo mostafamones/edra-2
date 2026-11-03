@@ -2,13 +2,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it, vi } from "vitest";
 
 import { AcademySections } from "./section";
+vi.mock("@/components/shared/link", () => ({ default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => <a href={href} {...props}>{children}</a> }));
 
-vi.mock("@/modules/students/server", () => ({ listMyStudentAcademies: async () => [] }));
 vi.mock("./academy-filter", () => ({ AcademyFilter: () => null }));
 
-it("keeps academy and course filters on both pagination links", async () => {
-  const section = await AcademySections({
-    title: "Assignments", section: "assignments", empty: "No assignments",
+it("keeps academy and course filters on both pagination links", () => {
+  const section = AcademySections({
+    title: "Assignments", section: "assignments", empty: "No assignments", academies: [],
     scope: { slug: "academy-one", page: 2 }, query: { unit: "course-one" },
     groups: [{ academy: { id: "one", slug: "academy-one", name: "Academy One" }, items: [], hasMore: true }],
     children: () => null,

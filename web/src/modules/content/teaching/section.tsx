@@ -1,9 +1,7 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconBooks, IconCheck, IconEdit, IconLoader2, IconRefresh, IconX } from "@tabler/icons-react";
+import { IconBooks, IconCheck, IconEdit, IconLoader2, IconRefresh, IconX } from "@/components/shared/icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

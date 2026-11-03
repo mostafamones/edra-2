@@ -1,6 +1,4 @@
-"use client";
-
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -12,6 +10,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { formatAcademyDateTime } from "@/lib/academy-time";
 import { newUuid } from "@/lib/uuid";
+import { useAcademyScope, useAuth } from "@/modules/auth";
 import { changeStudentAnswerAccess, loadAnswerAccess } from "../../actions";
 import type { Assignment } from "../../types";
 
@@ -21,6 +20,11 @@ import type { Assignment } from "../../types";
  */
 export function AnswerAccess({ assignment, recordId, manager }: { assignment: Assignment; recordId: string; manager: boolean }) {
   const client = useQueryClient();
+  const isCurrentAcademy = useAcademyScope();
+  const { session } = useAuth();
+  const identity = JSON.stringify([session?.user.id, assignment.academyId, assignment.id, recordId]);
+  const current = useRef<object | null>(null);
+  useLayoutEffect(() => { current.current = {}; return () => { current.current = null; }; }, [identity]);
   const key = ["assignments", assignment.academyId, assignment.id, "answer-access", recordId];
   const query = useQuery({ queryKey: key, queryFn: async () => {
     const result = await loadAnswerAccess({ academyId: assignment.academyId, assignmentId: assignment.id, recordId });
@@ -37,9 +41,11 @@ export function AnswerAccess({ assignment, recordId, manager }: { assignment: As
   const action = data.revoked ? "restore" : "revoke";
 
   async function confirm() {
+    const started = current.current;
     setBusy(true);
     setError(null);
     const result = await changeStudentAnswerAccess({ academyId: assignment.academyId, assignmentId: assignment.id, recordId, action, reason, requestId });
+    if (!started || current.current !== started || !isCurrentAcademy(assignment.academyId)) return;
     setBusy(false);
     if (!result.ok) { setError(result.message); if (result.code !== "unavailable") setRequestId(newUuid()); return; }
     client.setQueryData(key, result.data);

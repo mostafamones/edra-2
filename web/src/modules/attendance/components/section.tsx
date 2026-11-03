@@ -1,10 +1,8 @@
-"use client";
-
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconAlertCircle, IconChecklist, IconSearch, IconUserPlus, IconUsers, IconUserX, IconWifiOff, IconX,
-} from "@tabler/icons-react";
+} from "@/components/shared/icons";
 
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

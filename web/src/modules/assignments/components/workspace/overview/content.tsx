@@ -1,5 +1,3 @@
-"use client";
-
 import { StatStrip } from "@/components/shared/assessment/workspace/stats";
 import { PartsCard, type PartRow } from "@/components/shared/assessment/workspace/parts";
 import { TopStudents } from "@/components/shared/assessment/workspace/top";

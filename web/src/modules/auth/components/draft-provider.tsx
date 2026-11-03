@@ -1,5 +1,3 @@
-"use client";
-
 import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from "react";
 
 type AuthDraft = {

@@ -1,69 +1,77 @@
-"use server";
+import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { contentCaller, contentResult } from "../data";
-import { mediaAdmin } from "../media";
-import { playbackToken } from "@/lib/video/mux";
-import { learningCaller, readAccessHistory, readAccessWorkspace, readLearningUnit } from "./data";
-import { grantReceiptSchema, learningError, materialSchema, redeemInput, requestInput, staffGrantInput, unitInput } from "./types";
 
-export async function loadAccessWorkspace(value: unknown) { return contentResult(() => readAccessWorkspace(value)); }
-export async function loadAccessHistory(value: unknown) { return contentResult(() => readAccessHistory(value)); }
-export async function loadLearningUnit(value: unknown) { return contentResult(() => readLearningUnit(value)); }
-export async function grantUnitAccess(value: unknown) {
-  return contentResult(async () => {
-    const input = staffGrantInput.parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { data, error } = await db.rpc("confirm_content_access", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_record_id: input.recordId, p_request_id: input.requestId,
-      p_expected_grant_id: input.expectedGrantId!, p_expected_revision: input.expectedRevision,
-      ...(input.extensionHours === undefined ? {} : { p_extension_hours: input.extensionHours }) });
-    learningError(error); return grantReceiptSchema.parse(data);
-  });
+import {
+  loadAccessWorkspace as loadAccessWorkspaceServer,
+  loadAccessHistory as loadAccessHistoryServer,
+  loadLearningUnit as loadLearningUnitServer,
+  grantUnitAccess as grantUnitAccessServer,
+  revokeUnitAccess as revokeUnitAccessServer,
+  redeemUnitCode as redeemUnitCodeServer,
+  extendMyUnitAccess as extendMyUnitAccessServer,
+  openLearningMaterial as openLearningMaterialServer,
+} from "./actions.server";
+
+const loadAccessWorkspaceFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => loadAccessWorkspaceServer(...(data.args as Parameters<typeof loadAccessWorkspaceServer>)));
+
+export async function loadAccessWorkspace(...args: Parameters<typeof loadAccessWorkspaceServer>): Promise<Awaited<ReturnType<typeof loadAccessWorkspaceServer>>> {
+  return loadAccessWorkspaceFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof loadAccessWorkspaceServer>>>;
 }
-export async function revokeUnitAccess(value: unknown) {
-  return contentResult(async () => {
-    const input = requestInput.extend({ recordId: z.guid(), grantId: z.guid(), reason: z.string().trim().min(1).max(1000) }).parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { error } = await db.rpc("revoke_content_access", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_record_id: input.recordId, p_request_id: input.requestId, p_grant_id: input.grantId, p_reason: input.reason });
-    learningError(error);
-  });
+
+const loadAccessHistoryFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => loadAccessHistoryServer(...(data.args as Parameters<typeof loadAccessHistoryServer>)));
+
+export async function loadAccessHistory(...args: Parameters<typeof loadAccessHistoryServer>): Promise<Awaited<ReturnType<typeof loadAccessHistoryServer>>> {
+  return loadAccessHistoryFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof loadAccessHistoryServer>>>;
 }
-export async function redeemUnitCode(value: unknown) {
-  return contentResult(async () => {
-    const input = redeemInput.parse(value);
-    const { db } = await learningCaller();
-    const { data, error } = await db.rpc("redeem_content_coupon", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_code: input.code, p_request_id: input.requestId });
-    learningError(error);
-    if (data && typeof data === "object" && "error" in data && typeof data.error === "string") learningError({ message: data.error });
-    return grantReceiptSchema.parse(data);
-  });
+
+const loadLearningUnitFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => loadLearningUnitServer(...(data.args as Parameters<typeof loadLearningUnitServer>)));
+
+export async function loadLearningUnit(...args: Parameters<typeof loadLearningUnitServer>): Promise<Awaited<ReturnType<typeof loadLearningUnitServer>>> {
+  return loadLearningUnitFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof loadLearningUnitServer>>>;
 }
-export async function extendMyUnitAccess(value: unknown) {
-  return contentResult(async () => {
-    const input = requestInput.parse(value);
-    const { db } = await learningCaller();
-    const { data, error } = await db.rpc("extend_my_content_access", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_request_id: input.requestId });
-    learningError(error); return grantReceiptSchema.parse(data);
-  });
+
+const grantUnitAccessFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => grantUnitAccessServer(...(data.args as Parameters<typeof grantUnitAccessServer>)));
+
+export async function grantUnitAccess(...args: Parameters<typeof grantUnitAccessServer>): Promise<Awaited<ReturnType<typeof grantUnitAccessServer>>> {
+  return grantUnitAccessFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof grantUnitAccessServer>>>;
 }
-export async function openLearningMaterial(value: unknown) {
-  return contentResult(async () => {
-    const input = unitInput.extend({ itemId: z.guid() }).parse(value);
-    const { db } = await learningCaller();
-    const { data, error } = await db.rpc("authorize_content_material", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_item_id: input.itemId });
-    learningError(error);
-    const material = materialSchema.parse(data);
-    const deadline = Math.floor(new Date(material.expiresAt).getTime() / 1000);
-    if (deadline <= Math.floor(Date.now() / 1000)) throw new Error("Your access has expired.");
-    if (material.kind === "video" && material.playbackId) {
-      const playback = playbackToken(material.playbackId, "v", deadline);
-      return { kind: "video" as const, playbackId: material.playbackId, token: playback.token, expires: playback.expires,
-        thumbnailToken: playbackToken(material.playbackId, "t", deadline).token, storyboardToken: playbackToken(material.playbackId, "s", deadline).token };
-    }
-    if (material.kind !== "document" || !material.storagePath) throw new Error("This material is not available.");
-    const ttl = Math.min(120, deadline - Math.floor(Date.now() / 1000));
-    if (ttl <= 0) throw new Error("Your access has expired.");
-    const signed = await mediaAdmin().storage.from("content-documents").createSignedUrl(material.storagePath, ttl);
-    if (signed.error || !signed.data) throw new Error("Could not open this document. Please retry.");
-    return { kind: "document" as const, url: signed.data.signedUrl, expires: Math.floor(Date.now() / 1000) + ttl };
-  });
+
+const revokeUnitAccessFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => revokeUnitAccessServer(...(data.args as Parameters<typeof revokeUnitAccessServer>)));
+
+export async function revokeUnitAccess(...args: Parameters<typeof revokeUnitAccessServer>): Promise<Awaited<ReturnType<typeof revokeUnitAccessServer>>> {
+  return revokeUnitAccessFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof revokeUnitAccessServer>>>;
+}
+
+const redeemUnitCodeFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => redeemUnitCodeServer(...(data.args as Parameters<typeof redeemUnitCodeServer>)));
+
+export async function redeemUnitCode(...args: Parameters<typeof redeemUnitCodeServer>): Promise<Awaited<ReturnType<typeof redeemUnitCodeServer>>> {
+  return redeemUnitCodeFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof redeemUnitCodeServer>>>;
+}
+
+const extendMyUnitAccessFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => extendMyUnitAccessServer(...(data.args as Parameters<typeof extendMyUnitAccessServer>)));
+
+export async function extendMyUnitAccess(...args: Parameters<typeof extendMyUnitAccessServer>): Promise<Awaited<ReturnType<typeof extendMyUnitAccessServer>>> {
+  return extendMyUnitAccessFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof extendMyUnitAccessServer>>>;
+}
+
+const openLearningMaterialFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => openLearningMaterialServer(...(data.args as Parameters<typeof openLearningMaterialServer>)));
+
+export async function openLearningMaterial(...args: Parameters<typeof openLearningMaterialServer>): Promise<Awaited<ReturnType<typeof openLearningMaterialServer>>> {
+  return openLearningMaterialFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof openLearningMaterialServer>>>;
 }

@@ -1,7 +1,6 @@
-"use client";
 import { usePortalPath, useCanonicalHref } from "../use-routing";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AssignmentsIcon, Book02Icon, Calendar03Icon, ChartBarLineIcon, CheckListIcon, Compass01Icon, Home07Icon, Logout01Icon, Menu01Icon, Note01Icon, Task01Icon, TeachingIcon, UserIcon } from "@hugeicons/core-free-icons";
 

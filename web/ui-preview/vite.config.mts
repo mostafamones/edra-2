@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const file = (path: string) => fileURLToPath(new URL(path, import.meta.url));
-// Isolated component review: these replacements never participate in Next's application build.
+// Isolated component review: these replacements never participate in the application build.
 export default defineConfig({
   root: file("./"),
   envDir: false,
@@ -14,7 +14,7 @@ export default defineConfig({
     if (target === file("../src/modules/content/actions")) return file("./content.ts");
   } }],
   resolve: { alias: [
-    { find: "next/link", replacement: file("./link.tsx") },
+    { find: "@/components/shared/link", replacement: file("./link.tsx") },
     { find: "@/modules/auth", replacement: file("./auth.tsx") },
     { find: "@", replacement: file("../src") },
   ] },

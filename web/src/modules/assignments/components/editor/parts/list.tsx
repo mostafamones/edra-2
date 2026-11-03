@@ -1,5 +1,3 @@
-"use client";
-
 import { detachDraft } from "@/components/shared/assessment/authoring";
 import { PartsList as SharedPartsList } from "@/components/shared/assessment/parts-list";
 import { PART_KINDS } from "../../../types";

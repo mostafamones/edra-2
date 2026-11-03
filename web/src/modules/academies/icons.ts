@@ -1,8 +1,8 @@
-import { IconBook, IconBuildingCommunity, IconCode, IconMicroscope, IconMusic, IconPalette, IconSchool, IconTrophy, IconWorld, type Icon } from "@tabler/icons-react";
+import { IconBook, IconBuildingCommunity, IconCode, IconMicroscope, IconMusic, IconPalette, IconSchool, IconTrophy, IconWorld, type Icon } from "@/components/shared/icons";
 
 import type { ACADEMY_ICON_IDS } from "./validation";
 
-/** Labels and Tabler icons for the allowed academy icon ids, in display order. */
+/** Labels and icons for the allowed academy icon ids, in display order. */
 export const ACADEMY_ICONS: Record<(typeof ACADEMY_ICON_IDS)[number], { label: string; Icon: Icon }> = {
   school: { label: "School", Icon: IconBuildingCommunity },
   book: { label: "Book", Icon: IconBook },

@@ -25,7 +25,7 @@ Use [finished interaction references](quality.md) to carry forward the decisions
 ## Existing non-negotiable rules
 
 - Existing shadcn primitives first. Do not hand-build equivalent dialogs, selects, menus or inputs. Compose Edra behavior outside `src/components/ui/`; protected primitives, `components.json` and theme tokens retain their approval rules.
-- Hugeicons, stroke width 1.5. Official brand assets are the exception. Older Tabler imports are migration debt, not permission to add more.
+- Hugeicons, stroke width 1.5. Official brand assets are the exception. The migration removed Tabler imports, including the separately approved protected primitive changes; do not reintroduce another general UI icon library.
 - No unsolicited helper paragraphs, subtitles or info icons. Use concise labels. Short-delay action/status tooltips are permitted by the current owner rules and must preserve independent accessible labels. Validation, access restrictions and recovery feedback remain available.
 - Empty datasets and no matching results replace the entire table, including headers and scroll wrapper. Keep relevant controls available.
 - Server-side authorization and tenant boundaries remain mandatory, regardless of what a cached screen displays.

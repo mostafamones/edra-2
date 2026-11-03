@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 export { previewPost, previewStatusGet } from "./http";
 export { clearedControlCookie, endPreviewForSignOut } from "./service";

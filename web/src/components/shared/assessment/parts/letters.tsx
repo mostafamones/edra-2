@@ -1,8 +1,7 @@
-"use client";
 
 import type { KeyboardEvent } from "react";
 import { useFieldArray, useFormContext, useWatch, type FieldValues } from "react-hook-form";
-import { IconPlus, IconX } from "@tabler/icons-react";
+import { IconPlus, IconX } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import type { EditorChoice, PartsConfig } from "./config";

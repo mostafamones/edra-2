@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { HugeiconsIcon } from "@hugeicons/react";

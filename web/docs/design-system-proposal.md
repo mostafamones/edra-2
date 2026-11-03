@@ -1,5 +1,7 @@
 # Edra design system proposal
 
+Historical proposal: framework references describe the earlier implementation; see [engineering](engineering.md) for current guidance.
+
 Status: planning proposal, 2026-10-28. Recommendations below are not approved product requirements or authorization to implement. No application, dependency, CI, protected primitive, theme or Linear changes accompany this proposal. Existing local session-recovery and attendance work is separate.
 
 ## Objective
@@ -16,7 +18,7 @@ Initial inventory inspected checkout `7b80390`. The branch was subsequently upda
 
 - Root `AGENTS.md` already requires Hugeicons at stroke 1.5, concise labels without unsolicited helper text, and empty states replacing entire tables.
 - `web/AGENTS.md` requires shadcn foundations and compositions outside protected `src/components/ui/`. Theme tokens and `components.json` remain owner-controlled.
-- `web/components.json` uses radix-vega; `web/src/app/globals.css` already defines semantic theme and font roles. A new UI framework or root shared package is unnecessary.
+- `web/components.json` uses radix-vega; `web/src/styles/globals.css` already defines semantic theme and font roles. A new UI framework or root shared package is unnecessary.
 - `web/src/components/shared/` has useful settings groups/rows, header actions, inputs and filters. These are a starting inventory, not a fully reviewed pattern catalog.
 - `web/eslint.config.mjs` has Next/TypeScript rules, but no Edra-specific design enforcement configuration. Playwright's general config targets `smoke.spec.ts`, desktop Chromium and failure screenshots. The attendance config adds authenticated attendance coverage. These do not constitute a general visual-regression or accessibility gate.
 - No Storybook or axe dependency was found in `web/package.json`; no general UI contract documentation or screenshot assertions were found in the inspected documentation/shared-component/e2e paths. This is a bounded inventory, not an accessibility audit of every screen.

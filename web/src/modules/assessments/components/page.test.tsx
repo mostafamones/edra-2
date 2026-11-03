@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   catalog: [] as { id: string; name: string; color: string }[], setLabel: vi.fn(), createLabel: vi.fn(), updateLabel: vi.fn(), deleteLabel: vi.fn(),
   setExamAvailability: vi.fn(), archiveExam: vi.fn(),
 }));
-vi.mock("next/navigation", () => ({
+vi.mock("@/lib/navigation", () => ({
   usePathname: () => "/science/assessments",
   useRouter: () => ({ replace: mocks.replace, push: mocks.push }),
   useSearchParams: () => new URLSearchParams(mocks.query),

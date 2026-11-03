@@ -1,5 +1,3 @@
-"use client";
-
 import { useFormContext, useWatch } from "react-hook-form";
 import { format, parseISO } from "date-fns";
 

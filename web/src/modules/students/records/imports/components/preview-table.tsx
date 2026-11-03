@@ -1,7 +1,5 @@
-"use client";
-
 import { useState, type ReactNode } from "react";
-import { IconSearch, IconSearchOff, IconTrash } from "@tabler/icons-react";
+import { IconSearch, IconSearchOff, IconTrash } from "@/components/shared/icons";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";

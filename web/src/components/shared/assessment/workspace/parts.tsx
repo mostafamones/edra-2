@@ -1,6 +1,5 @@
-"use client";
 
-import { IconAlertTriangle, type Icon } from "@tabler/icons-react";
+import { IconAlertTriangle, type Icon } from "@/components/shared/icons";
 
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatScore } from "@/lib/score";

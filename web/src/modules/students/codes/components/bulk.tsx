@@ -1,10 +1,8 @@
-"use client";
-
 import { studentsRootKey } from "../../records/queries";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { IconAlertTriangle, IconChevronDown, IconLoader2 } from "@tabler/icons-react";
+import { IconAlertTriangle, IconChevronDown, IconLoader2 } from "@/components/shared/icons";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -158,15 +156,19 @@ export function BulkStudentCodes({ academyId, enabled, settingsVersion, levels }
     setError("");
     try {
       const response = await generateStudentCodes({ academyId, ...attempt });
+      const unknownOutcome = !response.ok && response.code === "unavailable";
+      // Codes may exist whether or not this view is still current.
+      if (!unknownOutcome) {
+        void queryClient.invalidateQueries({ queryKey: ["student-codes", academyId] });
+        void queryClient.invalidateQueries({ queryKey: [...studentsRootKey(academyId), "list"] });
+      }
       if (!isCurrentAcademy(academyId)) return;
-      if (!response.ok && response.code === "unavailable") {
+      if (unknownOutcome) {
         setUnknown(attempt);
         return;
       }
       setUnknown(null);
       setConfirming(false);
-      void queryClient.invalidateQueries({ queryKey: ["student-codes", academyId] });
-      void queryClient.invalidateQueries({ queryKey: [...studentsRootKey(academyId), "list"] });
       if (!response.ok) {
         setError(response.message);
         return;

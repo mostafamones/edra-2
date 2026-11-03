@@ -1,5 +1,3 @@
-"use client";
-
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";

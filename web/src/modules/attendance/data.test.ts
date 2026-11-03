@@ -6,7 +6,7 @@ const STUDENT = "33333333-3333-4333-8333-333333333333";
 const KEY = "44444444-4444-4444-8444-444444444444";
 
 const state = vi.hoisted(() => ({ rpc: [] as { name: string; args: Record<string, unknown> }[], replayed: false }));
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({ cookieAuthority: async () => null }));
 
 import type { Authority } from "@/lib/supabase/authority";

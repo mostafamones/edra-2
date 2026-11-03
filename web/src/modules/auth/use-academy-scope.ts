@@ -1,6 +1,5 @@
-"use client";
-
-import { useCallback, useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import { browserScopeGeneration } from "@/lib/browser-scope";
 
 import { useAuth } from "./components/provider";
 
@@ -11,11 +10,13 @@ import { useAuth } from "./components/provider";
  * target the captured academy.
  */
 export function useAcademyScope() {
-  const { activeAcademy } = useAuth();
-  const latest = useRef(activeAcademy?.id ?? null);
+  const { activeAcademy, user } = useAuth();
+  const generation = browserScopeGeneration();
+  const captured = useMemo(() => ({ academyId: activeAcademy?.id ?? null, userId: user?.id ?? null, generation }), [activeAcademy?.id, user?.id, generation]);
+  const latest = useRef<typeof captured | null>(captured);
   useLayoutEffect(() => {
-    latest.current = activeAcademy?.id ?? null;
+    latest.current = captured;
     return () => { latest.current = null; };
-  }, [activeAcademy?.id]);
-  return useCallback((academyId: string) => latest.current === academyId, []);
+  }, [captured]);
+  return useCallback((academyId: string) => latest.current === captured && captured.academyId === academyId && captured.generation === browserScopeGeneration(), [captured]);
 }

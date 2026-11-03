@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useSyncExternalStore } from "react";
 
 import { type AcademyDraft, readAcademyDraft } from "./academy-draft";

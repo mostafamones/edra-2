@@ -1,6 +1,4 @@
-"use client";
-
-import Link from "next/link";
+import Link from "@/components/shared/link";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 

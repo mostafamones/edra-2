@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 const { detectWorkFile } = await import("./content");
 const { sameWorkFileType, workFileMime, workFileProblem, WORK_FILE_MAX_BYTES } = await import("./files");
 
@@ -32,6 +32,29 @@ describe("detectWorkFile", () => {
     expect(await detectWorkFile(heif("avif", ["mif1", "avif"]))).toBeNull();
     expect(await detectWorkFile(heif("heic", ["heic"], ["free"]))).toBeNull();
     expect(await detectWorkFile(heif("heic", ["heic"]).subarray(0, 30))).toBeNull();
+  });
+  it("rejects truncated image headers and a corrupt PNG IHDR CRC", async () => {
+    const png = await image("png");
+    expect(await detectWorkFile(png.subarray(0, 20))).toBeNull();
+    const corrupt = Buffer.from(png);
+    corrupt[29] ^= 1;
+    expect(await detectWorkFile(corrupt)).toBeNull();
+  });
+  it("matches sharp metadata acceptance up to PNG/JPEG image-data headers", async () => {
+    for (const format of ["png", "jpeg"] as const) {
+      const source = await image(format);
+      // Check every truncation of these small fixtures, including valid IHDR/SOF
+      // without IDAT/SOS, and metadata-complete input without trailing pixels.
+      for (let end = 0; end <= source.length; end++) {
+        const input = source.subarray(0, end);
+        let expected: string | null = null;
+        try {
+          const metadata = await sharp(input, { failOn: "error" }).metadata();
+          if (metadata.format === format && metadata.width && metadata.height) expected = `image/${format}`;
+        } catch { /* Metadata cannot be read. */ }
+        expect(await detectWorkFile(input), `${format}, bytes=${end}`).toBe(expected);
+      }
+    }
   });
   it("rejects other formats, truncated PDFs and renamed bytes", async () => {
     expect(await detectWorkFile(await image("gif"))).toBeNull();

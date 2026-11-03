@@ -1,6 +1,5 @@
-"use client";
 
-import { IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight } from "@tabler/icons-react";
+import { IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 

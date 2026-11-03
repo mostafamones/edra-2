@@ -9,6 +9,7 @@ import type { UnitSheetTab } from "./menu";
 const actions = vi.hoisted(() => ({ loadUnit: vi.fn(), loadUnitPanels: vi.fn(), saveUnit: vi.fn(), saveUnitVersion: vi.fn(), changeUnit: vi.fn() }));
 vi.mock("../actions", () => actions);
 vi.mock("../media-actions", () => ({ refreshVideo: vi.fn() }));
+vi.mock("@/modules/auth/components/provider", () => ({ useAuth: () => ({ activeAcademy: { id: "academy" }, user: { id: "author" } }) }));
 vi.mock("@/modules/navigation", () => ({ useCanonicalHref: () => (href: string) => href }));
 vi.mock("./preview", () => ({ MaterialPreview: () => <button>Preview</button>, ACTION: "" }));
 vi.mock("../requirements/editor", () => ({ UnitRequirements: () => null }));

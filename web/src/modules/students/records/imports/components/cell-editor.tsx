@@ -1,6 +1,4 @@
-"use client";
-
-import { IconAlertCircle, IconInfoCircle } from "@tabler/icons-react";
+import { IconAlertCircle, IconInfoCircle } from "@/components/shared/icons";
 
 import { PhoneInput } from "@/components/shared/app-input";
 import { Input } from "@/components/ui/input";

@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { IconSchool } from "@tabler/icons-react";
+import { IconSchool } from "@/components/shared/icons";
 
 import { Progress } from "@/components/ui/progress";
 

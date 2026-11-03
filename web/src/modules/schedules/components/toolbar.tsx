@@ -1,8 +1,7 @@
-"use client";
 import { useCanonicalHref } from "@/modules/navigation";
 
-import Link from "next/link";
-import { IconPlus as Plus, IconSearch as SearchIcon } from "@tabler/icons-react";
+import Link from "@/components/shared/link";
+import { IconPlus as Plus, IconSearch as SearchIcon } from "@/components/shared/icons";
 
 import { FilterPopover } from "@/components/shared/filter-popover";
 import { Button } from "@/components/ui/button";

@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ member: vi.fn(), rpc: vi.fn() }));
 vi.mock("@/lib/supabase/membership", () => ({ academyMember: mocks.member }));
 
-import { saveQuiz } from "@/modules/quizzes";
-import { saveExam } from "@/modules/exams";
+import { saveQuiz } from "@/modules/quizzes/actions.server";
+import { saveExam } from "@/modules/exams/actions.server";
 
 const academyId = "11111111-1111-4111-8111-111111111111";
 const id = "22222222-2222-4222-8222-222222222222";

@@ -1,6 +1,4 @@
-"use client";
-
-import { IconPencil } from "@tabler/icons-react";
+import { IconPencil } from "@/components/shared/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

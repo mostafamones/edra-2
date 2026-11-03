@@ -1,4 +1,3 @@
-"use client";
 import { newUuid } from "@/lib/uuid";
 import { useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";

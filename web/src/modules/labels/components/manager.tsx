@@ -1,5 +1,3 @@
-"use client";
-
 import { useMemo, useRef } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { LabelIcon } from "@hugeicons/core-free-icons";

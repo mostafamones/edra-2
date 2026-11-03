@@ -1,7 +1,5 @@
-"use client";
-
 import { useRef, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 

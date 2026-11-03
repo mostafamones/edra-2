@@ -1,49 +1,32 @@
-"use server";
-
+import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { labelFailure } from "./errors";
-import { runLabelCommand } from "./server";
-import { LABEL_DOMAINS, type DeleteLabelResult, type LabelResult } from "./types";
-import { labelColorSchema, labelNameSchema, toLabel } from "./validation";
+import {
+  createLabel as createLabelServer,
+  updateLabel as updateLabelServer,
+  deleteLabel as deleteLabelServer,
+} from "./actions.server";
 
-/** Label definition commands (Owner, Head Admin and Admin; enforced by the database). */
+const createLabelFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => createLabelServer(...(data.args as Parameters<typeof createLabelServer>)));
 
-const definition = z.object({ academyId: z.guid(), labelId: z.guid(), name: labelNameSchema, color: labelColorSchema });
-
-/** `labelId` is chosen by the caller, so a retried create returns the label it already made. */
-export async function createLabel(value: unknown): Promise<LabelResult> {
-  const parsed = definition.extend({ domain: z.enum(LABEL_DOMAINS) }).safeParse(value);
-  if (!parsed.success) return labelFailure("validation");
-  const { academyId, labelId, name, color, domain } = parsed.data;
-  return runLabelCommand((db) => db.rpc("create_label", { p_academy_id: academyId, p_label_id: labelId, p_name: name, p_color: color, p_domain: domain }),
-    (data) => ({ ok: true as const, label: toLabel(data) }));
+export async function createLabel(...args: Parameters<typeof createLabelServer>): Promise<Awaited<ReturnType<typeof createLabelServer>>> {
+  return createLabelFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof createLabelServer>>>;
 }
 
-/** Sets the name and color; every use, including archived and closed-year ones, shows the change. */
-export async function updateLabel(value: unknown): Promise<LabelResult> {
-  const parsed = definition.safeParse(value);
-  if (!parsed.success) return labelFailure("validation");
-  const { academyId, labelId, name, color } = parsed.data;
-  return runLabelCommand((db) => db.rpc("update_label", { p_academy_id: academyId, p_label_id: labelId, p_name: name, p_color: color }),
-    (data) => ({ ok: true as const, label: toLabel(data) }));
+const updateLabelFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => updateLabelServer(...(data.args as Parameters<typeof updateLabelServer>)));
+
+export async function updateLabel(...args: Parameters<typeof updateLabelServer>): Promise<Awaited<ReturnType<typeof updateLabelServer>>> {
+  return updateLabelFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof updateLabelServer>>>;
 }
 
-const deleteResult = z.discriminatedUnion("status", [
-  z.object({ status: z.literal("deleted") }),
-  z.object({ status: z.literal("confirm"), uses: z.number().int().positive() }),
-]);
+const deleteLabelFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => deleteLabelServer(...(data.args as Parameters<typeof deleteLabelServer>)));
 
-/**
- * Deletes an unused label at once. A used one is deleted only with `confirmed`; otherwise nothing
- * changes and the current use count comes back. The database counts at deletion time.
- */
-export async function deleteLabel(value: unknown): Promise<DeleteLabelResult> {
-  const parsed = z.object({ academyId: z.guid(), labelId: z.guid(), confirmed: z.boolean() }).safeParse(value);
-  if (!parsed.success) return labelFailure("validation");
-  const { academyId, labelId, confirmed } = parsed.data;
-  return runLabelCommand((db) => db.rpc("delete_label", { p_academy_id: academyId, p_label_id: labelId, p_confirmed: confirmed }), (data) => {
-    const result = deleteResult.parse(data);
-    return result.status === "deleted" ? { ok: true as const, deleted: true as const } : { ok: true as const, deleted: false as const, uses: result.uses };
-  });
+export async function deleteLabel(...args: Parameters<typeof deleteLabelServer>): Promise<Awaited<ReturnType<typeof deleteLabelServer>>> {
+  return deleteLabelFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof deleteLabelServer>>>;
 }

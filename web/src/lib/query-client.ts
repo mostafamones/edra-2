@@ -1,4 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
+import { advanceBrowserScope } from "./browser-scope";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -24,5 +25,6 @@ export function getQueryClient() {
 
 /** Call after sign-out so another account cannot see the previous account's cached data. */
 export function clearBrowserQueryCache() {
+  advanceBrowserScope();
   browserQueryClient?.clear();
 }

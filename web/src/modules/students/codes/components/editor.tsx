@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import { IconInfoCircle, IconListNumbers, IconRefresh } from "@tabler/icons-react";
+import { IconInfoCircle, IconListNumbers, IconRefresh } from "@/components/shared/icons";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

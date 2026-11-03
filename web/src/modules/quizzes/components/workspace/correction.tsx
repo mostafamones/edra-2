@@ -1,5 +1,3 @@
-"use client";
-
 import { useQueryClient } from "@tanstack/react-query";
 import { ScoringCorrection, type CorrectionQuestion } from "@/components/shared/assessment/correction";
 import { useAcademyScope } from "@/modules/auth";

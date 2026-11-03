@@ -1,8 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const api = vi.hoisted(() => ({ rpc: vi.fn(), redirect: vi.fn() }));
-vi.mock("server-only", () => ({}));
-vi.mock("next/headers", () => ({ cookies: vi.fn() }));
-vi.mock("next/navigation", () => ({ redirect: api.redirect }));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
+vi.mock("@/lib/server/request", () => ({ cookies: vi.fn() }));
+vi.mock("@/lib/navigation", () => ({ redirect: api.redirect }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ rpc: api.rpc }) }));
 import { isStaffAccount } from "./server";
 beforeEach(() => { vi.clearAllMocks(); });

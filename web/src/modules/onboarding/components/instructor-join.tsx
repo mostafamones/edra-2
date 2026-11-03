@@ -1,11 +1,10 @@
-"use client";
 import { staffAcademyHref } from "@/lib/routing";
 import { listUserAcademies } from "@/modules/academies";
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
+import Link from "@/components/shared/link";
+import { useRouter } from "@/lib/navigation";
+import { IconArrowLeft, IconArrowRight } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/shared/app-input";

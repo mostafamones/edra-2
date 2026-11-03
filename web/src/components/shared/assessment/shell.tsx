@@ -1,10 +1,9 @@
-"use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FormProvider, useForm, useWatch, type FieldErrors, type FieldValues, type Resolver } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconAlertCircle, IconCheck, IconLoader2 } from "@tabler/icons-react";
+import { IconAlertCircle, IconCheck, IconLoader2 } from "@/components/shared/icons";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

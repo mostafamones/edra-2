@@ -1,16 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
 const redirect = vi.hoisted(() => vi.fn((path: string) => { throw new Error(`redirect:${path}`); }));
-vi.mock("next/navigation", () => ({ redirect }));
+vi.mock("@/lib/navigation", () => ({ redirect }));
 
-import AssignmentsList from "@/app/app/[academySlug]/assignments/page";
-import ExamsList from "@/app/app/[academySlug]/exams/page";
-import QuizzesList from "@/app/app/[academySlug]/quizzes/page";
+import { Route as Assignments } from "@/routes/app/$academySlug/assignments/index";
+import { Route as Exams } from "@/routes/app/$academySlug/exams/index";
+import { Route as Quizzes } from "@/routes/app/$academySlug/quizzes/index";
 
 describe("legacy staff list routes", () => {
-  it.each([
-    [AssignmentsList, "assignment"], [QuizzesList, "quiz"], [ExamsList, "exam"],
-  ] as const)("redirect to Assessments with the type selected (%#)", async (Page, type) => {
-    await expect(Page({ params: Promise.resolve({ academySlug: "science" }) })).rejects.toThrow(`redirect:/science/assessments?type=${type}`);
+  it.each([[Assignments, "assignment"], [Quizzes, "quiz"], [Exams, "exam"]] as const)("redirects to Assessments with the type selected once the parent guard allows it (%#)", async (route, type) => {
+    const loader = route.options.loader as unknown as (context: { params: { academySlug: string }; parentMatchPromise: Promise<{ loaderData: { status: string } }> }) => Promise<unknown>;
+    await expect(loader({ params: { academySlug: "science" }, parentMatchPromise: Promise.resolve({ loaderData: { status: "ok" } }) })).rejects.toThrow(`redirect:/science/assessments?type=${type}`);
   });
 });

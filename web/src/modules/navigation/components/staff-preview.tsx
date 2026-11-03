@@ -1,7 +1,6 @@
-"use client";
 import { useCanonicalHref } from "../use-routing";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 
 import { useAuth } from "@/modules/auth";
 

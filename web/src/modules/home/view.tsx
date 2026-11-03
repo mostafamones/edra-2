@@ -1,6 +1,4 @@
-"use client";
-
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import type { ComponentProps } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, StudentsIcon, AssignmentsIcon, BookOpen01Icon, Calendar03Icon, PlayIcon, CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";

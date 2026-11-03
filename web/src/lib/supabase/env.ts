@@ -1,3 +1,4 @@
+import { publicEnv } from "@/lib/env/public";
 import { z } from "zod";
 
 const publicSupabaseEnvSchema = z.object({
@@ -7,8 +8,8 @@ const publicSupabaseEnvSchema = z.object({
 
 export function getPublicSupabaseEnv() {
   return publicSupabaseEnvSchema.parse({
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_URL: publicEnv.supabaseUrl,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+      publicEnv.supabasePublishableKey,
   });
 }

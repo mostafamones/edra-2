@@ -1,90 +1,122 @@
-"use server";
+import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { contentCaller, contentError, contentResult, readContentUnit, readContentWorkspace, readReuseSources, readUnitHistory } from "./data";
-import { documentSchema } from "./types";
 
-export async function loadWorkspace(academyId: string) { return readContentWorkspace(academyId); }
-export async function loadUnit(academyId: string, unitId: string) { return readContentUnit(academyId, unitId); }
-export async function loadUnitHistory(academyId: string, unitId: string) { return contentResult(() => readUnitHistory(academyId, unitId)); }
+import {
+  loadWorkspace as loadWorkspaceServer,
+  loadUnit as loadUnitServer,
+  loadUnitHistory as loadUnitHistoryServer,
+  loadUnitPanels as loadUnitPanelsServer,
+  createUnit as createUnitServer,
+  saveUnit as saveUnitServer,
+  changeUnit as changeUnitServer,
+  saveUnitVersion as saveUnitVersionServer,
+  publishUnitEdits as publishUnitEditsServer,
+  copyUnit as copyUnitServer,
+  assessmentOptions as assessmentOptionsServer,
+  reuseMaterial as reuseMaterialServer,
+  createAttachedAssessment as createAttachedAssessmentServer,
+} from "./actions.server";
 
-/** One background request; client Server Actions are dispatched sequentially by Next.js. */
-export async function loadUnitPanels(academyId: string, unitId: string) {
-  const [history, assessments, sources] = await Promise.all([
-    loadUnitHistory(academyId, unitId),
-    contentResult(() => assessmentOptions(academyId, unitId)),
-    contentResult(() => readReuseSources(academyId, unitId)),
-  ]);
-  return { history, assessments, sources };
-}
-const scopeSchema = z.object({ academyId: z.guid(), yearId: z.guid(), levelId: z.string().min(1), trackId: z.guid().nullable(), unitId: z.guid() });
-export async function createUnit(value: unknown) {
-  return contentResult(async () => {
-  const input = scopeSchema.extend({ title: z.string().trim().min(1).max(200) }).parse(value);
-  const { db } = await contentCaller(input.academyId);
-  const { error } = await db.rpc("create_content_unit", { p_academy_id: input.academyId, p_year_id: input.yearId, p_level_id: input.levelId, p_track_id: input.trackId!, p_unit_id: input.unitId, p_title: input.title });
-  contentError(error); return input.unitId;
-  });
-}
-export async function saveUnit(value: unknown) {
-  return contentResult(async () => {
-  const input = z.object({ academyId: z.guid(), unitId: z.guid(), version: z.number().int().positive(), document: documentSchema }).parse(value);
-  const { db } = await contentCaller(input.academyId);
-  const { error } = await db.rpc("save_content_unit", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_version: input.version, p_document: input.document }); contentError(error);
-  });
-}
-export async function changeUnit(value: unknown) {
-  return contentResult(async () => {
-  const input = z.object({ academyId: z.guid(), unitId: z.guid(), version: z.number().int().positive(), action: z.enum(["submit", "publish", "archive", "restore", "feedback", "request_changes"]), feedback: z.string().max(5000).default("") }).parse(value);
-  const { db } = await contentCaller(input.academyId);
-  const { error } = await db.rpc("change_content_unit", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_version: input.version, p_action: input.action, p_feedback: input.feedback }); contentError(error);
-  });
-}
-export async function saveUnitVersion(value: unknown) {
-  return contentResult(async () => {
-    const input = z.object({ academyId: z.guid(), unitId: z.guid(), version: z.number().int().positive() }).parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { error } = await db.rpc("save_content_draft_version", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_version: input.version });
-    contentError(error);
-  });
-}
-export async function publishUnitEdits(value: unknown) {
-  return contentResult(async () => {
-    const input = z.object({ academyId: z.guid(), unitId: z.guid(), version: z.number().int().positive(), document: documentSchema }).parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { error } = await db.rpc("publish_content_edits", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_version: input.version, p_document: input.document });
-    contentError(error);
-  });
-}
-export async function copyUnit(value: unknown) {
-  return contentResult(async () => {
-  const input = scopeSchema.extend({ sourceId: z.guid() }).parse(value);
-  const { db } = await contentCaller(input.academyId);
-  const { error } = await db.rpc("copy_content_unit", { p_academy_id: input.academyId, p_source_id: input.sourceId, p_year_id: input.yearId, p_level_id: input.levelId, p_track_id: input.trackId!, p_unit_id: input.unitId }); contentError(error); return input.unitId;
-  });
-}
-export async function assessmentOptions(academyId: string, unitId: string) {
-  z.guid().parse(unitId); const { db } = await contentCaller(academyId);
-  const all = [];
-  for (let offset = 0; ; offset += 100) {
-    const { data, error } = await db.rpc("content_assessment_options", { p_academy_id: academyId, p_unit_id: unitId, p_offset: offset, p_limit: 100 });
-    contentError(error);
-    const rows = z.array(z.object({ id: z.guid(), title: z.string(), kind: z.enum(["assignment", "quiz", "exam"]) })).parse(data);
-    all.push(...rows);
-    if (rows.length < 100) return all;
-  }
+const loadWorkspaceFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.string()]) }))
+  .handler(({ data }) => loadWorkspaceServer(...(data.args as Parameters<typeof loadWorkspaceServer>)));
+
+export async function loadWorkspace(...args: Parameters<typeof loadWorkspaceServer>): Promise<Awaited<ReturnType<typeof loadWorkspaceServer>>> {
+  return loadWorkspaceFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof loadWorkspaceServer>>>;
 }
 
-export async function reuseMaterial(value: unknown) {
-  return contentResult(async () => {
-  const input = z.object({ academyId: z.guid(), unitId: z.guid(), version: z.number().int().positive(), sourceId: z.guid(), itemId: z.guid() }).parse(value);
-  const { db } = await contentCaller(input.academyId);
-  const { error } = await db.rpc("copy_content_material", { p_academy_id: input.academyId, p_source_id: input.sourceId, p_item_id: input.itemId, p_target_id: input.unitId, p_version: input.version }); contentError(error);
-  });
+const loadUnitFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.string(), z.string()]) }))
+  .handler(({ data }) => loadUnitServer(...(data.args as Parameters<typeof loadUnitServer>)));
+
+export async function loadUnit(...args: Parameters<typeof loadUnitServer>): Promise<Awaited<ReturnType<typeof loadUnitServer>>> {
+  return loadUnitFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof loadUnitServer>>>;
 }
-export async function createAttachedAssessment(value: unknown) {
-  return contentResult(async () => {
-  const input = z.object({ academyId: z.guid(), unitId: z.guid(), version: z.number().int().positive(), kind: z.enum(["assignment", "quiz", "exam"]), title: z.string().trim().min(1).max(200) }).parse(value);
-  const { db } = await contentCaller(input.academyId);
-  const { data, error } = await db.rpc("create_content_assessment", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_version: input.version, p_kind: input.kind, p_title: input.title }); contentError(error); return data!;
-  });
+
+const loadUnitHistoryFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown(), z.unknown()]) }))
+  .handler(({ data }) => loadUnitHistoryServer(...(data.args as Parameters<typeof loadUnitHistoryServer>)));
+
+export async function loadUnitHistory(...args: Parameters<typeof loadUnitHistoryServer>): Promise<Awaited<ReturnType<typeof loadUnitHistoryServer>>> {
+  return loadUnitHistoryFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof loadUnitHistoryServer>>>;
+}
+
+const loadUnitPanelsFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown(), z.unknown()]) }))
+  .handler(({ data }) => loadUnitPanelsServer(...(data.args as Parameters<typeof loadUnitPanelsServer>)));
+
+export async function loadUnitPanels(...args: Parameters<typeof loadUnitPanelsServer>): Promise<Awaited<ReturnType<typeof loadUnitPanelsServer>>> {
+  return loadUnitPanelsFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof loadUnitPanelsServer>>>;
+}
+
+const createUnitFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => createUnitServer(...(data.args as Parameters<typeof createUnitServer>)));
+
+export async function createUnit(...args: Parameters<typeof createUnitServer>): Promise<Awaited<ReturnType<typeof createUnitServer>>> {
+  return createUnitFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof createUnitServer>>>;
+}
+
+const saveUnitFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => saveUnitServer(...(data.args as Parameters<typeof saveUnitServer>)));
+
+export async function saveUnit(...args: Parameters<typeof saveUnitServer>): Promise<Awaited<ReturnType<typeof saveUnitServer>>> {
+  return saveUnitFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof saveUnitServer>>>;
+}
+
+const changeUnitFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => changeUnitServer(...(data.args as Parameters<typeof changeUnitServer>)));
+
+export async function changeUnit(...args: Parameters<typeof changeUnitServer>): Promise<Awaited<ReturnType<typeof changeUnitServer>>> {
+  return changeUnitFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof changeUnitServer>>>;
+}
+
+const saveUnitVersionFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => saveUnitVersionServer(...(data.args as Parameters<typeof saveUnitVersionServer>)));
+
+export async function saveUnitVersion(...args: Parameters<typeof saveUnitVersionServer>): Promise<Awaited<ReturnType<typeof saveUnitVersionServer>>> {
+  return saveUnitVersionFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof saveUnitVersionServer>>>;
+}
+
+const publishUnitEditsFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => publishUnitEditsServer(...(data.args as Parameters<typeof publishUnitEditsServer>)));
+
+export async function publishUnitEdits(...args: Parameters<typeof publishUnitEditsServer>): Promise<Awaited<ReturnType<typeof publishUnitEditsServer>>> {
+  return publishUnitEditsFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof publishUnitEditsServer>>>;
+}
+
+const copyUnitFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => copyUnitServer(...(data.args as Parameters<typeof copyUnitServer>)));
+
+export async function copyUnit(...args: Parameters<typeof copyUnitServer>): Promise<Awaited<ReturnType<typeof copyUnitServer>>> {
+  return copyUnitFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof copyUnitServer>>>;
+}
+
+const assessmentOptionsFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.string(), z.unknown()]) }))
+  .handler(({ data }) => assessmentOptionsServer(...(data.args as Parameters<typeof assessmentOptionsServer>)));
+
+export async function assessmentOptions(...args: Parameters<typeof assessmentOptionsServer>): Promise<Awaited<ReturnType<typeof assessmentOptionsServer>>> {
+  return assessmentOptionsFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof assessmentOptionsServer>>>;
+}
+
+const reuseMaterialFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => reuseMaterialServer(...(data.args as Parameters<typeof reuseMaterialServer>)));
+
+export async function reuseMaterial(...args: Parameters<typeof reuseMaterialServer>): Promise<Awaited<ReturnType<typeof reuseMaterialServer>>> {
+  return reuseMaterialFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof reuseMaterialServer>>>;
+}
+
+const createAttachedAssessmentFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => createAttachedAssessmentServer(...(data.args as Parameters<typeof createAttachedAssessmentServer>)));
+
+export async function createAttachedAssessment(...args: Parameters<typeof createAttachedAssessmentServer>): Promise<Awaited<ReturnType<typeof createAttachedAssessmentServer>>> {
+  return createAttachedAssessmentFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof createAttachedAssessmentServer>>>;
 }

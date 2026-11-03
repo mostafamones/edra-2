@@ -1,8 +1,7 @@
-"use client";
 
 import { useState, type ReactNode } from "react";
 import { useFormContext, useWatch, type FieldValues } from "react-hook-form";
-import { IconArrowBarToDown, IconArrowBarToUp, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconArrowBarToDown, IconArrowBarToUp, IconPlus, IconTrash } from "@/components/shared/icons";
 
 import { NumberInput } from "@/components/shared/app-input";
 import { Button } from "@/components/ui/button";

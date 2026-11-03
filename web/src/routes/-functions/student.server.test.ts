@@ -1,0 +1,33 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const mocks = vi.hoisted(() => ({ claims: vi.fn(), staff: vi.fn(), profile: vi.fn(), academies: vi.fn(), academy: vi.fn(), unit: vi.fn(), assignment: vi.fn(), exam: vi.fn() }));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
+vi.mock("@/lib/server/request", () => ({ cookies: async () => ({ get: () => undefined }) }));
+vi.mock("@/lib/navigation", () => ({ redirect: (url: string) => { throw new Error(`redirect:${url}`); }, notFound: () => { throw new Error("notFound"); } }));
+vi.mock("@/lib/routing", () => ({ staffEntryHref: () => "https://staff.example/" }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getClaims: mocks.claims } }) }));
+vi.mock("@/modules/staff/server", () => ({ isStaffAccount: mocks.staff }));
+vi.mock("@/modules/students/server", () => ({ getStudentProfile: mocks.profile, listMyStudentAcademies: mocks.academies, getMyStudentAcademy: mocks.academy }));
+vi.mock("@/modules/content/server", () => ({ readLearningUnit: mocks.unit }));
+vi.mock("@/modules/assignments/server", () => ({ loadStudentAssignment: mocks.assignment }));
+vi.mock("@/modules/exams/server", () => ({ loadStudentExamOverview: mocks.exam }));
+vi.mock("@/modules/learning/server", () => ({ loadLearningHome: vi.fn(), loadLearningUnits: vi.fn(), loadLearningAssignments: vi.fn(), loadLearningExams: vi.fn() }));
+vi.mock("@/modules/learning", () => ({ scopeParam: vi.fn(), unitListParams: vi.fn() }));
+import { studentAssignment, studentLayout, studentUnit } from "./student.server";
+const guid = "123e4567-e89b-42d3-a456-426614174000";
+beforeEach(() => { vi.clearAllMocks(); mocks.claims.mockResolvedValue({ data: { claims: { sub: "user", amr: [{ method: "password" }] } } }); mocks.staff.mockResolvedValue(false); mocks.profile.mockResolvedValue({ data: { level_id: "level", parent_phone: "phone", parent_phone_verified_at: "date" }, error: null }); mocks.academy.mockResolvedValue({ access: "active", academy: { id: "id", slug: "school", name: "School" } }); });
+describe("student guards", () => {
+  it.each(["otp", "recovery", "magiclink", undefined])("rejects %s sessions before reading student data", async method => {
+    mocks.claims.mockResolvedValue({ data: { claims: { sub: "user", amr: method ? [{ method }] : undefined } } });
+    await expect(studentLayout("/courses?academy=school")).rejects.toThrow("redirect:/auth/login?next=%2Fcourses%3Facademy%3Dschool");
+    expect(mocks.staff).not.toHaveBeenCalled();
+    expect(mocks.profile).not.toHaveBeenCalled();
+    expect(mocks.academies).not.toHaveBeenCalled();
+  });
+  it("encodes the public return path for unauthenticated visitors", async () => { mocks.claims.mockResolvedValue({ data: null }); await expect(studentLayout("/courses?q=a b")).rejects.toThrow("redirect:/auth/login?next=%2Fcourses%3Fq%3Da%20b"); });
+  it("preserves encoded query bytes in the login continuation", async () => { mocks.claims.mockResolvedValue({ data: null }); await expect(studentLayout("/courses?q=a%2Fb&x=1")).rejects.toThrow("redirect:/auth/login?next=%2Fcourses%3Fq%3Da%252Fb%26x%3D1"); });
+  it("redirects staff before reading the profile", async () => { mocks.staff.mockResolvedValue(true); await expect(studentLayout("/")).rejects.toThrow("redirect:https://staff.example/"); expect(mocks.profile).not.toHaveBeenCalled(); });
+  it("requires a completed student profile", async () => { mocks.profile.mockResolvedValue({ data: { level_id: null }, error: null }); await expect(studentLayout("/")).rejects.toThrow("redirect:/onboarding/student"); });
+  it("redacts provider errors", async () => { const log = vi.spyOn(console, "error").mockImplementation(() => {}); mocks.profile.mockResolvedValue({ data: null, error: new Error("provider secret") }); await expect(studentLayout("/")).rejects.toThrow("Could not load student profile."); log.mockRestore(); });
+  it("rejects invalid ids before academy or item reads", async () => { await expect(studentAssignment({ academySlug: "school", assignmentId: "bad" })).rejects.toThrow("notFound"); await expect(studentUnit({ academySlug: "school", unitId: "bad" })).rejects.toThrow("notFound"); expect(mocks.academy).not.toHaveBeenCalled(); expect(mocks.assignment).not.toHaveBeenCalled(); expect(mocks.unit).not.toHaveBeenCalled(); });
+  it("rejects inactive access before item reads", async () => { mocks.academy.mockResolvedValue({ access: "suspended", academy: { id: "id" } }); await expect(studentAssignment({ academySlug: "school", assignmentId: guid })).rejects.toThrow("notFound"); await expect(studentUnit({ academySlug: "school", unitId: guid })).rejects.toThrow("notFound"); expect(mocks.assignment).not.toHaveBeenCalled(); expect(mocks.unit).not.toHaveBeenCalled(); });
+});

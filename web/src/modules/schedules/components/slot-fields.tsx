@@ -1,8 +1,6 @@
-"use client";
-
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash } from "@/components/shared/icons";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

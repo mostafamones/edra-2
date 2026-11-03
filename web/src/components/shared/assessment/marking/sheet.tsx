@@ -1,7 +1,6 @@
-"use client";
 
 import { useState, type ReactNode } from "react";
-import { IconChecklist } from "@tabler/icons-react";
+import { IconChecklist } from "@/components/shared/icons";
 
 import { MarkingGuard } from "./guard";
 import { Button } from "@/components/ui/button";

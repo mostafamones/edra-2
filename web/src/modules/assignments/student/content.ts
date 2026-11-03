@@ -1,6 +1,6 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
-import sharp from "sharp";
+import { readImageMetadata } from "@/modules/account/image-header";
 
 import type { WorkFileType } from "./files";
 
@@ -16,12 +16,8 @@ export async function detectWorkFile(bytes: Uint8Array): Promise<WorkFileType | 
   const latin = (from: number, to: number) => Buffer.from(bytes.subarray(from, to)).toString("latin1");
   if (latin(0, 5) === "%PDF-") return latin(Math.max(0, bytes.length - 1024), bytes.length).includes("%%EOF") ? "application/pdf" : null;
   if (latin(4, 8) === "ftyp") return isHeic(bytes) ? "image/heic" : null;
-  try {
-    const { format, width, height } = await sharp(bytes, { failOn: "error" }).metadata();
-    return format && width && height ? IMAGE_FORMATS[format] ?? null : null;
-  } catch {
-    return null;
-  }
+  const header = readImageMetadata(bytes);
+  return header ? IMAGE_FORMATS[header.format] ?? null : null;
 }
 
 /**

@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { createClient } from "../../../lib/supabase/server";
 import { isAcademyProfileEditor, type AcademyRole } from "../roles";

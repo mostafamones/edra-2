@@ -1,7 +1,6 @@
-"use client";
 
 import type { ReactNode } from "react";
-import { IconUsersGroup } from "@tabler/icons-react";
+import { IconUsersGroup } from "@/components/shared/icons";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { describeAudience, type AudienceNames } from "./names";

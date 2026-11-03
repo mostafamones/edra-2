@@ -1,7 +1,5 @@
-"use client";
-
 import { useCallback } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/lib/navigation";
 import { internalStaffPath, internalStudentPath, publicHref } from "@/lib/routing";
 import { useAuth } from "@/modules/auth";
 

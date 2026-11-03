@@ -3,7 +3,7 @@ import type { Authority } from "@/lib/supabase/authority";
 
 const A = "11111111-1111-4111-8111-111111111111", S = "22222222-2222-4222-8222-222222222222", U = "33333333-3333-4333-8333-333333333333", K = "44444444-4444-4444-8444-444444444444";
 const state = vi.hoisted(() => ({ allowed: true, calls: [] as { name: string; args: Record<string, unknown> }[], error: null as { message: string } | null, pages: [] as unknown[][] }));
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/membership", () => ({ academyMember: async () => state.allowed ? { db: { rpc: async (name: string, args: Record<string, unknown>) => {
   state.calls.push({ name, args });
   return { error: state.error, data: name === "save_session_content" ? { outcome: "saved", revision: 3, replayed: true } : name === "session_content_options" ? state.pages.shift() ?? [] : { revision: 0, items: [], lockReason: null, history: [] } };

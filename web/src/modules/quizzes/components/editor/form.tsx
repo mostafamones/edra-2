@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import { IconLock } from "@tabler/icons-react";
+import { IconLock } from "@/components/shared/icons";
 
 import { AudienceFields } from "@/components/shared/assessment/audience";
 import { ImagesProvider } from "@/components/shared/assessment/images/context";

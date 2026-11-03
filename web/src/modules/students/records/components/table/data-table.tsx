@@ -1,5 +1,3 @@
-"use client";
-
 import { memo, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { flexRender, type Column, type Row, type Table as TanstackTable } from "@tanstack/react-table";
 import { cn } from "cn";

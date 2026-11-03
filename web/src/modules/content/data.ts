@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 import { z } from "zod";
 import { cookieAuthority } from "@/lib/supabase/authority";
 import { fetchAllPages } from "@/lib/supabase/paginate";

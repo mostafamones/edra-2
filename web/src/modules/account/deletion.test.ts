@@ -2,8 +2,8 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ authority: vi.fn(), membership: vi.fn(), list: vi.fn(), remove: vi.fn(), rpc: vi.fn(), signOut: vi.fn() }));
 vi.mock("../../lib/supabase/authority", () => ({ cookieAuthority: mocks.authority }));
-vi.mock("./image", () => ({ encodeAvatar: vi.fn() }));
-import { deleteAccount } from "./actions";
+vi.mock("./image.server", () => ({ encodeAvatar: vi.fn() }));
+import { deleteAccount } from "./actions.server";
 
 beforeEach(() => {
   vi.clearAllMocks();

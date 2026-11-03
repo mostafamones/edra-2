@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { throughTransport } from "../../transport.test-support";
 
 const ACADEMY = "11111111-1111-4111-8111-111111111111";
 const EXAM = "22222222-2222-4222-8222-222222222222";
@@ -19,7 +20,7 @@ const state = vi.hoisted(() => ({
   signed: [] as string[],
 }));
 
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({
   cookieAuthority: async () => state.signedIn ? {
     userId: "student-1",
@@ -112,6 +113,7 @@ describe("student exam review boundary", () => {
         ],
       },
     });
+    expect(await throughTransport(result)).toEqual(result);
     const text = JSON.stringify(result);
     for (const leaked of ["max_score", "maxScore", "score", "is_correct", "isCorrect"]) expect(text).not.toContain(leaked);
   });

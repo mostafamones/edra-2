@@ -34,7 +34,7 @@ Worker monitoring: `edra_private.exam_deadline_runs` (counts, failures, largest 
 
 `server.ts` exports the domain operations (`data.ts`) and the v1 builders (`v1.ts`); `actions.ts` exposes cookie web actions; `queries.ts` holds browser reads. Routes: `/app/exams` (redirects to the shared staff list, `/app/assessments?type=exam`; see the [assessments module](../assessments/README.md)), `/app/exams/new`, `/app/exams/<id>`, `/app/exams/<id>/edit`, and the bearer reads `GET /api/v1/academies/{academyId}/exams`, `/api/v1/exams/{examId}`, `/api/v1/exams/{examId}/students`. Staff commands are web actions only.
 
-Student code lives in `student/` (cookie web boundary only; no bearer API): `server.ts` exports `listMyExams`, `getMyExamOverview`, `getMyExamReview`, `enterMyExam` and the `StudentExamList` / `StudentExamOverviewPage` server components; `index.ts` exports the `enterStudentExam` server action, the route loading/error states, the entry integration types and the student DTO types. Student routes are `/<slug>/exams` and `/<slug>/exams/<examId>` on the student host.
+Student code lives in `student/` (cookie web boundary only; no bearer API): the module-root `server.ts` exports `listMyExams`, `getMyExamOverview`, `getMyExamReview`, `enterMyExam`; the module-root `index.ts` exports the `enterStudentExam` web command, the route loading/error states, the entry integration types and the student DTO types. Student routes are `/<slug>/exams` and `/<slug>/exams/<examId>` on the student host.
 
 Exact decimal helpers live in `src/lib/score.ts` and academy-time helpers in `src/lib/academy-time.ts`.
 
@@ -142,3 +142,5 @@ Current status (EDRA-236): `20261020132535_student_exam_review.sql` is now recor
 [Standalone student exam release verification](../../../docs/technical/student-exam-release.md) records the tested source, cloud target, catalog/type/worker/Storage evidence, the connected browser matrix, fixtures and the remaining release conditions.
 
 Two client fixes came out of it. The tab records which account owns its sessionStorage editor tokens (`edra:exam-editor-account`), so a reload by the same account keeps them for recovery; sign-out or another account still clears them. `onExamAccountChange` listeners receive the new account, and the review ignores its own account, so it no longer clears itself when the AuthProvider resolves after a full page load. Hosted HTTPS deployment, non-Chromium browsers and real mobile hardware remain release gates; EDRA-83 is not complete.
+
+Pending gate: verify student exam loader and component exports after the route/domain migration.

@@ -1,8 +1,6 @@
-"use client";
-
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { IconAlertTriangle, IconArrowsMaximize, IconBug, IconLoader2 } from "@tabler/icons-react";
+import { IconAlertTriangle, IconArrowsMaximize, IconBug, IconLoader2 } from "@/components/shared/icons";
 
 import {
   AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle,

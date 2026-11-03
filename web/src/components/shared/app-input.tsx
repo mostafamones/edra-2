@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 
-import { IconCalendar, IconEye, IconEyeOff, IconMinus, IconPlus } from "@tabler/icons-react";
+import { IconCalendar, IconEye, IconEyeOff, IconMinus, IconPlus } from "@/components/shared/icons";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import * as React from "react";
@@ -350,7 +350,7 @@ export const DateInput = React.forwardRef<HTMLButtonElement, DateInputProps>(
               {...buttonProps}
               id={triggerId}
             >
-              <IconCalendar stroke={dateValue ? 2 : 1.5} className={variant === "sm" ? "size-3" : variant === "md" ? "size-3.5" : variant === "lg" ? "size-4" : "size-4.5"} />
+              <IconCalendar className={variant === "sm" ? "size-3" : variant === "md" ? "size-3.5" : variant === "lg" ? "size-4" : "size-4.5"} />
               {dateValue ? format(dateValue, "MMM d, yyyy") : placeholder}
             </Button>
           </PopoverTrigger>

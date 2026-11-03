@@ -1,4 +1,6 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
+
+import { publicEnv } from "@/lib/env/public";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { muxRequest, type MuxAsset } from "@/lib/video/mux";
@@ -7,7 +9,7 @@ import { muxRequest, type MuxAsset } from "@/lib/video/mux";
 export function mediaAdmin() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) throw new Error("Video processing is not configured. Ask a manager to check the server credentials.");
-  return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createClient<Database>(publicEnv.supabaseUrl, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 /** The caller verifies the raw provider signature before invoking this service. */
 export async function synchronizeProviderUpload(uploadId: string) {

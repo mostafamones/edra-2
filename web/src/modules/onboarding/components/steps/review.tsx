@@ -1,7 +1,6 @@
-"use client";
 import { platformOrigin } from "@/lib/routing";
 
-import { IconPencil as Pencil } from "@tabler/icons-react";
+import { IconPencil as Pencil } from "@/components/shared/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

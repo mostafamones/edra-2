@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { IconCheck, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { IconCheck, IconChevronLeft, IconChevronRight } from "@/components/shared/icons";
 
 import { ImageSourceProvider } from "@/components/shared/assessment/images/context";
 import { RichText } from "@/components/shared/assessment/images/text";
