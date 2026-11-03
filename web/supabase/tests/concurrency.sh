@@ -1298,6 +1298,44 @@ expect_ok lb3b "the repeated application failed"
 psqlx -tA -c "select count(*) from public.exam_labels where label_id = '$LABEL_A'" | grep -qx 1 || fail "a repeated application duplicated the association"
 grep -qi deadlock "$OUT"/lb1a "$OUT"/lb1b "$OUT"/lb2a "$OUT"/lb2b "$OUT"/lb3a "$OUT"/lb3b && fail "a label race deadlocked"
 
+# LB4-LB7. Student record labels: the same lock order across a bulk selection.
+LABEL_C="$(uuid)"; LABEL_D="$(uuid)"
+psqlx >/dev/null -c "$as_admin select public.create_label('$ACADEMY','$LABEL_C','Race C','red','students'); select public.create_label('$ACADEMY','$LABEL_D','Race D','blue','students');"
+LR_A="$(new_student 'Label race A' 01077770101 null)"
+LR_B="$(new_student 'Label race B' 01077770102 null)"
+student_label_uses() { psqlx -tA -c "select count(*) from public.annual_student_record_labels where label_id = '$1'"; }
+# LB4. A bulk application holds the label; an unconfirmed deletion waits, then sees both uses and changes nothing.
+hold lb4a lb4b "$as_admin select public.set_student_records_label('$ACADEMY',array['$LR_A','$LR_B']::uuid[],'$LABEL_C',true);"
+start lb4b "$as_admin select public.delete_label('$ACADEMY','$LABEL_C',false);"
+wait
+expect_ok lb4a "the bulk application holding the label failed"
+expect_ok lb4b "the deletion queued behind the bulk application failed"
+grep -q '"uses": 2' "$OUT/lb4b" || fail "a label that gained uses was deleted without confirmation: $(out lb4b)"
+[ "$(student_label_uses "$LABEL_C")" = 2 ] || fail "the unconfirmed deletion removed the new uses"
+# LB5. A deletion holds the unused label; a concurrent bulk application waits, then is rejected whole.
+hold lb5a lb5b "$as_admin select public.delete_label('$ACADEMY','$LABEL_D',false);"
+start lb5b "$as_admin select public.set_student_records_label('$ACADEMY',array['$LR_A','$LR_B']::uuid[],'$LABEL_D',true);"
+wait
+expect_ok lb5a "the deletion holding the label failed"
+expect_rejected lb5b "a bulk application crossed the deletion" label_not_found
+[ "$(student_label_uses "$LABEL_D")" = 0 ] || fail "a bulk application survived the deletion"
+# LB6. Overlapping selections in opposite orders: the command sorts its targets, so neither deadlocks.
+psqlx >/dev/null -c "delete from public.annual_student_record_labels where label_id = '$LABEL_C';"
+hold lb6a lb6b "$as_admin select public.set_student_records_label('$ACADEMY',array['$LR_A','$LR_B']::uuid[],'$LABEL_C',true);"
+start lb6b "$as_admin select public.set_student_records_label('$ACADEMY',array['$LR_B','$LR_A']::uuid[],'$LABEL_C',true);"
+wait
+expect_ok lb6a "the first bulk application failed"
+expect_ok lb6b "the overlapping bulk application failed"
+[ "$(student_label_uses "$LABEL_C")" = 2 ] || fail "overlapping applications duplicated or lost associations"
+# LB7. Two removals overlap in opposite orders.
+hold lb7a lb7b "$as_admin select public.set_student_records_label('$ACADEMY',array['$LR_B','$LR_A']::uuid[],'$LABEL_C',false);"
+start lb7b "$as_admin select public.set_student_records_label('$ACADEMY',array['$LR_A','$LR_B']::uuid[],'$LABEL_C',false);"
+wait
+expect_ok lb7a "the first bulk removal failed"
+expect_ok lb7b "the overlapping bulk removal failed"
+[ "$(student_label_uses "$LABEL_C")" = 0 ] || fail "overlapping removals left associations"
+grep -qi deadlock "$OUT"/lb4a "$OUT"/lb4b "$OUT"/lb5a "$OUT"/lb5b "$OUT"/lb6a "$OUT"/lb6b "$OUT"/lb7a "$OUT"/lb7b && fail "a student label race deadlocked"
+
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
 #     neither deadlocks. After the commit the worker finds a closed year and the command is refused.

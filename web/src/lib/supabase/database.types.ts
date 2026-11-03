@@ -491,6 +491,45 @@ export type Database = {
           },
         ]
       }
+      annual_student_record_labels: {
+        Row: {
+          academy_id: string
+          annual_student_record_id: string
+          created_at: string
+          domain: string
+          label_id: string
+        }
+        Insert: {
+          academy_id: string
+          annual_student_record_id: string
+          created_at?: string
+          domain?: string
+          label_id: string
+        }
+        Update: {
+          academy_id?: string
+          annual_student_record_id?: string
+          created_at?: string
+          domain?: string
+          label_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annual_student_record_labels_label_fkey"
+            columns: ["academy_id", "domain", "label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["academy_id", "domain", "id"]
+          },
+          {
+            foreignKeyName: "annual_student_record_labels_record_fkey"
+            columns: ["academy_id", "annual_student_record_id"]
+            isOneToOne: false
+            referencedRelation: "annual_student_records"
+            referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
       annual_student_records: {
         Row: {
           academic_year_id: string
@@ -8435,6 +8474,7 @@ export type Database = {
           p_academic_year_id: string
           p_academy_id: string
           p_group: string
+          p_label_ids?: string[]
           p_level_id: string
           p_page_index: number
           p_page_size: number
@@ -8443,6 +8483,7 @@ export type Database = {
           p_sorts: Json
           p_status: string
           p_track: string
+          p_unlabeled?: boolean
         }
         Returns: Json
       }
@@ -9114,6 +9155,15 @@ export type Database = {
           p_records: Json
         }
         Returns: Json
+      }
+      set_student_records_label: {
+        Args: {
+          p_academy_id: string
+          p_applied: boolean
+          p_label_id: string
+          p_record_ids: string[]
+        }
+        Returns: number
       }
       settle_login_phone_change: {
         Args: { p_end: boolean; p_operation_id: string; p_user_id: string }
