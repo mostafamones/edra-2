@@ -1,9 +1,8 @@
-"use client";
 
 import { Fragment, useState } from "react";
 import { Controller, useFormContext, useWatch, type FieldValues } from "react-hook-form";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronUp, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronUp, IconPlus, IconTrash } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

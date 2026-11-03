@@ -1,8 +1,7 @@
-"use client";
 
 import { useState, type ReactNode } from "react";
-import Link from "next/link";
-import { IconAlertCircle, IconDots, IconPencil } from "@tabler/icons-react";
+import Link from "@/components/shared/link";
+import { IconAlertCircle, IconDots, IconPencil } from "@/components/shared/icons";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

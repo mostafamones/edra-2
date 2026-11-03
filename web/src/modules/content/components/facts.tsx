@@ -1,5 +1,3 @@
-"use client";
-
 import { useRef, useState } from "react";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 

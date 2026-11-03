@@ -1,5 +1,3 @@
-"use client";
-
 import { useMemo, type ReactNode } from "react";
 import { Controller, useWatch, type UseFormReturn } from "react-hook-form";
 

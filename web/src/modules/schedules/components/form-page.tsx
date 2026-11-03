@@ -1,8 +1,7 @@
-"use client";
 import { useCanonicalHref } from "@/modules/navigation";
 
 import { useCallback, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/navigation";
 
 import { DiscardDialog } from "./discard-dialog";
 import { ScheduleForm, type FormStatus } from "./schedule-form";

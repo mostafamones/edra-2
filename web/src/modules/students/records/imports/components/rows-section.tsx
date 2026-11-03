@@ -1,10 +1,8 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   IconAlertCircle, IconAlertTriangle, IconCircleCheck, IconListDetails, IconPencil, IconSearch, IconSearchOff, IconTrash,
-} from "@tabler/icons-react";
+} from "@/components/shared/icons";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

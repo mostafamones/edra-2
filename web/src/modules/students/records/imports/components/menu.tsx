@@ -1,9 +1,8 @@
-"use client";
 import { useCanonicalHref } from "@/modules/navigation";
 
 import { useState } from "react";
-import Link from "next/link";
-import { IconDatabaseImport, IconList } from "@tabler/icons-react";
+import Link from "@/components/shared/link";
+import { IconDatabaseImport, IconList } from "@/components/shared/icons";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {

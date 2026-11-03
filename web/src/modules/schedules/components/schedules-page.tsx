@@ -1,10 +1,9 @@
-"use client";
 import { useCanonicalHref } from "@/modules/navigation";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { useQuery } from "@tanstack/react-query";
-import { IconAlertCircle as AlertCircle, IconCalendarClock as CalendarClock, IconChevronDown as ChevronDown, IconPlus as Plus, IconSearchOff as SearchX } from "@tabler/icons-react";
+import { IconAlertCircle as AlertCircle, IconCalendarClock as CalendarClock, IconChevronDown as ChevronDown, IconPlus as Plus, IconSearchOff as SearchX } from "@/components/shared/icons";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

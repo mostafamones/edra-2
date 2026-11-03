@@ -1,8 +1,6 @@
-"use client";
-
 import { motion, useReducedMotion } from "framer-motion";
 
-import { IconCheck } from "@tabler/icons-react";
+import { IconCheck } from "@/components/shared/icons";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";

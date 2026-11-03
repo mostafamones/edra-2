@@ -1,4 +1,3 @@
-"use client";
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, RefreshIcon } from "@hugeicons/core-free-icons";

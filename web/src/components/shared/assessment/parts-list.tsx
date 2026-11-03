@@ -1,8 +1,7 @@
-"use client";
 
 import { useFieldArray, useFormContext, useWatch, type FieldValues } from "react-hook-form";
 import { toast } from "sonner";
-import { IconArrowDown, IconArrowUp, IconChevronRight, IconCopy, IconDots, IconTrash, type Icon } from "@tabler/icons-react";
+import { IconArrowDown, IconArrowUp, IconChevronRight, IconCopy, IconDots, IconTrash, type Icon } from "@/components/shared/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+vi.mock('@/lib/env/public', () => ({ publicEnv: {
+  get marketingOrigin() { return process.env.VITE_EDRA_MARKETING_ORIGIN },
+  get appOrigin() { return process.env.VITE_EDRA_APP_ORIGIN },
+  get learnOrigin() { return process.env.VITE_EDRA_LEARN_ORIGIN },
+} }));
 import { classifyHost, describeRoute, internalStaffPath, internalStudentPath, platformOrigins, publicHref, safeRelativePath, staffAcademyHref, validateReturnDestination } from "./index";
 
 afterEach(() => vi.unstubAllEnvs());
 function local() {
   vi.stubEnv("NODE_ENV", "development");
-  for (const key of ["EDRA_DEV_TUNNEL_HOST", "EDRA_APP_ORIGIN", "EDRA_LEARN_ORIGIN", "EDRA_MARKETING_ORIGIN", "NEXT_PUBLIC_EDRA_APP_ORIGIN", "NEXT_PUBLIC_EDRA_LEARN_ORIGIN", "NEXT_PUBLIC_EDRA_MARKETING_ORIGIN"]) vi.stubEnv(key, "");
+  for (const key of ["EDRA_DEV_TUNNEL_HOST", "EDRA_APP_ORIGIN", "EDRA_LEARN_ORIGIN", "EDRA_MARKETING_ORIGIN", "VITE_EDRA_APP_ORIGIN", "VITE_EDRA_LEARN_ORIGIN", "VITE_EDRA_MARKETING_ORIGIN"]) vi.stubEnv(key, "");
 }
 describe("trusted platform routes", () => {
   it("classifies exact hosts including ports without substring or suffix trust", () => {
@@ -31,9 +36,9 @@ describe("trusted platform routes", () => {
   });
   it("ignores a populated development tunnel in production", () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("EDRA_MARKETING_ORIGIN", "https://edra.example"); vi.stubEnv("NEXT_PUBLIC_EDRA_MARKETING_ORIGIN", "https://edra.example");
-    vi.stubEnv("EDRA_APP_ORIGIN", "https://app.edra.example"); vi.stubEnv("NEXT_PUBLIC_EDRA_APP_ORIGIN", "https://app.edra.example");
-    vi.stubEnv("EDRA_LEARN_ORIGIN", "https://learn.edra.example"); vi.stubEnv("NEXT_PUBLIC_EDRA_LEARN_ORIGIN", "https://learn.edra.example");
+    vi.stubEnv("EDRA_MARKETING_ORIGIN", "https://edra.example"); vi.stubEnv("VITE_EDRA_MARKETING_ORIGIN", "https://edra.example");
+    vi.stubEnv("EDRA_APP_ORIGIN", "https://app.edra.example"); vi.stubEnv("VITE_EDRA_APP_ORIGIN", "https://app.edra.example");
+    vi.stubEnv("EDRA_LEARN_ORIGIN", "https://learn.edra.example"); vi.stubEnv("VITE_EDRA_LEARN_ORIGIN", "https://learn.edra.example");
     vi.stubEnv("EDRA_DEV_TUNNEL_HOST", "tunnel.example.net:3000");
     expect(classifyHost("app.edra.example")).toBe("staff");
     expect(classifyHost("tunnel.example.net:3000")).toBeNull();
@@ -61,9 +66,9 @@ describe("trusted platform routes", () => {
     expect(() => staffAcademyHref("profile")).toThrow();
   });
   it("rejects conflicting browser/server configuration and duplicate platforms", () => {
-    local(); vi.stubEnv("EDRA_APP_ORIGIN", "http://app.lvh.me:3000"); vi.stubEnv("NEXT_PUBLIC_EDRA_APP_ORIGIN", "http://wrong.lvh.me:3000");
+    local(); vi.stubEnv("EDRA_APP_ORIGIN", "http://app.lvh.me:3000"); vi.stubEnv("VITE_EDRA_APP_ORIGIN", "http://wrong.lvh.me:3000");
     expect(() => platformOrigins()).toThrow(/must match/);
-    vi.stubEnv("NEXT_PUBLIC_EDRA_APP_ORIGIN", "http://app.lvh.me:3000"); vi.stubEnv("EDRA_LEARN_ORIGIN", "http://app.lvh.me:3000");
+    vi.stubEnv("VITE_EDRA_APP_ORIGIN", "http://app.lvh.me:3000"); vi.stubEnv("EDRA_LEARN_ORIGIN", "http://app.lvh.me:3000");
     expect(() => platformOrigins()).toThrow(/distinct/);
   });
   it("requires explicit production origins and HTTPS", () => {

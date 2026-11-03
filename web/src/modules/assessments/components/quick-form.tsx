@@ -1,7 +1,5 @@
-"use client";
-
 import { useEffect, useState, type MouseEvent } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { Controller, FormProvider, useForm, type Path } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";

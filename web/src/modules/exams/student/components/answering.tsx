@@ -1,8 +1,6 @@
-"use client";
-
 import { useCallback, useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { IconAlertCircle, IconChevronLeft, IconChevronRight, IconFlag, IconFlagFilled, IconInfoCircle, IconLoader2, IconSend } from "@tabler/icons-react";
+import { IconAlertCircle, IconChevronLeft, IconChevronRight, IconFlag, IconFlagFilled, IconInfoCircle, IconLoader2, IconSend } from "@/components/shared/icons";
 
 import { ImageSourceProvider } from "@/components/shared/assessment/images/context";
 import { Alert, AlertTitle } from "@/components/ui/alert";

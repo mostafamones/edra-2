@@ -1,4 +1,5 @@
-import type { NextResponse } from "next/server";
+import "@tanstack/react-start/server-only";
+
 
 // Server-only. The pending invitation is untrusted input: it only names a token for the join screen,
 // which the database re-checks on every preview and acceptance.
@@ -14,6 +15,6 @@ export const pendingStaffInviteCookie = {
   maxAge: 60 * 60 * 24 * 7,
 } as const;
 
-export function clearPendingStaffInvite(response: NextResponse) {
+export function clearPendingStaffInvite(response: { cookies: { set(name: string, value: string, options: typeof pendingStaffInviteCookie): unknown } }) {
   response.cookies.set(PENDING_STAFF_INVITE_COOKIE, "", { ...pendingStaffInviteCookie, maxAge: 0 });
 }

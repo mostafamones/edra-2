@@ -1,7 +1,6 @@
-"use client";
 
 import type { ReactNode } from "react";
-import { IconAlertTriangle, IconChevronRight, IconCircleCheck, IconPencil } from "@tabler/icons-react";
+import { IconAlertTriangle, IconChevronRight, IconCircleCheck, IconPencil } from "@/components/shared/icons";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

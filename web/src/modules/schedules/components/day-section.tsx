@@ -1,7 +1,5 @@
-"use client";
-
 import type { ReactNode } from "react";
-import { IconChevronDown } from "@tabler/icons-react";
+import { IconChevronDown } from "@/components/shared/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";

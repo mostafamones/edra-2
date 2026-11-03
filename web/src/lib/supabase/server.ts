@@ -1,5 +1,6 @@
+import { publicEnv } from "@/lib/env/public";
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies } from '@/lib/server/request'
 
 import { failureFetch } from '@/modules/development/failures/inject'
 
@@ -17,8 +18,8 @@ export async function createClient() {
   const simulated = await failureFetch(cookieStore)
 
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    publicEnv.supabaseUrl!,
+    publicEnv.supabasePublishableKey!,
     {
       cookieOptions: authCookieOptions(),
       ...(simulated && { global: { fetch: simulated } }),

@@ -1,5 +1,3 @@
-"use client";
-
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, Rotate01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
@@ -116,12 +114,17 @@ function Body({ academyId, academicYearId, records, groups, onClose, onDone, onR
     const groupName = destination === null ? null : data.destination?.name ?? null;
     const listsKey = [...studentsRootKey(targetAcademyId), "list"];
     await queryClient.cancelQueries({ queryKey: listsKey });
-    const snapshots = queryClient.getQueriesData<StudentListResult>({ queryKey: listsKey });
+    const snapshots = queryClient.getQueriesData<StudentListResult>({ queryKey: listsKey })
+      .map(([key, value]) => ({ key, value, query: queryClient.getQueryCache().find({ queryKey: key, exact: true }) }));
     queryClient.setQueriesData<StudentListResult>({ queryKey: listsKey }, (list) => list && {
       ...list,
       rows: list.rows.map((row) => ids.has(row.id) ? { ...row, primaryGroupId: destination, groupName } : row),
     });
-    const restore = () => { for (const [key, value] of snapshots) queryClient.setQueryData(key, value); };
+    const restore = () => {
+      for (const { key, value, query } of snapshots) {
+        if (query && queryClient.getQueryCache().find({ queryKey: key, exact: true }) === query) queryClient.setQueryData(key, value);
+      }
+    };
     setSavingState(true);
     onDone([...ids]);
     onClose();

@@ -1,8 +1,6 @@
-"use client";
-
 import {
   IconArchive, IconClock, IconDotsVertical, IconEdit, IconGitBranch, IconMapPin, IconSchool, IconUsersGroup,
-} from "@tabler/icons-react";
+} from "@/components/shared/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

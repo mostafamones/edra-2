@@ -1,4 +1,5 @@
-import "server-only";
+import { publicEnv } from "@/lib/env/public";
+import "@tanstack/react-start/server-only";
 
 import { createClient as createTokenClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -30,7 +31,7 @@ export async function cookieAuthority(): Promise<Authority | null> {
  * accepts the project publishable key as authentication.
  */
 export async function bearerAuthority(token: string): Promise<Authority | null> {
-  const db = createTokenClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+  const db = createTokenClient<Database>(publicEnv.supabaseUrl!, publicEnv.supabasePublishableKey!, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     global: { headers: { Authorization: `Bearer ${token}` } },
   });

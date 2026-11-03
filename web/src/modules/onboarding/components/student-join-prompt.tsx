@@ -1,8 +1,6 @@
-"use client";
-
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import { IconArrowRight } from "@tabler/icons-react";
+import { useRouter } from "@/lib/navigation";
+import { IconArrowRight } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/shared/app-input";

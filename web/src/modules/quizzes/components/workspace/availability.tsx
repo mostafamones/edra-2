@@ -1,9 +1,7 @@
-"use client";
-
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconAlertCircle, IconCalendarClock, IconLoader2 } from "@tabler/icons-react";
+import { IconAlertCircle, IconCalendarClock, IconLoader2 } from "@/components/shared/icons";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

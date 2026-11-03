@@ -1,7 +1,5 @@
-"use client";
-
 import { useRef } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { BellIcon, Logout01Icon, Settings01Icon } from "@hugeicons/core-free-icons";
 

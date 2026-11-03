@@ -1,6 +1,4 @@
-"use client";
-
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash } from "@/components/shared/icons";
 import { newUuid } from "@/lib/uuid";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";

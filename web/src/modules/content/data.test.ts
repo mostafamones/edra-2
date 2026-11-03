@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({ authority: vi.fn(), from: vi.fn(), membership: vi.fn(), range: vi.fn() }));
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({ cookieAuthority: api.authority }));
 vi.mock("@/modules/academies/structure", () => ({ readOfferingTrackLabels: vi.fn() }));
 import { readReuseSources } from "./data";

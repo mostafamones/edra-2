@@ -1,4 +1,3 @@
-"use client";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, CheckmarkCircle02Icon, Clock01Icon, Edit02Icon } from "@hugeicons/core-free-icons";

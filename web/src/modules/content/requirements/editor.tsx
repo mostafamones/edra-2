@@ -1,5 +1,3 @@
-"use client";
-
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";

@@ -1,0 +1,52 @@
+import { afterEach, expect, it, vi } from 'vitest'
+import { notFound, redirect } from '@tanstack/react-router'
+const routing = vi.hoisted(() => ({ navigate: vi.fn(), location: { href: '/' } }))
+vi.mock('@tanstack/react-start', async original => ({ ...await original<typeof import('@tanstack/react-start')>(), getRouterInstance: () => ({ resolveRedirect: <T,>(value: T) => value, stores: { location: { get: () => routing.location } }, navigate: routing.navigate }) }))
+import { navigateFunctionRedirect, redactFunctionError } from './start'
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(); routing.navigate.mockReset() })
+it('redacts production errors completely while passing route control signals', async () => {
+  vi.stubEnv('NODE_ENV', 'production'); vi.spyOn(console, 'error').mockImplementation(() => {})
+  const source = Object.assign(new Error('private database detail', { cause: 'secret' }), { detail: 'private' })
+  const error = await redactFunctionError(async () => { throw source }).catch(e => e)
+  expect(error.message).toBe('Internal Server Error'); expect(error.cause).toBeUndefined(); expect(error.detail).toBeUndefined(); expect(error.stack).not.toContain('private database detail')
+  const dest = redirect({ href: '/target' }); const missing = notFound()
+  await expect(redactFunctionError(async () => { throw dest })).rejects.toBe(dest)
+  await expect(redactFunctionError(async () => { throw missing })).rejects.toBe(missing)
+  vi.stubEnv('NODE_ENV', 'development'); await expect(redactFunctionError(async () => { throw source })).rejects.toBe(source)
+})
+it('navigates browser actions once and rejects so their finally blocks run', async () => {
+  vi.stubGlobal('window', { location: { href: 'https://app.test/current', origin: 'https://app.test', assign: vi.fn(), replace: vi.fn() } })
+  routing.navigate.mockResolvedValue(undefined)
+  const settled = vi.fn()
+  const internal = redirect({ href: '/target' })
+  await expect(navigateFunctionRedirect(async () => { throw internal }).finally(settled)).rejects.toBe(internal)
+  const external = redirect({ href: 'https://outside.test/' })
+  await expect(navigateFunctionRedirect(async () => { throw external }).finally(settled)).rejects.toBe(external)
+  expect(settled).toHaveBeenCalledTimes(2)
+  expect(window.location.assign).toHaveBeenCalledWith('https://outside.test/'); expect(routing.navigate).toHaveBeenCalledTimes(1)
+})
+it('leaves GET loader redirects to the Router without initiating another navigation', async () => {
+  vi.stubGlobal('window', { location: { href: 'https://app.test/current', origin: 'https://app.test' } })
+  const destination = redirect({ href: '/auth/login' })
+  await expect(navigateFunctionRedirect(async () => { throw destination }, 'GET')).rejects.toBe(destination)
+  expect(routing.navigate).not.toHaveBeenCalled()
+})
+it('releases the caller when a redirect navigation fails', async () => {
+  vi.stubGlobal('window', { location: { href: 'https://app.test/current', origin: 'https://app.test' } })
+  const failure = new Error('navigation failed')
+  routing.navigate.mockRejectedValue(failure)
+  const settled = vi.fn()
+  await expect(navigateFunctionRedirect(async () => { throw redirect({ href: '/target' }) }).finally(settled)).rejects.toBe(failure)
+  expect(settled).toHaveBeenCalledTimes(1)
+})
+it('keeps an SSR redirect available to Start', async () => {
+  const destination = redirect({ href: '/target' })
+  await expect(navigateFunctionRedirect(async () => { throw destination })).rejects.toBe(destination)
+})
+it('sends legacy action redirects to the gateway without losing path or query', async () => {
+  const assign = vi.fn()
+  vi.stubGlobal('window', { location: { href: 'https://app.test/current', origin: 'https://app.test', assign } })
+  const destination = redirect({ href: '/app/students?q=1' })
+  await expect(navigateFunctionRedirect(async () => { throw destination })).rejects.toBe(destination)
+  expect(assign).toHaveBeenCalledWith('/app/students?q=1'); expect(routing.navigate).not.toHaveBeenCalled()
+})

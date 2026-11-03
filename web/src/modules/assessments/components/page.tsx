@@ -1,5 +1,3 @@
-"use client";
-
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";

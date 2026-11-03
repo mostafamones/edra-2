@@ -1,6 +1,4 @@
-"use client";
-
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 

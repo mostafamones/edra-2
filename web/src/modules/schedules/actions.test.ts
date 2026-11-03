@@ -8,8 +8,7 @@ const state = vi.hoisted(() => ({
   schedule: { kind: "recurring", archived_at: null as string | null, created_by: "u" },
   writes: 0,
 }));
-vi.mock("server-only", () => ({}));
-vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({
   cookieAuthority: async () => ({
     userId: "u",
@@ -31,7 +30,7 @@ vi.mock("@/lib/supabase/authority", () => ({
   }),
 }));
 
-import { archiveSchedule } from "./actions";
+import { archiveSchedule } from "./actions.server";
 
 beforeEach(() => {
   state.role = null; state.writes = 0;

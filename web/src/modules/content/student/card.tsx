@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AssignmentsIcon, Book02Icon, CheckmarkCircle02Icon, Clock01Icon, File02Icon, LockIcon, Note01Icon, PlayIcon, SparklesIcon, Task01Icon } from "@hugeicons/core-free-icons";
 

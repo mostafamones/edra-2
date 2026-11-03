@@ -4,8 +4,7 @@ const ACADEMY = "11111111-1111-4111-8111-111111111111";
 const GROUP = "22222222-2222-4222-8222-222222222222";
 
 const state = vi.hoisted(() => ({ role: null as string | null, recovery: false, writes: [] as string[] }));
-vi.mock("server-only", () => ({}));
-vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({
   // cookieAuthority refuses recovery (phone-code) sessions.
   cookieAuthority: async () => state.recovery ? null : {
@@ -24,7 +23,8 @@ vi.mock("@/lib/supabase/authority", () => ({
   },
 }));
 
-import { archiveGroup } from "./actions";
+import { archiveGroup } from "./actions.server";
+import { throughTransport } from "../transport.test-support";
 
 beforeEach(() => { state.role = null; state.recovery = false; state.writes = []; });
 
@@ -44,5 +44,14 @@ describe("group management authority", () => {
     state.role = "owner"; state.recovery = true;
     expect((await archiveGroup(ACADEMY, GROUP)).ok).toBe(false);
     expect(state.writes).toEqual([]);
+  });
+
+  it("transports the real success and forbidden results", async () => {
+    state.role = "owner";
+    const success = await archiveGroup(ACADEMY, GROUP);
+    state.role = "instructor";
+    const failure = await archiveGroup(ACADEMY, GROUP);
+    expect(await throughTransport(success)).toEqual(success);
+    expect(await throughTransport(failure)).toEqual(failure);
   });
 });

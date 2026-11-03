@@ -1,7 +1,6 @@
-"use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/lib/navigation";
 
 type Parent = { label: string; href: string };
 const Context = createContext<{ title: string | null; parent: Parent | null; publish: (title: string, path: string, parent?: Parent) => () => void }>({ title: null, parent: null, publish: () => () => {} });

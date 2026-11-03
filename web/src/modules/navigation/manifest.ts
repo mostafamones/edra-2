@@ -1,4 +1,4 @@
-import { IconChartBar as BarChart3, IconBell as Bell, IconBook as BookOpen, IconBuilding as Building2, IconCalendar as CalendarDays, IconCalendarClock as CalendarClock, IconClipboardCheck as ClipboardCheck, IconClipboardList as ClipboardList, IconFilePencil as FilePenLine, IconFileText as FileText, IconSchool as GraduationCap, IconHome as House, IconId as IdCard, IconUserPlus as UserPlus, IconBooks as Library, IconListCheck as ListChecks, IconMessageCircle as MessageCircle, IconSitemap as Network, IconPlug as Plug, IconZoomCheck as SearchCheck, IconSettings as Settings, IconTicket as Ticket, IconUserCog as UserCog, IconUser as UserRound, IconUsers as Users, IconUsersGroup as UsersRound, type Icon as TablerIcon } from "@tabler/icons-react";
+import { IconChartBar as BarChart3, IconBell as Bell, IconBook as BookOpen, IconBuilding as Building2, IconCalendar as CalendarDays, IconCalendarClock as CalendarClock, IconClipboardCheck as ClipboardCheck, IconClipboardList as ClipboardList, IconFilePencil as FilePenLine, IconFileText as FileText, IconSchool as GraduationCap, IconHome as House, IconId as IdCard, IconUserPlus as UserPlus, IconBooks as Library, IconListCheck as ListChecks, IconMessageCircle as MessageCircle, IconSitemap as Network, IconPlug as Plug, IconZoomCheck as SearchCheck, IconSettings as Settings, IconTicket as Ticket, IconUserCog as UserCog, IconUser as UserRound, IconUsers as Users, IconUsersGroup as UsersRound, type Icon } from "@/components/shared/icons";
 
 import type { AcademyRole } from "@/modules/academies/roles";
 
@@ -30,7 +30,7 @@ export const NAV_ICONS = {
   integrations: Plug,
   account: UserRound,
   learning: GraduationCap,
-} satisfies Record<string, TablerIcon>;
+} satisfies Record<string, Icon>;
 
 export type StaffRole = AcademyRole;
 

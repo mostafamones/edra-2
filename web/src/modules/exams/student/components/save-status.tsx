@@ -1,7 +1,5 @@
-"use client";
-
 import { useEffect, useState } from "react";
-import { IconCircleCheck, IconCloudOff, IconDeviceFloppy, IconLoader2, type Icon } from "@tabler/icons-react";
+import { IconCircleCheck, IconCloudOff, IconDeviceFloppy, IconLoader2, type Icon } from "@/components/shared/icons";
 
 import { cn } from "@/lib/utils";
 

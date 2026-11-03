@@ -1,177 +1,50 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
+import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import type { Database } from "@/lib/supabase/database.types";
-import { loadGroupChangePreview, staffContext } from "./data";
-import { failure, failureFromDatabase } from "./errors";
 import {
-  canArchiveStudentRecords, canChangeStudentGroups, canCreateStudentRecord, canEditStudentContact,
-} from "./permissions";
-import type { GroupChangePreview, RecordVersion, StudentRecordField, StudentRecordResult } from "./types";
-import { studentRecordInputSchema, type StudentRecordInput } from "./validation";
+  createStudentRecord as createStudentRecordServer,
+  updateStudentRecord as updateStudentRecordServer,
+  setStudentRecordsArchived as setStudentRecordsArchivedServer,
+  previewStudentGroupChange as previewStudentGroupChangeServer,
+  setStudentRecordsGroup as setStudentRecordsGroupServer,
+} from "./actions.server";
 
-type Functions = Database["public"]["Functions"];
+const createStudentRecordFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => createStudentRecordServer(...(data.args as Parameters<typeof createStudentRecordServer>)));
 
-/**
- * Supabase's generator types every RPC argument as non-null, but track and group are nullable
- * and validated by the database.
- */
-function rpcArgs<Name extends "create_student_record" | "update_student_record">(
-  args: { [K in keyof Functions[Name]["Args"]]: Functions[Name]["Args"][K] | null },
-) {
-  return args as Functions[Name]["Args"];
+export async function createStudentRecord(...args: Parameters<typeof createStudentRecordServer>): Promise<Awaited<ReturnType<typeof createStudentRecordServer>>> {
+  return createStudentRecordFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof createStudentRecordServer>>>;
 }
 
-function parseInput(value: unknown) {
-  const parsed = studentRecordInputSchema.safeParse(value);
-  if (parsed.success) return { input: parsed.data } as const;
-  const fieldErrors: Partial<Record<StudentRecordField, string>> = {};
-  for (const issue of parsed.error.issues) {
-    const field = issue.path[0] as StudentRecordField;
-    if (typeof field === "string" && !fieldErrors[field]) fieldErrors[field] = issue.message;
-  }
-  return { failure: failure("validation", fieldErrors) } as const;
+const updateStudentRecordFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown(), z.unknown(), z.unknown()]) }))
+  .handler(({ data }) => updateStudentRecordServer(...(data.args as Parameters<typeof updateStudentRecordServer>)));
+
+export async function updateStudentRecord(...args: Parameters<typeof updateStudentRecordServer>): Promise<Awaited<ReturnType<typeof updateStudentRecordServer>>> {
+  return updateStudentRecordFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof updateStudentRecordServer>>>;
 }
 
-const fields = (input: StudentRecordInput) => ({
-  p_full_name: input.fullName,
-  p_student_phone: input.studentPhone,
-  p_parent_phone: input.parentPhone,
-  p_level_id: input.levelId,
-  p_track_id: input.trackId,
-  p_primary_group_id: input.primaryGroupId,
-  p_participation_type: input.participationType,
-});
+const setStudentRecordsArchivedFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown(), z.unknown(), z.unknown(), z.unknown()]) }))
+  .handler(({ data }) => setStudentRecordsArchivedServer(...(data.args as Parameters<typeof setStudentRecordsArchivedServer>)));
 
-export async function createStudentRecord(value: unknown): Promise<StudentRecordResult<RecordVersion>> {
-  const parsed = parseInput(value);
-  if (parsed.failure) return parsed.failure;
-  const { input } = parsed;
-  const actor = await staffContext(input.academyId);
-  if (!actor || !canCreateStudentRecord(actor.role)) return failure("forbidden");
-  try {
-    const { data, error } = await actor.db.rpc("create_student_record", rpcArgs<"create_student_record">({
-      p_academy_id: input.academyId, p_academic_year_id: input.academicYearId, ...fields(input),
-    }));
-    if (error) return failureFromDatabase(error);
-    const created = data?.[0];
-    if (!created) return failure("unavailable");
-    revalidatePath("/app/[academySlug]/students", "page");
-    return { ok: true, data: { id: created.id, version: created.version } };
-  } catch {
-    return failure("unavailable");
-  }
+export async function setStudentRecordsArchived(...args: Parameters<typeof setStudentRecordsArchivedServer>): Promise<Awaited<ReturnType<typeof setStudentRecordsArchivedServer>>> {
+  return setStudentRecordsArchivedFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof setStudentRecordsArchivedServer>>>;
 }
 
-export async function updateStudentRecord(recordId: string, expectedVersion: number, value: unknown): Promise<StudentRecordResult<RecordVersion>> {
-  if (!z.guid().safeParse(recordId).success || !Number.isInteger(expectedVersion) || expectedVersion < 1) return failure("not_found");
-  const parsed = parseInput(value);
-  if (parsed.failure) return parsed.failure;
-  const { input } = parsed;
-  const actor = await staffContext(input.academyId);
-  // Instructor placement limits are enforced by update_student_record, which compares against the stored record.
-  if (!actor || !canEditStudentContact(actor.role)) return failure("forbidden");
-  try {
-    const { data, error } = await actor.db.rpc("update_student_record", rpcArgs<"update_student_record">({
-      p_record_id: recordId, p_expected_version: expectedVersion, p_academy_id: input.academyId, ...fields(input),
-    }));
-    if (error) return failureFromDatabase(error);
-    const updated = data?.[0];
-    if (!updated) return failure("not_found");
-    revalidatePath("/app/[academySlug]/students", "page");
-    return { ok: true, data: { id: updated.id, version: updated.version } };
-  } catch {
-    return failure("unavailable");
-  }
+const previewStudentGroupChangeFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown(), z.unknown(), z.unknown().optional()]) }))
+  .handler(({ data }) => previewStudentGroupChangeServer(...(data.args as Parameters<typeof previewStudentGroupChangeServer>)));
+
+export async function previewStudentGroupChange(...args: Parameters<typeof previewStudentGroupChangeServer>): Promise<Awaited<ReturnType<typeof previewStudentGroupChangeServer>>> {
+  return previewStudentGroupChangeFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof previewStudentGroupChangeServer>>>;
 }
 
-const batchSchema = z.object({
-  academyId: z.guid(),
-  academicYearId: z.guid(),
-  records: z.array(z.object({ id: z.guid(), version: z.number().int().positive() })).min(1).max(500),
-  archived: z.boolean(),
-});
+const setStudentRecordsGroupFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown(), z.unknown(), z.unknown()]) }))
+  .handler(({ data }) => setStudentRecordsGroupServer(...(data.args as Parameters<typeof setStudentRecordsGroupServer>)));
 
-/** Archives or restores records atomically: every target must be current, or nothing changes. */
-export async function setStudentRecordsArchived(
-  academyId: string, academicYearId: string, records: RecordVersion[], archived: boolean,
-): Promise<StudentRecordResult<{ ids: string[] }>> {
-  const parsed = batchSchema.safeParse({ academyId, academicYearId, records, archived });
-  if (!parsed.success) return failure("validation");
-  const actor = await staffContext(parsed.data.academyId);
-  if (!actor || !canArchiveStudentRecords(actor.role)) return failure("forbidden");
-  try {
-    const { data, error } = await actor.db.rpc("set_student_records_archived", {
-      p_academy_id: parsed.data.academyId,
-      p_academic_year_id: parsed.data.academicYearId,
-      p_records: parsed.data.records,
-      p_archived: parsed.data.archived,
-    });
-    if (error) return failureFromDatabase(error);
-    revalidatePath("/app/[academySlug]/students", "page");
-    return { ok: true, data: { ids: data ?? [] } };
-  } catch {
-    return failure("unavailable");
-  }
-}
-
-const groupScopeSchema = z.object({
-  academyId: z.guid(),
-  academicYearId: z.guid(),
-  records: z.array(z.object({ id: z.guid(), version: z.number().int().positive() })).min(1).max(500)
-    .refine((records) => new Set(records.map((record) => record.id)).size === records.length),
-});
-
-/**
- * Fresh current → proposed placements for the selected records. The selection only holds versions,
- * so placement is always read from the database. `destination` is a group id, null for Unassigned,
- * or undefined while none is chosen.
- */
-export async function previewStudentGroupChange(
-  scope: { academyId: string; academicYearId: string }, records: RecordVersion[], destination?: string | null,
-): Promise<StudentRecordResult<GroupChangePreview>> {
-  const parsed = groupScopeSchema.safeParse({ ...scope, records });
-  if (!parsed.success || (destination != null && !z.guid().safeParse(destination).success)) return failure("validation");
-  const actor = await staffContext(parsed.data.academyId);
-  if (!actor || !canChangeStudentGroups(actor.role)) return failure("forbidden");
-  try {
-    const preview = await loadGroupChangePreview(actor, parsed.data, parsed.data.records, destination);
-    if (!preview) return failure("invalid_placement");
-    return { ok: true, data: preview };
-  } catch {
-    return failure("unavailable");
-  }
-}
-
-/**
- * Assigns the selected active records to one group, or removes their group when `primaryGroupId`
- * is null. All-or-nothing: every record must be current and, for a group, in its level (and track, for a track-specific group).
- */
-export async function setStudentRecordsGroup(
-  scope: { academyId: string; academicYearId: string }, records: RecordVersion[], primaryGroupId: string | null,
-): Promise<StudentRecordResult<{ changed: RecordVersion[]; unchanged: string[] }>> {
-  const parsed = groupScopeSchema.safeParse({ ...scope, records });
-  if (!parsed.success || (primaryGroupId !== null && !z.guid().safeParse(primaryGroupId).success)) return failure("validation");
-  const actor = await staffContext(parsed.data.academyId);
-  if (!actor || !canChangeStudentGroups(actor.role)) return failure("forbidden");
-  try {
-    const { data, error } = await actor.db.rpc("set_student_records_group", {
-      p_academy_id: parsed.data.academyId,
-      p_academic_year_id: parsed.data.academicYearId,
-      p_records: parsed.data.records,
-      // NULL removes the group; the generator types the argument as non-null.
-      p_primary_group_id: primaryGroupId as string,
-    });
-    if (error) return failureFromDatabase(error);
-    const result = z.object({
-      changed: z.array(z.object({ id: z.string(), version: z.number().int() })),
-      unchanged: z.array(z.string()),
-    }).parse(data);
-    revalidatePath("/app/[academySlug]/students", "page");
-    return { ok: true, data: result };
-  } catch {
-    return failure("unavailable");
-  }
+export async function setStudentRecordsGroup(...args: Parameters<typeof setStudentRecordsGroupServer>): Promise<Awaited<ReturnType<typeof setStudentRecordsGroupServer>>> {
+  return setStudentRecordsGroupFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof setStudentRecordsGroupServer>>>;
 }

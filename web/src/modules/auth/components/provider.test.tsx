@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Session } from "@supabase/supabase-js";
+import { advanceBrowserScope } from "@/lib/browser-scope";
 
 const harness = vi.hoisted(() => ({
   effects: [] as Array<{ run: () => void | (() => void); dependencies: unknown }>,
@@ -22,10 +23,10 @@ vi.mock("react", async (original) => ({
     return [value, (next: unknown) => { harness.state[index] = next; }];
   },
 }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/magd", useRouter: () => ({ refresh: harness.refresh }) }));
+vi.mock("@/lib/navigation", () => ({ usePathname: () => "/magd", useRouter: () => ({ refresh: harness.refresh }) }));
 vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: [], error: null, isPending: false, refetch: vi.fn() }) }));
 vi.mock("@/modules/academies", () => ({ academyQueryKeys: { forUser: (id: string) => [id] }, listUserAcademies: vi.fn() }));
-vi.mock("@/lib/query-client", () => ({ clearBrowserQueryCache: harness.clearCache }));
+vi.mock("@/lib/query-client", () => ({ clearBrowserQueryCache: () => { advanceBrowserScope(); harness.clearCache(); } }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth: {
   getSession: harness.getSession, getUser: harness.getUser,
   onAuthStateChange: (callback: typeof harness.authEvent) => {
@@ -108,6 +109,28 @@ describe("auth provider lifecycle", () => {
     expect(harness.state[4]).toBeNull();
   });
 
+  it("keeps a changing scope blocked until its own identity refresh finishes", async () => {
+    let finishFirst!: () => void;
+    let finishSecond!: () => void;
+    harness.refresh.mockReturnValueOnce(new Promise<void>(resolve => { finishFirst = resolve; }))
+      .mockReturnValueOnce(new Promise<void>(resolve => { finishSecond = resolve; }));
+    mount();
+    harness.authEvent?.("INITIAL_SESSION", session("a"));
+    harness.authEvent?.("SIGNED_IN", session("b"));
+    vi.advanceTimersByTime(0);
+    expect(harness.state[5]).toBe(true);
+    harness.authEvent?.("SIGNED_IN", session("c"));
+    vi.advanceTimersByTime(0);
+    finishFirst();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(harness.state[5]).toBe(true);
+    finishSecond();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(harness.state[5]).toBe(false);
+  });
+
   it("cancels refreshes and subscriptions when the provider unmounts", async () => {
     mount();
     harness.authEvent?.("INITIAL_SESSION", session("a"));
@@ -144,6 +167,22 @@ describe("auth provider lifecycle", () => {
     browser.dispatchEvent(new Event("focus"));
     await flush();
     expect(harness.state[0]).toEqual(session("a"));
+    expect(harness.refresh).not.toHaveBeenCalled();
+  });
+
+  it("ignores a focus check that finishes after preview recovery starts", async () => {
+    let resolveUser!: (value: unknown) => void;
+    mount();
+    harness.authEvent?.("INITIAL_SESSION", session("a"));
+    harness.getSession.mockResolvedValue({ data: { session: session("b") }, error: null });
+    harness.getUser.mockImplementation(() => new Promise((resolve) => { resolveUser = resolve; }));
+    browser.dispatchEvent(new Event("focus"));
+    await flush();
+    browser.dispatchEvent(new CustomEvent("edra-session-ended", { detail: "preview" }));
+    resolveUser({ data: { user: { id: "b" } }, error: null });
+    await flush();
+    expect(harness.state[0]).toEqual(session("a"));
+    expect(harness.state[4]).toBe("preview");
     expect(harness.refresh).not.toHaveBeenCalled();
   });
 

@@ -1,7 +1,5 @@
-"use client";
-
 import { useRef, useState } from "react";
-import { IconFileUpload, IconRefresh, IconTrash } from "@tabler/icons-react";
+import { IconFileUpload, IconRefresh, IconTrash } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -15,6 +13,7 @@ import { uploadToSignedUrl } from "../upload";
 type Editor = () => { academyId: string; assignmentId: string; token: string };
 type Props = {
   part: EditorPart; doc: EditorDocument; editor: Editor;
+  inOrder: <T>(run: () => Promise<T>) => Promise<T>; alive: React.RefObject<boolean>;
   onDocument: (doc: EditorDocument) => void; onUploading: (delta: 1 | -1) => void; onFailure: (failure: StudentAssignmentFailure) => void;
 };
 type Local = { id: string; file: File; mime: WorkFileType; progress: number; error: string | null };
@@ -25,7 +24,7 @@ const size = (bytes: number) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(
  * One Written Work part: up to 20 PDFs or photos for the whole part. Only files the server has
  * accepted count; a selected file that has not finished uploading must be retried or removed.
  */
-export function StudentAssignmentWrittenWork({ part, doc, editor, onDocument, onUploading, onFailure }: Props) {
+export function StudentAssignmentWrittenWork({ part, doc, editor, inOrder, alive, onDocument, onUploading, onFailure }: Props) {
   const [locals, setLocals] = useState<Local[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -40,29 +39,34 @@ export function StudentAssignmentWrittenWork({ part, doc, editor, onDocument, on
     update(entry.id, { progress: 0, error: null });
     try {
       const generation = doc.generation;
-      const started = await startAssignmentUpload({
+      const started = await inOrder(() => startAssignmentUpload({
         ...editor(), operation: "register", generation, key: newUuid(), partId: part.id,
         name: entry.file.name.slice(0, 250) || "Upload", mime: entry.mime, size: entry.file.size,
-      });
+      }));
+      if (!alive.current) return;
       if (!started.ok) { onFailure(started); update(entry.id, { error: started.message }); return; }
-      const sent = await uploadToSignedUrl(started.data.url, entry.file, entry.mime, (progress) => update(entry.id, { progress }));
+      const sent = await uploadToSignedUrl(started.data.url, entry.file, entry.mime, (progress) => { if (alive.current) update(entry.id, { progress }); });
+      if (!alive.current) return;
       if (!sent) {
-        await removeAssignmentFile({ ...editor(), operation: "remove", generation, key: newUuid(), fileId: started.data.fileId });
+        await inOrder(() => removeAssignmentFile({ ...editor(), operation: "remove", generation, key: newUuid(), fileId: started.data.fileId }));
+        if (!alive.current) return;
         update(entry.id, { error: "Upload failed. Check your connection and retry." });
         return;
       }
-      const finished = await finishAssignmentUpload({ ...editor(), operation: "finish", generation, key: newUuid(), fileId: started.data.fileId });
+      const finished = await inOrder(() => finishAssignmentUpload({ ...editor(), operation: "finish", generation, key: newUuid(), fileId: started.data.fileId }));
+      if (!alive.current) return;
       if (!finished.ok) {
         onFailure(finished);
         update(entry.id, { error: finished.message });
-        const read = await readAssignmentEditor({ ...editor(), operation: "read" });
+        const read = await inOrder(() => readAssignmentEditor({ ...editor(), operation: "read" }));
+        if (!alive.current) return;
         if (read.ok) onDocument(read.data);
         return;
       }
       onDocument(finished.data);
       setLocals((current) => current.filter((item) => item.id !== entry.id));
     } finally {
-      onUploading(-1);
+      if (alive.current) onUploading(-1);
     }
   }
 
@@ -82,9 +86,11 @@ export function StudentAssignmentWrittenWork({ part, doc, editor, onDocument, on
 
   async function remove(fileId: string) {
     setRemoving(fileId);
-    const result = await removeAssignmentFile({ ...editor(), operation: "remove", generation: doc.generation, key: newUuid(), fileId });
+    const result = await inOrder(() => removeAssignmentFile({ ...editor(), operation: "remove", generation: doc.generation, key: newUuid(), fileId }));
+    if (!alive.current) return;
     if (!result.ok) { onFailure(result); setError(result.message); }
-    const read = await readAssignmentEditor({ ...editor(), operation: "read" });
+    const read = await inOrder(() => readAssignmentEditor({ ...editor(), operation: "read" }));
+    if (!alive.current) return;
     if (read.ok) onDocument(read.data);
     setRemoving(null);
   }

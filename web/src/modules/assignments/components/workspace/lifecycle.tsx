@@ -1,9 +1,7 @@
-"use client";
-
 import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconArchive, IconDots, IconLock, IconLockOpen } from "@tabler/icons-react";
+import { IconArchive, IconDots, IconLock, IconLockOpen } from "@/components/shared/icons";
 
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,

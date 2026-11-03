@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { AUTH_COOKIE_NAME, isLegacyAuthCookie } from "@/lib/supabase/cookie-policy";
 import { bearerAuthority, type Authority } from "@/lib/supabase/authority";

@@ -1,6 +1,5 @@
-"use client";
 import { useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, File01Icon, PlayIcon, SquareLock01Icon } from "@hugeicons/core-free-icons";

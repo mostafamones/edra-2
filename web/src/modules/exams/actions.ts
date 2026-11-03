@@ -1,69 +1,95 @@
-"use server";
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 
 import {
-  announceResults, archiveExam, configureAvailability, confirmPhysical, correctKey, createExam, excludeQuestion, saveMarks,
-  savePhysicalDraft, updateExam,
-} from "./data";
-import { failure } from "./errors";
-import type { AnnounceResult, ExamDraft, ExamResult, StudentWorkResult } from "./types";
+  createNewExam as createNewExamServer,
+  saveExam as saveExamServer,
+  setExamAvailability as setExamAvailabilityServer,
+  archiveExistingExam as archiveExistingExamServer,
+  correctExamKey as correctExamKeyServer,
+  excludeExamQuestion as excludeExamQuestionServer,
+  savePhysicalAnswers as savePhysicalAnswersServer,
+  confirmPhysicalWork as confirmPhysicalWorkServer,
+  saveExamMarks as saveExamMarksServer,
+  announceExamResults as announceExamResultsServer,
+} from "./actions.server";
 
-/** Staff web actions. They run the same domain operations as the external API with the cookie session. */
+const createNewExamFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => createNewExamServer(data.value as Parameters<typeof createNewExamServer>[0]));
 
-const invalid = (value: unknown) => !value || typeof value !== "object";
-
-export async function createNewExam(value: { academyId: string; academicYearId: string; examId: string; draft: ExamDraft }): Promise<ExamResult> {
-  return invalid(value) ? failure("validation") : createExam(value);
+export async function createNewExam(value: Parameters<typeof createNewExamServer>[0]): ReturnType<typeof createNewExamServer> {
+  return createNewExamFn({ data: { value } }) as ReturnType<typeof createNewExamServer>;
 }
 
-export async function saveExam(value: { academyId: string; examId: string; expectedVersion: number; draft: ExamDraft; availability?: { opensAt: string | null; closesAt: string | null } }): Promise<ExamResult> {
-  return invalid(value) ? failure("validation") : updateExam(value);
+const saveExamFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => saveExamServer(data.value as Parameters<typeof saveExamServer>[0]));
+
+export async function saveExam(value: Parameters<typeof saveExamServer>[0]): ReturnType<typeof saveExamServer> {
+  return saveExamFn({ data: { value } }) as ReturnType<typeof saveExamServer>;
 }
 
-/** Owner/Head Admin/Admin. Times are UTC instants; null clears an unopened window. */
-export async function setExamAvailability(
-  value: { academyId: string; examId: string; expectedVersion: number; opensAt: string | null; closesAt: string | null },
-): Promise<ExamResult> {
-  return invalid(value) ? failure("validation") : configureAvailability(value);
+const setExamAvailabilityFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => setExamAvailabilityServer(data.value as Parameters<typeof setExamAvailabilityServer>[0]));
+
+export async function setExamAvailability(value: Parameters<typeof setExamAvailabilityServer>[0]): ReturnType<typeof setExamAvailabilityServer> {
+  return setExamAvailabilityFn({ data: { value } }) as ReturnType<typeof setExamAvailabilityServer>;
 }
 
-export async function archiveExistingExam(value: { academyId: string; examId: string; expectedVersion: number }): Promise<ExamResult> {
-  return invalid(value) ? failure("validation") : archiveExam(value);
+const archiveExistingExamFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => archiveExistingExamServer(data.value as Parameters<typeof archiveExistingExamServer>[0]));
+
+export async function archiveExistingExam(value: Parameters<typeof archiveExistingExamServer>[0]): ReturnType<typeof archiveExistingExamServer> {
+  return archiveExistingExamFn({ data: { value } }) as ReturnType<typeof archiveExistingExamServer>;
 }
 
-export async function correctExamKey(
-  value: { academyId: string; examId: string; questionId: string; choiceId: string; expectedScoringRevision: number; key: string },
-): Promise<ExamResult> {
-  return invalid(value) ? failure("validation") : correctKey(value);
+const correctExamKeyFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => correctExamKeyServer(data.value as Parameters<typeof correctExamKeyServer>[0]));
+
+export async function correctExamKey(value: Parameters<typeof correctExamKeyServer>[0]): ReturnType<typeof correctExamKeyServer> {
+  return correctExamKeyFn({ data: { value } }) as ReturnType<typeof correctExamKeyServer>;
 }
 
-export async function excludeExamQuestion(
-  value: { academyId: string; examId: string; questionId: string; expectedScoringRevision: number; key: string },
-): Promise<ExamResult> {
-  return invalid(value) ? failure("validation") : excludeQuestion(value);
+const excludeExamQuestionFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => excludeExamQuestionServer(data.value as Parameters<typeof excludeExamQuestionServer>[0]));
+
+export async function excludeExamQuestion(value: Parameters<typeof excludeExamQuestionServer>[0]): ReturnType<typeof excludeExamQuestionServer> {
+  return excludeExamQuestionFn({ data: { value } }) as ReturnType<typeof excludeExamQuestionServer>;
 }
 
-export async function savePhysicalAnswers(
-  value: { academyId: string; examId: string; recordId: string; expectedVersion: number; answers: { questionId: string; choiceId: string | null }[]; key: string },
-): Promise<StudentWorkResult> {
-  return invalid(value) ? failure("validation") : savePhysicalDraft(value);
+const savePhysicalAnswersFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => savePhysicalAnswersServer(data.value as Parameters<typeof savePhysicalAnswersServer>[0]));
+
+export async function savePhysicalAnswers(value: Parameters<typeof savePhysicalAnswersServer>[0]): ReturnType<typeof savePhysicalAnswersServer> {
+  return savePhysicalAnswersFn({ data: { value } }) as ReturnType<typeof savePhysicalAnswersServer>;
 }
 
-/** Records received physical work as final. It never announces a result. */
-export async function confirmPhysicalWork(
-  value: { academyId: string; examId: string; recordId: string; expectedVersion: number; key: string },
-): Promise<StudentWorkResult> {
-  return invalid(value) ? failure("validation") : confirmPhysical(value);
+const confirmPhysicalWorkFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => confirmPhysicalWorkServer(data.value as Parameters<typeof confirmPhysicalWorkServer>[0]));
+
+export async function confirmPhysicalWork(value: Parameters<typeof confirmPhysicalWorkServer>[0]): ReturnType<typeof confirmPhysicalWorkServer> {
+  return confirmPhysicalWorkFn({ data: { value } }) as ReturnType<typeof confirmPhysicalWorkServer>;
 }
 
-export async function saveExamMarks(
-  value: { academyId: string; examId: string; recordId: string; expectedVersion: number; marks: { questionId: string; score: string | null }[]; feedback?: string; key: string },
-): Promise<StudentWorkResult> {
-  return invalid(value) ? failure("validation") : saveMarks(value);
+const saveExamMarksFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => saveExamMarksServer(data.value as Parameters<typeof saveExamMarksServer>[0]));
+
+export async function saveExamMarks(value: Parameters<typeof saveExamMarksServer>[0]): ReturnType<typeof saveExamMarksServer> {
+  return saveExamMarksFn({ data: { value } }) as ReturnType<typeof saveExamMarksServer>;
 }
 
-/** Announces complete results; saving marks never does. */
-export async function announceExamResults(
-  value: { academyId: string; examId: string; expectedScoringRevision: number; key: string; items: { recordId: string; expectedVersion: number }[] },
-): Promise<AnnounceResult> {
-  return invalid(value) ? failure("validation") : announceResults(value);
+const announceExamResultsFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => announceExamResultsServer(data.value as Parameters<typeof announceExamResultsServer>[0]));
+
+export async function announceExamResults(value: Parameters<typeof announceExamResultsServer>[0]): ReturnType<typeof announceExamResultsServer> {
+  return announceExamResultsFn({ data: { value } }) as ReturnType<typeof announceExamResultsServer>;
 }

@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import { IconCalendarDue } from "@tabler/icons-react";
+import { IconCalendarDue } from "@/components/shared/icons";
 
 import { AssessmentWorkspacePage } from "@/components/shared/assessment/workspace/page";
 import { WorkspaceView } from "@/components/shared/assessment/workspace/view";

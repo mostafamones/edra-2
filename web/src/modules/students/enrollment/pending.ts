@@ -1,3 +1,4 @@
+import "@tanstack/react-start/server-only";
 // Server-only. The pending entry is untrusted input: it only names a token for academy onboarding,
 // which the database re-checks on every preview and completion. One entry is pending at a time.
 

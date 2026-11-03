@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/routing", () => ({ platformOrigin: () => "https://learn.example.com" }));
 const api = vi.hoisted(() => ({ departure: vi.fn() }));
 vi.mock("../data", () => ({ recordMyExamDeparture: api.departure }));

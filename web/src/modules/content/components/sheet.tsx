@@ -1,9 +1,9 @@
-"use client";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, Archive02Icon, Cancel01Icon, CloudSavingDone01Icon } from "@hugeicons/core-free-icons";
+import { useAcademyScope } from "@/modules/auth";
 import { DiscardDialog } from "@/components/shared/assessment/discard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ export function UnitSheet({ academyId, unitId, tab: initialTab, opener, onClose,
   academyId: string; unitId: string; tab: UnitSheetTab; opener: HTMLElement | null; onClose: () => void; onArchive: (unit: ContentUnit) => void;
 }) {
   const cache = useQueryClient();
+  const isCurrent = useAcademyScope();
   const unitKey = ["content", academyId, "unit", unitId];
   const query = useQuery({ queryKey: unitKey, queryFn: () => loadUnit(academyId, unitId), refetchOnWindowFocus: false });
   const data = query.data;
@@ -58,7 +59,7 @@ export function UnitSheet({ academyId, unitId, tab: initialTab, opener, onClose,
       unwrapContent(await saveUnit({ academyId, unitId, version: saved.version, document: parsed.data }));
       const latest = await loadUnit(academyId, unitId);
       setSaved({ version: latest.unit.version, draft: sent });
-      cache.setQueryData(unitKey, latest);
+      if (isCurrent(academyId)) cache.setQueryData(unitKey, latest);
       void cache.invalidateQueries({ queryKey: ["content", academyId] });
       return true;
     } catch (e) { setFailed(sent); setError(e instanceof Error ? e.message : "Could not save the draft."); return false; }

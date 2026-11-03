@@ -1,4 +1,4 @@
-import { IconDeviceLaptop, IconFileUpload, IconListCheck, IconNumbers, type Icon } from "@tabler/icons-react";
+import { IconDeviceLaptop, IconFileUpload, IconListCheck, IconNumbers, type Icon } from "@/components/shared/icons";
 
 import type { AssignmentAudience, AssignmentState, PartIssue, PartKind, PublicationState, WorkStatus } from "../../types";
 

@@ -1,9 +1,7 @@
-"use client";
-
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { IconArrowLeft, IconArrowRight, IconBuilding, IconLogout, IconSchool, IconUser, IconUsersGroup } from "@tabler/icons-react";
+import { IconArrowLeft, IconArrowRight, IconBuilding, IconLogout, IconSchool, IconUser, IconUsersGroup } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 

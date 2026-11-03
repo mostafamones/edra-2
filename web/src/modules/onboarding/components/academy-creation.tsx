@@ -1,11 +1,10 @@
-"use client";
 import { staffAcademyHref } from "@/lib/routing";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/shared/link";
+import { useRouter } from "@/lib/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconCheck as Check, IconLoader2 as LoaderCircle } from "@tabler/icons-react";
+import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconCheck as Check, IconLoader2 as LoaderCircle } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

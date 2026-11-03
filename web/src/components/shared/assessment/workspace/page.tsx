@@ -1,8 +1,7 @@
-"use client";
 
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { IconAlertCircle } from "@tabler/icons-react";
+import { IconAlertCircle } from "@/components/shared/icons";
 
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

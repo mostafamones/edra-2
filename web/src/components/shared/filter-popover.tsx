@@ -1,4 +1,3 @@
-"use client";
 
 import { Fragment, useRef, useState, type ReactNode } from "react";
 

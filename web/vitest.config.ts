@@ -10,8 +10,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
-      // Next resolves this marker to its empty stub on the server; tests run server and client code alike.
-      "server-only": fileURLToPath(new URL("./node_modules/next/dist/compiled/server-only/empty.js", import.meta.url)),
     },
   },
 });

@@ -1,5 +1,3 @@
-"use client";
-
 import { Field, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FIELD_LABELS, rowLabel, type MappingProblem } from "../mapping";

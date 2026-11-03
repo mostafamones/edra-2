@@ -1,4 +1,6 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
+
+import { publicEnv } from "@/lib/env/public";
 
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -31,7 +33,7 @@ type DatabaseError = { code?: string; message?: string };
 export function storageAdmin() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) return null;
-  return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createClient<Database>(publicEnv.supabaseUrl, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
 async function call<T>(run: (db: Db) => PromiseLike<{ data: unknown; error: DatabaseError | null }>, parse: (value: unknown) => T): Promise<StudentAssignmentResult<T>> {

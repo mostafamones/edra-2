@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 
 import { hashControlToken, newControlToken, open, seal, type SealContext } from "./crypto";
 

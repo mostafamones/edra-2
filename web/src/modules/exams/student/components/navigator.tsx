@@ -1,6 +1,4 @@
-"use client";
-
-import { IconFlagFilled } from "@tabler/icons-react";
+import { IconFlagFilled } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

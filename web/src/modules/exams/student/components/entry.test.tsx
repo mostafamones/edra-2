@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StrictMode } from "react";
 const api = vi.hoisted(() => ({ supported: vi.fn(), fullscreen: vi.fn(), exit: vi.fn(), enter: vi.fn(), lock: vi.fn(), release: vi.fn(), refresh: vi.fn(), recovery: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: api.refresh }) }));
+vi.mock("@/lib/navigation", () => ({ useRouter: () => ({ refresh: api.refresh }) }));
 vi.mock("@/modules/auth", () => ({ useAuth: () => ({ user: { id: "12345678-1234-4123-8123-123456789012" }, loading: false }) }));
 vi.mock("../actions", () => ({ enterStudentExam: api.enter }));
 vi.mock("../answering/recovery", () => ({ recoverDeparture: api.recovery }));

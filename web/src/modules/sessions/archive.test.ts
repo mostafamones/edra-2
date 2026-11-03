@@ -10,7 +10,7 @@ const state = vi.hoisted(() => ({
   result: { data: null as unknown, error: null as unknown },
   archivedAt: null as string | null,
 }));
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({
   cookieAuthority: async () => ({
     userId: "user-1",
@@ -25,7 +25,7 @@ vi.mock("@/lib/supabase/authority", () => ({
   }),
 }));
 
-import { archiveSession, restoreSession, startSession } from "./actions";
+import { archiveSession, restoreSession, startSession } from "./actions.server";
 import { getSession, listSessionHistory, readSessionHistoryQuery } from "./data";
 import { sessionV1 } from "./v1";
 

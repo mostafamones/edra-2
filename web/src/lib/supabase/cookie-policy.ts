@@ -1,3 +1,4 @@
+import { publicEnv } from "@/lib/env/public";
 import type { CookieOptionsWithName } from "@supabase/ssr";
 import { platformOrigins } from "../routing";
 
@@ -5,7 +6,7 @@ import { platformOrigins } from "../routing";
 export const AUTH_COOKIE_NAME = "edra-auth-v1";
 
 export function authCookieOptions(): CookieOptionsWithName {
-  const configured = process.env.NEXT_PUBLIC_EDRA_COOKIE_DOMAIN;
+  const configured = publicEnv.cookieDomain;
   const domain = configured?.replace(/^\./, "") || (process.env.NODE_ENV !== "production" ? "lvh.me" : undefined);
   if (!domain || !/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/.test(domain) || domain.endsWith(".vercel.app") || domain === "vercel.app") {
     throw new Error("Configure an owned parent domain for shared authentication cookies.");
@@ -23,6 +24,6 @@ export function authCookieOptions(): CookieOptionsWithName {
 }
 
 export function isLegacyAuthCookie(name: string) {
-  const reference = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split(".")[0];
+  const reference = new URL(publicEnv.supabaseUrl!).hostname.split(".")[0];
   return name === `sb-${reference}-auth-token` || name.startsWith(`sb-${reference}-auth-token.`) || name === `sb-${reference}-auth-token-code-verifier`;
 }

@@ -9,7 +9,7 @@ const CHOICE = "77777777-7777-4777-8777-777777777777";
 const KEY = "44444444-4444-4444-8444-444444444444";
 
 const state = vi.hoisted(() => ({ result: { data: null as unknown, error: null as unknown }, calls: [] as { name: string; args: unknown }[] }));
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({ cookieAuthority: async () => null }));
 
 import type { StaffApiContext } from "@/lib/api/handler";

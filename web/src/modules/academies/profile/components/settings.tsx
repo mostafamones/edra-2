@@ -1,14 +1,12 @@
-"use client";
-
 import { useState, type ComponentType, type ReactNode } from "react";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Call02Icon } from "@hugeicons/core-free-icons";
-import { SiFacebook, SiGooglemaps, SiInstagram, SiTiktok, SiWhatsapp } from "react-icons/si";
-import { IconAlertCircle, IconLink, IconLoader2, IconPlus } from "@tabler/icons-react";
+import { SiFacebook, SiGooglemaps, SiInstagram, SiTiktok, SiWhatsapp } from "@/components/shared/brands";
+import { IconAlertCircle, IconLink, IconLoader2, IconPlus } from "@/components/shared/icons";
 import { toast } from "sonner";
 
 import { PhoneInput, TextInput } from "@/components/shared/app-input";
@@ -25,6 +23,7 @@ import { useAcademyScope, useAuth } from "@/modules/auth";
 
 import { ACADEMY_ICONS } from "../../icons";
 import { loadAcademyProfile, saveAcademyProfile, type AcademyProfileResult } from "../actions";
+import { refreshProfileShell } from "../refresh";
 import { academyProfileSchema, sameProfileValues, type AcademyProfile, type AcademyProfileFields, type AcademyProfileInput } from "../validation";
 
 type Notice = { kind: "error"; message: string } | { kind: "conflict"; current: AcademyProfile };
@@ -84,12 +83,13 @@ function ProfileForm({ profile }: { profile: AcademyProfile }) {
       // The save may have committed before the response was lost: trust only the persisted state.
       const current = await loadAcademyProfile(profile.slug).catch(() => null);
       result = current && sameProfileValues(current, values) ? { ok: true, profile: current } : { ok: false, code: "saveFailed" };
-      if (result.ok) router.refresh();
     }
     if (!isCurrentAcademy(academyId)) return;
 
     if (result.ok) {
       adopt(result.profile);
+      // A failed loader refresh cannot turn an already committed save into an error.
+      void refreshProfileShell(() => router.refresh());
       toast.success("Academy profile saved");
       // The header and switcher read memberships too; a failed refresh does not undo the save.
       void refreshAcademies().catch(() => undefined);
@@ -152,7 +152,6 @@ function ProfileForm({ profile }: { profile: AcademyProfile }) {
           </Alert>
         )}
       </div>
-      <InstagramGradient />
       {/* On small screens the preview leads; on wide screens it stays beside the form while it scrolls. */}
       <div className="order-first flex flex-col gap-2 lg:sticky lg:top-6 lg:order-none">
         <span className="text-sm font-medium text-muted-foreground">Preview</span>
@@ -180,31 +179,15 @@ function ProfileForm({ profile }: { profile: AcademyProfile }) {
 
 type ContactIcon = { Icon: ComponentType<{ className?: string }>; color: string };
 
-/** Brand marks in their brand colors (Instagram uses its gradient, defined once by InstagramGradient); TikTok follows the text color since its brand is black or white. */
+/** Brand assets carry their original colors. */
 const CONTACT_ICONS = {
-  phone: { Icon: ({ className }) => <HugeiconsIcon icon={Call02Icon} className={className} strokeWidth={1.75} />, color: "text-foreground" },
+  phone: { Icon: ({ className }) => <HugeiconsIcon icon={Call02Icon} className={className} strokeWidth={1.5} />, color: "text-foreground" },
   whatsapp: { Icon: SiWhatsapp, color: "text-[#25D366]" },
   facebook: { Icon: SiFacebook, color: "text-[#0866FF]" },
-  instagram: { Icon: SiInstagram, color: "fill-[url(#academy-instagram)]" },
+  instagram: { Icon: SiInstagram, color: "" },
   tiktok: { Icon: SiTiktok, color: "text-foreground" },
   location: { Icon: SiGooglemaps, color: "text-[#4285F4]" },
 } satisfies Record<string, ContactIcon>;
-
-function InstagramGradient() {
-  return (
-    <svg width="0" height="0" aria-hidden="true" className="absolute">
-      <defs>
-        <linearGradient id="academy-instagram" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" stopColor="#FEDA75" />
-          <stop offset="0.35" stopColor="#FA7E1E" />
-          <stop offset="0.6" stopColor="#D62976" />
-          <stop offset="0.8" stopColor="#962FBF" />
-          <stop offset="1" stopColor="#4F5BD5" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-}
 
 /** A label with its icon on the left and its input on the right. */
 function ContactRow({ label, icon, id, children }: { label: string; icon: ContactIcon; id: string; children: ReactNode }) {
@@ -309,7 +292,7 @@ function IconPicker({ value, onChange, disabled }: { value: string; onChange: (v
       <PopoverTrigger asChild>
         <button type="button" disabled={disabled} aria-label={`Icon: ${label}`}
           className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted/60 text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 data-[state=open]:bg-muted">
-          <Icon className="size-5" aria-hidden="true" stroke={1.75} />
+          <Icon className="size-5" aria-hidden="true" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto gap-2 px-1.5 py-1.5">
@@ -318,7 +301,7 @@ function IconPicker({ value, onChange, disabled }: { value: string; onChange: (v
           {Object.entries(ACADEMY_ICONS).map(([id, option]) => (
             <RadioGroupPrimitive.Item key={id} value={id}
               className="flex w-10 h-10 flex-col items-center justify-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary">
-              <option.Icon className="size-5" aria-hidden="true" stroke={1.75} />
+              <option.Icon className="size-5" aria-hidden="true" />
             </RadioGroupPrimitive.Item>
           ))}
         </RadioGroupPrimitive.Root>

@@ -1,6 +1,4 @@
-"use client";
-
-import { IconCode } from "@tabler/icons-react";
+import { IconCode } from "@/components/shared/icons";
 
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 

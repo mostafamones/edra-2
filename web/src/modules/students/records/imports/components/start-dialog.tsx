@@ -1,9 +1,8 @@
-"use client";
 import { useCanonicalHref } from "@/modules/navigation";
 
 import { useRef, useState, type DragEvent } from "react";
-import { useRouter } from "next/navigation";
-import { IconAlertCircle as AlertCircle, IconFileUpload as FileUp, IconHistory as History } from "@tabler/icons-react";
+import { useRouter } from "@/lib/navigation";
+import { IconAlertCircle as AlertCircle, IconFileUpload as FileUp, IconHistory as History } from "@/components/shared/icons";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

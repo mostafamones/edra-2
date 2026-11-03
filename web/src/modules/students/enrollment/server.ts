@@ -1,5 +1,6 @@
-import { cookies } from "next/headers";
-import { cache } from "react";
+import "@tanstack/react-start/server-only";
+import { cookies } from "@/lib/server/request";
+import { requestCache } from "@/lib/server/request";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -35,7 +36,7 @@ export async function getStudentJoinState(): Promise<StudentJoinState> {
 export type StudentAcademyLink = { id: string; name: string; slug: string };
 
 /** Academies the signed-in account is connected to, for student navigation. Read once per request. */
-export const listMyStudentAcademies = cache(async (): Promise<StudentAcademyLink[]> => {
+export const listMyStudentAcademies = requestCache(async (): Promise<StudentAcademyLink[]> => {
   const db = await createClient();
   const { data, error } = await db.rpc("list_my_student_academies");
   if (error) throw error;

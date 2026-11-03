@@ -9,3 +9,5 @@ export { enterMyExam, getMyExamOverview, getMyExamReview, listMyExams } from "./
 export { StudentExamStatus } from "./student/components/status";
 export { STUDENT_EXAM_PAGE_SIZE } from "./student/types";
 export { StudentExamOverviewPage } from "./student/components/overview";
+
+export { loadStudentExamOverview } from "./student/overview.server";

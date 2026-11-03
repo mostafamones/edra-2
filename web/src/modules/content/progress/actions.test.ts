@@ -1,10 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
-vi.mock("server-only", () => ({}));
+import { throughTransport } from "@/modules/transport.test-support";
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), mux: vi.fn(), update: vi.fn(), eq: vi.fn(), is: vi.fn() }));
 vi.mock("../access/data", () => ({ learningCaller: async () => ({ db: { rpc: mocks.rpc } }) }));
 vi.mock("../media", () => ({ mediaAdmin: () => ({ from: () => ({ update: mocks.update }) }) }));
 vi.mock("@/lib/video/mux", () => ({ muxRequest: mocks.mux }));
-import { saveVideoProgress, startVideoProgress } from "./actions";
+import { saveVideoProgress, startVideoProgress } from "./actions.server";
 const academyId = "10000000-0000-4000-8000-000000000001", unitId = "10000000-0000-4000-8000-000000000002";
 const itemId = "10000000-0000-4000-8000-000000000003", sessionId = "10000000-0000-4000-8000-000000000004";
 beforeEach(() => {
@@ -34,4 +35,14 @@ it("rejects a forged non-finite checkpoint before contacting the database", asyn
 it("reports a lost access grant instead of claiming progress was saved", async () => {
   mocks.rpc.mockResolvedValue({ error: { message: "access_required" }, data: null });
   expect(await saveVideoProgress({ academyId, unitId, sessionId, sequence: 2, position: 20, ranges: [[10, 20]] })).toEqual({ ok: false, message: "Active unit access is required." });
+});
+
+it("transports authorized start and checkpoint results", async () => {
+  mocks.rpc.mockResolvedValueOnce({ error: null, data: { sessionId, assetId: itemId, providerAssetId: "mux-id", durationSeconds: 100, positionSeconds: 40 } });
+  const started = await startVideoProgress({ academyId, unitId, itemId });
+  expect(await throughTransport(started)).toEqual(started);
+  mocks.rpc.mockResolvedValueOnce({ error: null, data: { positionSeconds: 20, watchedSeconds: 10, durationSeconds: 100, completed: false } });
+  const saved = await saveVideoProgress({ academyId, unitId, sessionId, sequence: 1, position: 20, ranges: [[10, 20]] });
+  expect(saved.ok).toBe(true);
+  expect(await throughTransport(saved)).toEqual(saved);
 });

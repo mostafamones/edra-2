@@ -1,7 +1,5 @@
-"use client";
-
 import { useRef, type ReactElement, type RefObject } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Archive02Icon, ArchiveRestoreIcon, Clock01Icon, Copy01Icon, LinkSquare02Icon, MoreHorizontalIcon, PencilEdit01Icon, ViewIcon } from "@hugeicons/core-free-icons";
 

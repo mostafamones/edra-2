@@ -1,90 +1,95 @@
-"use server";
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 
-import { studentFailure } from "./errors";
 import {
-  claimMyExamEditor, enterMyExam, getMyExamAnswering, recordMyExamDeparture, releaseMyExamEditor, renewMyExamEditor, saveMyExamAnswers,
-  submitMyExam,
-} from "./data";
-import { signMyExamImages, signMyExamReviewImages } from "./images";
-import type {
-  StudentExamAnswerPatch, StudentExamClaimOutcome, StudentExamCommandResult, StudentExamDepartureOutcome, StudentExamEntry,
-  StudentExamHeartbeatOutcome, StudentExamImagesOutcome, StudentExamReadOutcome, StudentExamReleaseOutcome, StudentExamReviewImagesOutcome,
-  StudentExamSaveOutcome, StudentExamSubmitOutcome,
-} from "./types";
+  enterStudentExam as enterStudentExamServer,
+  claimStudentExamEditor as claimStudentExamEditorServer,
+  renewStudentExamEditor as renewStudentExamEditorServer,
+  releaseStudentExamEditor as releaseStudentExamEditorServer,
+  readStudentExamAnswering as readStudentExamAnsweringServer,
+  saveStudentExamAnswers as saveStudentExamAnswersServer,
+  submitStudentExam as submitStudentExamServer,
+  recordStudentExamDeparture as recordStudentExamDepartureServer,
+  signStudentExamImages as signStudentExamImagesServer,
+  signStudentExamReviewImages as signStudentExamReviewImagesServer,
+} from "./actions.server";
 
-/**
- * Student web commands (cookie session). Server actions are reachable by direct POST, so each one
- * validates its input and the database reauthorizes the caller, the attempt and the editor claim.
- * Responses are allowlisted DTOs and never shared-cached.
- */
+const enterStudentExamFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => enterStudentExamServer(data.value as Parameters<typeof enterStudentExamServer>[0]));
 
-type Exam = { academyId: string; examId: string };
-type Editor = Exam & { token: string };
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+export async function enterStudentExam(value: Parameters<typeof enterStudentExamServer>[0]): ReturnType<typeof enterStudentExamServer> {
+  return enterStudentExamFn({ data: { value } }) as ReturnType<typeof enterStudentExamServer>;
 }
 
-/**
- * Starts the caller's single timed attempt (or resumes it with its original deadline and departure
- * count) and claims the answering editor. A busy claim returns no question material.
- */
-export async function enterStudentExam(value: Exam & { token: string | null }): Promise<StudentExamCommandResult<StudentExamEntry>> {
-  if (!isObject(value)) return studentFailure("validation");
-  return enterMyExam({ academyId: value.academyId, examId: value.examId, token: value.token });
+const claimStudentExamEditorFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => claimStudentExamEditorServer(data.value as Parameters<typeof claimStudentExamEditorServer>[0]));
+
+export async function claimStudentExamEditor(value: Parameters<typeof claimStudentExamEditorServer>[0]): ReturnType<typeof claimStudentExamEditorServer> {
+  return claimStudentExamEditorFn({ data: { value } }) as ReturnType<typeof claimStudentExamEditorServer>;
 }
 
-export async function claimStudentExamEditor(value: Exam & { token: string | null }): Promise<StudentExamCommandResult<StudentExamClaimOutcome>> {
-  if (!isObject(value)) return studentFailure("validation");
-  return claimMyExamEditor({ academyId: value.academyId, examId: value.examId, token: value.token });
+const renewStudentExamEditorFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => renewStudentExamEditorServer(data.value as Parameters<typeof renewStudentExamEditorServer>[0]));
+
+export async function renewStudentExamEditor(value: Parameters<typeof renewStudentExamEditorServer>[0]): ReturnType<typeof renewStudentExamEditorServer> {
+  return renewStudentExamEditorFn({ data: { value } }) as ReturnType<typeof renewStudentExamEditorServer>;
 }
 
-export async function renewStudentExamEditor(value: Editor): Promise<StudentExamCommandResult<StudentExamHeartbeatOutcome>> {
-  if (!isObject(value)) return studentFailure("validation");
-  return renewMyExamEditor({ academyId: value.academyId, examId: value.examId, token: value.token });
+const releaseStudentExamEditorFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => releaseStudentExamEditorServer(data.value as Parameters<typeof releaseStudentExamEditorServer>[0]));
+
+export async function releaseStudentExamEditor(value: Parameters<typeof releaseStudentExamEditorServer>[0]): ReturnType<typeof releaseStudentExamEditorServer> {
+  return releaseStudentExamEditorFn({ data: { value } }) as ReturnType<typeof releaseStudentExamEditorServer>;
 }
 
-export async function releaseStudentExamEditor(value: Editor): Promise<StudentExamCommandResult<StudentExamReleaseOutcome>> {
-  if (!isObject(value)) return studentFailure("validation");
-  return releaseMyExamEditor({ academyId: value.academyId, examId: value.examId, token: value.token });
+const readStudentExamAnsweringFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => readStudentExamAnsweringServer(data.value as Parameters<typeof readStudentExamAnsweringServer>[0]));
+
+export async function readStudentExamAnswering(value: Parameters<typeof readStudentExamAnsweringServer>[0]): ReturnType<typeof readStudentExamAnsweringServer> {
+  return readStudentExamAnsweringFn({ data: { value } }) as ReturnType<typeof readStudentExamAnsweringServer>;
 }
 
-export async function readStudentExamAnswering(value: Editor): Promise<StudentExamCommandResult<StudentExamReadOutcome>> {
-  if (!isObject(value)) return studentFailure("validation");
-  return getMyExamAnswering({ academyId: value.academyId, examId: value.examId, token: value.token });
+const saveStudentExamAnswersFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => saveStudentExamAnswersServer(data.value as Parameters<typeof saveStudentExamAnswersServer>[0]));
+
+export async function saveStudentExamAnswers(value: Parameters<typeof saveStudentExamAnswersServer>[0]): ReturnType<typeof saveStudentExamAnswersServer> {
+  return saveStudentExamAnswersFn({ data: { value } }) as ReturnType<typeof saveStudentExamAnswersServer>;
 }
 
-export async function saveStudentExamAnswers(
-  value: Editor & { generation: number; expectedVersion: number; key: string; answers: StudentExamAnswerPatch[] },
-): Promise<StudentExamCommandResult<StudentExamSaveOutcome>> {
-  if (!isObject(value)) return studentFailure("validation");
-  return saveMyExamAnswers({
-    academyId: value.academyId, examId: value.examId, token: value.token,
-    generation: value.generation, expectedVersion: value.expectedVersion, key: value.key, answers: value.answers,
-  });
+const submitStudentExamFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => submitStudentExamServer(data.value as Parameters<typeof submitStudentExamServer>[0]));
+
+export async function submitStudentExam(value: Parameters<typeof submitStudentExamServer>[0]): ReturnType<typeof submitStudentExamServer> {
+  return submitStudentExamFn({ data: { value } }) as ReturnType<typeof submitStudentExamServer>;
 }
 
-export async function submitStudentExam(value: Editor & { generation: number; expectedVersion: number; key: string }): Promise<StudentExamCommandResult<StudentExamSubmitOutcome>> {
-  if (!isObject(value)) return studentFailure("validation");
-  return submitMyExam({ academyId: value.academyId, examId: value.examId, token: value.token, generation: value.generation, expectedVersion: value.expectedVersion, key: value.key });
+const recordStudentExamDepartureFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => recordStudentExamDepartureServer(data.value as Parameters<typeof recordStudentExamDepartureServer>[0]));
+
+export async function recordStudentExamDeparture(value: Parameters<typeof recordStudentExamDepartureServer>[0]): ReturnType<typeof recordStudentExamDepartureServer> {
+  return recordStudentExamDepartureFn({ data: { value } }) as ReturnType<typeof recordStudentExamDepartureServer>;
 }
 
-export async function recordStudentExamDeparture(
-  value: Editor & { generation: number; eventId: string; questionId: string | null },
-): Promise<StudentExamCommandResult<StudentExamDepartureOutcome>> {
-  if (!isObject(value)) return studentFailure("validation");
-  return recordMyExamDeparture({
-    academyId: value.academyId, examId: value.examId, token: value.token, generation: value.generation, eventId: value.eventId, questionId: value.questionId,
-  });
+const signStudentExamImagesFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => signStudentExamImagesServer(data.value as Parameters<typeof signStudentExamImagesServer>[0]));
+
+export async function signStudentExamImages(value: Parameters<typeof signStudentExamImagesServer>[0]): ReturnType<typeof signStudentExamImagesServer> {
+  return signStudentExamImagesFn({ data: { value } }) as ReturnType<typeof signStudentExamImagesServer>;
 }
 
-export async function signStudentExamImages(value: Editor & { imageIds: string[] }): Promise<StudentExamCommandResult<StudentExamImagesOutcome>> {
-  if (!isObject(value)) return studentFailure("validation");
-  return signMyExamImages({ academyId: value.academyId, examId: value.examId, token: value.token, imageIds: value.imageIds });
-}
+const signStudentExamReviewImagesFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => signStudentExamReviewImagesServer(data.value as Parameters<typeof signStudentExamReviewImagesServer>[0]));
 
-/** Read-only review images (EDRA-235): no editor token; the database checks qualification. */
-export async function signStudentExamReviewImages(value: Exam & { imageIds: string[] }): Promise<StudentExamCommandResult<StudentExamReviewImagesOutcome>> {
-  if (!isObject(value)) return studentFailure("validation");
-  return signMyExamReviewImages({ academyId: value.academyId, examId: value.examId, imageIds: value.imageIds });
+export async function signStudentExamReviewImages(value: Parameters<typeof signStudentExamReviewImagesServer>[0]): ReturnType<typeof signStudentExamReviewImagesServer> {
+  return signStudentExamReviewImagesFn({ data: { value } }) as ReturnType<typeof signStudentExamReviewImagesServer>;
 }

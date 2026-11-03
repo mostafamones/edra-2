@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useRef } from "react";
 
 /** Clears the revoked browser session by posting to sign-out, which redirects to the login page. */

@@ -1,5 +1,3 @@
-"use client";
-
 import { ToggleBadge, ToggleBadgeGroup } from "@/components/shared/toggle-badge";
 import type { Label } from "../types";
 import { LabelSwatch } from "./badge";

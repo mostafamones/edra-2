@@ -1,10 +1,9 @@
-"use client";
 import { useCanonicalHref } from "@/modules/navigation";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { IconArrowLeft as ArrowLeft, IconHistory as History } from "@tabler/icons-react";
+import { IconArrowLeft as ArrowLeft, IconHistory as History } from "@/components/shared/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";

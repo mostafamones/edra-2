@@ -5,7 +5,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const mocks = vi.hoisted(() => ({ start: vi.fn(), push: vi.fn(), current: vi.fn(), uuid: vi.fn(), error: vi.fn() }));
 vi.mock("../actions", () => ({ startSession: mocks.start }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
+vi.mock("@/lib/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock("@/modules/navigation", () => ({ useCanonicalHref: () => (path: string) => path }));
 vi.mock("@/modules/auth", () => ({ useAcademyScope: () => mocks.current }));
 vi.mock("@/lib/uuid", () => ({ newUuid: mocks.uuid }));

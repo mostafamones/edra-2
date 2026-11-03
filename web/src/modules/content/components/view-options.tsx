@@ -1,5 +1,3 @@
-"use client";
-
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, PreferenceHorizontalIcon } from "@hugeicons/core-free-icons";
 

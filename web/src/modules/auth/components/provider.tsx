@@ -1,7 +1,5 @@
-"use client";
-
-import { createContext, useContext, useEffect, useEffectEvent, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { Fragment, createContext, useContext, useEffect, useEffectEvent, useState } from "react";
+import { usePathname, useRouter } from "@/lib/navigation";
 import { AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import type { Session, User } from "@supabase/supabase-js";
@@ -10,6 +8,7 @@ import { academyQueryKeys, listUserAcademies, type AcademyEntry } from "@/module
 import { purgeAssignmentDrafts } from "@/modules/assignments/browser";
 import { installExamSignOutCleanup, setExamJournalAccount } from "@/modules/exams/browser";
 import { clearBrowserQueryCache } from "@/lib/query-client";
+import { browserScopeGeneration } from "@/lib/browser-scope";
 import { createClient } from "@/lib/supabase/client";
 import type { Platform } from "@/lib/routing";
 
@@ -55,6 +54,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
   const [authError, setAuthError] = useState<string | null>(null);
   const [preferredAcademyId, setPreferredAcademyId] = useState<string | null>(readPreferredAcademyId);
   const [ended, setEnded] = useState<SessionEndReason | null>(null);
+  const [scopeChanging, setScopeChanging] = useState(false);
 
   const refreshRoute = useEffectEvent(() => router.refresh());
 
@@ -88,14 +88,19 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
       previousUserId = nextUserId;
 
       if (accountChanged) {
-        if (!previewRecovery) clearBrowserQueryCache();
+        setScopeChanging(true);
+        clearBrowserQueryCache();
         setPreferredAcademyId(null);
         try { window.localStorage.removeItem(LAST_ACADEMY_KEY); } catch { /* Storage may be unavailable. */ }
         // Auth callbacks run while Supabase holds its session lock. Refresh once
         // after the callback returns, only for an actual identity transition.
-        if (!refreshTimer) refreshTimer = setTimeout(() => {
+        if (!refreshTimer) refreshTimer = setTimeout(async () => {
           refreshTimer = undefined;
-          if (mounted) refreshRoute();
+          if (!mounted) return;
+          const generation = browserScopeGeneration();
+          try { await refreshRoute(); }
+          catch { if (mounted && generation === browserScopeGeneration()) setAuthError("Unable to refresh your session."); }
+          finally { if (mounted && generation === browserScopeGeneration()) setScopeChanging(false); }
         }, 0);
       }
 
@@ -160,6 +165,7 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
     function recover(reason: SessionEndReason) {
       if (!mounted || previewRecovery) return;
       previewRecovery = true;
+      identityEpoch += 1;
       clearBrowserQueryCache();
       setEnded(reason);
     }
@@ -212,9 +218,9 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
   const academiesLoading = Boolean(user && academiesQuery.isPending);
   const isAppRoute = pathname === "/app" || pathname.startsWith("/app/") || (initialPlatform === "staff" && !/^(?:\/auth|\/onboarding|\/invite)(?:\/|$)/.test(pathname));
   // Academy membership is authorized by the server per URL; only the session gates rendering here.
-  const waiting = loading && isAppRoute;
   const loadError = authError;
   const protectedSurface = isAppRoute || (initialPlatform === "student" && !/^(?:\/auth|\/invite)(?:\/|$)/.test(pathname));
+  const waiting = (loading && isAppRoute) || (scopeChanging && protectedSurface);
 
   return (
     <AuthContext.Provider value={{
@@ -230,9 +236,9 @@ export function AuthProvider({ children, initialPlatform }: { children: React.Re
       activeAcademy,
       setActiveAcademy,
     }}>
-      {ended && protectedSurface ? <SessionRecovery reason={ended} /> : isAppRoute && loading ? null : isAppRoute && loadError ? (
+      {ended && protectedSurface ? <SessionRecovery reason={ended} /> : waiting ? null : protectedSurface && loadError ? (
         <AuthLoadError message={loadError} onRetry={() => window.location.reload()} retrying={false} />
-      ) : children}
+      ) : <Fragment key={browserScopeGeneration()}>{children}</Fragment>}
       <AnimatePresence>
         {waiting && <AuthLoadingOverlay key="auth-loader" />}
       </AnimatePresence>

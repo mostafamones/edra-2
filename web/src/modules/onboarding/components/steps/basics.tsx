@@ -1,8 +1,7 @@
-"use client";
 import { platformOrigin } from "@/lib/routing";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { IconBook as BookOpen, IconCode as Code2, IconSchool as GraduationCap, IconWorld as Globe2, IconInfoCircle as Info, IconMicroscope as Microscope, IconMusic as Music2, IconPalette as Palette, IconBuildingCommunity as School, IconTrophy as Trophy } from "@tabler/icons-react";
+import { IconBook as BookOpen, IconCode as Code2, IconSchool as GraduationCap, IconWorld as Globe2, IconInfoCircle as Info, IconMicroscope as Microscope, IconMusic as Music2, IconPalette as Palette, IconBuildingCommunity as School, IconTrophy as Trophy } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";

@@ -1,8 +1,8 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { cookies } from "next/headers";
+import { cookies } from "@/lib/server/request";
 import { z } from "zod";
 
 import { platformOrigin } from "@/lib/routing";

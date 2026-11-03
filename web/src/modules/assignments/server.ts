@@ -10,3 +10,5 @@ export { StudentAssignmentPage } from "./student/components/page";
 export { listMyAssignments } from "./student/data";
 export { StudentAssignmentStatus } from "./student/components/status";
 export { searchStaffAssignments } from "./search";
+
+export { loadStudentAssignment } from "./student/page.server";

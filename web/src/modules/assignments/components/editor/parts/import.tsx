@@ -1,8 +1,6 @@
-"use client";
-
 import { useRef } from "react";
 import { toast } from "sonner";
-import { IconFileImport } from "@tabler/icons-react";
+import { IconFileImport } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { isValidMaxScore } from "../../../score";

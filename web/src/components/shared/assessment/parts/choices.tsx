@@ -1,8 +1,7 @@
-"use client";
 
 import type { ReactNode } from "react";
 import { Controller, useFieldArray, useFormContext, useWatch, type FieldValues } from "react-hook-form";
-import { IconPlus, IconX } from "@tabler/icons-react";
+import { IconPlus, IconX } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { PlainTextField } from "./text";

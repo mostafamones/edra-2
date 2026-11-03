@@ -1,6 +1,5 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { IconArrowLeft, IconLoader2 } from "@tabler/icons-react";
+import Link from "@/components/shared/link";
+import { IconArrowLeft, IconLoader2 } from "@/components/shared/icons";
 
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +9,8 @@ import { studentListPath } from "@/lib/routing";
 import { BreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 
 import type { ExamSource, FinalizationReason } from "../../types";
-import { getMyExamOverview, getMyExamReview } from "../data";
-import type { StudentExamAcademy, StudentExamOverview, StudentExamRead, StudentExamReview } from "../types";
+import type { StudentExamOverviewData } from "../overview.server";
+import type { StudentExamAcademy } from "../types";
 import { StudentExamEntry } from "./entry";
 import { StudentExamNotice } from "./notice";
 import { StudentExamRefresh } from "./refresh";
@@ -34,26 +33,10 @@ const SOURCES: Record<ExamSource, string> = { online: "Online", physical: "On pa
  * submission and official total, then (EDRA-235) the read-only answers and solutions once the
  * server qualifies them. Opening it never starts the timer.
  */
-export async function StudentExamOverviewPage({ academy, examId }: { academy: StudentExamAcademy; examId: string }) {
-  if (academy.access !== "active") {
-    return <Shell><StudentExamNotice access={academy.access} /></Shell>;
-  }
-  const result = await getMyExamOverview({ academyId: academy.id, examId });
-  if (!result.ok) {
-    if (result.code === "not_found" || result.code === "validation") notFound();
-    // Transient failures reach the route's error boundary, which offers a retry.
-    if (result.code === "unavailable") throw new Error(result.message);
-    return <Shell><StudentExamNotice message={result.message} /></Shell>;
-  }
-  const exam = result.data;
-  // Accepted work only: the review read settles due work and returns material only once qualified.
-  const review = exam.submission ? await getMyExamReview({ academyId: academy.id, examId: exam.examId }) : null;
-  // A due attempt not yet settled by this read: recheck rather than infer a submission or a zero.
-  const processing = !exam.submission && exam.action === "submitted" && exam.attempt !== null
-    && exam.attempt.finalizedAt === null && !exam.attempt.superseded;
-  const awaiting = processing || (exam.submission !== null
-    && (exam.result === null || !review?.ok || review.data.status === "unavailable"));
-  const closing = exam.actualClosesAt && Date.parse(exam.actualClosesAt) > Date.parse(exam.serverNow) ? exam.actualClosesAt : null;
+export function StudentExamOverviewPage({ academy, data }: { academy: StudentExamAcademy; data: StudentExamOverviewData }) {
+  if (data.kind === "access") return <Shell><StudentExamNotice access={data.access} /></Shell>;
+  if (data.kind === "notice") return <Shell><StudentExamNotice message={data.message} /></Shell>;
+  const { exam, review, failure, processing, awaiting, closing } = data;
   return (
     <Shell>
       <BreadcrumbTitle title={exam.title} />
@@ -66,9 +49,9 @@ export async function StudentExamOverviewPage({ academy, examId }: { academy: St
         <CardContent>
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
             {exam.timeLimitMinutes !== null && <Detail label="Duration">{formatDuration(exam.timeLimitMinutes)}</Detail>}
-            <Availability exam={exam} />
+            {exam.availability && <Availability {...exam.availability} />}
             {exam.attempt && <Detail label="Started"><StudentExamTime value={exam.attempt.startedAt} /></Detail>}
-            {exam.attempt && exam.action === "resume" && <Detail label="Your deadline"><StudentExamTime value={exam.attempt.cutoffAt} /></Detail>}
+            {exam.attempt?.deadline && <Detail label="Your deadline"><StudentExamTime value={exam.attempt.deadline} /></Detail>}
           </dl>
         </CardContent>
       </Card>
@@ -102,17 +85,15 @@ export async function StudentExamOverviewPage({ academy, examId }: { academy: St
           <CardContent>
             <dl className="grid gap-4 text-sm sm:grid-cols-2">
               <Detail label="Score"><span className="text-lg font-semibold tabular-nums">{exam.result.total} / {exam.result.maxScore}</span></Detail>
-              {exam.result.corrected && exam.result.correctedAt
-                ? <Detail label="Corrected"><StudentExamTime value={exam.result.correctedAt} /></Detail>
-                : <Detail label="Published"><StudentExamTime value={exam.result.publishedAt} /></Detail>}
+              <Detail label={exam.result.when.label}><StudentExamTime value={exam.result.when.value} /></Detail>
             </dl>
           </CardContent>
         </Card>
       )}
-      {review && <Review academyId={academy.id} exam={exam} review={review} />}
+      {review && <Review academyId={academy.id} examId={exam.examId} review={review} />}
       {(exam.submission || processing) && (
         <StudentExamRefresh poll={awaiting} refreshAt={closing} serverNow={exam.serverNow}
-          failure={review && !review.ok ? "Answers and solutions couldn’t be loaded." : undefined} />
+          failure={failure ? "Answers and solutions couldn’t be loaded." : undefined} />
       )}
       {(exam.action === "start" || exam.action === "resume") && (
         <StudentExamEntry academyId={academy.id} examId={exam.examId} resume={exam.action === "resume"} />
@@ -122,31 +103,26 @@ export async function StudentExamOverviewPage({ academy, examId }: { academy: St
 }
 
 /** Released review, or why it is not available yet. Failures are reported by StudentExamRefresh. */
-function Review({ academyId, exam, review }: { academyId: string; exam: StudentExamOverview; review: StudentExamRead<StudentExamReview> }) {
-  if (!review.ok || (review.data.status === "unavailable" && review.data.reason === "not_submitted")) return null;
-  if (review.data.status === "available") return <StudentExamReviewSection academyId={academyId} examId={exam.examId} review={review.data} />;
+function Review({ academyId, examId, review }: { academyId: string; examId: string; review: NonNullable<Extract<StudentExamOverviewData, { kind: "exam" }>["review"]> }) {
+  if (review.status === "available") return <StudentExamReviewSection academyId={academyId} examId={examId} review={review.data} />;
   return (
     <Card>
       <CardHeader><CardTitle>Answers and solutions</CardTitle></CardHeader>
       <CardContent className="text-sm font-medium">
-        {review.data.reason === "awaiting_closure" && exam.actualClosesAt
-          ? <p>Available after the exam closes at <StudentExamTime value={exam.actualClosesAt} /></p>
-          : <p>{review.data.reason === "awaiting_closure" ? "Available after the exam closes" : "Available after your result is published"}</p>}
+        {review.reason === "awaiting_closure" && review.closesAt
+          ? <p>Available after the exam closes at <StudentExamTime value={review.closesAt} /></p>
+          : <p>{review.reason === "awaiting_closure" ? "Available after the exam closes" : "Available after your result is published"}</p>}
       </CardContent>
     </Card>
   );
 }
 
 /** Opening and closing times; the scheduled close stops new starts, the actual close ends the completion period. */
-function Availability({ exam }: { exam: StudentExamOverview }) {
-  if (!exam.opensAt || !exam.closesAt || !exam.actualClosesAt) return null;
-  const closed = exam.phase === "closed" || exam.phase === "archived";
+function Availability({ opensAt, label, at }: { opensAt: string; label: string; at: string }) {
   return (
     <>
-      <Detail label="Opens"><StudentExamTime value={exam.opensAt} /></Detail>
-      {closed
-        ? <Detail label="Closed"><StudentExamTime value={exam.actualClosesAt} /></Detail>
-        : <Detail label={exam.phase === "headroom" ? "Closed to new starts" : "Closes"}><StudentExamTime value={exam.closesAt} /></Detail>}
+      <Detail label="Opens"><StudentExamTime value={opensAt} /></Detail>
+      <Detail label={label}><StudentExamTime value={at} /></Detail>
     </>
   );
 }

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * PUTs a file to a server-issued signed Storage upload URL, reporting progress. The URL creates a
  * fresh object only; it cannot overwrite accepted work.

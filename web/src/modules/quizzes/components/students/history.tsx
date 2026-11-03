@@ -1,5 +1,3 @@
-"use client";
-
 import { formatScore } from "@/lib/score";
 import type { Quiz, StudentDetail } from "../../types";
 import { QuizTime } from "../shared/time";

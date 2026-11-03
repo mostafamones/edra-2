@@ -1,7 +1,5 @@
-"use client";
-
 import { useCallback, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams } from "@/lib/navigation";
 
 import { internalStaffPath, staffAcademyPath, validateReturnDestination } from "@/lib/routing";
 

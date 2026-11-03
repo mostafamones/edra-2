@@ -1,7 +1,6 @@
-"use client";
 import { useCanonicalHref } from "../use-routing";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, AssignmentsIcon, Calendar03Icon, CheckListIcon, File01Icon, StudentsIcon, TeachingIcon } from "@hugeicons/core-free-icons";
 import type { ComponentProps } from "react";

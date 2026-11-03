@@ -1,12 +1,10 @@
-"use client";
-
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "@/components/shared/link";
+import { usePathname, useRouter } from "@/lib/navigation";
 import { onboardingHref } from "@/lib/routing";
 import { academySwitchHref } from "../switch-destination";
 import { ACADEMY_ROLE_LABELS, type AcademyEntry } from "@/modules/academies";
-import { IconBook as BookOpen, IconCheck as Check, IconSelector as ChevronsUpDown, IconCode as Code2, IconWorld as Globe2, IconSchool as GraduationCap, IconMicroscope as Microscope, IconMusic as Music2, IconPalette as Palette, IconPlus as Plus, IconBuildingCommunity as School, IconTrophy as Trophy, type Icon as TablerIcon } from "@tabler/icons-react";
+import { IconBook as BookOpen, IconCheck as Check, IconSelector as ChevronsUpDown, IconCode as Code2, IconWorld as Globe2, IconSchool as GraduationCap, IconMicroscope as Microscope, IconMusic as Music2, IconPalette as Palette, IconPlus as Plus, IconBuildingCommunity as School, IconTrophy as Trophy, type Icon as AppIcon } from "@/components/shared/icons";
 
 import {
   DropdownMenu,
@@ -20,7 +18,7 @@ import { Kbd } from "@/components/ui/kbd";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/modules/auth";
 
-const academyIcons: Record<string, TablerIcon> = {
+const academyIcons: Record<string, AppIcon> = {
   school: School,
   book: BookOpen,
   graduate: GraduationCap,

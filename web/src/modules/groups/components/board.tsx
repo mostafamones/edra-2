@@ -1,9 +1,7 @@
-"use client";
-
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, AlertCircleIcon, SearchRemoveIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 

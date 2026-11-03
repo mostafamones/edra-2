@@ -1,6 +1,5 @@
-"use client";
 
-import { IconArrowRight, IconTrophy } from "@tabler/icons-react";
+import { IconArrowRight, IconTrophy } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

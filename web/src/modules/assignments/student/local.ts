@@ -1,5 +1,3 @@
-"use client";
-
 import { newUuid } from "@/lib/uuid";
 import type { Answers } from "./types";
 

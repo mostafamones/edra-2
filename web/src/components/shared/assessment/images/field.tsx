@@ -1,4 +1,3 @@
-"use client";
 
 import { useLayoutEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
 import { toast } from "sonner";

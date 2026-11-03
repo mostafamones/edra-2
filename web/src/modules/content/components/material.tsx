@@ -1,5 +1,4 @@
-"use client";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { useState, type DragEvent, type FocusEvent, type ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, LinkSquare02Icon, RefreshIcon } from "@hugeicons/core-free-icons";

@@ -1,0 +1,11 @@
+import { build } from 'esbuild';
+import ExcelJS from 'exceljs';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+const dir=await mkdtemp(join(tmpdir(),'edra-deps-')); const workbook=new ExcelJS.Workbook();workbook.addWorksheet('sheet').getCell('A1').value='fixture';
+const xlsx=await workbook.xlsx.writeBuffer(); await writeFile('workers-test/mux.fixture.mjs', `export const fixture=${JSON.stringify(Buffer.from(xlsx).toString('base64'))};\n`);
+await build({entryPoints:['workers-test/mux.deps.mjs'],outfile:join(dir,'test.mjs'),bundle:true,format:'esm',platform:'browser',conditions:['workerd','worker','browser']});
+await writeFile(join(dir,'config.capnp'),`using Workerd = import "/workerd/workerd.capnp";\nconst config :Workerd.Config = (services = [(name = "test", worker = (compatibilityDate = "2026-10-30", compatibilityFlags = ["nodejs_compat"], modules = [(name = "test.mjs", esModule = embed "test.mjs")]))]);`);
+const result=spawnSync('node_modules/.bin/workerd',['test',join(dir,'config.capnp')],{stdio:'inherit'});process.exitCode=result.status??1;

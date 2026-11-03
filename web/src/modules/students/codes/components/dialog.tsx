@@ -1,10 +1,8 @@
-"use client";
-
 import { studentsRootKey } from "../../records/queries";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconAlertCircle, IconWand } from "@tabler/icons-react";
+import { IconAlertCircle, IconWand } from "@/components/shared/icons";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -101,6 +99,10 @@ function DialogBody({ academy, target, onClose, onBusyChange }: BodyProps) {
       const result = await changeStudentCode({
         academyId: academy.id, recordId: target.id, action, code, expectedVersion: current.version, requestKey,
       });
+      if (result.ok) {
+        void queryClient.invalidateQueries({ queryKey: studentCodeQueryKeys.listCodes(academy.id) });
+        void queryClient.invalidateQueries({ queryKey: [...studentsRootKey(academy.id), "list"] });
+      }
       if (!isCurrentAcademy(academy.id)) return;
       if (!result.ok) {
         if (result.code !== "unavailable") setRequestKey(newRequestKey());
@@ -114,8 +116,6 @@ function DialogBody({ academy, target, onClose, onBusyChange }: BodyProps) {
       }
       setRequestKey(newRequestKey());
       queryClient.setQueryData(stateKey, result.data);
-      void queryClient.invalidateQueries({ queryKey: studentCodeQueryKeys.listCodes(academy.id) });
-      void queryClient.invalidateQueries({ queryKey: [...studentsRootKey(academy.id), "list"] });
       setDraft(null);
       toast.success(action === "retire" ? `Retired ${current.code}.` : `${target.fullName} now has code ${result.data.code}.`);
       onClose();

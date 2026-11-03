@@ -2,7 +2,7 @@
 import { cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(window.location.search) }));
+vi.mock("@/lib/navigation", () => ({ useSearchParams: () => new URLSearchParams(window.location.search) }));
 
 import { managementReturnPath, useManagementReturn } from "./use-management-return";
 

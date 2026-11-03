@@ -15,11 +15,13 @@
 /playwright-report/
 /test-results/
 /blob-report/
+/workers-test/image-fixtures.mjs
+/workers-test/mux.fixture.mjs
 
-# next.js
-/.next/
-/.next-e2e/
-/out/
+# Vite and Cloudflare
+/dist/
+/.wrangler/
+.dev.vars*
 
 # production
 /build
@@ -43,7 +45,6 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # Isolated CI verification outputs
 /artifacts/

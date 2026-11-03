@@ -1,8 +1,7 @@
-"use client";
 
 import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { IconAlertCircle, IconSearch, IconSearchOff, IconUsers } from "@tabler/icons-react";
+import { IconAlertCircle, IconSearch, IconSearchOff, IconUsers } from "@/components/shared/icons";
 
 import { FilterPopover, type FilterField } from "@/components/shared/filter-popover";
 import { SortPopover } from "@/components/shared/sort-popover";

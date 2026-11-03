@@ -1,9 +1,8 @@
-"use client";
 import { useCanonicalHref } from "../use-routing";
 
 import { useRef } from "react";
-import Link from "next/link";
-import { IconBell, IconDotsVertical, IconLogout, IconUser } from "@tabler/icons-react";
+import Link from "@/components/shared/link";
+import { IconBell, IconDotsVertical, IconLogout, IconUser } from "@/components/shared/icons";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {

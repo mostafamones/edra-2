@@ -1,6 +1,4 @@
-"use client";
-
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 
@@ -10,7 +8,7 @@ import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { COURSE_ROWS, CourseCard } from "@/modules/content/student-cards";
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "@/lib/navigation";
 
 import type { readMyUnits, Scope } from "../data";
 import { Pager } from "./pager";

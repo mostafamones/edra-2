@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -13,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AcademyGate } from "@/modules/auth";
+import { AcademyGate, useAcademyScope } from "@/modules/auth";
 
 import { getYearLearning, startYearLearning } from "../actions";
 import type { YearLearning } from "../types";
@@ -25,6 +23,7 @@ export function YearLearningSettings() {
 
 function YearLearningRow({ academyId }: { academyId: string }) {
   const queryClient = useQueryClient();
+  const isCurrent = useAcademyScope();
   const key = ["year-learning", academyId] as const;
   const [confirm, setConfirm] = useState(false);
   const query = useQuery({
@@ -42,7 +41,9 @@ function YearLearningRow({ academyId }: { academyId: string }) {
       return result.value;
     },
     onSuccess: (value) => {
-      queryClient.setQueryData<YearLearning>(key, value);
+      // The key has no actor, so a late result must not repopulate the next account's cache.
+      if (isCurrent(academyId)) queryClient.setQueryData<YearLearning>(key, value);
+      else void queryClient.invalidateQueries({ queryKey: key, exact: true });
       toast.success("Student learning started");
     },
     onError: (error) => toast.error(error.message === "forbidden" ? "You don’t have permission to do that." : "Couldn’t start the year. Try again."),

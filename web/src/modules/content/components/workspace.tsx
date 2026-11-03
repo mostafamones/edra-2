@@ -1,8 +1,7 @@
-"use client";
 import { newUuid } from "@/lib/uuid";
 import { useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/shared/link";
+import { useRouter } from "@/lib/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -76,6 +75,7 @@ function WorkspaceContent({ academy, data }: { academy: AcademyEntry; data: Cont
   const view = { ...savedView, labels: savedView.labels.filter(id => catalog.some(label => label.id === id)) };
   const [managing, setManaging] = useState<{ open: boolean; opener: HTMLElement | null }>({ open: false, opener: null });
   const applying = useRef(0);
+  const labelWrites = useRef(new Map<string, Promise<Awaited<ReturnType<typeof setUnitLabel>>>>());
   const isCurrent = useAcademyScope();
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [modal, setModal] = useState<"new" | "copy" | null>(null);
@@ -126,28 +126,42 @@ function WorkspaceContent({ academy, data }: { academy: AcademyEntry; data: Cont
   }
   const workspaceKey = ["content", academy.id, "workspace"];
   async function applyLabel(unit: ContentUnit, labelId: string, applied: boolean) {
-    const show = (on: boolean) => cache.setQueryData<ContentWorkspace>(workspaceKey, current => {
-      if (!current) return current;
-      const others = (current.labelIds[unit.id] ?? []).filter(id => id !== labelId);
-      return { ...current, labelIds: { ...current.labelIds, [unit.id]: on ? [...others, labelId] : others } };
-    });
+    const key = `${unit.id}:${labelId}`;
+    const previous = labelWrites.current.get(key);
+    const originalQuery = cache.getQueryCache().find({ queryKey: workspaceKey, exact: true });
+    const isActive = () => isCurrent(academy.id) && !!originalQuery && cache.getQueryCache().find({ queryKey: workspaceKey, exact: true }) === originalQuery;
+    // Preserve the user's order for repeated changes to the same label. Server functions
+    // can otherwise finish in a different order from the clicks that issued them.
+    const request = (previous ? previous.catch(() => undefined) : Promise.resolve()).then(() =>
+      setUnitLabel({ academyId: academy.id, unitId: unit.id, labelId, applied }));
+    void request.catch(() => {});
+    labelWrites.current.set(key, request);
+    applying.current += 1;
+    const show = (on: boolean) => {
+      if (!isActive()) return;
+      cache.setQueryData<ContentWorkspace>(workspaceKey, current => {
+        if (!current) return current;
+        const others = (current.labelIds[unit.id] ?? []).filter(id => id !== labelId);
+        return { ...current, labelIds: { ...current.labelIds, [unit.id]: on ? [...others, labelId] : others } };
+      });
+    };
     await cache.cancelQueries({ queryKey: workspaceKey });
     show(applied);
-    applying.current += 1;
     try {
-      const result = await setUnitLabel({ academyId: academy.id, unitId: unit.id, labelId, applied });
+      const result = await request;
       if (!result.ok) {
-        show(!applied);
-        if (result.code === "label_not_found") void cache.invalidateQueries({ queryKey: labelsQueryKey(academy.id, "content") });
-        if (isCurrent(academy.id)) toast.error(result.message);
+        if (labelWrites.current.get(key) === request) show(!applied);
+        if (isActive() && result.code === "label_not_found") void cache.invalidateQueries({ queryKey: labelsQueryKey(academy.id, "content") });
+        if (isActive()) toast.error(result.message);
       }
     } catch {
-      show(!applied);
-      if (isCurrent(academy.id)) toast.error("Could not reach the server. Check your connection and try again.");
+      if (labelWrites.current.get(key) === request) show(!applied);
+      if (isActive()) toast.error("Could not reach the server. Check your connection and try again.");
     } finally {
+      if (labelWrites.current.get(key) === request) labelWrites.current.delete(key);
       applying.current -= 1;
       // Refreshing between quick changes would bring back the state before the later ones.
-      if (applying.current === 0) void cache.invalidateQueries({ queryKey: workspaceKey });
+      if (applying.current === 0 && isActive()) void cache.invalidateQueries({ queryKey: workspaceKey });
     }
   }
   const menuActions: UnitMenuActions = {

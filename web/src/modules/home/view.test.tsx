@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { HomeView } from "./view";
 import type { Overview } from "./overview";
+vi.mock("@/components/shared/link", () => ({ default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => <a href={href} {...props}>{children}</a> }));
 afterEach(cleanup);
 const read = <T,>(data: T) => ({ data, error: null, isPending: false, isFetching: false, refetch: vi.fn(async () => {}) });
 const data: Overview = { year: 2026, asOf: "2026-10-29T12:00:00Z", attentionCount: 1,

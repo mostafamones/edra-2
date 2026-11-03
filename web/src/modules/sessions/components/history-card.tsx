@@ -1,8 +1,6 @@
-"use client";
-
 import { useState } from "react";
-import Link from "next/link";
-import { IconArchive, IconArchiveOff, IconCalendar, IconClipboardList, IconClock, IconDots, IconUser, IconUsers } from "@tabler/icons-react";
+import Link from "@/components/shared/link";
+import { IconArchive, IconArchiveOff, IconCalendar, IconClipboardList, IconClock, IconDots, IconUser, IconUsers } from "@/components/shared/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

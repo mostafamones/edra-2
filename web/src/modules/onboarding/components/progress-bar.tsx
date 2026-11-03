@@ -1,5 +1,3 @@
-"use client";
-
 import { createPortal } from "react-dom";
 
 import { useIsHydrated } from "./use-is-hydrated";

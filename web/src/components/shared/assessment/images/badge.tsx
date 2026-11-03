@@ -1,6 +1,5 @@
-"use client";
 
-import { IconLoader, IconPhoto, IconPhotoOff } from "@tabler/icons-react";
+import { IconLoader, IconPhoto, IconPhotoOff } from "@/components/shared/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";

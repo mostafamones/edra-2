@@ -1,10 +1,8 @@
-"use client";
-
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Archive02Icon, ArrowLeftRightIcon, IdentityCardIcon, MoreHorizontalIcon, PencilEdit02Icon, RestoreBinIcon, UserIdVerificationIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";

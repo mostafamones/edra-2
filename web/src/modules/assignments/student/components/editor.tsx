@@ -1,8 +1,6 @@
-"use client";
-
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { IconAlertCircle, IconChevronLeft, IconChevronRight, IconCircleCheck, IconCloudOff, IconDeviceFloppy, IconLoader2 } from "@tabler/icons-react";
+import { useRouter } from "@/lib/navigation";
+import { IconAlertCircle, IconChevronLeft, IconChevronRight, IconCircleCheck, IconCloudOff, IconDeviceFloppy, IconLoader2 } from "@/components/shared/icons";
 
 import { ImageSourceProvider, type ImageSource } from "@/components/shared/assessment/images/context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -59,6 +57,14 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
   const conflictsRef = useRef<Answers>({});
   const operation = useRef<PendingOperation | null>(null);
   const saving = useRef(false);
+  const alive = useRef(false);
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const inOrder = useCallback(<T,>(run: () => Promise<T>): Promise<T> => {
+    const result = queue.current.then(run);
+    queue.current = result.then(() => undefined, () => undefined);
+    return result;
+  }, []);
   // Refs mirror the latest state for async save/submit callbacks.
   const applyDoc = useCallback((next: EditorDocument | null) => { docRef.current = next; setDoc(next); }, []);
   const applyPending = useCallback((next: Answers) => { pendingRef.current = next; setPending(next); }, []);
@@ -66,12 +72,12 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
 
   const base = useCallback(() => ({ academyId, assignmentId, token: token.current! }), [academyId, assignmentId]);
   const persist = useCallback((next: Answers, current: EditorDocument | null = docRef.current) => {
-    if (!current) return;
+    if (!alive.current || !current) return;
     setKept(storeLocalDraft(userId, current.recordId, assignmentId, {
       generation: current.generation, baseVersion: current.version, pending: next, conflicts: conflictsRef.current, operation: operation.current,
     }));
   }, [userId, assignmentId]);
-  const forget = useCallback(() => { const current = docRef.current; if (current) clearLocalDraft(userId, current.recordId, assignmentId); }, [userId, assignmentId]);
+  const forget = useCallback(() => { const current = docRef.current; if (alive.current && current) clearLocalDraft(userId, current.recordId, assignmentId); }, [userId, assignmentId]);
 
   const reclaim = useRef<(() => void) | null>(null);
   const fail = useCallback((failure: StudentAssignmentFailure) => {
@@ -85,6 +91,7 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
   const claim = useCallback(async (transfer: boolean, recovering = false) => {
     token.current ??= editorToken(userId, assignmentId);
     const result = await claimAssignmentEditor({ ...base(), operation: "claim", ...(transfer ? { transfer: true } : {}) });
+    if (!alive.current) return;
     if (!result.ok) {
       if (BLOCKING.has(result.code)) fail(result);
       else { setProblem(result.message); setPhase("failed"); }
@@ -112,7 +119,7 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
     if (phase !== "editing") return;
     const timer = setInterval(async () => {
       const result = await renewAssignmentEditor({ ...base(), operation: "renew" });
-      if (!result.ok) fail(result);
+      if (alive.current && !result.ok) fail(result);
     }, RENEW_MS);
     return () => clearInterval(timer);
   }, [phase, base, fail]);
@@ -127,14 +134,15 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
 
   // Newer saved work wins the display; this device's differing choices wait as conflicts.
   const reload = useCallback(async () => {
-    const result = await readAssignmentEditor({ ...base(), operation: "read" });
+    const result = await inOrder(() => readAssignmentEditor({ ...base(), operation: "read" }));
+    if (!alive.current) return;
     if (!result.ok) { fail(result); return; }
     operation.current = null;
     applyConflicts(answerable(conflictsAgainst({ ...conflictsRef.current, ...pendingRef.current }, result.data.answers), result.data));
     applyDoc(result.data);
     applyPending({});
     persist({}, result.data);
-  }, [applyConflicts, applyDoc, applyPending, base, fail, persist]);
+  }, [applyConflicts, applyDoc, applyPending, base, fail, inOrder, persist]);
 
   // One save in flight. An uncertain save is retried with its exact payload until answered.
   const flush = useCallback(async () => {
@@ -150,12 +158,15 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
     const sent = operation.current.payload as { answers: Answers };
     saving.current = true;
     setSaveState("saving");
-    const result = await saveAssignmentAnswers(operation.current.payload);
+    const payload = operation.current.payload;
+    const result = await inOrder(() => saveAssignmentAnswers(payload));
+    if (!alive.current) return;
     saving.current = false;
     if (result.ok) {
       operation.current = null;
       const next = Object.fromEntries(Object.entries(pendingRef.current).filter(([id, value]) => sent.answers[id] !== value));
-      const acknowledged = { ...current, version: result.data.version, answers: { ...current.answers, ...sent.answers } };
+      const latest = docRef.current ?? current;
+      const acknowledged = { ...latest, version: result.data.version, answers: { ...latest.answers, ...sent.answers } };
       applyDoc(acknowledged);
       applyPending(next);
       persist(next, acknowledged);
@@ -173,7 +184,7 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
     }
     fail(result);
     setProblem(result.message);
-  }, [applyDoc, applyPending, base, fail, persist, phase, reload]);
+  }, [applyDoc, applyPending, base, fail, inOrder, persist, phase, reload]);
 
   useEffect(() => {
     if (phase !== "editing" || Object.keys(pending).length === 0) return;
@@ -212,7 +223,9 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
       operation.current = { kind: "submit", payload: { ...base(), operation: "submit", generation: current.generation, version: current.version, key: newUuid(), scoringRevision: current.scoringRevision } };
       persist({}, current);
     }
-    const result = await submitAssignment(operation.current.payload);
+    const payload = operation.current.payload;
+    const result = await inOrder(() => submitAssignment(payload));
+    if (!alive.current) return null;
     if (result.ok) {
       operation.current = null;
       forget();
@@ -222,10 +235,11 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
     // A lost response keeps the same identity for the next attempt; other answers end this one.
     if (result.code !== "unavailable" && result.code !== "throttled") { operation.current = null; persist({}, current); }
     if (result.code === "draft_conflict") await reload();
+    if (!alive.current) return null;
     if (result.code === "editor_stale" || result.code === "submitted" || BLOCKING.has(result.code)) fail(result);
     if (result.code === "submitted") router.refresh();
     return result.message;
-  }, [base, fail, forget, persist, reload, router]);
+  }, [base, fail, forget, inOrder, persist, reload, router]);
 
   if (phase === "claiming") return <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><IconLoader2 className="size-4 animate-spin" aria-hidden="true" />Opening your work…</p>;
   if (phase === "busy" || phase === "stale") {
@@ -285,7 +299,7 @@ export function StudentAssignmentEditor({ academyId, assignmentId, userId, dueAt
           </Alert>
         )}
         {part.kind === "file_upload" ? (
-          <StudentAssignmentWrittenWork part={part} doc={doc} editor={base} onDocument={applyDoc} onUploading={(delta) => setUploading((count) => count + delta)} onFailure={fail} />
+          <StudentAssignmentWrittenWork part={part} doc={doc} editor={base} inOrder={inOrder} alive={alive} onDocument={applyDoc} onUploading={(delta) => setUploading((count) => count + delta)} onFailure={fail} />
         ) : (
           <StudentAssignmentPart part={part} answers={answers} conflicts={conflicts} onChoose={choose} onResolve={resolve} />
         )}

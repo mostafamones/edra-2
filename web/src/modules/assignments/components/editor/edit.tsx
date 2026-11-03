@@ -1,7 +1,5 @@
-"use client";
-
-import Link from "next/link";
-import { IconAlertCircle, IconArrowLeft } from "@tabler/icons-react";
+import Link from "@/components/shared/link";
+import { IconAlertCircle, IconArrowLeft } from "@/components/shared/icons";
 
 import { AssessmentEditGate } from "@/components/shared/assessment/edit";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

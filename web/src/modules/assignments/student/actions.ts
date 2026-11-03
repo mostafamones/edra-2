@@ -1,55 +1,86 @@
-"use server";
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 
-import { cleanupWorkFiles, finishWorkUpload, runAssignmentCommand, signWorkImages, startWorkUpload } from "./data";
-import type { ClaimOutcome, EditorDocument, StudentAssignment, StudentAssignmentResult } from "./types";
+import {
+  claimAssignmentEditor as claimAssignmentEditorServer,
+  renewAssignmentEditor as renewAssignmentEditorServer,
+  readAssignmentEditor as readAssignmentEditorServer,
+  saveAssignmentAnswers as saveAssignmentAnswersServer,
+  submitAssignment as submitAssignmentServer,
+  startAssignmentUpload as startAssignmentUploadServer,
+  finishAssignmentUpload as finishAssignmentUploadServer,
+  removeAssignmentFile as removeAssignmentFileServer,
+  signAssignmentImages as signAssignmentImagesServer,
+} from "./actions.server";
 
-/**
- * Student assignment commands (cookie session). Server actions are reachable by direct POST, so
- * each input is validated here and the database reauthorizes the caller, record and editor claim.
- */
+const claimAssignmentEditorFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => claimAssignmentEditorServer(data.value as Parameters<typeof claimAssignmentEditorServer>[0]));
 
-export async function claimAssignmentEditor(value: unknown) {
-  return runAssignmentCommand(value) as Promise<StudentAssignmentResult<ClaimOutcome>>;
+export async function claimAssignmentEditor(value: Parameters<typeof claimAssignmentEditorServer>[0]): ReturnType<typeof claimAssignmentEditorServer> {
+  return claimAssignmentEditorFn({ data: { value } }) as ReturnType<typeof claimAssignmentEditorServer>;
 }
 
-export async function renewAssignmentEditor(value: unknown) {
-  return runAssignmentCommand(value) as Promise<StudentAssignmentResult<{ leaseUntil: string; version: number }>>;
+const renewAssignmentEditorFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => renewAssignmentEditorServer(data.value as Parameters<typeof renewAssignmentEditorServer>[0]));
+
+export async function renewAssignmentEditor(value: Parameters<typeof renewAssignmentEditorServer>[0]): ReturnType<typeof renewAssignmentEditorServer> {
+  return renewAssignmentEditorFn({ data: { value } }) as ReturnType<typeof renewAssignmentEditorServer>;
 }
 
-export async function readAssignmentEditor(value: unknown) {
-  return runAssignmentCommand(value) as Promise<StudentAssignmentResult<EditorDocument>>;
+const readAssignmentEditorFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => readAssignmentEditorServer(data.value as Parameters<typeof readAssignmentEditorServer>[0]));
+
+export async function readAssignmentEditor(value: Parameters<typeof readAssignmentEditorServer>[0]): ReturnType<typeof readAssignmentEditorServer> {
+  return readAssignmentEditorFn({ data: { value } }) as ReturnType<typeof readAssignmentEditorServer>;
 }
 
-export async function saveAssignmentAnswers(value: unknown) {
-  return runAssignmentCommand(value) as Promise<StudentAssignmentResult<{ version: number }>>;
+const saveAssignmentAnswersFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => saveAssignmentAnswersServer(data.value as Parameters<typeof saveAssignmentAnswersServer>[0]));
+
+export async function saveAssignmentAnswers(value: Parameters<typeof saveAssignmentAnswersServer>[0]): ReturnType<typeof saveAssignmentAnswersServer> {
+  return saveAssignmentAnswersFn({ data: { value } }) as ReturnType<typeof saveAssignmentAnswersServer>;
 }
 
-export async function submitAssignment(value: unknown) {
-  const result = await runAssignmentCommand(value) as StudentAssignmentResult<StudentAssignment>;
-  if (result.ok && typeof value === "object" && value) {
-    const { academyId, assignmentId } = value as { academyId: string; assignmentId: string };
-    await cleanupWorkFiles(academyId, assignmentId);
-  }
-  return result;
+const submitAssignmentFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => submitAssignmentServer(data.value as Parameters<typeof submitAssignmentServer>[0]));
+
+export async function submitAssignment(value: Parameters<typeof submitAssignmentServer>[0]): ReturnType<typeof submitAssignmentServer> {
+  return submitAssignmentFn({ data: { value } }) as ReturnType<typeof submitAssignmentServer>;
 }
 
-export async function startAssignmentUpload(value: unknown) {
-  return startWorkUpload(value);
+const startAssignmentUploadFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => startAssignmentUploadServer(data.value as Parameters<typeof startAssignmentUploadServer>[0]));
+
+export async function startAssignmentUpload(value: Parameters<typeof startAssignmentUploadServer>[0]): ReturnType<typeof startAssignmentUploadServer> {
+  return startAssignmentUploadFn({ data: { value } }) as ReturnType<typeof startAssignmentUploadServer>;
 }
 
-export async function finishAssignmentUpload(value: unknown) {
-  return finishWorkUpload(value);
+const finishAssignmentUploadFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => finishAssignmentUploadServer(data.value as Parameters<typeof finishAssignmentUploadServer>[0]));
+
+export async function finishAssignmentUpload(value: Parameters<typeof finishAssignmentUploadServer>[0]): ReturnType<typeof finishAssignmentUploadServer> {
+  return finishAssignmentUploadFn({ data: { value } }) as ReturnType<typeof finishAssignmentUploadServer>;
 }
 
-export async function removeAssignmentFile(value: unknown) {
-  const result = await runAssignmentCommand(value) as StudentAssignmentResult<{ fileId: string; state: "removed" }>;
-  if (result.ok && typeof value === "object" && value) {
-    const { academyId, assignmentId } = value as { academyId: string; assignmentId: string };
-    await cleanupWorkFiles(academyId, assignmentId);
-  }
-  return result;
+const removeAssignmentFileFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => removeAssignmentFileServer(data.value as Parameters<typeof removeAssignmentFileServer>[0]));
+
+export async function removeAssignmentFile(value: Parameters<typeof removeAssignmentFileServer>[0]): ReturnType<typeof removeAssignmentFileServer> {
+  return removeAssignmentFileFn({ data: { value } }) as ReturnType<typeof removeAssignmentFileServer>;
 }
 
-export async function signAssignmentImages(value: unknown) {
-  return signWorkImages(value);
+const signAssignmentImagesFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => signAssignmentImagesServer(data.value as Parameters<typeof signAssignmentImagesServer>[0]));
+
+export async function signAssignmentImages(value: Parameters<typeof signAssignmentImagesServer>[0]): ReturnType<typeof signAssignmentImagesServer> {
+  return signAssignmentImagesFn({ data: { value } }) as ReturnType<typeof signAssignmentImagesServer>;
 }

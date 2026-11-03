@@ -1,4 +1,3 @@
-"use client";
 import { useRef } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowUp01Icon, Attachment01Icon, Cancel01Icon, Delete02Icon, Unlink04Icon, Upload04Icon } from "@hugeicons/core-free-icons";

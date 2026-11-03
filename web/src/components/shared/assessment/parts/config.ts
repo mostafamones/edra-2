@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { Icon } from "@tabler/icons-react";
+import type { Icon } from "@/components/shared/icons";
 
 /** The editable shape of a question every assessment shares; the stored model answer is carried along untouched. */
 export type EditorChoice = { id?: string; label: string; isCorrect: boolean };

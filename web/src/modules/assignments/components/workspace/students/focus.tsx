@@ -1,6 +1,4 @@
-"use client";
-
-import { IconCheck, IconSlash, IconX } from "@tabler/icons-react";
+import { IconCheck, IconSlash, IconX } from "@/components/shared/icons";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

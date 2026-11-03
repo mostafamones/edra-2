@@ -1,4 +1,4 @@
-import { IconListNumbers } from "@tabler/icons-react";
+import { IconListNumbers } from "@/components/shared/icons";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";

@@ -1,13 +1,11 @@
-"use client";
-
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/shared/link";
+import { useRouter } from "@/lib/navigation";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
-import { FcGoogle } from "react-icons/fc";
-import { IconInfoCircle } from "@tabler/icons-react";
+import { FcGoogle } from "@/components/shared/brands";
+import { IconInfoCircle } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";

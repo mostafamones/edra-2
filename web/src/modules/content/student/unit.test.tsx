@@ -8,6 +8,8 @@ vi.mock("../access/actions", () => mocks);
 vi.mock("@/modules/auth", () => ({ useAuth: mocks.auth }));
 vi.mock("./material", () => ({ StudentMaterial: () => <button>Open protected material</button> }));
 import { StudentLearningUnit } from "./unit";
+vi.mock("@/components/shared/link", () => ({ default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => <a href={href} {...props}>{children}</a> }));
+vi.mock("@/lib/navigation", () => ({ usePathname: () => "/learn/units/unit" }));
 const userId = "student", academyId = "academy";
 function unit(): LearningUnit { return { id: "unit", title: "Revision lesson", description: "", accessDays: 7, extensionAvailable: true, prerequisites: [], prerequisitesMet: true, couponType: null,
   access: { status: "locked", expiresAt: null, grantId: null }, items: [{ id: "material", kind: "document", title: "Notes", available: false, assessmentKind: null }] }; }

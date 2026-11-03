@@ -1,8 +1,7 @@
-"use client";
 import { usePortalPath, useCanonicalHref } from "../use-routing";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from "@/components/shared/link";
+import { usePathname } from "@/lib/navigation";
 import { Fragment } from "react";
 
 import {

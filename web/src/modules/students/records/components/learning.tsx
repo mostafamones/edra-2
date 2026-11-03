@@ -1,6 +1,4 @@
-"use client";
-
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { useState } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";

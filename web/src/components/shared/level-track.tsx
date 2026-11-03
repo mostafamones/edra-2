@@ -1,4 +1,3 @@
-"use client";
 
 import { Field, FieldError } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
+import { throughTransport } from "@/modules/transport.test-support";
 
 const reads = vi.hoisted(() => ({ history: vi.fn(), sources: vi.fn(), caller: vi.fn(), rpc: vi.fn() }));
 vi.mock("./data", () => ({
@@ -9,7 +10,7 @@ vi.mock("./data", () => ({
     catch (error) { return { ok: false, message: (error as Error).message }; }
   },
 }));
-import { loadUnitPanels } from "./actions";
+import { loadUnitPanels, saveUnit } from "./actions.server";
 
 const academyId = "11111111-1111-4111-8111-111111111111", unitId = "22222222-2222-4222-8222-222222222222";
 beforeEach(() => {
@@ -36,4 +37,14 @@ it("preserves successful panels when one read fails", async () => {
     history: { ok: false, message: "History unavailable" },
     assessments: { ok: true, value: [] }, sources: { ok: true, value: [] },
   });
+});
+
+it("transports panel data and the explicit undefined save result", async () => {
+  const panels = await loadUnitPanels(academyId, unitId);
+  expect(await throughTransport(panels)).toEqual(panels);
+  const saved = await saveUnit({ academyId, unitId, version: 1, document: { title: "Unit", description: "", accessDays: 7, items: [] } });
+  expect(saved).toEqual({ ok: true, value: undefined });
+  const result = await throughTransport(saved);
+  expect(result).toEqual(saved);
+  expect(Object.hasOwn(result, "value")).toBe(true);
 });

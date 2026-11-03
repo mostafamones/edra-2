@@ -1,9 +1,7 @@
-"use client";
-
 import { useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconAlertCircle, IconInfoCircle } from "@tabler/icons-react";
+import { IconAlertCircle, IconInfoCircle } from "@/components/shared/icons";
 
 import { MarksForm } from "@/components/shared/assessment/marking/form";
 import { markSnapshot, scoringBasis } from "@/components/shared/assessment/marking/snapshot";

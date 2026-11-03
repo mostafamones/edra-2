@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -21,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { AcademyEntry } from "@/modules/academies";
+import { useAcademyScope } from "@/modules/auth";
 import { copyInvitationLink } from "@/modules/staff";
 
 import { getStudentBookingSettings, saveStudentBookingSettings } from "../actions";
@@ -44,6 +43,7 @@ type ChoiceField = "excludedLevelIds" | "excludedTrackIds" | "excludedGroupIds";
 /** Booking form settings: managers edit and save atomically; every staff role can copy the link and preview. */
 export function BookingSettingsPanel({ academy }: { academy: AcademyEntry }) {
   const queryClient = useQueryClient();
+  const isCurrent = useAcademyScope();
   const key = ["student-booking-settings", academy.id] as const;
   const query = useQuery({
     queryKey: key,
@@ -62,12 +62,15 @@ export function BookingSettingsPanel({ academy }: { academy: AcademyEntry }) {
       if (!result.ok) throw new Error(result.error);
       return result.settings;
     },
-    onSuccess: (settings) => {
+    onMutate: () => queryClient.getQueryCache().find({ queryKey: key, exact: true }),
+    onSuccess: (settings, _input, originalQuery) => {
+      if (!isCurrent(academy.id) || !originalQuery || queryClient.getQueryCache().find({ queryKey: key, exact: true }) !== originalQuery) return;
       queryClient.setQueryData<BookingSettings>(key, settings);
       setDraft(null);
       toast.success("Booking settings saved");
     },
-    onError: (error) => {
+    onError: (error, _input, originalQuery) => {
+      if (!isCurrent(academy.id) || !originalQuery || queryClient.getQueryCache().find({ queryKey: key, exact: true }) !== originalQuery) return;
       toast.error(SAVE_ERRORS[error.message] ?? "Couldn’t save the settings. Try again.");
       if (error.message === "stale" || error.message === "year_unavailable") {
         setDraft(null);

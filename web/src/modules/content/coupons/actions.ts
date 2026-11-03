@@ -1,101 +1,86 @@
-"use server";
-
+import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { contentCaller, contentResult } from "../data";
-import { learningError } from "../access/types";
-import { couponBatchCodesSchema, couponBatchPageSchema, couponBatchSchema, couponOptionsSchema, prefixSchema } from "./types";
 
-const academyInput = z.object({ academyId: z.guid() });
-const requestInput = academyInput.extend({ requestId: z.guid() });
-// A null level targets the whole academy for the year.
-const scopeInput = z.object({ yearId: z.guid(), levelId: z.null().default(null), trackId: z.null().default(null) });
+import {
+  loadCouponOptions as loadCouponOptionsServer,
+  loadCouponBatches as loadCouponBatchesServer,
+  loadCouponBatch as loadCouponBatchServer,
+  createCouponType as createCouponTypeServer,
+  changeCouponPrefix as changeCouponPrefixServer,
+  generateCoupons as generateCouponsServer,
+  revokeCoupon as revokeCouponServer,
+  renameCouponType as renameCouponTypeServer,
+  deleteCouponType as deleteCouponTypeServer,
+} from "./actions.server";
 
-export async function loadCouponOptions(value: unknown) {
-  return contentResult(async () => {
-    const { academyId } = academyInput.parse(value);
-    const { db, userId } = await contentCaller(academyId);
-    const { data, error } = await db.rpc("get_content_coupon_options", { p_academy_id: academyId });
-    learningError(error);
-    const options = couponOptionsSchema.safeParse(data);
-    if (!options.success) throw new Error("Could not load coupon settings. Refresh and try again.");
-    return { ...options.data, userId };
-  });
+const loadCouponOptionsFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => loadCouponOptionsServer(...(data.args as Parameters<typeof loadCouponOptionsServer>)));
+
+export async function loadCouponOptions(...args: Parameters<typeof loadCouponOptionsServer>): Promise<Awaited<ReturnType<typeof loadCouponOptionsServer>>> {
+  return loadCouponOptionsFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof loadCouponOptionsServer>>>;
 }
 
-export async function loadCouponBatches(value: unknown) {
-  return contentResult(async () => {
-    const input = academyInput.extend({ yearId: z.guid().nullable(), levelId: z.null().default(null), trackId: z.null().default(null), academyWide: z.literal(true).default(true), prefix: z.string().regex(/^[A-Z]{2,3}$/).nullable(), search: z.string().max(100), page: z.number().int().min(0).max(4000) }).parse(value);
-    const { db, userId } = await contentCaller(input.academyId);
-    const { data, error } = await db.rpc("get_content_coupon_batches", { p_academy_id: input.academyId, p_year_id: input.yearId ?? undefined, p_level_id: input.levelId ?? undefined, p_track_id: input.trackId ?? undefined, p_academy_wide: input.academyWide, p_prefix: input.prefix ?? undefined, p_search: input.search, p_offset: input.page * 25 });
-    learningError(error);
-    return { ...couponBatchPageSchema.parse(data), userId };
-  });
+const loadCouponBatchesFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => loadCouponBatchesServer(...(data.args as Parameters<typeof loadCouponBatchesServer>)));
+
+export async function loadCouponBatches(...args: Parameters<typeof loadCouponBatchesServer>): Promise<Awaited<ReturnType<typeof loadCouponBatchesServer>>> {
+  return loadCouponBatchesFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof loadCouponBatchesServer>>>;
 }
 
-export async function loadCouponBatch(value: unknown) {
-  return contentResult(async () => {
-    const input = academyInput.extend({ batchId: z.guid() }).parse(value);
-    const { db, userId } = await contentCaller(input.academyId);
-    const { data, error } = await db.rpc("get_content_coupon_batch", { p_academy_id: input.academyId, p_batch_id: input.batchId });
-    learningError(error);
-    return { ...couponBatchCodesSchema.parse(data), userId };
-  });
+const loadCouponBatchFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => loadCouponBatchServer(...(data.args as Parameters<typeof loadCouponBatchServer>)));
+
+export async function loadCouponBatch(...args: Parameters<typeof loadCouponBatchServer>): Promise<Awaited<ReturnType<typeof loadCouponBatchServer>>> {
+  return loadCouponBatchFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof loadCouponBatchServer>>>;
 }
 
-export async function createCouponType(value: unknown) {
-  return contentResult(async () => {
-    const input = requestInput.merge(scopeInput).extend({ name: z.string().trim().min(1).max(80), prefix: prefixSchema }).parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { data, error } = await db.rpc("create_academy_coupon_type", { p_academy_id: input.academyId, p_year_id: input.yearId, p_name: input.name, p_prefix: input.prefix, p_request_id: input.requestId });
-    learningError(error);
-    return z.object({ id: z.guid() }).parse(data);
-  });
+const createCouponTypeFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => createCouponTypeServer(...(data.args as Parameters<typeof createCouponTypeServer>)));
+
+export async function createCouponType(...args: Parameters<typeof createCouponTypeServer>): Promise<Awaited<ReturnType<typeof createCouponTypeServer>>> {
+  return createCouponTypeFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof createCouponTypeServer>>>;
 }
 
-export async function changeCouponPrefix(value: unknown) {
-  return contentResult(async () => {
-    const input = requestInput.merge(scopeInput).extend({ typeId: z.guid().nullable(), prefix: prefixSchema }).parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { error } = input.typeId ? await db.rpc("change_content_coupon_prefix", { p_academy_id: input.academyId, p_type_id: input.typeId, p_prefix: input.prefix, p_request_id: input.requestId })
-      : await db.rpc("change_academy_default_prefix", { p_academy_id: input.academyId, p_year_id: input.yearId, p_prefix: input.prefix, p_request_id: input.requestId });
-    learningError(error);
-  });
+const changeCouponPrefixFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => changeCouponPrefixServer(...(data.args as Parameters<typeof changeCouponPrefixServer>)));
+
+export async function changeCouponPrefix(...args: Parameters<typeof changeCouponPrefixServer>): Promise<Awaited<ReturnType<typeof changeCouponPrefixServer>>> {
+  return changeCouponPrefixFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof changeCouponPrefixServer>>>;
 }
 
-export async function generateCoupons(value: unknown) {
-  return contentResult(async () => {
-    const input = requestInput.merge(scopeInput).extend({ typeId: z.guid().nullable(), quantity: z.number().int().min(1).max(1000) }).parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { data, error } = input.typeId ? await db.rpc("generate_content_coupons", { p_academy_id: input.academyId, p_type_id: input.typeId, p_quantity: input.quantity, p_request_id: input.requestId })
-      : await db.rpc("generate_academy_default_coupons", { p_academy_id: input.academyId, p_year_id: input.yearId, p_quantity: input.quantity, p_request_id: input.requestId });
-    learningError(error);
-    return couponBatchSchema.parse(data);
-  });
+const generateCouponsFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => generateCouponsServer(...(data.args as Parameters<typeof generateCouponsServer>)));
+
+export async function generateCoupons(...args: Parameters<typeof generateCouponsServer>): Promise<Awaited<ReturnType<typeof generateCouponsServer>>> {
+  return generateCouponsFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof generateCouponsServer>>>;
 }
 
-export async function revokeCoupon(value: unknown) {
-  return contentResult(async () => {
-    const input = requestInput.extend({ couponId: z.guid() }).parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { error } = await db.rpc("revoke_content_coupon", { p_academy_id: input.academyId, p_coupon_id: input.couponId, p_request_id: input.requestId });
-    learningError(error);
-  });
+const revokeCouponFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => revokeCouponServer(...(data.args as Parameters<typeof revokeCouponServer>)));
+
+export async function revokeCoupon(...args: Parameters<typeof revokeCouponServer>): Promise<Awaited<ReturnType<typeof revokeCouponServer>>> {
+  return revokeCouponFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof revokeCouponServer>>>;
 }
 
-export async function renameCouponType(value: unknown) {
-  return contentResult(async () => {
-    const input = requestInput.extend({ typeId: z.guid(), name: z.string().trim().min(1).max(80) }).parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { error } = await db.rpc("rename_content_coupon_type", { p_academy_id: input.academyId, p_type_id: input.typeId, p_name: input.name, p_request_id: input.requestId });
-    learningError(error);
-  });
+const renameCouponTypeFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => renameCouponTypeServer(...(data.args as Parameters<typeof renameCouponTypeServer>)));
+
+export async function renameCouponType(...args: Parameters<typeof renameCouponTypeServer>): Promise<Awaited<ReturnType<typeof renameCouponTypeServer>>> {
+  return renameCouponTypeFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof renameCouponTypeServer>>>;
 }
 
-export async function deleteCouponType(value: unknown) {
-  return contentResult(async () => {
-    const input = requestInput.extend({ typeId: z.guid() }).parse(value);
-    const { db } = await contentCaller(input.academyId);
-    const { error } = await db.rpc("delete_content_coupon_type", { p_academy_id: input.academyId, p_type_id: input.typeId, p_request_id: input.requestId });
-    learningError(error);
-  });
+const deleteCouponTypeFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => deleteCouponTypeServer(...(data.args as Parameters<typeof deleteCouponTypeServer>)));
+
+export async function deleteCouponType(...args: Parameters<typeof deleteCouponTypeServer>): Promise<Awaited<ReturnType<typeof deleteCouponTypeServer>>> {
+  return deleteCouponTypeFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof deleteCouponTypeServer>>>;
 }

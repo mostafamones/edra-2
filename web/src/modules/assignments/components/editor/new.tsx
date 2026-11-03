@@ -1,5 +1,3 @@
-"use client";
-
 import { AcademyGate } from "@/modules/auth";
 import { AssignmentFormPage } from "./page";
 

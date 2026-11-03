@@ -1,8 +1,6 @@
-"use client";
-
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { IconAlertCircle, IconChevronRight } from "@tabler/icons-react";
+import { IconAlertCircle, IconChevronRight } from "@/components/shared/icons";
 
 import { FILLED_INPUTS } from "@/components/shared/filled-inputs";
 import { SettingsRow } from "@/components/shared/settings-row";
@@ -16,7 +14,6 @@ import type { AcademyEntry } from "@/modules/academies";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/modules/auth";
 import { loadStructure, structureQueryKey } from "@/modules/groups";
-import { studentsRootKey } from "../../records/queries";
 
 import { canConfigureStudentCodes } from "../permissions";
 import { fetchLevelStudentCounts, fetchStudentCodeSettings, studentCodeQueryKeys } from "../queries";
@@ -106,7 +103,6 @@ export function StudentCodesRow({ academy }: { academy: AcademyEntry }) {
             settings={settings}
             onSaved={(saved) => {
               queryClient.setQueryData(settingsKey, saved);
-              void queryClient.invalidateQueries({ queryKey: [...studentsRootKey(academy.id), "list"] });
             }}
             onStale={() => { void queryClient.invalidateQueries({ queryKey: settingsKey }); }}
           />

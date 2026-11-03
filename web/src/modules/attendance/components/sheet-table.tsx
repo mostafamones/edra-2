@@ -1,6 +1,4 @@
-"use client";
-
-import { IconFilterOff, IconUsers } from "@tabler/icons-react";
+import { IconFilterOff, IconUsers } from "@/components/shared/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

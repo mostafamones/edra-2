@@ -1,8 +1,6 @@
-"use client";
-
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconAlertCircle, IconCheck, IconCopy, IconRefresh } from "@tabler/icons-react";
+import { IconAlertCircle, IconCheck, IconCopy, IconRefresh } from "@/components/shared/icons";
 import { toast } from "sonner";
 
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
@@ -19,7 +17,7 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import type { AcademyEntry } from "@/modules/academies";
-import { AcademyGate } from "@/modules/auth";
+import { AcademyGate, useAcademyScope } from "@/modules/auth";
 import { copyInvitationLink } from "@/modules/staff";
 
 import { StudentCodesRow } from "../../codes/components/page";
@@ -36,6 +34,7 @@ type Result = Awaited<ReturnType<typeof getStudentEnrollmentSettings>>;
 function StudentEnrollment({ academy }: { academy: AcademyEntry }) {
   useBreadcrumbTitle("Students");
   const queryClient = useQueryClient();
+  const isCurrent = useAcademyScope();
   const key = ["student-enrollment", academy.id] as const;
   const query = useQuery({
     queryKey: key,
@@ -51,11 +50,16 @@ function StudentEnrollment({ academy }: { academy: AcademyEntry }) {
       if (!result.ok) throw new Error(result.error);
       return result.settings;
     },
-    onSuccess: (settings, { success }) => {
+    onMutate: () => queryClient.getQueryCache().find({ queryKey: key, exact: true }),
+    onSuccess: (settings, { success }, originalQuery) => {
+      if (!isCurrent(academy.id) || !originalQuery || queryClient.getQueryCache().find({ queryKey: key, exact: true }) !== originalQuery) return;
       queryClient.setQueryData<EnrollmentSettings>(key, settings);
       if (success) toast.success(success);
     },
-    onError: (error) => toast.error(error.message === "forbidden" ? "You don’t have permission to do that." : "Couldn’t save the change. Try again."),
+    onError: (error, _input, originalQuery) => {
+      if (isCurrent(academy.id) && originalQuery && queryClient.getQueryCache().find({ queryKey: key, exact: true }) === originalQuery)
+        toast.error(error.message === "forbidden" ? "You don’t have permission to do that." : "Couldn’t save the change. Try again.");
+    },
   });
   const [linkBox, setLinkBox] = useState<HTMLElement | null>(null);
   const [copied, setCopied] = useState(false);

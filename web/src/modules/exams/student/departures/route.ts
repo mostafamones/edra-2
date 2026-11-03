@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 import { z } from "zod";
 import { platformOrigin } from "@/lib/routing";
 import { recordMyExamDeparture } from "../data";

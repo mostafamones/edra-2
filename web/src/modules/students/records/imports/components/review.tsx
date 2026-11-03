@@ -1,9 +1,7 @@
-"use client";
-
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { IconAlertCircle, IconRotate } from "@tabler/icons-react";
+import { IconAlertCircle, IconRotate } from "@/components/shared/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,

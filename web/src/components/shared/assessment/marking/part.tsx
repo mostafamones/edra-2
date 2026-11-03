@@ -1,7 +1,6 @@
-"use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { IconBolt, IconCheck, IconChevronLeft, IconChevronRight, IconMinus, IconPlus, IconX } from "@tabler/icons-react";
+import { IconBolt, IconCheck, IconChevronLeft, IconChevronRight, IconMinus, IconPlus, IconX } from "@/components/shared/icons";
 
 import { Segmented } from "@/components/shared/segmented";
 import { Badge } from "@/components/ui/badge";

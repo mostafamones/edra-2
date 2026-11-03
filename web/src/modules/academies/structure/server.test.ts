@@ -4,7 +4,7 @@ const state = vi.hoisted(() => ({
   role: "owner" as string | null,
   rpc: vi.fn(),
 }));
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ rpc: state.rpc }) }));
 vi.mock("../server", () => ({ resolveStaffAcademy: async (slug: string) => state.role && slug === "academy-a"
   ? { id: "12900000-0000-4000-8000-000000000001", slug, role: state.role } : null }));

@@ -1,6 +1,6 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
-import { redirect } from "next/navigation";
+import { redirect } from "@/lib/navigation";
 import type { Authority } from "../../lib/supabase/authority";
 import { createClient } from "../../lib/supabase/server";
 import { validAcademySlug } from "../../lib/routing";

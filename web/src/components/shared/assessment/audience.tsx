@@ -1,4 +1,3 @@
-"use client";
 
 import type { ReactNode } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";

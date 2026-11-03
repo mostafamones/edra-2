@@ -1,8 +1,6 @@
-"use client";
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { IconExternalLink } from "@tabler/icons-react";
+import { IconExternalLink } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { formatAcademyDateTime } from "@/lib/academy-time";

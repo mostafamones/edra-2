@@ -1,7 +1,5 @@
-"use client";
-
 import { Fragment } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { itemKey } from "../types";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import type { ReactNode } from "react";
 
 import { Alert, AlertTitle } from "@/components/ui/alert";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
 import { studentListPath } from "@/lib/routing";
-import { listMyStudentAcademies } from "@/modules/students/server";
+import type { StudentAcademyLink } from "@/modules/students/server";
 
 import type { AcademyItems, Scope } from "../data";
 import { AcademyFilter } from "./academy-filter";
@@ -16,11 +16,12 @@ import { Pager } from "./pager";
  * A cross-academy page: one section per academy that has something to show, or one empty state.
  * `pick` narrows an academy's items. Unscoped pages link to each academy's filtered list; scoped pages page through it.
  */
-export async function AcademySections<T>({ title, section, empty, groups, scope, query, filter, pick = (items) => items, children }: {
+export function AcademySections<T>({ title, section, empty, groups, scope, academies, query, filter, pick = (items) => items, children }: {
   title: string;
   /** The list's path, such as "assignments", for links to one academy's full list. */
   section: string;
   scope: Scope;
+  academies: StudentAcademyLink[];
   /** Query values the pager keeps, such as an active filter. */
   query?: Record<string, string>;
   /** Shown under the title while a filter applies. */
@@ -30,7 +31,6 @@ export async function AcademySections<T>({ title, section, empty, groups, scope,
   pick?: (items: T[]) => T[];
   children: (item: T, slug: string) => ReactNode;
 }) {
-  const academies = await listMyStudentAcademies();
   const sections = groups.map((group) => ({ ...group, items: group.items && pick(group.items) }))
     .filter((group) => group.items === null || group.items.length > 0);
   return (

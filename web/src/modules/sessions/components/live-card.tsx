@@ -1,7 +1,5 @@
-"use client";
-
-import Link from "next/link";
-import { IconChevronRight, IconClock, IconMapPin, IconUser, IconUsers } from "@tabler/icons-react";
+import Link from "@/components/shared/link";
+import { IconChevronRight, IconClock, IconMapPin, IconUser, IconUsers } from "@/components/shared/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";

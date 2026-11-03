@@ -1,5 +1,3 @@
-"use client";
-
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { AcademyGate, useAuth } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";

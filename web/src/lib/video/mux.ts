@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 import { createPrivateKey, createSign, createHmac, timingSafeEqual } from "node:crypto";
 
 type MuxResponse<T> = { data: T };

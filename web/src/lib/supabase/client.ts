@@ -1,3 +1,4 @@
+import { publicEnv } from "@/lib/env/public";
 import { createBrowserClient, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr'
 import { failureFetch } from '@/modules/development/failures/browser'
 
@@ -7,8 +8,8 @@ import type { Database } from './database.types'
 
 export function createClient() {
   return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    publicEnv.supabaseUrl!,
+    publicEnv.supabasePublishableKey!,
     {
       cookieOptions: authCookieOptions(),
       // Development only: Developer mode's failure simulator.

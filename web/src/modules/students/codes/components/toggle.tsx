@@ -1,7 +1,6 @@
-"use client";
-
 import { useState } from "react";
-import { IconLoader2 } from "@tabler/icons-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { IconLoader2 } from "@/components/shared/icons";
 import { toast } from "sonner";
 
 import { Switch } from "@/components/ui/switch";
@@ -9,6 +8,7 @@ import { useAcademyScope } from "@/modules/auth";
 
 import { saveStudentCodeSettings } from "../actions";
 import type { StudentCodeSettings } from "../types";
+import { studentsRootKey } from "../../records/queries";
 
 type Props = {
   academyId: string;
@@ -21,6 +21,7 @@ type Props = {
 /** On/off switch that saves immediately. Formats and codes are kept either way. */
 export function StudentCodesToggle({ academyId, settings, onSaved, onStale }: Props) {
   const isCurrentAcademy = useAcademyScope();
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
 
   async function change(next: boolean) {
@@ -34,6 +35,7 @@ export function StudentCodesToggle({ academyId, settings, onSaved, onStale }: Pr
         defaultPattern: settings.defaultPattern ?? "",
         levels: settings.levels,
       });
+      if (result.ok) void queryClient.invalidateQueries({ queryKey: [...studentsRootKey(academyId), "list"] });
       if (!isCurrentAcademy(academyId)) return;
       if (!result.ok) {
         if (result.code === "stale_settings") onStale();

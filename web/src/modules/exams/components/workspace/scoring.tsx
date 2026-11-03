@@ -1,5 +1,3 @@
-"use client";
-
 import { ScoringPanel } from "@/components/shared/assessment/scoring";
 import type { AcademyRole } from "@/modules/academies/roles";
 import { examPermissions } from "../../permissions";

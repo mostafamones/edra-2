@@ -1,6 +1,4 @@
-"use client";
-
-import { IconClock, IconPlayerPlay } from "@tabler/icons-react";
+import { IconClock, IconPlayerPlay } from "@/components/shared/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

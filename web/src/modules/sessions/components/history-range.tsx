@@ -1,9 +1,7 @@
-"use client";
-
 import { useState } from "react";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { IconCalendar } from "@tabler/icons-react";
+import { IconCalendar } from "@/components/shared/icons";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";

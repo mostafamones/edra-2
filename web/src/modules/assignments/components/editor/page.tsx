@@ -1,5 +1,3 @@
-"use client";
-
 import { AssessmentFormPage } from "@/components/shared/assessment/page";
 import type { AcademyEntry } from "@/modules/academies";
 import type { Assignment } from "../../types";

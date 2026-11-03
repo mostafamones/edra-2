@@ -1,5 +1,3 @@
-"use client";
-
 import { queryOptions } from "@tanstack/react-query";
 import { unwrapContent } from "../types";
 import { loadCouponBatches, loadCouponOptions } from "./actions";

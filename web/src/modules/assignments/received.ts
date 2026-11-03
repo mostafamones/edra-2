@@ -1,4 +1,6 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
+
+import { publicEnv } from "@/lib/env/public";
 
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -49,7 +51,7 @@ export async function openReceivedFile(input: { academyId: string; fileId: strin
     const { data, error } = await caller.db.rpc("authorize_assignment_received_file", { p_academy_id: parsed.data.academyId, p_file_id: parsed.data.fileId });
     if (error) return failureFromDatabase(error);
     const file = z.object({ path: z.string(), name: z.string(), mime: z.string() }).parse(data);
-    const admin = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, { auth: { persistSession: false, autoRefreshToken: false } });
+    const admin = createClient<Database>(publicEnv.supabaseUrl, key, { auth: { persistSession: false, autoRefreshToken: false } });
     const signed = await admin.storage.from("assignment-work").createSignedUrl(file.path, FILE_URL_SECONDS, PREVIEWABLE_TYPES.includes(file.mime) ? undefined : { download: file.name });
     if (signed.error || !signed.data) return failure("unavailable");
     return { ok: true, url: signed.data.signedUrl };

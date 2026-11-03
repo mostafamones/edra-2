@@ -1,5 +1,3 @@
-"use client";
-
 import { MarkingSheet } from "@/components/shared/assessment/marking/sheet";
 import { formatScore } from "@/lib/score";
 import { useMarks } from "../../hooks/use-marks";

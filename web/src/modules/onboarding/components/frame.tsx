@@ -1,6 +1,6 @@
 import { platformOrigin } from "@/lib/routing";
-import Link from "next/link";
-import { IconSchool } from "@tabler/icons-react";
+import Link from "@/components/shared/link";
+import { IconSchool } from "@/components/shared/icons";
 
 import { onboardingFrameCopy } from "../copy/frame";
 import "../onboarding.css";

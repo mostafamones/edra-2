@@ -1,9 +1,9 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { randomUUID } from "node:crypto";
 
 import { createClient as createSupabaseClient, type Session } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import { cookies } from "@/lib/server/request";
 
 import { platformOrigin, staffAcademyHref, staffAcademyPath, studentAcademyHref } from "@/lib/routing";
 import { authCookieOptions } from "@/lib/supabase/cookie-policy";

@@ -1,9 +1,7 @@
-"use client";
-
 import { useState, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { useQuery } from "@tanstack/react-query";
-import { IconAlertCircle, IconArchive, IconArchiveOff, IconArrowLeft, IconPlayerStop, IconQuestionMark } from "@tabler/icons-react";
+import { IconAlertCircle, IconArchive, IconArchiveOff, IconArrowLeft, IconPlayerStop, IconQuestionMark } from "@/components/shared/icons";
 
 import { useBreadcrumbTitle } from "@/components/shared/breadcrumb-title";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

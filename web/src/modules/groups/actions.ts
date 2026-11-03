@@ -1,80 +1,41 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
+import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { academyMember } from "@/lib/supabase/membership";
-import { isAcademyManager } from "@/modules/academies/roles";
-import { groupInputSchema } from "./validation";
+import {
+  createGroup as createGroupServer,
+  updateGroup as updateGroupServer,
+  archiveGroup as archiveGroupServer,
+  restoreGroup as restoreGroupServer,
+} from "./actions.server";
 
-type Result = { ok: true } | { ok: false; message: string };
+const createGroupFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => createGroupServer(data.value as Parameters<typeof createGroupServer>[0]));
 
-/** The caller's client when they manage the academy (Owner, Head Admin or Admin), else null. */
-async function manager(academyId: string) {
-  const actor = await academyMember(academyId);
-  return actor && isAcademyManager(actor.role) ? actor.db : null;
+export async function createGroup(value: Parameters<typeof createGroupServer>[0]): Promise<Awaited<ReturnType<typeof createGroupServer>>> {
+  return createGroupFn({ data: { value } });
 }
 
-export async function createGroup(value: unknown): Promise<Result> {
-  const parsed = groupInputSchema.safeParse(value);
-  if (!parsed.success) return { ok: false, message: "Check the group fields and try again." };
-  const input = parsed.data;
-  const db = await manager(input.academyId);
-  if (!db) return { ok: false, message: "You do not have permission to create groups." };
-  const { data: year, error: yearError } = await db.from("academic_years")
-    .select("id").eq("academy_id", input.academyId).is("closed_at", null).single();
-  if (yearError || !year) return { ok: false, message: "The active academic year is unavailable." };
-  const { error } = await db.from("groups").insert({
-    academy_id: input.academyId, academic_year_id: year.id,
-    name: input.name, level_id: input.levelId, track_id: input.trackId,
-    capacity: input.capacity, notes: input.notes,
-  });
-  if (error) return { ok: false, message: error.message };
-  revalidatePath("/app/[academySlug]/groups", "page");
-  return { ok: true };
+const updateGroupFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ groupId: z.unknown(), value: z.unknown() }))
+  .handler(({ data }) => updateGroupServer(data.groupId as Parameters<typeof updateGroupServer>[0], data.value as Parameters<typeof updateGroupServer>[1]));
+
+export async function updateGroup(groupId: Parameters<typeof updateGroupServer>[0], value: Parameters<typeof updateGroupServer>[1]): Promise<Awaited<ReturnType<typeof updateGroupServer>>> {
+  return updateGroupFn({ data: { groupId, value } });
 }
 
-export async function updateGroup(groupId: string, value: unknown): Promise<Result> {
-  if (!z.guid().safeParse(groupId).success) return { ok: false, message: "Invalid group." };
-  const parsed = groupInputSchema.safeParse(value);
-  if (!parsed.success) return { ok: false, message: "Check the group fields and try again." };
-  const input = parsed.data;
-  const db = await manager(input.academyId);
-  if (!db) return { ok: false, message: "You do not have permission to edit groups." };
-  const { data, error } = await db.from("groups").update({
-    name: input.name, level_id: input.levelId, track_id: input.trackId,
-    capacity: input.capacity, notes: input.notes,
-  }).eq("id", groupId).eq("academy_id", input.academyId).is("archived_at", null).select("id").single();
-  if (error) return { ok: false, message: error.message };
-  if (!data) return { ok: false, message: "Group not found." };
-  revalidatePath("/app/[academySlug]/groups", "page");
-  return { ok: true };
+const archiveGroupFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ academyId: z.unknown(), groupId: z.unknown() }))
+  .handler(({ data }) => archiveGroupServer(data.academyId as Parameters<typeof archiveGroupServer>[0], data.groupId as Parameters<typeof archiveGroupServer>[1]));
+
+export async function archiveGroup(academyId: Parameters<typeof archiveGroupServer>[0], groupId: Parameters<typeof archiveGroupServer>[1]): Promise<Awaited<ReturnType<typeof archiveGroupServer>>> {
+  return archiveGroupFn({ data: { academyId, groupId } });
 }
 
-export async function archiveGroup(academyId: string, groupId: string): Promise<Result> {
-  if (!z.guid().safeParse(academyId).success || !z.guid().safeParse(groupId).success)
-    return { ok: false, message: "Invalid group." };
-  const db = await manager(academyId);
-  if (!db) return { ok: false, message: "You do not have permission to archive groups." };
-  const { data, error } = await db.from("groups").update({ archived_at: new Date().toISOString() })
-    .eq("id", groupId).eq("academy_id", academyId).is("archived_at", null).select("id").single();
-  if (error) return { ok: false, message: error.message };
-  if (!data) return { ok: false, message: "Group not found." };
-  revalidatePath("/app/[academySlug]/groups", "page");
-  return { ok: true };
-}
+const restoreGroupFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ academyId: z.unknown(), groupId: z.unknown() }))
+  .handler(({ data }) => restoreGroupServer(data.academyId as Parameters<typeof restoreGroupServer>[0], data.groupId as Parameters<typeof restoreGroupServer>[1]));
 
-export async function restoreGroup(academyId: string, groupId: string): Promise<Result> {
-  if (!z.guid().safeParse(academyId).success || !z.guid().safeParse(groupId).success)
-    return { ok: false, message: "Invalid group." };
-  const db = await manager(academyId);
-  if (!db) return { ok: false, message: "You do not have permission to unarchive groups." };
-  const { data, error } = await db.from("groups").update({ archived_at: null })
-    .eq("id", groupId).eq("academy_id", academyId).not("archived_at", "is", null).select("id").single();
-  // 23505: the active-name index already holds a group with this name in the same level and track.
-  if (error?.code === "23505") return { ok: false, message: "An active group in this level already uses this name." };
-  if (error) return { ok: false, message: error.message };
-  if (!data) return { ok: false, message: "Group not found." };
-  revalidatePath("/app/[academySlug]/groups", "page");
-  return { ok: true };
+export async function restoreGroup(academyId: Parameters<typeof restoreGroupServer>[0], groupId: Parameters<typeof restoreGroupServer>[1]): Promise<Awaited<ReturnType<typeof restoreGroupServer>>> {
+  return restoreGroupFn({ data: { academyId, groupId } });
 }
