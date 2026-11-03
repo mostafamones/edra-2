@@ -37,6 +37,8 @@ export function AnswerAccess({ assignment, recordId, manager }: { assignment: As
   const [busy, setBusy] = useState(false);
   const [requestId, setRequestId] = useState(newUuid);
   const data = query.data;
+  if (query.isPending) return <p role="status" className="text-sm text-muted-foreground">Loading answer access…</p>;
+  if (query.isError) return <div role="alert" className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm"><span>Could not load answer access.</span><Button variant="outline" size="sm" onClick={() => void query.refetch()}>Retry answer access</Button></div>;
   if (!data?.hasAnswerVideos || (!data.qualifyingWork && data.history.length === 0)) return null;
   const action = data.revoked ? "restore" : "revoke";
 
@@ -44,21 +46,27 @@ export function AnswerAccess({ assignment, recordId, manager }: { assignment: As
     const started = current.current;
     setBusy(true);
     setError(null);
-    const result = await changeStudentAnswerAccess({ academyId: assignment.academyId, assignmentId: assignment.id, recordId, action, reason, requestId });
-    if (!started || current.current !== started || !isCurrentAcademy(assignment.academyId)) return;
-    setBusy(false);
-    if (!result.ok) { setError(result.message); if (result.code !== "unavailable") setRequestId(newUuid()); return; }
-    client.setQueryData(key, result.data);
-    setOpen(false);
-    setReason("");
-    setRequestId(newUuid());
+    const isCurrent = () => Boolean(started && current.current === started && isCurrentAcademy(assignment.academyId));
+    try {
+      const result = await changeStudentAnswerAccess({ academyId: assignment.academyId, assignmentId: assignment.id, recordId, action, reason, requestId });
+      if (!isCurrent()) return;
+      if (!result.ok) { setError(result.message); if (result.code !== "unavailable") setRequestId(newUuid()); return; }
+      client.setQueryData(key, result.data);
+      setOpen(false);
+      setReason("");
+      setRequestId(newUuid());
+    } catch {
+      if (isCurrent()) setError("Could not confirm the access change. Retry with the same reason.");
+    } finally {
+      if (isCurrent()) setBusy(false);
+    }
   }
 
   return (
-    <section aria-label="Answer videos" className="flex flex-col gap-2 rounded-md border p-3 text-sm">
+    <section aria-label="Answer access" className="flex flex-col gap-2 rounded-md border p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-2 font-medium">
-          Answer videos
+          Answer access
           <Badge variant={data.revoked || !data.qualifyingWork ? "outline" : "secondary"}>
             {data.revoked ? "Revoked" : data.qualifyingWork ? "Unlocked" : "Locked"}
           </Badge>
@@ -70,7 +78,7 @@ export function AnswerAccess({ assignment, recordId, manager }: { assignment: As
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>{action === "revoke" ? "Revoke answer video access?" : "Restore answer video access?"}</AlertDialogTitle>
+                <AlertDialogTitle>{action === "revoke" ? "Revoke answer access?" : "Restore answer access?"}</AlertDialogTitle>
               </AlertDialogHeader>
               <Field>
                 <FieldLabel htmlFor={`answer-access-reason-${recordId}`}>Reason</FieldLabel>

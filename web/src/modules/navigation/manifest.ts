@@ -243,7 +243,6 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         label: "Coupons",
         href: "/app/manage/access",
         icon: "access",
-        roles: MANAGERS,
         preview: {
           title: "Access and coupons",
           purpose: "Manage release access while preserving the source of every entitlement.",

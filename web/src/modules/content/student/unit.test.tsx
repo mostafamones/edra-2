@@ -108,3 +108,40 @@ it("does not show another account's cached learning unit", () => {
   expect(screen.queryByLabelText("Coupon")).toBeNull();
   expect(mocks.loadLearningUnit).not.toHaveBeenCalled();
 });
+
+it("clears coupon input and errors when navigating between units", async () => {
+  const first = unit(), second = { ...unit(), id: "second", title: "Next lesson" };
+  mocks.loadLearningUnit.mockImplementation(async ({ unitId }) => ({ ok: true, value: { userId, unit: unitId === first.id ? first : second } }));
+  mocks.redeemUnitCode.mockResolvedValue({ ok: false, message: "This coupon is not available." });
+  const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const view = (initial: LearningUnit) => <QueryClientProvider client={cache}><StudentLearningUnit academyId={academyId} academySlug="academy" userId={userId} initial={initial} /></QueryClientProvider>;
+  const { rerender } = render(view(first));
+  fireEvent.change(await screen.findByLabelText("Coupon"), { target: { value: "AB7K-9M3R" } });
+  fireEvent.click(screen.getByRole("button", { name: "Redeem coupon" }));
+  await screen.findByText("This coupon is not available.");
+  rerender(view(second));
+  expect(await screen.findByRole("heading", { name: "Next lesson" })).toBeTruthy();
+  expect((screen.getByLabelText("Coupon") as HTMLInputElement).value).toBe("");
+  expect(screen.queryByText("This coupon is not available.")).toBeNull();
+  expect((screen.getByRole("button", { name: "Redeem coupon" }) as HTMLButtonElement).disabled).toBe(true);
+  cache.clear();
+});
+
+it("does not carry an in-flight redemption notice into another unit", async () => {
+  const first = unit(), second = { ...unit(), id: "second", title: "Next lesson" };
+  mocks.loadLearningUnit.mockImplementation(async ({ unitId }) => ({ ok: true, value: { userId, unit: unitId === first.id ? first : second } }));
+  let complete!: (value: unknown) => void;
+  mocks.redeemUnitCode.mockReturnValue(new Promise(resolve => { complete = resolve; }));
+  const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const view = (initial: LearningUnit) => <QueryClientProvider client={cache}><StudentLearningUnit academyId={academyId} academySlug="academy" userId={userId} initial={initial} /></QueryClientProvider>;
+  const { rerender } = render(view(first));
+  fireEvent.change(await screen.findByLabelText("Coupon"), { target: { value: "AB7K-9M3R" } });
+  fireEvent.click(screen.getByRole("button", { name: "Redeem coupon" }));
+  await waitFor(() => expect(mocks.redeemUnitCode).toHaveBeenCalledTimes(1));
+  rerender(view(second));
+  complete({ ok: true, value: { expiresAt: "2026-11-20T12:00:00Z" } });
+  await screen.findByRole("heading", { name: "Next lesson" });
+  expect(screen.queryByText(/Access granted until/)).toBeNull();
+  expect((screen.getByLabelText("Coupon") as HTMLInputElement).disabled).toBe(false);
+  cache.clear();
+});

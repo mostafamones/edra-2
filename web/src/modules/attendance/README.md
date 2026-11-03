@@ -19,9 +19,9 @@ Attendance for a started session: draft inputs, positive check-ins, explicit pub
 - Every write takes an idempotency key (UUID per action, reused on retry). Clients keep the whole command (body and key) after an uncertain outcome (network failure, 429, 5xx, unreadable acknowledgment) and retry it unchanged; the web manual check-in keeps the student, Late-after and key until acknowledged or dismissed. The response is stored with the write, per user; a retry replays it; a key reused for a different request is `idempotency_conflict`. Conflicts and `review_required` are not stored. Records are kept (no expiry job yet).
 - Locking: the sessions row first (`for no key update`, which serializes with `end_session`), then the academic year (`for share`).
 
-## Publication effects (outbox only)
+## Publication effects and learning grants
 
-`attendance_effects` records official effects once per student and session: Present/Late → `explanation_access`; Absent on a mandatory class for an expected student → `absence_event`; Excused and Unknown → none. A correction that no longer supports an earlier effect records `revocation_review` (owner policy pending). **Nothing consumes the outbox yet**: no access is granted and no parent is notified until those modules exist.
+`attendance_effects` records official effects once per student and session: Present/Late → `explanation_access`; Absent on a mandatory class for an expected student → `absence_event`; Excused and Unknown → none. A correction that no longer supports an earlier effect records `revocation_review` (owner policy pending). Migration `20261026210000_attendance_learning_access.sql` consumes new explanation-access effects in the finalization transaction, using the frozen taught-unit list and each unit's published duration. It preserves longer unrevoked access and records eligibility/prerequisite denials. Internal learning grants also run in registered generated academies; external notifications stay suppressed there. Applying the migration does not replay historical effects. Parent notification delivery remains separate.
 
 Archival contracts (migration 20261013200000_session_archival.sql), for every current and future consumer:
 

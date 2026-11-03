@@ -23,7 +23,10 @@ describe("canonical navigation", () => {
     }
   });
   it("falls back to home for unavailable and unauthorized sections", () => {
-    expect(academySwitchHref("/science/manage/access", "science", { slug: "math", role: "instructor" })).toBe("http://app.lvh.me:3000/math");
+    expect(academySwitchHref("/science/manage/notifications", "science", { slug: "math", role: "instructor" })).toBe("http://app.lvh.me:3000/math");
     expect(academySwitchHref("/science/unknown/record", "science", { slug: "math", role: "owner" })).toBe("http://app.lvh.me:3000/math");
+  });
+  it("preserves the instructor's coupon destination while switching academy scope", () => {
+    expect(academySwitchHref("/science/manage/access", "science", { slug: "math", role: "instructor" })).toBe("http://app.lvh.me:3000/math/manage/access");
   });
 });

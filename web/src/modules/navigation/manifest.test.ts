@@ -32,7 +32,7 @@ describe("portal navigation manifest", () => {
   });
 
   it("keeps restricted staff sections out of Instructor navigation", () => {
-    for (const href of ["/app/manage/access", "/app/manage/notifications", "/app/manage/integrations"]) {
+    for (const href of ["/app/manage/notifications", "/app/manage/integrations"]) {
       const item = findStaffItem(href);
       expect(item).toBeDefined();
       expect(canViewStaffItem(item!, "instructor")).toBe(false);
@@ -40,6 +40,11 @@ describe("portal navigation manifest", () => {
       expect(canViewStaffItem(item!, "head_admin")).toBe(true);
       expect(canViewStaffItem(item!, "admin")).toBe(true);
     }
+  });
+
+  it("lets instructors reach coupon generation without granting type-management permissions", () => {
+    expect(canViewStaffItem(findStaffItem("/app/manage/access")!, "instructor")).toBe(true);
+    expect(canViewStaffItem(findStaffItem("/app/manage/access")!, null)).toBe(false);
   });
 
   it("gives staff one Assessments destination and keeps student work pages separate", () => {
