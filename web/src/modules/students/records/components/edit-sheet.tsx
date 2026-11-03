@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { FloatingSheet, FloatingSheetContent, FloatingSheetHeader, FloatingSheetTitle } from "@/components/ui/floating-sheet";
 import { useAcademyScope } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
 import { groupDependencyQueryKey } from "@/modules/groups";
@@ -54,13 +54,12 @@ export function StudentEditSheet({ academy, recordId, onClose }: Props) {
   const blocked = status.saving || busy;
   return (
     <>
-      <Sheet open={Boolean(recordId)} onOpenChange={(open) => { if (!open) requestClose(); }}>
-        <SheetContent
-          side="right"
+      <FloatingSheet open={Boolean(recordId)} onOpenChange={(open) => { if (!open) requestClose(); }}>
+        <FloatingSheetContent
           showCloseButton={!blocked}
           onEscapeKeyDown={(event) => { if (blocked) event.preventDefault(); }}
           onPointerDownOutside={(event) => { if (blocked) event.preventDefault(); }}
-          className="gap-0 overflow-hidden p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
+          className="w-xl gap-0"
         >
           {recordId && (
             <SheetBody
@@ -73,8 +72,8 @@ export function StudentEditSheet({ academy, recordId, onClose }: Props) {
               onBusyChange={setBusy}
             />
           )}
-        </SheetContent>
-      </Sheet>
+        </FloatingSheetContent>
+      </FloatingSheet>
       <DiscardDialog open={confirming} onOpenChange={setConfirming} onDiscard={close} />
     </>
   );
@@ -129,11 +128,11 @@ function SheetBody({ academy, recordId, onSaved, onCancel, onStatusChange, onBus
   const archived = Boolean(record?.archivedAt);
   return (
     <>
-      <SheetHeader className="shrink-0 border-b px-6 py-5 pr-16">
-        <SheetTitle className="flex items-center gap-2 text-xl font-normal">
+      <FloatingSheetHeader className="shrink-0 border-b px-6 py-5 pr-16">
+        <FloatingSheetTitle className="flex items-center gap-2 text-xl font-normal">
           {archived ? "Archived student: " : "Edit student: "}
           <span className="font-[Noto_Sans_Arabic] font-semibold">{record?.fullName ?? "Loading..."}</span>
-        </SheetTitle>
+        </FloatingSheetTitle>
         {record && (
           <p className="text-sm text-muted-foreground">
             Online account: {ONLINE_ACCOUNT_LABELS[record.onlineAccount]}
@@ -144,7 +143,7 @@ function SheetBody({ academy, recordId, onSaved, onCancel, onStatusChange, onBus
             <HugeiconsIcon icon={IdentityCardIcon} data-icon="inline-start" />Student code
           </Button>
         )}
-      </SheetHeader>
+      </FloatingSheetHeader>
       {record && (
         <StudentCodeDialog
           academy={academy}
