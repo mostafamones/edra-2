@@ -1,10 +1,10 @@
 import { spawn } from "node:child_process";
 import http from "node:http";
-import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import { createServer } from "node:net";
 import { setTimeout } from "node:timers/promises";
 
-const require = createRequire(import.meta.url);
+const vite = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
 // Refuse an occupied port before sending any readiness request to it.
 const portCheck = createServer();
 await new Promise((resolve, reject) => {
@@ -14,12 +14,24 @@ await new Promise((resolve, reject) => {
 await new Promise((resolve, reject) => portCheck.close((error) => error ? reject(error) : resolve()));
 
 // Privileged fixture settings are used only by Node setup/assertion helpers.
-const serverEnv = { ...process.env };
-for (const key of Object.keys(serverEnv)) {
-  if (/^(ATTENDANCE_|PG|SUPABASE_|EDRA_DB_TEST_)/.test(key)) delete serverEnv[key];
-}
+const allowedEnv = new Set([
+  "PATH", "HOME", "TMPDIR", "CI", "GITHUB_ACTIONS", "NODE_ENV",
+  "EDRA_MARKETING_ORIGIN", "EDRA_APP_ORIGIN", "EDRA_LEARN_ORIGIN", "EDRA_DEV_TUNNEL_HOST",
+  "VITE_EDRA_MARKETING_ORIGIN", "VITE_EDRA_APP_ORIGIN", "VITE_EDRA_LEARN_ORIGIN",
+  "VITE_EDRA_COOKIE_DOMAIN", "VITE_SUPABASE_URL", "VITE_SUPABASE_PUBLISHABLE_KEY",
+]);
+const serverEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => allowedEnv.has(key)));
+// vite.config.ts strips dist/server/.dev.vars, so the Worker reads the origins baked from VITE_* at build.
+// Build with the same public settings that the worker will serve. Playwright owns
+// this process only in CI; preview runs the built Worker through workerd.
+const build = spawn(process.execPath, [vite, "build"], { stdio: "inherit", env: serverEnv });
+const buildCode = await new Promise((resolve, reject) => {
+  build.once("error", reject);
+  build.once("exit", (code) => resolve(code ?? 1));
+});
+if (buildCode !== 0) process.exit(buildCode);
 const server = spawn(process.execPath, [
-  require.resolve("next/dist/bin/next"), "dev", "--hostname", process.env.GITHUB_ACTIONS ? "0.0.0.0" : "127.0.0.1", "--port", "3100",
+  vite, "preview", "--host", "127.0.0.1", "--port", "3100", "--strictPort",
 ], { stdio: "inherit", env: serverEnv });
 
 server.on("error", (error) => {
@@ -29,10 +41,7 @@ server.on("error", (error) => {
 server.on("exit", (code) => process.exit(code ?? 1));
 
 // Playwright kills the whole process group at teardown, including this child.
-// Next normalizes its request origin to localhost; an explicit 127.0.0.1 bind makes it treat the proxy's
-// /app rewrite as external. The disposable CI runner binds 0.0.0.0 (rewrites stay internal); local runs stay on loopback.
-// Use loopback transport with the canonical Host to avoid DNS and preserve
-// host validation. Warm the login route before the 30-second tests begin.
+// Probe loopback with the canonical Host and require the actual login response.
 function loginReady() {
   return new Promise((resolve) => {
     const request = http.get({

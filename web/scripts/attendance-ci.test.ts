@@ -58,6 +58,9 @@ describe("attendance disposable target boundary", () => {
         const path = join(bin, name);
         writeFileSync(path, name === "supabase" ? `#!/bin/bash
 if [ "$1" = --version ]; then echo 2.117.0; exit 0; fi
+for key in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY PGHOSTADDR; do
+  [ -z "\${!key:-}" ] || exit 88
+done
 printf '%s\\n' "$*" >> '${calls}'
 if [ "$1" = start ]; then echo private-start-output; exit 17; fi
 if [ "$1" = stop ]; then exit ${cleanupFails ? 19 : 0}; fi
@@ -65,7 +68,7 @@ exit 0
 ` : "#!/bin/bash\nexit 99\n"); chmodSync(path, 0o700);
       }
       const result = spawnSync("bash", [resolve("scripts/attendance-e2e-ci.sh")], {
-        env: { NODE_ENV: "test", PATH: `${bin}:${process.env.PATH}`, GITHUB_ACTIONS: "true", RUNNER_ENVIRONMENT: "github-hosted", RUNNER_TEMP: temp, GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "1" }, encoding: "utf8",
+        env: { NODE_ENV: "test", PATH: `${bin}:${process.env.PATH}`, GITHUB_ACTIONS: "true", RUNNER_ENVIRONMENT: "github-hosted", RUNNER_TEMP: temp, GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "1", NEXT_PUBLIC_SUPABASE_URL: "inherited", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "inherited", VITE_SUPABASE_URL: "inherited", VITE_SUPABASE_PUBLISHABLE_KEY: "inherited", PGHOSTADDR: "inherited" }, encoding: "utf8",
       });
       expect(result.status).toBe(17);
       expect(result.stdout + result.stderr).not.toContain("private-start-output");
