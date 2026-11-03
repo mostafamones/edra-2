@@ -77,17 +77,19 @@ export function revisionChanges(previous: ContentDocument | null, next: ContentD
 
 type Event<B> = { document: unknown; at: string; by: B };
 type Author = { id: string } | null;
-export type HistoryEntry<B> = { key: string; kind: "published" | "draft"; at: string; creators: B[]; saves: number; summary: ChangeSummary | null; version: boolean };
+export type HistoryEntry<B> = { key: string; kind: "published" | "draft"; at: string; creators: B[]; saves: number; summary: ChangeSummary | null; version: boolean; scheduled: boolean };
 
 /**
  * One timeline, newest first. A publication owns the draft saves made since the previous publication, so a unit
  * sent for review is one event: the people who saved the drafts created it. Saves newer than the latest publication form a leading draft entry,
  * left out when they end where the publication is (edits that were undone). A draft kept as a version starts its own entry the same way.
  */
-export function historyEntries<B extends Author>(drafts: (Event<B> & { kind: "created" | "saved" | "version" })[], revisions: (Event<B> & { revision: number })[]): HistoryEntry<B>[] {
+export function historyEntries<B extends Author>(drafts: (Event<B> & { kind: "created" | "saved" | "version" })[], revisions: (Event<B> & { revision: number; savedAt?: string })[]): HistoryEntry<B>[] {
   // A save-and-publish stores its draft and publication in one transaction; the publication sorts first.
+  // A scheduled publication sits on the version it published, so saves made after that version stay the working draft.
+  const place = (event: { at: string; savedAt?: string }) => event.savedAt ?? event.at;
   const events = [...revisions.map(r => ({ ...r, kind: "published" as const, origin: null })), ...drafts.map(d => ({ ...d, origin: d.kind, kind: "draft" as const }))]
-    .sort((a, b) => b.at.localeCompare(a.at) || (a.kind === b.kind ? 0 : a.kind === "published" ? -1 : 1));
+    .sort((a, b) => place(b).localeCompare(place(a)) || (a.kind === b.kind ? 0 : a.kind === "published" ? -1 : 1));
   const groups: (typeof events)[] = [];
   for (const event of events) {
     if (event.kind === "published" || event.origin === "version" || !groups.length) groups.push([event]); else groups.at(-1)!.push(event);
@@ -116,7 +118,7 @@ export function historyEntries<B extends Author>(drafts: (Event<B> & { kind: "cr
     }
     // Publications from before drafts were recorded have no saves; their publisher is the only known creator.
     const creators = unique(saves.length ? saves.map(e => e.by) : [newest.by]);
-    return { key: newest.kind === "published" ? `revision-${newest.revision}` : `draft-${index}`, kind: newest.kind, at: newest.at, creators, saves: saves.length, summary, version: newest.origin === "version" };
+    return { key: newest.kind === "published" ? `revision-${newest.revision}` : `draft-${index}`, kind: newest.kind, at: newest.at, creators, saves: saves.length, summary, version: newest.origin === "version", scheduled: newest.kind === "published" && !!newest.savedAt };
   });
 }
 

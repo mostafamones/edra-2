@@ -32,6 +32,7 @@ import { UnitSettings } from "./settings";
 import { VersionHistory } from "./history";
 import { sameDocument } from "../revisions";
 import { unitPanelOptions } from "../panels";
+import { PublicationButton, usePublication } from "./publication";
 
 export function ContentEditorPage({ unitId }: { unitId: string }) { return <AcademyGate>{academy => <Editor academy={academy} unitId={unitId} />}</AcademyGate>; }
 function Editor({ academy, unitId }: { academy: AcademyEntry; unitId: string }) {
@@ -80,6 +81,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
   const canManage = data.manager && !closed;
   // A draft that matches the live publication (for example after undoing every edit) has nothing to publish or review.
   const unpublished = !unit.published_revision || !sameDocument(document, data.revisions[0]?.document);
+  const publication = usePublication({ academyId: academy.id, unitId: unit.id, userId: data.userId, enabled: data.manager, dirty });
   useEffect(() => {
     // Panels and tabs fetch in the background so they open without a loading state.
     void cache.prefetchQuery(unitPanelOptions(academy.id, unit.id));
@@ -171,6 +173,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
     <VersionHistory academyId={academy.id} unitId={unit.id} userId={data.userId} live={unit.state !== "archived"} disabled={disabled || dirty}
       action={unitAction(unit, { editable, manager: canManage, changed: unpublished })} onAction={perform} />
     </div>
+    {canManage && unit.state !== "archived" && <PublicationButton academyId={academy.id} unitId={unit.id} query={publication} dirty={dirty || saving} />}
     {/* Publishing is the review, so whoever can publish only publishes; everyone else submits for review. */}
     {editable && unpublished && !(canManage && unit.state !== "archived") && <Button disabled={disabled || dirty} onClick={() => perform("submit")}><HugeiconsIcon icon={SentIcon} strokeWidth={1.5} aria-hidden="true" />Submit for review</Button>}
     {canManage && unit.state !== "archived" && unpublished && <Button disabled={disabled} onClick={() => perform("publish")}><HugeiconsIcon icon={Tick02Icon} strokeWidth={1.5} aria-hidden="true" />{unit.published_revision ? "Publish changes" : "Publish unit"}</Button>}

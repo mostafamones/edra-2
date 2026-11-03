@@ -1,5 +1,5 @@
 import { newUuid } from "@/lib/uuid";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "@/components/shared/link";
 import { useRouter } from "@/lib/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -38,8 +38,9 @@ import type { ContentWorkspace } from "../data";
 import { UnitFacts, type UnitFact } from "./facts";
 import { KIND_ICONS } from "./kind-icon";
 import { UnitActions, UnitMenu, type UnitMenuActions, type UnitSheetTab } from "./menu";
+import { ScheduleUnitDialog } from "./publication";
 import { UnitSheet } from "./sheet";
-import { runUnitAction, UNIT_ACTIONS } from "./unit-action";
+import { runUnitAction, UNIT_ACTIONS, type UnitAction } from "./unit-action";
 import { UnitViewOptions } from "./view-options";
 
 const GRID = "grid gap-3 sm:grid-cols-2 xl:grid-cols-3";
@@ -85,6 +86,8 @@ function WorkspaceContent({ academy, data }: { academy: AcademyEntry; data: Cont
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [requestId, setRequestId] = useState("");
   const [archiving, setArchiving] = useState<ContentUnit | null>(null), [changing, setChanging] = useState(false);
+  const [scheduling, setScheduling] = useState<string | null>(null), [publishing, setPublishing] = useState<ContentUnit | null>(null);
+  const closeSchedule = useCallback(() => setScheduling(null), []);
   const [sheet, setSheet] = useState<{ unitId: string; tab: UnitSheetTab; opener: HTMLElement | null } | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const year = data.years.find(y => y.id === yearId);
@@ -164,17 +167,22 @@ function WorkspaceContent({ academy, data }: { academy: AcademyEntry; data: Cont
       if (applying.current === 0 && isActive()) void cache.invalidateQueries({ queryKey: workspaceKey });
     }
   }
+  function act(unit: ContentUnit, action: UnitAction) {
+    return runUnitAction({ academyId: academy.id, unitId: unit.id, version: unit.version }, action)
+      .then(() => toast.success(UNIT_ACTIONS[action].done), e => toast.error(e instanceof Error ? e.message : "Could not complete this change. Please retry."))
+      // A refusal usually means the card is out of date, so refresh either way.
+      .finally(() => void cache.invalidateQueries({ queryKey: ["content", academy.id] }));
+  }
   const menuActions: UnitMenuActions = {
     academyId: academy.id, labelIds: data.labelIds,
     onApplyLabel: (unit, labelId, applied) => void applyLabel(unit, labelId, applied),
     onManageLabels: canManageLabels(academy.role) ? from => setManaging({ open: true, opener: from }) : undefined,
     writable, manager: data.manager, userId: data.userId,
-    onAction: (unit, action) => void runUnitAction({ academyId: academy.id, unitId: unit.id, version: unit.version }, action)
-      .then(() => toast.success(UNIT_ACTIONS[action].done), e => toast.error(e instanceof Error ? e.message : "Could not complete this change. Please retry."))
-      // A refusal usually means the card is out of date, so refresh either way.
-      .finally(() => void cache.invalidateQueries({ queryKey: ["content", academy.id] })),
+    // Publishing reaches students, so a card's menu asks first.
+    onAction: (unit, action, from) => { if (action === "publish") { opener.current = from; setPublishing(unit); } else void act(unit, action); },
     onClone: (unit, from) => open("copy", unit, from),
     onArchive: (unit, from) => { opener.current = from; setArchiving(unit); },
+    onSchedule: (unit, from) => { opener.current = from; setScheduling(unit.id); },
     onRestore: unit => void change(unit, "restore"),
     onSheet: (unit, from, tab) => setSheet({ unitId: unit.id, tab, opener: from }),
   };
@@ -188,7 +196,7 @@ function WorkspaceContent({ academy, data }: { academy: AcademyEntry; data: Cont
       router.push(href(`/app/content/${id}`));
     } catch (e) { setError(e instanceof Error ? e.message : "Could not create the unit. Retry with the same action."); setBusy(false); }
   }
-  const cards = (list: ContentUnit[]) => <ul className={GRID}>{list.map(u => <UnitMenu key={u.id} unit={u} href={href(`/app/content/${u.id}`)} actions={menuActions}><li className="min-w-0 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"><UnitCard unit={u} program={describe(u)} href={href(`/app/content/${u.id}`)} actions={menuActions} units={data.units} labels={catalog.filter(label => data.labelIds[u.id]?.includes(label.id))} /></li></UnitMenu>)}</ul>;
+  const cards = (list: ContentUnit[]) => <ul className={GRID}>{list.map(u => <UnitMenu key={u.id} unit={u} href={href(`/app/content/${u.id}`)} actions={menuActions}><li className="min-w-0 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"><UnitCard schedule={data.schedules[u.id]} unit={u} program={describe(u)} href={href(`/app/content/${u.id}`)} actions={menuActions} units={data.units} labels={catalog.filter(label => data.labelIds[u.id]?.includes(label.id))} /></li></UnitMenu>)}</ul>;
   return <main className="page-shell min-w-0">
     {year?.closed_at && <Alert><HugeiconsIcon icon={AlertCircleIcon} strokeWidth={1.5} aria-hidden="true" /><AlertTitle>{yearLabel} is closed</AlertTitle><AlertDescription>Its units are read-only.</AlertDescription></Alert>}
     <HeaderActions>
@@ -233,6 +241,7 @@ function WorkspaceContent({ academy, data }: { academy: AcademyEntry; data: Cont
           <CollapsibleContent>{cards(group.units)}</CollapsibleContent>
         </Collapsible>;
       })}</div>}
+    {scheduling && <ScheduleUnitDialog academyId={academy.id} unitId={scheduling} userId={data.userId} onClose={closeSchedule} onCloseAutoFocus={refocus} />}
     {sheet && <UnitSheet academyId={academy.id} unitId={sheet.unitId} tab={sheet.tab} opener={sheet.opener} onClose={() => setSheet(null)}
       onArchive={unit => { opener.current = sheet.opener; setSheet(null); setArchiving(unit); }} />}
     <Dialog open={modal !== null} onOpenChange={open => { if (!busy && !open) setModal(null); }}><DialogContent onCloseAutoFocus={refocus}><DialogHeader><DialogTitle>{modal === "copy" ? "Copy a published unit" : "New unit"}</DialogTitle><DialogDescription>{yearLabel}</DialogDescription></DialogHeader>
@@ -244,6 +253,7 @@ function WorkspaceContent({ academy, data }: { academy: AcademyEntry; data: Cont
       </FieldGroup>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}<DialogFooter><Button variant="outline" disabled={busy} onClick={() => setModal(null)}>Cancel</Button><Button disabled={busy || !target || (modal === "new" ? !title.trim() : !source)} onClick={submit}>{busy ? "Creating…" : modal === "copy" ? "Copy as draft" : "Create draft"}</Button></DialogFooter>
     </DialogContent></Dialog>
+    <AlertDialog open={publishing !== null} onOpenChange={open => { if (!open) setPublishing(null); }}><AlertDialogContent onCloseAutoFocus={refocus}><AlertDialogHeader><AlertDialogTitle>{publishing?.published_revision ? "Publish these changes?" : "Publish this unit?"}</AlertDialogTitle><AlertDialogDescription>Students with access see {publishing?.published_revision ? "the changes" : "it"} right away.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => { if (publishing) void act(publishing, "publish"); }}>Publish</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     <AlertDialog open={archiving !== null} onOpenChange={open => { if (!open && !changing) setArchiving(null); }}><AlertDialogContent onCloseAutoFocus={refocus}><AlertDialogHeader><AlertDialogTitle>Archive this unit?</AlertDialogTitle><AlertDialogDescription>It leaves active student learning. Material and history are preserved, and restoring returns it as a draft.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={changing}>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" disabled={changing} onClick={event => { event.preventDefault(); if (archiving) void change(archiving, "archive"); }}>{changing ? "Archiving…" : "Archive unit"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </main>;
 }
@@ -256,7 +266,7 @@ const MATERIALS = [
   { key: "files", icon: KIND_ICONS.document, label: "Files" },
 ] as const;
 
-function UnitCard({ unit, program, href, actions, units, labels }: { unit: ContentUnit; program: string; href: string; actions: UnitMenuActions; units: ContentUnit[]; labels: Label[] }) {
+function UnitCard({ unit, program, href, actions, units, labels, schedule }: { unit: ContentUnit; program: string; href: string; actions: UnitMenuActions; units: ContentUnit[]; labels: Label[]; schedule?: ContentWorkspace["schedules"][string] }) {
   const { title, description, items, prerequisites = [] } = unit.draft;
   const summary = materialSummary(items);
   const facts: UnitFact[] = MATERIALS.filter(m => summary[m.key].length > 0).map(m => ({ ...m, rows: summary[m.key] }));
@@ -276,6 +286,8 @@ function UnitCard({ unit, program, href, actions, units, labels }: { unit: Conte
       <Badge variant={unit.state === "published" ? "default" : "secondary"}>{STATE_LABELS[unit.state]}</Badge>
       {unit.review_requested_at && unit.state !== "review" && <Badge variant="outline">In review</Badge>}
       {unit.state === "published" && unit.version !== unit.published_version && <Badge variant="outline">Unpublished changes</Badge>}
+      {schedule?.state === "pending" && <Badge variant="outline">Scheduled {formatAcademyRelative(schedule.scheduledFor)}</Badge>}
+      {schedule?.state === "stopped" && <Badge variant="destructive">Publication stopped</Badge>}
       {labels.length > 0 && <Separator orientation="vertical" className="h-3 data-vertical:self-auto" />}
       <LabelOverflow labels={labels} />
     </div>

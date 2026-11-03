@@ -12,6 +12,9 @@ import {
   saveUnitVersion as saveUnitVersionServer,
   publishUnitEdits as publishUnitEditsServer,
   copyUnit as copyUnitServer,
+  loadUnitPublication as loadUnitPublicationServer,
+  scheduleUnitPublication as scheduleUnitPublicationServer,
+  cancelUnitPublication as cancelUnitPublicationServer,
   assessmentOptions as assessmentOptionsServer,
   reuseMaterial as reuseMaterialServer,
   createAttachedAssessment as createAttachedAssessmentServer,
@@ -119,4 +122,28 @@ const createAttachedAssessmentFn = createServerFn({ method: "POST", strict: fals
 
 export async function createAttachedAssessment(...args: Parameters<typeof createAttachedAssessmentServer>): Promise<Awaited<ReturnType<typeof createAttachedAssessmentServer>>> {
   return createAttachedAssessmentFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof createAttachedAssessmentServer>>>;
+}
+
+const loadUnitPublicationFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown(), z.unknown()]) }))
+  .handler(({ data }) => loadUnitPublicationServer(...(data.args as Parameters<typeof loadUnitPublicationServer>)));
+
+export async function loadUnitPublication(...args: Parameters<typeof loadUnitPublicationServer>): Promise<Awaited<ReturnType<typeof loadUnitPublicationServer>>> {
+  return loadUnitPublicationFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof loadUnitPublicationServer>>>;
+}
+
+const scheduleUnitPublicationFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => scheduleUnitPublicationServer(...(data.args as Parameters<typeof scheduleUnitPublicationServer>)));
+
+export async function scheduleUnitPublication(...args: Parameters<typeof scheduleUnitPublicationServer>): Promise<Awaited<ReturnType<typeof scheduleUnitPublicationServer>>> {
+  return scheduleUnitPublicationFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof scheduleUnitPublicationServer>>>;
+}
+
+const cancelUnitPublicationFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => cancelUnitPublicationServer(...(data.args as Parameters<typeof cancelUnitPublicationServer>)));
+
+export async function cancelUnitPublication(...args: Parameters<typeof cancelUnitPublicationServer>): Promise<Awaited<ReturnType<typeof cancelUnitPublicationServer>>> {
+  return cancelUnitPublicationFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof cancelUnitPublicationServer>>>;
 }

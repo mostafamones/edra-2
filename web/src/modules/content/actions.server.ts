@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
-import { contentCaller, contentError, contentResult, readContentUnit, readContentWorkspace, readReuseSources, readUnitHistory } from "./data";
+import { academyInstant } from "@/lib/academy-time";
+import { contentCaller, contentError, contentResult, readContentUnit, readContentWorkspace, readReuseSources, readUnitHistory, readUnitPublication } from "./data";
 import { documentSchema } from "./types";
 
 export async function loadWorkspace(academyId: string) { return readContentWorkspace(academyId); }
@@ -53,6 +54,28 @@ export async function publishUnitEdits(value: unknown) {
     const { db } = await contentCaller(input.academyId);
     const { error } = await db.rpc("publish_content_edits", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_version: input.version, p_document: input.document });
     contentError(error);
+  });
+}
+const scheduleResult = z.object({ state: z.enum(["pending", "published", "cancelled", "stopped"]), generation: z.number().int(), scheduledFor: z.string() });
+export async function loadUnitPublication(academyId: string, unitId: string) { return contentResult(() => readUnitPublication(academyId, unitId)); }
+export async function scheduleUnitPublication(value: unknown) {
+  return contentResult(async () => {
+    const input = z.object({ academyId: z.guid(), unitId: z.guid(), date: z.string(), time: z.string(), generation: z.number().int().nonnegative() }).parse(value);
+    const at = academyInstant(input.date, input.time);
+    if (!at) throw new Error("That date or time doesn’t exist in Cairo time.");
+    const { db } = await contentCaller(input.academyId);
+    const { data, error } = await db.rpc("schedule_content_publication", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_at: at, p_generation: input.generation });
+    contentError(error);
+    return scheduleResult.parse(data);
+  });
+}
+export async function cancelUnitPublication(value: unknown) {
+  return contentResult(async () => {
+    const input = z.object({ academyId: z.guid(), unitId: z.guid(), generation: z.number().int().positive() }).parse(value);
+    const { db } = await contentCaller(input.academyId);
+    const { data, error } = await db.rpc("cancel_content_publication", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_generation: input.generation });
+    contentError(error);
+    return scheduleResult.parse(data);
   });
 }
 export async function copyUnit(value: unknown) {

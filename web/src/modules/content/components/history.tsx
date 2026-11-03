@@ -41,12 +41,14 @@ export function UnitHistoryList({ academyId, unitId, userId, live, disabled, act
   academyId: string; unitId: string; userId: string; live: boolean; disabled: boolean; action: UnitAction | null; onAction: (action: UnitAction) => void;
 }) {
   const query = useQuery({ ...unitPanelOptions(academyId, unitId), select: selectHistory });
+  // Edits to a published unit can still be kept as a version, which is what a schedule publishes.
+  const rowActions: UnitAction[] = action && action !== "version" ? ["version", action] : action ? [action] : [];
   const liveKey = live ? query.data?.find(entry => entry.kind === "published")?.key : undefined;
   const withYear = new Set(query.data?.map(entry => new Date(entry.at).getFullYear())).size > 1;
   return <QueryContent query={query} label="history" isEmpty={entries => !entries.length} emptyTitle="No history yet.">
     {entries => <ol>{entries.map((entry, index) => <Entry key={entry.key} entry={entry} userId={userId} live={entry.key === liveKey} withYear={withYear} last={index === entries.length - 1} disabled={disabled}
       // Only the newest draft is the unit's working document, so only its own author acts on it from here. A kept version is already saved.
-      action={index === 0 && entry.kind === "draft" && entry.creators.some(c => c?.id === userId) && !(entry.version && action === "version") ? action : null} onAction={onAction} />)}</ol>}
+      actions={index === 0 && entry.kind === "draft" && entry.creators.some(c => c?.id === userId) ? rowActions.filter(a => !(entry.version && a === "version")) : []} onAction={onAction} />)}</ol>}
   </QueryContent>;
 }
 
@@ -74,7 +76,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   return <div className="contents"><dt className="text-xs leading-5 text-muted-foreground">{label}</dt><dd className="min-w-0 text-sm leading-5">{children}</dd></div>;
 }
 
-function Entry({ entry, userId, live, withYear, last, disabled, action, onAction }: { entry: HistoryEntry<Author>; userId: string; live: boolean; withYear: boolean; last: boolean; disabled: boolean; action: UnitAction | null; onAction: (action: UnitAction) => void }) {
+function Entry({ entry, userId, live, withYear, last, disabled, actions, onAction }: { entry: HistoryEntry<Author>; userId: string; live: boolean; withYear: boolean; last: boolean; disabled: boolean; actions: UnitAction[]; onAction: (action: UnitAction) => void }) {
   const published = entry.kind === "published";
   const { summary } = entry;
   const now = new Date();
@@ -90,12 +92,13 @@ function Entry({ entry, userId, live, withYear, last, disabled, action, onAction
           <p dir="auto" className="font-medium">{summary?.headline || (published ? "Published" : "Draft")}</p>
           <p className="text-xs text-muted-foreground tabular-nums">
             {live && <><span className="font-medium text-foreground">Live</span> · </>}
+            {entry.scheduled && "Scheduled · "}
             {!published && (entry.version ? "Saved version · " : "Draft · ")}
             <time dateTime={entry.at}>{historyTime(entry.at, now, withYear)}</time>
             <span className="mx-1.5 text-muted-foreground/40" aria-hidden="true">|</span>{timeAgo(entry.at, now)}
           </p>
         </div>
-        {action && <Button variant="outline" size="sm" disabled={disabled} className="shrink-0" onClick={() => onAction(action)}><HugeiconsIcon icon={UNIT_ACTIONS[action].icon} strokeWidth={1.5} aria-hidden="true" />{action === "publish" ? "Publish" : UNIT_ACTIONS[action].label}</Button>}
+        {actions.map(action => <Button key={action} variant="outline" size="sm" disabled={disabled} className="shrink-0" onClick={() => onAction(action)}><HugeiconsIcon icon={UNIT_ACTIONS[action].icon} strokeWidth={1.5} aria-hidden="true" />{action === "publish" ? "Publish" : UNIT_ACTIONS[action].label}</Button>)}
       </div>
       <Collapsible className="rounded-lg bg-muted/50 px-3 py-2.5">
         <dl className="grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-2">
