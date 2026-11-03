@@ -2968,9 +2968,209 @@ export type Database = {
           },
         ]
       }
+      content_publication_candidates: {
+        Row: {
+          academy_id: string
+          confirmed_at: string
+          confirmed_by: string
+          document: Json
+          id: string
+          sequence: number
+          base_revision: number
+          unit_id: string
+          unit_version: number
+        }
+        Insert: {
+          academy_id: string
+          confirmed_at?: string
+          confirmed_by: string
+          document: Json
+          id?: string
+          sequence?: never
+          base_revision: number
+          unit_id: string
+          unit_version: number
+        }
+        Update: {
+          academy_id?: string
+          confirmed_at?: string
+          confirmed_by?: string
+          document?: Json
+          id?: string
+          sequence?: never
+          base_revision?: number
+          unit_id?: string
+          unit_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_publication_candidates_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_publication_candidates_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_publication_events: {
+        Row: {
+          academy_id: string
+          actor_id: string | null
+          at: string
+          candidate_id: string | null
+          generation: number | null
+          id: number
+          kind: string
+          reason: string | null
+          revision: number | null
+          scheduled_for: string | null
+          unit_id: string
+        }
+        Insert: {
+          academy_id: string
+          actor_id?: string | null
+          at?: string
+          candidate_id?: string | null
+          generation?: number | null
+          id?: never
+          kind: string
+          reason?: string | null
+          revision?: number | null
+          scheduled_for?: string | null
+          unit_id: string
+        }
+        Update: {
+          academy_id?: string
+          actor_id?: string | null
+          at?: string
+          candidate_id?: string | null
+          generation?: number | null
+          id?: never
+          kind?: string
+          reason?: string | null
+          revision?: number | null
+          scheduled_for?: string | null
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_publication_events_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_publication_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_publication_events_unit_id_candidate_id_fkey"
+            columns: ["unit_id", "candidate_id"]
+            isOneToOne: false
+            referencedRelation: "content_publication_candidates"
+            referencedColumns: ["unit_id", "id"]
+          },
+          {
+            foreignKeyName: "content_publication_events_unit_id_revision_fkey"
+            columns: ["unit_id", "revision"]
+            isOneToOne: false
+            referencedRelation: "content_revisions"
+            referencedColumns: ["unit_id", "revision"]
+          },
+        ]
+      }
+      content_publication_schedules: {
+        Row: {
+          academy_id: string
+          attempts: number
+          candidate_id: string | null
+          generation: number
+          last_attempt_at: string | null
+          next_attempt_at: string | null
+          published_revision: number | null
+          reason: string | null
+          scheduled_by: string
+          scheduled_for: string
+          state: string
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          attempts?: number
+          candidate_id?: string | null
+          generation?: number
+          last_attempt_at?: string | null
+          next_attempt_at?: string | null
+          published_revision?: number | null
+          reason?: string | null
+          scheduled_by: string
+          scheduled_for: string
+          state: string
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          attempts?: number
+          candidate_id?: string | null
+          generation?: number
+          last_attempt_at?: string | null
+          next_attempt_at?: string | null
+          published_revision?: number | null
+          reason?: string | null
+          scheduled_by?: string
+          scheduled_for?: string
+          state?: string
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_publication_schedules_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_publication_schedules_scheduled_by_fkey"
+            columns: ["scheduled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_publication_schedules_unit_id_candidate_id_fkey"
+            columns: ["unit_id", "candidate_id"]
+            isOneToOne: false
+            referencedRelation: "content_publication_candidates"
+            referencedColumns: ["unit_id", "id"]
+          },
+          {
+            foreignKeyName: "content_publication_schedules_unit_id_published_revision_fkey"
+            columns: ["unit_id", "published_revision"]
+            isOneToOne: false
+            referencedRelation: "content_revisions"
+            referencedColumns: ["unit_id", "revision"]
+          },
+        ]
+      }
       content_revisions: {
         Row: {
           academy_id: string
+          candidate_id: string | null
           document: Json
           published_at: string
           published_by: string
@@ -2979,6 +3179,7 @@ export type Database = {
         }
         Insert: {
           academy_id: string
+          candidate_id?: string | null
           document: Json
           published_at?: string
           published_by: string
@@ -2987,6 +3188,7 @@ export type Database = {
         }
         Update: {
           academy_id?: string
+          candidate_id?: string | null
           document?: Json
           published_at?: string
           published_by?: string
@@ -2994,6 +3196,13 @@ export type Database = {
           unit_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "content_revisions_candidate_fkey"
+            columns: ["unit_id", "candidate_id"]
+            isOneToOne: false
+            referencedRelation: "content_publication_candidates"
+            referencedColumns: ["unit_id", "id"]
+          },
           {
             foreignKeyName: "content_revisions_academy_id_unit_id_fkey"
             columns: ["academy_id", "unit_id"]
@@ -7488,6 +7697,10 @@ export type Database = {
         Args: { p_operation_id: string; p_user_id: string }
         Returns: string
       }
+      cancel_content_publication: {
+        Args: { p_academy_id: string; p_generation: number; p_unit_id: string }
+        Returns: Json
+      }
       cancel_student_import: {
         Args: { p_session_id: string }
         Returns: undefined
@@ -9067,6 +9280,15 @@ export type Database = {
           p_enabled: boolean
           p_expected_version: number
           p_levels: Json
+        }
+        Returns: Json
+      }
+      schedule_content_publication: {
+        Args: {
+          p_academy_id: string
+          p_at: string
+          p_generation: number
+          p_unit_id: string
         }
         Returns: Json
       }

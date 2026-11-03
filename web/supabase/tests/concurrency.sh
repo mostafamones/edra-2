@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Separate-session race tests for staff access, schedule/group/slot, student-record, import,
-# student-code, check-in, attendance-correction, quiz and exam locking, and label assignment/deletion. Run only through `npm run test:db`, which validates the isolated target and
+# student-code, check-in, attendance-correction, quiz and exam locking, label assignment/deletion, and scheduled content publication. Run only through `npm run test:db`, which validates the isolated target and
 # exports its connection. Races need real concurrent transactions, so fixtures are committed under a
 # run-specific academy, admin and ids. They are retained: preserved history (sessions, attendance,
 # code ledger) cannot be removed through normal flows. Fresh identities keep reruns collision-free.
@@ -1335,6 +1335,97 @@ expect_ok lb7a "the first bulk removal failed"
 expect_ok lb7b "the overlapping bulk removal failed"
 [ "$(student_label_uses "$LABEL_C")" = 0 ] || fail "overlapping removals left associations"
 grep -qi deadlock "$OUT"/lb4a "$OUT"/lb4b "$OUT"/lb5a "$OUT"/lb5b "$OUT"/lb6a "$OUT"/lb6b "$OUT"/lb7a "$OUT"/lb7b && fail "a student label race deadlocked"
+
+# P1-P7. Scheduled publication. Every command and the worker meet on the content_units row: commands wait
+#     for it and the worker skips a locked one, so each pair has one order and no duplicate publication.
+# The cron job stays out of it: these races decide who runs the worker. The database is disposable.
+psqlx >/dev/null -c "select cron.unschedule('edra-content-publication');"
+PUB_N=0
+pub_unit() { # Prints a new published unit whose saved working draft is saved as a version and scheduled; made due below.
+  PUB_N=$((PUB_N + 1))
+  local unit asset; unit="$(uuid)"; asset="$(uuid)"
+  psqlx >/dev/null <<SQL
+begin;
+$as_admin
+select public.create_content_unit('$ACADEMY','$YEAR','secondary-1',null,'$unit','Race unit $PUB_N');
+reset role;
+insert into public.content_assets(id,academy_id,unit_id,created_by,kind,name,mime_type,status,playback_id)
+  values('$asset','$ACADEMY','$unit','$ADMIN','video','Race video','video/mp4','ready','race-playback');
+$as_admin
+select public.save_content_unit('$ACADEMY','$unit',1,'{"title":"Live","description":"","accessDays":7,"items":[{"id":"$asset","kind":"explanation","title":"Video","assetId":"$asset"}]}');
+select public.change_content_unit('$ACADEMY','$unit',2,'publish');
+select public.save_content_unit('$ACADEMY','$unit',3,'{"title":"Candidate","description":"","accessDays":7,"items":[{"id":"$asset","kind":"explanation","title":"Video","assetId":"$asset"}]}');
+select public.save_content_draft_version('$ACADEMY','$unit',4);
+select public.schedule_content_publication('$ACADEMY','$unit',now()+interval '1 hour',0);
+commit;
+SQL
+  echo "$unit"
+}
+pub_due() { psqlx >/dev/null -c "update public.content_publication_schedules set scheduled_for=clock_timestamp()-interval '1 second',next_attempt_at=clock_timestamp()-interval '1 second' where unit_id='$1';"; }
+pub_doc() { psqlx -tA -c "select string_agg(document->>'title',',' order by revision) from public.content_revisions where unit_id='$1'"; }
+pub_state() { psqlx -tA -c "select state from public.content_publication_schedules where unit_id='$1'"; }
+pub_worker="select edra_private.run_content_publications(25);"
+
+# P1. Cancellation holds the unit; the worker skips it and, after the commit, finds nothing due.
+U="$(pub_unit)"; pub_due "$U"
+hold p1a p1b "$as_admin select public.cancel_content_publication('$ACADEMY','$U',1);"
+start p1b "$pub_worker"
+wait
+expect_ok p1a "the cancellation failed"; expect_ok p1b "the worker failed beside a cancellation"
+run p1c "$pub_worker"; expect_ok p1c "the later worker failed"
+[ "$(pub_doc "$U")" = "Live" ] || fail "an acknowledged cancellation still published: $(pub_doc "$U")"
+[ "$(pub_state "$U")" = cancelled ] || fail "the cancellation did not stand"
+# P2. The worker holds the unit; the waiting cancellation reports the publication instead of a false cancel.
+U="$(pub_unit)"; pub_due "$U"
+hold p2a p2b "$pub_worker"
+start p2b "$as_admin select public.cancel_content_publication('$ACADEMY','$U',1);"
+wait
+expect_ok p2a "the worker holding the unit failed"; expect_ok p2b "the queued cancellation failed"
+grep -q '"state": "published"' "$OUT/p2b" || fail "a cancellation behind execution misreported: $(out p2b)"
+[ "$(pub_doc "$U")" = "Live,Candidate" ] || fail "execution did not stand: $(pub_doc "$U")"
+# P3. Publish now holds the unit; the worker skips it, and the schedule is already cancelled afterwards.
+U="$(pub_unit)"; pub_due "$U"
+hold p3a p3b "$as_admin select public.change_content_unit('$ACADEMY','$U',4,'publish');"
+start p3b "$pub_worker"
+wait
+expect_ok p3a "Publish now failed"; expect_ok p3b "the worker failed beside Publish now"
+run p3c "$pub_worker"; expect_ok p3c "the later worker failed"
+[ "$(pub_doc "$U")" = "Live,Candidate" ] || fail "Publish now and the worker duplicated a publication: $(pub_doc "$U")"
+[ "$(pub_state "$U")" = cancelled ] || fail "Publish now left the schedule pending"
+# P4. The worker holds the unit; a queued Publish now finds that version already live and publishes nothing more.
+U="$(pub_unit)"; pub_due "$U"
+hold p4a p4b "$pub_worker"
+start p4b "$as_admin select public.change_content_unit('$ACADEMY','$U',4,'publish');"
+wait
+expect_ok p4a "the worker holding the unit failed"; expect_ok p4b "the queued Publish now failed"
+[ "$(pub_doc "$U")" = "Live,Candidate" ] || fail "the worker and Publish now duplicated a publication: $(pub_doc "$U")"
+[ "$(pub_state "$U")" = published ] || fail "the executed schedule changed afterwards"
+# P5. Duplicate workers: one publication and one receipt.
+U="$(pub_unit)"; pub_due "$U"
+hold p5a p5b "$pub_worker"
+start p5b "$pub_worker"
+start p5c "$pub_worker"
+wait
+expect_ok p5a "a duplicate worker failed"; expect_ok p5b "a duplicate worker failed"; expect_ok p5c "a duplicate worker failed"
+[ "$(pub_doc "$U")" = "Live,Candidate" ] || fail "duplicate workers republished: $(pub_doc "$U")"
+psqlx -tA -c "select count(*) from public.content_publication_events where unit_id='$U' and kind='published'" | grep -qx 1 || fail "duplicate workers wrote two receipts"
+# P6. A newer saved version holds the unit while the worker runs; the next run selects it.
+U="$(pub_unit)"; pub_due "$U"
+hold p6a p6b "$as_admin select public.save_content_unit('$ACADEMY','$U',4,(select draft||'{\"title\":\"Newer\"}'::jsonb from public.content_units where id='$U')); select public.save_content_draft_version('$ACADEMY','$U',5);"
+start p6b "$pub_worker"
+wait
+expect_ok p6a "saving the version failed"; expect_ok p6b "the worker failed beside a saved version"
+run p6c "$pub_worker"; expect_ok p6c "the later worker failed"
+[ "$(pub_doc "$U")" = "Live,Newer" ] || fail "the worker missed a committed saved version: $(pub_doc "$U")"
+# P7. The worker holds the unit; a queued reschedule sees the newer generation and is refused.
+U="$(pub_unit)"; pub_due "$U"
+hold p7a p7b "$pub_worker"
+start p7b "$as_admin select public.schedule_content_publication('$ACADEMY','$U',now()+interval '2 hours',1);"
+wait
+expect_ok p7a "the worker holding the unit failed"
+expect_rejected p7b "a reschedule crossed an execution" schedule_conflict
+[ "$(pub_doc "$U")" = "Live,Candidate" ] || fail "execution did not stand beside a reschedule: $(pub_doc "$U")"
+grep -qi deadlock "$OUT"/p[1-7]* && fail "a scheduled publication race deadlocked"
 
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
