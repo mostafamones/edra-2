@@ -26,6 +26,11 @@
 # production
 /build
 
+# Legacy Next.js build artifacts
+/.next/
+/.next-*/
+/next-env.d.ts
+
 # misc
 .DS_Store
 *.pem
