@@ -56,6 +56,20 @@ Signing in with a matching phone alone does not grant academy access. Staff stud
 
 Student codes identify records for academy workflows such as attendance and marking. They are not sign-in credentials.
 
+## Online access management
+
+Confirmed with the owner, 2026-11-03, for EDRA-277. Owners, Head Admins and Admins may manually suspend or restore a student's academy online access individually and in bulk, including before account connection and from archived or closed-year records. The suspension belongs to the persistent academy profile, so an action from a historical record also affects current participation. Instructors may inspect the state and latest change but cannot change suspension. Optional reasons and retained audit events follow [learning access](learning-access.md#student-suspension-management--edra-277).
+
+The students list has an online-access filter with the exact choices **All / Suspended / Has Access**:
+
+- **All** adds no online-access restriction.
+- **Suspended** matches manual suspension, including students without a connected account. Archival alone does not match.
+- **Has Access** requires a connected account and neither manual nor archival suspension on the selected annual record. It does not guarantee access to particular content or bypass year availability, publication, placement, grants or assessment rules.
+
+The existing Active/Archived/All record filter remains separate; filters combine with AND. An archived-only record without manual suspension matches neither Suspended nor Has Access, and remains available through All when the archive filter permits it. An unconnected, unsuspended record likewise appears only through All for this filter.
+
+The account-link dot retains its existing connection semantics. Manual suspension and its controls must remain identifiable for unconnected students, who have no account-link dot. Staff can inspect current suspension causes and the latest manual change without a complete history screen.
+
 ## Archival and restoration
 
 Archiving removes a student record from ordinary active student lists while retaining its contacts, placement and academic history. Authorized staff can find archived records and restore them within the applicable academic-year rules.

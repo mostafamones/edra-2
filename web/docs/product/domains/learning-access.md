@@ -94,6 +94,20 @@ Archiving annual participation also adds online-access suspension caused by arch
 
 Suspension prevents protected learning access and coupon redemption. Restoring access does not restart grant periods or reset coupon and extension usage; the student's grants retain their original timing.
 
+### Student suspension management — EDRA-277
+
+Confirmed with the owner, 2026-11-03. This defines the management delivery; the existing enforcement baseline is EDRA-155.
+
+Managers may suspend or restore online access individually and in bulk. Manual suspension belongs to the persistent academy student profile, across its annual records. It may be applied before an account is connected and remains effective after connection. Both in-person and online-only students are eligible.
+
+Managers may change manual suspension from archived records and records in closed academic years. The action changes the academy profile's current suspension, including its effect on current participation; it does not edit the historical annual record or reopen its year. This is an explicit exception to historical record editing restrictions. Removing manual suspension leaves any applicable archival suspension in place.
+
+Suspension and restoration accept an optional reason. One reason applies to the whole bulk selection. Each actual change retains its action, actor, timestamp and supplied reason. Academy staff, including Instructors, can see the current state and latest manual change, including its reason. A complete history view is outside this delivery; earlier audit events remain preserved. Reasons remain staff-only; students retain the existing suspension message.
+
+The staff controls distinguish manual suspension, archival suspension and account connection. An unconnected student can be manually suspended without being shown as connected. See [student records](student-records.md#online-access-management) for list filter semantics.
+
+### Unit-access revocation and session archival
+
 Managers may revoke explanation access and, for invalid qualifying work, answer access. These actions retain their reason and history. Ordinary attendance corrections do not silently decide revocation; the correction policy must be settled before that workflow is implemented.
 
 Session archival follows the confirmed session rules: already issued learning access remains intact, while pending unprocessed access effects from the archived session are stopped. Restoring the session does not reissue a grant or restart its period. This archival policy does not settle the separate ordinary attendance-correction revocation policy.

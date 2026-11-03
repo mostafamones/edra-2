@@ -25,9 +25,11 @@ These are intended product permissions. Current source enforces the Owner, Head 
 | Quiz/exam availability windows/archive | Yes | Yes | Yes | No |
 | Inspect learning access; issue unit-default grants and additional-time extensions | Yes | Yes | Yes | Yes |
 | Generate/distribute unit-access codes; inspect redemption | Yes | Yes | Yes | Yes |
-| Revoke learning access/unused codes; suspend academy online access | Yes | Yes | Yes | No |
+| Revoke learning access/unused codes | Yes | Yes | Yes | No |
+| Suspend/restore student academy online access, individual/bulk, including unconnected, archived and closed-year records | Yes | Yes | Yes | No |
+| Inspect student suspension state and latest change, including staff-only reason | Yes | Yes | Yes | Yes |
 | Manage parent report links | Yes | Yes | Yes | Preview only; no secret access |
 | Notes | Manage | Manage | Manage | Create; manage own notes under sharing rules |
 | Delivery diagnostics/retries | Yes | Yes | Yes | Basic delivery outcome only |
 
-Role descriptions do not override domain conditions, year closure, tenant isolation, structure locks or academic history. Applying/removing labels on assessments is an explicit organizational-metadata exception to archived/closed-year read-only rules; global label changes update historical uses while preserving academic work and official results. Staff administration excludes self-role/self-removal changes. Read [academy](domains/academy.md), [students](domains/students.md), [teaching](domains/teaching.md), [learning](domains/learning.md), [labels](domains/labels.md), [assessments](domains/assessments.md) and [family](domains/family.md) for conditions.
+Role descriptions do not override domain conditions, year closure, tenant isolation, structure locks or academic history. Applying/removing labels on assessments is an explicit organizational-metadata exception to archived/closed-year read-only rules; global label changes update historical uses while preserving academic work and official results. Changing student manual suspension from archived or closed-year records is an explicit academy-profile access-management exception; it does not edit historical participation or reopen its year. Staff administration excludes self-role/self-removal changes. Read [academy](domains/academy.md), [students](domains/students.md), [teaching](domains/teaching.md), [learning](domains/learning.md), [labels](domains/labels.md), [assessments](domains/assessments.md) and [family](domains/family.md) for conditions.
