@@ -158,11 +158,11 @@ select pg_temp.expect_error($s$ select public.set_student_access_suspension(pg_t
 select pg_temp.check((pg_temp.profile('r1')).access_suspended_at is null and pg_temp.events('r1') = 0, 'rejected batches wrote nothing');
 
 -- Suspension before connection, a shared trimmed reason, deduplicated targets, one event per change.
-select pg_temp.check(public.set_student_access_suspension(pg_temp.id('academy'),jsonb_build_array(pg_temp.target('r1',0),pg_temp.target('r2',0),pg_temp.target('r2',0),pg_temp.target('r4',0)),true,'  Unpaid fees  ')
-  = jsonb_build_object(
-    'changed', (select jsonb_agg(x order by x->>'record_id') from (values (jsonb_build_object('record_id',pg_temp.id('r1'),'profile_id',(pg_temp.profile('r1')).id,'revision',1))),
-      (jsonb_build_object('record_id',pg_temp.id('r2'),'profile_id',(pg_temp.profile('r2')).id,'revision',1))) v(x)),
-    'unchanged', jsonb_build_array(jsonb_build_object('record_id',pg_temp.id('r4'),'profile_id',(pg_temp.profile('r4')).id,'revision',0))), 'mixed batch reports changed and unchanged');
+select set_config('test.mixed', public.set_student_access_suspension(pg_temp.id('academy'),jsonb_build_array(pg_temp.target('r1',0),pg_temp.target('r2',0),pg_temp.target('r2',0),pg_temp.target('r4',0)),true,'  Unpaid fees  ')::text, true);
+select pg_temp.check((select string_agg(e->>'record_id', ',' order by e->>'record_id') from jsonb_array_elements(current_setting('test.mixed')::jsonb->'changed') e)
+  = (select string_agg(id::text, ',' order by id::text) from pg_temp.ids where name in ('r1','r2')), 'changed: r1 and r2 once each');
+select pg_temp.check(current_setting('test.mixed')::jsonb->'changed' @> jsonb_build_array(jsonb_build_object('record_id',pg_temp.id('r1'),'profile_id',(pg_temp.profile('r1')).id,'revision',1)), 'changed entry carries the profile and new revision');
+select pg_temp.check(current_setting('test.mixed')::jsonb->'unchanged' = jsonb_build_array(jsonb_build_object('record_id',pg_temp.id('r4'),'profile_id',(pg_temp.profile('r4')).id,'revision',0)), 'already suspended is unchanged');
 reset role;
 select pg_temp.check((select count(*) from public.student_access_suspension_events e where e.reason = 'Unpaid fees' and e.action = 'suspended' and e.actor_id = pg_temp.id('admin') and e.revision = 1
   and e.academy_id = pg_temp.id('academy')) = 2, 'one event per changed profile, actor and trimmed reason');
