@@ -65,11 +65,13 @@ The companion will bring together content units, sessions, assessments and stude
 
 ### 6. Concern threads and team follow-up
 
-- Owners and Admins opening a thread about a specific academy concern and choosing its participants.
+Concern threads are a shared web/mobile feature. The owner confirmed web delivery first on 2026-11-04. The [shared concern-thread rules](../../../web/docs/product/domains/concerns.md) define the agreed domain and web delivery; native interfaces follow separately. Native interaction planning remains part of this later milestone.
+
+- Owners, Head Admins and Admins opening a thread about a specific academy concern and choosing its participants.
 - Conversations with one instructor, several team members or the whole team.
-- Settling a concern through an explicit confirmation by an Owner or Admin.
+- Settling a concern with a written outcome by participating leadership, and reopening with a recorded reason.
 - Participants retaining access to the discussion and recorded outcome after settlement.
-- A management view of ongoing and settled concerns for academy leadership.
+- Participant-scoped views of ongoing and settled concerns, with explicit academy Owner recovery as the access exception.
 
 ## Completion criteria
 

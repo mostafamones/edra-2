@@ -11,6 +11,7 @@
 - [Content and learning access](product/domains/learning.md).
 - [Assessments and results](product/domains/assessments.md).
 - [Labels](product/domains/labels.md): shared academy feature, initially integrated with assessments.
+- [Concern threads](product/domains/concerns.md): agreed shared staff conversation rules and first web delivery scope.
 - [Reports, notes and messages](product/domains/family.md).
 - [Permissions](product/permissions.md) and [terms](product/terms.md).
 
