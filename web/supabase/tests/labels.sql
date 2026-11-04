@@ -46,8 +46,8 @@ begin
     or not has_function_privilege('authenticated', 'public.set_content_unit_label(uuid,uuid,uuid,boolean)', 'execute')
     or has_function_privilege('anon', 'public.set_student_records_label(uuid,uuid[],uuid,boolean)', 'execute')
     or not has_function_privilege('authenticated', 'public.set_student_records_label(uuid,uuid[],uuid,boolean)', 'execute')
-    or has_function_privilege('anon', 'public.list_student_records(uuid,uuid,text,text,text,text,text,text,jsonb,integer,integer,uuid[],boolean)', 'execute')
-    or not has_function_privilege('authenticated', 'public.list_student_records(uuid,uuid,text,text,text,text,text,text,jsonb,integer,integer,uuid[],boolean)', 'execute')
+    or has_function_privilege('anon', 'public.list_student_records(uuid,uuid,text,text,text,text,text,text,jsonb,integer,integer,uuid[],boolean,text)', 'execute')
+    or not has_function_privilege('authenticated', 'public.list_student_records(uuid,uuid,text,text,text,text,text,text,jsonb,integer,integer,uuid[],boolean,text)', 'execute')
     or has_function_privilege('anon', 'public.list_assessments(uuid,uuid,text[],text,text,text,uuid,uuid,text[],text,text,integer,integer,uuid[],boolean)', 'execute')
     or not has_function_privilege('authenticated', 'public.update_label(uuid,uuid,text,text)', 'execute')
     or has_function_privilege('authenticated', 'edra_private.require_label_role(uuid,boolean)', 'execute') then

@@ -256,6 +256,7 @@ export type Database = {
         Row: {
           academy_id: string
           access_suspended_at: string | null
+          access_suspension_revision: number
           created_at: string
           created_by: string | null
           created_via: string
@@ -266,6 +267,7 @@ export type Database = {
         Insert: {
           academy_id: string
           access_suspended_at?: string | null
+          access_suspension_revision?: number
           created_at?: string
           created_by?: string | null
           created_via?: string
@@ -276,6 +278,7 @@ export type Database = {
         Update: {
           academy_id?: string
           access_suspended_at?: string | null
+          access_suspension_revision?: number
           created_at?: string
           created_by?: string | null
           created_via?: string
@@ -6626,6 +6629,54 @@ export type Database = {
           },
         ]
       }
+      student_access_suspension_events: {
+        Row: {
+          academy_id: string
+          academy_student_profile_id: string
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: number
+          reason: string | null
+          revision: number
+        }
+        Insert: {
+          academy_id: string
+          academy_student_profile_id: string
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: never
+          reason?: string | null
+          revision: number
+        }
+        Update: {
+          academy_id?: string
+          academy_student_profile_id?: string
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: never
+          reason?: string | null
+          revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_access_suspension_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_access_suspension_events_profile_fkey"
+            columns: ["academy_id", "academy_student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "academy_student_profiles"
+            referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
       student_booking_links: {
         Row: {
           academy_id: string
@@ -8468,6 +8519,10 @@ export type Database = {
         Args: { p_academy_id: string; p_session_id: string }
         Returns: Json
       }
+      get_student_access_suspension: {
+        Args: { p_academy_id: string; p_record_id: string }
+        Returns: Json
+      }
       get_student_booking_form: { Args: { p_token: string }; Returns: Json }
       get_student_booking_settings: {
         Args: { p_academy_id: string }
@@ -8695,6 +8750,7 @@ export type Database = {
           p_search: string
           p_sorts: Json
           p_status: string
+          p_access?: string
           p_track: string
           p_unlabeled?: boolean
         }
@@ -8887,6 +8943,10 @@ export type Database = {
         Returns: Json
       }
       preview_staff_invitation: { Args: { p_token: string }; Returns: Json }
+      preview_student_access_suspension: {
+        Args: { p_academy_id: string; p_record_ids: string[] }
+        Returns: Json
+      }
       preview_student_booking_entry: {
         Args: { p_token: string }
         Returns: Json
@@ -9358,6 +9418,15 @@ export type Database = {
       }
       set_student_invite: {
         Args: { p_academy_id: string; p_active: boolean }
+        Returns: Json
+      }
+      set_student_access_suspension: {
+        Args: {
+          p_academy_id: string
+          p_reason: string
+          p_records: Json
+          p_suspended: boolean
+        }
         Returns: Json
       }
       set_student_records_archived: {
