@@ -24,6 +24,12 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 - Use `web/docs/README.md` and `mobile/docs/README.md` for references; shared constraints live in `docs/engineering/`. Preserve the existing setup and agreed product rules. Review worksheets and temporary plans are not new development requirements.
 - Master threads use product context and current technical evidence. Before exporting an implementation plan, settle relevant open decisions with the owner and update the affected documentation to the latest agreed terms. Do not invent restrictions or workflows to fill gaps.
 - Implementation plans are self-contained. Implementation agents read the engineering/API references and only the final product sections assigned by their plan; unresolved discussions and review queues are not requirements. Ask about genuine consequential conflicts, not routine factual documentation corrections.
+- Assume implementation plans will run in a separate worktree. Include the intended branch and, when configurable, worktree folder name using the naming rules below. State the required base commits and include all instructions needed without relying on the Master thread's working tree.
+
+## Worktrees and branch names
+
+- Name worktree branches `type/short-hyphenated-title`, using a lowercase conventional type such as `feat`, `fix`, `docs`, `refactor`, `test`, `ci`, or `chore`. The title must be lowercase and hyphenated, normally one to three words and never more than four; for example, `feat/student-suspension` or `fix/access-filter`.
+- When the worktree folder name is configurable, use only the title portion, such as `student-suspension` for `feat/student-suspension`.
 
 ## Commit runs
 
@@ -31,7 +37,9 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 - When the owner requests a "commit run", review the current changes, run the relevant verification checks, and create Git commits for the requested scope.
 - Group related changes into focused, coherent commits. Stage each group separately, using partial staging when a file contains changes belonging to different groups. Create as many commits as needed to represent the work clearly.
 - Give each commit a clear subject and a detailed message explaining what changed and why. Include relevant verification results and material limitations.
-- Do not push commits unless the owner explicitly requests it.
+- When working in a separate worktree on a non-`main` branch, every completed prompt run that changes files automatically includes reviewing the changes, running relevant verification, committing the authorized task changes, and pushing to that branch's remote. Do not wait for an explicit commit run or another push request. Set the upstream on the first push when needed. Runs with no changes do not require an empty commit.
+- Automatic worktree commits follow the focused-commit, detailed-message, verification and plan-file rules above. Leave unrelated changes untouched and report verification failures or unavailable evidence accurately.
+- Outside the automatic worktree workflow, push only when the owner explicitly requests it or invokes "Commit docs" below.
 
 ### Commit docs
 
