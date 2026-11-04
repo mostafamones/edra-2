@@ -54,18 +54,28 @@ describe("student label writes", () => {
     expect(invalidate.mock.calls.some(([filter]) => filter?.queryKey?.[0] === "labels")).toBe(true);
   });
 
-  it("shows nothing for a bulk write until the server accepts it, and reports failure so the selection stays", async () => {
+  it("shows a bulk write at once and keeps it when the server accepts it", async () => {
+    let answer!: (value: unknown) => void;
+    mocks.set.mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }));
+    const { result, rowLabels } = setup();
+    let write!: Promise<boolean>;
+    await act(async () => { write = result.current.applyToSelection(["r1", "r2"], "new", true); await Promise.resolve(); await Promise.resolve(); });
+    expect(rowLabels()).toEqual([["keep", "new"], ["new"]]);
+    let ok = false;
+    await act(async () => { answer({ ok: true, changed: 2 }); ok = await write; });
+    expect(ok).toBe(true);
+    expect(rowLabels()).toEqual([["keep", "new"], ["new"]]);
+  });
+
+  it("undoes a refused bulk write only where it changed something", async () => {
     mocks.set.mockResolvedValueOnce({ ok: false, code: "not_found", message: "Gone" });
     const { result, rowLabels } = setup();
     let ok = true;
-    await act(async () => { ok = await result.current.applyToSelection(["r1", "r2"], "new", true); });
+    // r1 already has "keep": a failed apply must not take it away.
+    await act(async () => { ok = await result.current.applyToSelection(["r1", "r2"], "keep", true); });
     expect(ok).toBe(false);
     expect(rowLabels()).toEqual([["keep"], []]);
-    mocks.set.mockResolvedValueOnce({ ok: true, changed: 2 });
-    await act(async () => { ok = await result.current.applyToSelection(["r1", "r2"], "new", true); });
-    expect(ok).toBe(true);
-    expect(rowLabels()).toEqual([["keep", "new"], ["new"]]);
-    expect(result.current.bulkPending).toBe(false);
+    expect(mocks.error).toHaveBeenCalledWith("Gone");
   });
 
   it("removes one label from a mixed selection without touching the others", async () => {

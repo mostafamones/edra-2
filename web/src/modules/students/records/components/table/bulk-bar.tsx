@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Archive02Icon, Cancel01Icon, FolderEditIcon, RestoreBinIcon } from "@hugeicons/core-free-icons";
+import { Archive02Icon, Cancel01Icon, FolderEditIcon, RestoreBinIcon, UserBlock01Icon, UserCheck01Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { ActionBar, ActionBarSeparator } from "@/components/ui/action-bar";
@@ -16,21 +16,36 @@ type Props = {
     restorable: number;
     onArchive: () => void;
     onRestore: () => void;
-    onChangeGroup: () => void;
+    /** Omitted unless one active group can take every selected student. */
+    onChangeGroup?: () => void;
+    /** Selected records last seen without, and with, manual suspension. A mixed selection gets neither action. */
+    suspendable: number;
+    unsuspendable: number;
+    onSuspension: (suspend: boolean) => void;
   };
   onClear: () => void;
 };
 
-/** Selection count, labels, and the managers' group, archive, and restore actions, pinned to the viewport bottom beside toasts so the table never shifts. */
+/** Selection count, labels, and the managers' group, online-access, archive, and restore actions, pinned to the viewport bottom beside toasts so the table never shifts. */
 export function BulkBar({ selected, labels, manager, onClear }: Props) {
   return (
     <ActionBar aria-label="Selected students">
       <span className="px-2 font-medium tabular-nums" aria-live="polite">{selected} selected</span>
       <ActionBarSeparator />
       {labels}
-      {manager && (
+      {manager?.onChangeGroup && (
         <Button variant="ghost" size="sm" onClick={manager.onChangeGroup}>
           <HugeiconsIcon icon={FolderEditIcon} />Change group
+        </Button>
+      )}
+      {manager && manager.suspendable > 0 && manager.unsuspendable === 0 && (
+        <Button variant="ghost" size="sm" onClick={() => manager.onSuspension(true)}>
+          <HugeiconsIcon icon={UserBlock01Icon} strokeWidth={1.5} />Suspend
+        </Button>
+      )}
+      {manager && manager.unsuspendable > 0 && manager.suspendable === 0 && (
+        <Button variant="ghost" size="sm" onClick={() => manager.onSuspension(false)}>
+          <HugeiconsIcon icon={UserCheck01Icon} strokeWidth={1.5} />Restore
         </Button>
       )}
       {manager && manager.archivable > 0 && (

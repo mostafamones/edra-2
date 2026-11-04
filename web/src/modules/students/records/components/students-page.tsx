@@ -33,12 +33,15 @@ import { fetchStudentList, studentListQueryKey } from "../queries";
 import type { GroupChangeRow, RecordVersion, StudentRecordRow } from "../types";
 import { ACTIONS_COLUMN, CODE_COLUMN, SELECT_COLUMN } from "../table/config";
 import { defaultLayout, withColumnAt, type TablePreferences } from "../table/preferences";
-import { bulkTargets, pageSelectionState, selectionScope, syncSelection, togglePage, toggleRow, type Selection } from "../table/selection";
+import { bulkTargets, hasSharedGroup, pageSelectionState, suspensionTargets, selectionScope, syncSelection, togglePage, toggleRow, type Selection } from "../table/selection";
 import { useListParams } from "../table/use-list-params";
 import { useTablePreferences } from "../table/use-preferences";
 import { MAX_LABEL_TARGETS } from "../label-limits";
+import { MAX_SUSPENSION_TARGETS } from "../validation";
 import { useStudentLabels } from "../use-labels";
 import { ArchiveDialog, type ArchiveRequest } from "./archive-dialog";
+import { SuspensionDialog } from "./suspension-dialog";
+import { useStudentSuspension, type SuspensionRequest } from "../use-suspension";
 import { StudentCodeDialog, type CodeTarget } from "../../codes/components/dialog";
 import { fetchStudentCodes, studentCodeQueryKeys } from "../../codes/queries";
 import { useStudentCodeSettings } from "../../codes/use-settings";
@@ -91,6 +94,9 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   }, [linkedRecord]);
   const [archiveRequest, setArchiveRequest] = useState<ArchiveRequest | null>(null);
   const [groupChange, setGroupChange] = useState<RecordVersion[] | null>(null);
+  const [suspensionRequest, setSuspensionRequest] = useState<SuspensionRequest | null>(null);
+  // Shown at once; the selection stays for further actions, and a failure reopens the confirmation.
+  const suspension = useStudentSuspension(academyId, { reopen: setSuspensionRequest });
   const [groupsOpen, setGroupsOpen] = useState(false);
   // `?groups=open` (the Groups command) opens the groups panel.
   const openGroups = searchParams.get("groups") === "open";
@@ -123,6 +129,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   if (currentScope !== scope) {
     setCurrentScope(scope);
     setSelection({});
+    setSuspensionRequest(null);
   }
   // Keep selected rows' versions current as pages reload, so bulk actions target what is shown.
   const [syncedRows, setSyncedRows] = useState(rows);
@@ -168,6 +175,10 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     onManageLabels: labelManager ? openLabelManager : undefined,
     onOpen: (row) => setEditingId(row.id),
     onArchive: (row, archive) => setArchiveRequest({ archive, records: [{ id: row.id, version: row.version }], name: row.fullName }),
+    onSuspension: (row, suspend) => setSuspensionRequest({
+      suspend, name: row.fullName,
+      targets: [{ recordId: row.id, revision: row.suspensionRevision, suspended: row.manuallySuspended, archived: Boolean(row.archivedAt) }],
+    }),
     onCode: codesEnabled ? (row) => setCodeTarget({ id: row.id, fullName: row.fullName, levelId: row.levelId }) : undefined,
     viewAsStudent: (row) => viewAsStudent(row.id),
   }), [academyId, applyToRecord, canManage, codesEnabled, labelManager, openLabelManager, viewAsStudent]);
@@ -223,6 +234,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   const archivable = bulkTargets(selection, true);
   const restorable = bulkTargets(selection, false);
   const selectedCount = Object.keys(selection).length;
+  const suspendable = Object.values(selection).filter((entry) => !entry.suspended).length;
   const layout = { order: preferences.order, visibility: preferences.visibility, sizing: preferences.sizing };
   const customized = JSON.stringify(layout) !== JSON.stringify(defaultLayout());
   const filtering = isFiltering(params);
@@ -238,7 +250,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     });
   }
 
-  /** Applies or removes one label on the explicit selection; a failed write keeps the selection. */
+  /** Applies or removes one label on the explicit selection, shown at once. The selection stays for further actions. */
   async function applyBulkLabel(label: Label, applied: boolean) {
     const ids = Object.keys(selection);
     if (ids.length > MAX_LABEL_TARGETS) {
@@ -246,10 +258,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
       return;
     }
     if (!await labelWrites.applyToSelection(ids, label.id, applied)) return;
-    deselect(ids);
     toast.success(`${applied ? "Applied" : "Removed"} “${label.name}” ${applied ? "to" : "from"} ${ids.length} ${ids.length === 1 ? "student" : "students"}`);
-    // The selection bar is gone; continue from the table.
-    requestAnimationFrame(() => document.querySelector<HTMLElement>('[aria-label="Select all students on this page"]')?.focus());
   }
 
   /** Takes fresh versions for changed records and drops ones that no longer exist. */
@@ -257,7 +266,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     const next: Selection = { ...selection };
     for (const row of rows) {
       if (row.version === null) delete next[row.id];
-      else if (next[row.id]) next[row.id] = { version: row.version, archived: row.archived };
+      else if (next[row.id]) next[row.id] = { ...next[row.id], version: row.version, archived: row.archived, levelId: row.levelId ?? next[row.id].levelId, trackId: row.trackId };
     }
     setSelection(next);
     setGroupChange(Object.entries(next).map(([id, value]) => ({ id, version: value.version })));
@@ -371,7 +380,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
                   </EmptyHeader>
                   <EmptyContent>
                     <Button size="sm" variant="outline" onClick={() => onFiltersChange({
-                      search: "", status: "active", levelId: null, track: null, group: null, participationType: null, labels: [], unlabeled: false,
+                      search: "", status: "active", levelId: null, track: null, group: null, participationType: null, labels: [], unlabeled: false, access: null,
                     })}>{params.search.trim() ? "Clear search and filters" : "Clear filters"}</Button>
                   </EmptyContent>
                 </Empty>
@@ -403,13 +412,22 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
           {canSelect && selectedCount > 0 && (
             <BulkBar
               selected={selectedCount}
-              labels={<BulkLabels academyId={academyId} pending={labelWrites.bulkPending} onApply={(label, applied) => void applyBulkLabel(label, applied)} onManage={labelManager ? openLabelManager : undefined} />}
+              labels={<BulkLabels academyId={academyId} onApply={(label, applied) => void applyBulkLabel(label, applied)} onManage={labelManager ? openLabelManager : undefined} />}
               manager={canManage ? {
                 archivable: archivable.length,
                 restorable: restorable.length,
                 onArchive: () => setArchiveRequest({ archive: true, records: archivable }),
                 onRestore: () => setArchiveRequest({ archive: false, records: restorable }),
-                onChangeGroup: () => setGroupChange(Object.entries(selection).map(([id, value]) => ({ id, version: value.version }))),
+                onChangeGroup: hasSharedGroup(selection, groupsQuery.data?.groups ?? [])
+                  ? () => setGroupChange(Object.entries(selection).map(([id, value]) => ({ id, version: value.version })))
+                  : undefined,
+                suspendable,
+                unsuspendable: selectedCount - suspendable,
+                onSuspension: (suspend) => {
+                  const targets = suspensionTargets(selection);
+                  if (targets.length > MAX_SUSPENSION_TARGETS) toast.error(`Select at most ${MAX_SUSPENSION_TARGETS} students.`);
+                  else setSuspensionRequest({ suspend, targets });
+                },
               } : undefined}
               onClear={() => setSelection({})}
             />
@@ -428,6 +446,13 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
             onClose={() => setGroupChange(null)}
             onDone={deselect}
             onReloadSelection={onReloadSelection}
+          />
+        )}
+        {canManage && (
+          <SuspensionDialog
+            request={suspensionRequest}
+            onClose={() => setSuspensionRequest(null)}
+            onConfirm={(request, reason) => { setSuspensionRequest(null); void suspension.submit(request, reason); }}
           />
         )}
         <ArchiveDialog
