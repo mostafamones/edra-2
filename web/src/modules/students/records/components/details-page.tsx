@@ -16,6 +16,9 @@ import { StudentEditSheet } from "./edit-sheet";
 import { StudentAttendance } from "./attendance";
 import { StudentLearning } from "./learning";
 import { StudentAssessments } from "./assessments";
+import { canManageStudentSuspension } from "../permissions";
+import { SuspensionDialog, type SuspensionRequest } from "./suspension-dialog";
+import { SuspensionStatus } from "./suspension-status";
 
 export function StudentDetailsPage({ recordId, returnQuery = "" }: { recordId: string; returnQuery?: string }) {
   return <AcademyGate>{academy => <Details key={`${academy.id}:${recordId}`} academy={academy} recordId={recordId} returnQuery={returnQuery} />}</AcademyGate>;
@@ -24,6 +27,8 @@ export function StudentDetailsPage({ recordId, returnQuery = "" }: { recordId: s
 function Details({ academy, recordId, returnQuery }: { academy: AcademyEntry; recordId: string; returnQuery: string }) {
   const href = useCanonicalHref();
   const [editing, setEditing] = useState(false);
+  const [suspension, setSuspension] = useState<SuspensionRequest | null>(null);
+  const canSuspend = canManageStudentSuspension(academy.role);
   const record = useQuery({ queryKey: studentRecordQueryKey(academy.id, recordId), queryFn: ({ signal }) => fetchStudentRecord(academy.id, recordId, signal) });
   const student = record.data;
   const physical = student?.participationType === "in_person";
@@ -50,6 +55,7 @@ function Details({ academy, recordId, returnQuery }: { academy: AcademyEntry; re
           <h1 dir="auto" className="break-words text-2xl font-semibold tracking-tight">{student.fullName}</h1>
           <div className="flex flex-wrap items-center gap-2"><Badge variant="secondary">{student.archivedAt ? "Archived" : "Active"}</Badge><Badge variant="secondary">{PARTICIPATION_LABELS[student.participationType]}</Badge>{physical && <span className="text-xs text-muted-foreground">{{ connected: "Account connected", suspended: "Account suspended", not_connected: "Account not connected" }[student.onlineAccount]}</span>}</div>
           <StudentRecordLabels academy={academy} recordId={student.id} labelIds={student.labelIds} />
+          <SuspensionStatus student={student} onChange={canSuspend ? (suspend) => setSuspension({ suspend, recordIds: [student.id], name: student.fullName }) : undefined} />
         </div>
         <Button variant="secondary" onClick={() => setEditing(true)}>{student.archivedAt ? "View archived record" : "Edit student"}</Button>
       </header>
@@ -59,6 +65,7 @@ function Details({ academy, recordId, returnQuery }: { academy: AcademyEntry; re
       <StudentLearning key={placement} academyId={academy.id} recordId={student.id} placement={placement} query={learning} base={base} />
       <StudentAssessments academyId={academy.id} recordId={student.id} base={base} />
       <StudentEditSheet academy={academy} recordId={editing ? recordId : null} onClose={() => setEditing(false)} />
+      {canSuspend && <SuspensionDialog academyId={academy.id} request={suspension} onClose={() => setSuspension(null)} />}
     </>}
   </article>;
 }

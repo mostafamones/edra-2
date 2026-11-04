@@ -1,6 +1,6 @@
 import { useRef, type ReactElement, type RefObject } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Archive02Icon, IdentityCardIcon, MoreHorizontalIcon, PencilEdit02Icon, RestoreBinIcon, UserIdVerificationIcon, ViewIcon } from "@hugeicons/core-free-icons";
+import { Archive02Icon, IdentityCardIcon, MoreHorizontalIcon, PencilEdit02Icon, RestoreBinIcon, UserBlock01Icon, UserCheck01Icon, UserIdVerificationIcon, ViewIcon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -19,6 +19,8 @@ export type RowActions = {
   onManageLabels?: (opener: HTMLElement | null) => void;
   onOpen: (row: StudentRecordRow) => void;
   onArchive: (row: StudentRecordRow, archive: boolean) => void;
+  /** Opens the suspension confirmation; managers only, including archived and closed-year records. */
+  onSuspension: (row: StudentRecordRow, suspend: boolean) => void;
   /** Opens the student code dialog; omitted while student codes are off. */
   onCode?: (row: StudentRecordRow) => void;
   /** Developer mode student entry for generated linked students; undefined otherwise. */
@@ -57,6 +59,9 @@ function Items({ row, actions, menu, openerRef, openingRef }: Props & {
       {actions.canManage && (
         <>
           <Separator />
+          {row.manuallySuspended
+            ? <Item onSelect={() => actions.onSuspension(row, false)}><HugeiconsIcon icon={UserCheck01Icon} strokeWidth={1.5} />Restore online access</Item>
+            : <Item onSelect={() => actions.onSuspension(row, true)}><HugeiconsIcon icon={UserBlock01Icon} strokeWidth={1.5} />Suspend online access</Item>}
           {archived
             ? <Item onSelect={() => actions.onArchive(row, false)}><HugeiconsIcon icon={RestoreBinIcon} strokeWidth={1.5} />Restore</Item>
             : <Item variant="destructive" onSelect={() => actions.onArchive(row, true)}><HugeiconsIcon icon={Archive02Icon} strokeWidth={1.5} />Archive</Item>}
@@ -80,7 +85,7 @@ export function StudentRowMenu({ row, actions, children }: Props & { children: R
       }}>
         {children}
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-44" onCloseAutoFocus={(event) => { if (opening.current) { event.preventDefault(); opening.current = false; } }}>
+      <ContextMenuContent className="w-52" onCloseAutoFocus={(event) => { if (opening.current) { event.preventDefault(); opening.current = false; } }}>
         <Items row={row} actions={actions} menu="context" openerRef={trigger} openingRef={opening} />
       </ContextMenuContent>
     </ContextMenu>
@@ -103,7 +108,7 @@ export function StudentRowActions({ row, actions }: Props) {
         </TooltipTrigger>
         <TooltipContent>Actions</TooltipContent>
       </Tooltip>
-      <DropdownMenuContent align="end" className="w-44" onCloseAutoFocus={(event) => { if (opening.current) { event.preventDefault(); opening.current = false; } }}>
+      <DropdownMenuContent align="end" className="w-52" onCloseAutoFocus={(event) => { if (opening.current) { event.preventDefault(); opening.current = false; } }}>
         <Items row={row} actions={actions} menu="dropdown" openerRef={trigger} openingRef={opening} />
       </DropdownMenuContent>
     </DropdownMenu>

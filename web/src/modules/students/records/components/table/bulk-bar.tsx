@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Archive02Icon, Cancel01Icon, FolderEditIcon, RestoreBinIcon } from "@hugeicons/core-free-icons";
+import { Archive02Icon, Cancel01Icon, FolderEditIcon, RestoreBinIcon, UserBlock01Icon, UserCheck01Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { ActionBar, ActionBarSeparator } from "@/components/ui/action-bar";
@@ -17,11 +17,15 @@ type Props = {
     onArchive: () => void;
     onRestore: () => void;
     onChangeGroup: () => void;
+    /** Selected records last seen without, and with, manual suspension. */
+    suspendable: number;
+    unsuspendable: number;
+    onSuspension: (suspend: boolean) => void;
   };
   onClear: () => void;
 };
 
-/** Selection count, labels, and the managers' group, archive, and restore actions, pinned to the viewport bottom beside toasts so the table never shifts. */
+/** Selection count, labels, and the managers' group, online-access, archive, and restore actions, pinned to the viewport bottom beside toasts so the table never shifts. */
 export function BulkBar({ selected, labels, manager, onClear }: Props) {
   return (
     <ActionBar aria-label="Selected students">
@@ -31,6 +35,16 @@ export function BulkBar({ selected, labels, manager, onClear }: Props) {
       {manager && (
         <Button variant="ghost" size="sm" onClick={manager.onChangeGroup}>
           <HugeiconsIcon icon={FolderEditIcon} />Change group
+        </Button>
+      )}
+      {manager && manager.suspendable > 0 && (
+        <Button variant="ghost" size="sm" onClick={() => manager.onSuspension(true)}>
+          <HugeiconsIcon icon={UserBlock01Icon} strokeWidth={1.5} />Suspend online access
+        </Button>
+      )}
+      {manager && manager.unsuspendable > 0 && (
+        <Button variant="ghost" size="sm" onClick={() => manager.onSuspension(false)}>
+          <HugeiconsIcon icon={UserCheck01Icon} strokeWidth={1.5} />Restore online access
         </Button>
       )}
       {manager && manager.archivable > 0 && (

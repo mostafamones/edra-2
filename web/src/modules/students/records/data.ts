@@ -53,6 +53,8 @@ const listRowSchema = z.object({
   updated_at: z.string(),
   version: z.number().int(),
   online_account: z.enum(["not_connected", "connected", "suspended"]),
+  manually_suspended: z.boolean(),
+  suspension_revision: z.number().int().nonnegative(),
   account_name: z.string().nullable(),
   label_ids: z.array(z.string()),
 });
@@ -76,6 +78,8 @@ const toRow = (row: z.infer<typeof listRowSchema>): StudentRecordRow => ({
   updatedAt: row.updated_at,
   version: row.version,
   onlineAccount: row.online_account,
+  manuallySuspended: row.manually_suspended,
+  suspensionRevision: row.suspension_revision,
   accountName: row.account_name,
   labelIds: row.label_ids,
 });
@@ -103,6 +107,7 @@ export async function listStudentRecords(academyId: string, params: StudentListP
       p_page_size: params.pageSize,
       p_label_ids: params.labels,
       p_unlabeled: params.unlabeled,
+      p_access: params.access,
     };
     // The generator types RPC arguments as non-null; the function treats NULL filters as "any".
     const [{ data, error }, year] = await Promise.all([
@@ -122,6 +127,18 @@ export async function listStudentRecords(academyId: string, params: StudentListP
   }
 }
 
+const suspensionStateSchema = z.object({
+  connected: z.boolean(),
+  suspended: z.boolean(),
+  revision: z.number().int().nonnegative(),
+  latest: z.object({
+    action: z.enum(["suspended", "restored"]),
+    reason: z.string().nullable(),
+    created_at: z.string(),
+    actor_name: z.string().nullable(),
+  }).nullable(),
+});
+
 const RECORD_COLUMNS = "id,academy_id,academic_year_id,academy_student_profile_id,full_name,student_phone,parent_phone,level_id,track_id,primary_group_id,participation_type,archived_at,created_at,updated_at,version";
 
 /** One record fetched fresh by tenant and id, for the edit sheet. */
@@ -133,16 +150,22 @@ export async function getStudentRecord(academyId: string, recordId: string): Pro
     .eq("academy_id", academyId).eq("id", recordId).maybeSingle();
   if (error) return { ok: false, status: 500 };
   if (!data) return { ok: false, status: 404 };
-  const { data: profile, error: profileError } = await actor.db.from("academy_student_profiles")
-    .select("user_id,access_suspended_at").eq("academy_id", academyId).eq("id", data.academy_student_profile_id).maybeSingle();
-  if (profileError) return { ok: false, status: 500 };
+  // Required: a failed or missing suspension read must never look unsuspended.
+  const { data: access, error: accessError } = await actor.db.rpc("get_student_access_suspension", { p_academy_id: academyId, p_record_id: recordId });
+  if (accessError) return { ok: false, status: 500 };
+  const suspension = suspensionStateSchema.safeParse(access);
+  if (!suspension.success) return { ok: false, status: 500 };
   const { data: labels, error: labelsError } = await actor.db.from("annual_student_record_labels")
     .select("label_id").eq("academy_id", academyId).eq("annual_student_record_id", recordId);
   if (labelsError) return { ok: false, status: 500 };
+  const { connected, suspended, revision, latest } = suspension.data;
   return {
     ok: true,
     data: {
-      onlineAccount: onlineAccountState(profile?.user_id, data.archived_at, profile?.access_suspended_at),
+      onlineAccount: onlineAccountState(connected, data.archived_at, suspended),
+      manuallySuspended: suspended,
+      suspensionRevision: revision,
+      latestSuspensionChange: latest && { action: latest.action, reason: latest.reason, at: latest.created_at, actorName: latest.actor_name },
       id: data.id,
       academyId: data.academy_id,
       academicYearId: data.academic_year_id,

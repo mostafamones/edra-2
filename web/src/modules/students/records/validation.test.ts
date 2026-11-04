@@ -144,10 +144,10 @@ describe("group compatibility", () => {
 
 describe("onlineAccountState", () => {
   it("matches the list and edit-sheet rule for every link and suspension combination", () => {
-    expect(onlineAccountState(null, null, null)).toBe("not_connected");
-    expect(onlineAccountState(null, "2030-01-01", "2030-01-01")).toBe("not_connected");
-    expect(onlineAccountState("u", null, null)).toBe("connected");
-    expect(onlineAccountState("u", "2030-01-01", null)).toBe("suspended");
-    expect(onlineAccountState("u", null, "2030-01-01")).toBe("suspended");
+    expect(onlineAccountState(false, null, false)).toBe("not_connected");
+    expect(onlineAccountState(false, "2030-01-01", true)).toBe("not_connected");
+    expect(onlineAccountState(true, null, false)).toBe("connected");
+    expect(onlineAccountState(true, "2030-01-01", false)).toBe("suspended");
+    expect(onlineAccountState(true, null, true)).toBe("suspended");
   });
 });

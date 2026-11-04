@@ -5,9 +5,9 @@ import type { RecordVersion, StudentRecordRow } from "../types";
  * Selected records keyed by id. Each entry keeps the version and status last seen, so a selection
  * that spans pages can still build archive/restore targets for rows that are no longer loaded.
  */
-export type Selection = Record<string, { version: number; archived: boolean }>;
+export type Selection = Record<string, { version: number; archived: boolean; suspended: boolean }>;
 
-const entry = (row: StudentRecordRow) => ({ version: row.version, archived: Boolean(row.archivedAt) });
+const entry = (row: StudentRecordRow) => ({ version: row.version, archived: Boolean(row.archivedAt), suspended: row.manuallySuspended });
 
 export function toggleRow(selection: Selection, row: StudentRecordRow, selected: boolean): Selection {
   const next = { ...selection };
@@ -34,7 +34,7 @@ export function pageSelectionState(selection: Selection, rows: StudentRecordRow[
 
 /** What a selection belongs to: changing any of it clears the selection, so hidden records are never acted on. Paging and sorting keep it. */
 export const selectionScope = (params: StudentListParams, userId: string | undefined, academicYearId: string | null | undefined) => JSON.stringify([
-  userId, academicYearId, params.search, params.status, params.levelId, params.track, params.group, params.participationType, params.labels, params.unlabeled,
+  userId, academicYearId, params.search, params.status, params.levelId, params.track, params.group, params.participationType, params.labels, params.unlabeled, params.access,
 ]);
 
 /** Refreshes versions and statuses for selected rows that were just reloaded. */
@@ -45,7 +45,7 @@ export function syncSelection(selection: Selection, rows: StudentRecordRow[]): S
     const current = next[row.id];
     if (!current) continue;
     const fresh = entry(row);
-    if (current.version !== fresh.version || current.archived !== fresh.archived) {
+    if (current.version !== fresh.version || current.archived !== fresh.archived || current.suspended !== fresh.suspended) {
       next[row.id] = fresh;
       changed = true;
     }

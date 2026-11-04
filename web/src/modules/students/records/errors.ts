@@ -16,6 +16,7 @@ const MESSAGES: Record<StudentRecordErrorCode, string> = {
   stage_conflict: "This file’s rows differ from the ones already sent. Start a new import with the file.",
   incomplete_staging: "Not every row of the file has been sent yet. Select the same file again to finish.",
   outcome_changed: "Student records or the academy’s levels, tracks, or groups changed. Review the refreshed preview and confirm again.",
+  stale_suspension: "Online access for some of these students changed since you reviewed it. Nothing was changed. Review the refreshed selection and confirm again.",
 };
 
 const CODES = new Set(Object.keys(MESSAGES));

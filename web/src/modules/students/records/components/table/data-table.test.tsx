@@ -15,10 +15,10 @@ const row = (change: Partial<StudentRecordRow> = {}): StudentRecordRow => ({
   id: "r1", academyStudentProfileId: "p1", fullName: "Amal", studentPhone: "+201012345678", parentPhone: "+201112223333",
   levelId: "preparatory-3", levelName: "Third Preparatory", trackId: null, trackName: null, primaryGroupId: null, groupName: null,
   participationType: "in_person", archivedAt: null, createdAt: "2030-09-01T00:00:00Z", updatedAt: "2030-09-01T00:00:00Z", version: 1,
-  onlineAccount: "not_connected", accountName: null, labelIds: [], ...change,
+  onlineAccount: "not_connected", manuallySuspended: false, suspensionRevision: 0, accountName: null, labelIds: [], ...change,
 });
 
-const actions = { academyId: "a1", canManage: true, onApplyLabel: vi.fn(), onOpen: vi.fn(), onArchive: vi.fn() };
+const actions = { academyId: "a1", canManage: true, onApplyLabel: vi.fn(), onOpen: vi.fn(), onArchive: vi.fn(), onSuspension: vi.fn() };
 const rowHref = (record: StudentRecordRow) => `/app/students/${record.id}`;
 
 function Harness({ record }: { record: StudentRecordRow }) {

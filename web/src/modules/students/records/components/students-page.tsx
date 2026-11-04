@@ -37,8 +37,10 @@ import { bulkTargets, pageSelectionState, selectionScope, syncSelection, toggleP
 import { useListParams } from "../table/use-list-params";
 import { useTablePreferences } from "../table/use-preferences";
 import { MAX_LABEL_TARGETS } from "../label-limits";
+import { MAX_SUSPENSION_TARGETS } from "../validation";
 import { useStudentLabels } from "../use-labels";
 import { ArchiveDialog, type ArchiveRequest } from "./archive-dialog";
+import { SuspensionDialog, type SuspensionRequest } from "./suspension-dialog";
 import { StudentCodeDialog, type CodeTarget } from "../../codes/components/dialog";
 import { fetchStudentCodes, studentCodeQueryKeys } from "../../codes/queries";
 import { useStudentCodeSettings } from "../../codes/use-settings";
@@ -91,6 +93,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   }, [linkedRecord]);
   const [archiveRequest, setArchiveRequest] = useState<ArchiveRequest | null>(null);
   const [groupChange, setGroupChange] = useState<RecordVersion[] | null>(null);
+  const [suspensionRequest, setSuspensionRequest] = useState<SuspensionRequest | null>(null);
   const [groupsOpen, setGroupsOpen] = useState(false);
   // `?groups=open` (the Groups command) opens the groups panel.
   const openGroups = searchParams.get("groups") === "open";
@@ -123,6 +126,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   if (currentScope !== scope) {
     setCurrentScope(scope);
     setSelection({});
+    setSuspensionRequest(null);
   }
   // Keep selected rows' versions current as pages reload, so bulk actions target what is shown.
   const [syncedRows, setSyncedRows] = useState(rows);
@@ -168,6 +172,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     onManageLabels: labelManager ? openLabelManager : undefined,
     onOpen: (row) => setEditingId(row.id),
     onArchive: (row, archive) => setArchiveRequest({ archive, records: [{ id: row.id, version: row.version }], name: row.fullName }),
+    onSuspension: (row, suspend) => setSuspensionRequest({ suspend, recordIds: [row.id], name: row.fullName }),
     onCode: codesEnabled ? (row) => setCodeTarget({ id: row.id, fullName: row.fullName, levelId: row.levelId }) : undefined,
     viewAsStudent: (row) => viewAsStudent(row.id),
   }), [academyId, applyToRecord, canManage, codesEnabled, labelManager, openLabelManager, viewAsStudent]);
@@ -223,6 +228,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
   const archivable = bulkTargets(selection, true);
   const restorable = bulkTargets(selection, false);
   const selectedCount = Object.keys(selection).length;
+  const suspendable = Object.values(selection).filter((entry) => !entry.suspended).length;
   const layout = { order: preferences.order, visibility: preferences.visibility, sizing: preferences.sizing };
   const customized = JSON.stringify(layout) !== JSON.stringify(defaultLayout());
   const filtering = isFiltering(params);
@@ -257,7 +263,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
     const next: Selection = { ...selection };
     for (const row of rows) {
       if (row.version === null) delete next[row.id];
-      else if (next[row.id]) next[row.id] = { version: row.version, archived: row.archived };
+      else if (next[row.id]) next[row.id] = { ...next[row.id], version: row.version, archived: row.archived };
     }
     setSelection(next);
     setGroupChange(Object.entries(next).map(([id, value]) => ({ id, version: value.version })));
@@ -371,7 +377,7 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
                   </EmptyHeader>
                   <EmptyContent>
                     <Button size="sm" variant="outline" onClick={() => onFiltersChange({
-                      search: "", status: "active", levelId: null, track: null, group: null, participationType: null, labels: [], unlabeled: false,
+                      search: "", status: "active", levelId: null, track: null, group: null, participationType: null, labels: [], unlabeled: false, access: null,
                     })}>{params.search.trim() ? "Clear search and filters" : "Clear filters"}</Button>
                   </EmptyContent>
                 </Empty>
@@ -410,6 +416,13 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
                 onArchive: () => setArchiveRequest({ archive: true, records: archivable }),
                 onRestore: () => setArchiveRequest({ archive: false, records: restorable }),
                 onChangeGroup: () => setGroupChange(Object.entries(selection).map(([id, value]) => ({ id, version: value.version }))),
+                suspendable,
+                unsuspendable: selectedCount - suspendable,
+                onSuspension: (suspend) => {
+                  const ids = Object.keys(selection);
+                  if (ids.length > MAX_SUSPENSION_TARGETS) toast.error(`Select at most ${MAX_SUSPENSION_TARGETS} students.`);
+                  else setSuspensionRequest({ suspend, recordIds: ids });
+                },
               } : undefined}
               onClear={() => setSelection({})}
             />
@@ -428,6 +441,19 @@ function StudentsContent({ academy }: { academy: AcademyEntry }) {
             onClose={() => setGroupChange(null)}
             onDone={deselect}
             onReloadSelection={onReloadSelection}
+          />
+        )}
+        {canManage && (
+          <SuspensionDialog
+            academyId={academyId}
+            request={suspensionRequest}
+            onClose={() => setSuspensionRequest(null)}
+            onDone={(request) => {
+              // A row action (named) leaves the selection alone; a bulk action clears what it changed.
+              if (request.name) return;
+              deselect(request.recordIds);
+              requestAnimationFrame(() => document.querySelector<HTMLElement>('[aria-label="Select all students on this page"]')?.focus());
+            }}
           />
         )}
         <ArchiveDialog
