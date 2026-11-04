@@ -7541,6 +7541,66 @@ export type Database = {
       }
     }
     Functions: {
+      can_join_concern_channel: { Args: { p_topic: string }; Returns: boolean }
+      concern_detail: { Args: { p_academy_id: string; p_concern_id: string }; Returns: Json }
+      concern_has_access: { Args: { p_academy_id: string; p_concern_id: string }; Returns: boolean }
+      concern_inbox: {
+        Args: {
+          p_academy_id: string
+          p_before_id?: string
+          p_before_updated_at?: string
+          p_limit?: number
+          p_status?: string
+        }
+        Returns: Json
+      }
+      concern_message_changes: {
+        Args: { p_academy_id: string; p_after_revision: number; p_concern_id: string; p_limit?: number }
+        Returns: Json
+      }
+      concern_messages_page: {
+        Args: { p_academy_id: string; p_before_seq?: number; p_concern_id: string; p_limit?: number }
+        Returns: Json
+      }
+      concern_unread: { Args: { p_academy_id: string }; Returns: Json }
+      create_concern: {
+        Args: {
+          p_academy_id: string
+          p_body: string
+          p_concern_id: string
+          p_mentions?: string[]
+          p_message_id: string
+          p_participant_ids: string[]
+          p_title: string
+          p_whole_team?: boolean
+        }
+        Returns: Json
+      }
+      delete_concern_message: {
+        Args: { p_academy_id: string; p_concern_id: string; p_message_id: string }
+        Returns: Json
+      }
+      edit_concern_message: {
+        Args: { p_academy_id: string; p_body: string; p_concern_id: string; p_mentions?: string[]; p_message_id: string }
+        Returns: Json
+      }
+      mark_concern_read: { Args: { p_academy_id: string; p_concern_id: string; p_seq: number }; Returns: Json }
+      search_concerns: { Args: { p_academy_id: string; p_limit?: number; p_query: string }; Returns: Json }
+      send_concern_message: {
+        Args: {
+          p_academy_id: string
+          p_body: string
+          p_concern_id: string
+          p_mentions?: string[]
+          p_message_id: string
+          p_reply_to_id?: string
+        }
+        Returns: Json
+      }
+      set_concern_reaction: {
+        Args: { p_academy_id: string; p_concern_id: string; p_emoji: string; p_message_id: string; p_on: boolean }
+        Returns: Json
+      }
       academy_role_for: {
         Args: { target_academy_id: string }
         Returns: Database["public"]["Enums"]["academy_role"]

@@ -10,7 +10,7 @@ const read = (file: string) => readFileSync(file, "utf8");
 const implementations = files.filter((file) => /(actions|labels)\.server\.ts$/.test(file));
 
 describe("module server boundaries", () => {
-  it("found the 33 action modules", () => expect(implementations).toHaveLength(33));
+  it("found the 34 action modules", () => expect(implementations).toHaveLength(34));
 
   it.each(implementations.map((file) => relative(root, file)))("%s has one static endpoint per action and no server value re-export", (file) => {
     const server = read(join(root, file));

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Separate-session race tests for staff access, schedule/group/slot, student-record, import,
-# student-code, check-in, attendance-correction, quiz and exam locking, label assignment/deletion, and scheduled content publication. Run only through `npm run test:db`, which validates the isolated target and
+# student-code, check-in, attendance-correction, quiz and exam locking, label assignment/deletion, scheduled content publication and concern messaging. Run only through `npm run test:db`, which validates the isolated target and
 # exports its connection. Races need real concurrent transactions, so fixtures are committed under a
 # run-specific academy, admin and ids. They are retained: preserved history (sessions, attendance,
 # code ledger) cannot be removed through normal flows. Fresh identities keep reruns collision-free.
@@ -1426,6 +1426,50 @@ expect_ok p7a "the worker holding the unit failed"
 expect_rejected p7b "a reschedule crossed an execution" schedule_conflict
 [ "$(pub_doc "$U")" = "Live,Candidate" ] || fail "execution did not stand beside a reschedule: $(pub_doc "$U")"
 grep -qi deadlock "$OUT"/p[1-7]* && fail "a scheduled publication race deadlocked"
+
+# CN1-CN5. Concern messaging. Every command locks the concern row, so sequence numbers, edits,
+#          deletions and lifecycle changes serialize instead of interleaving.
+CONCERN="$(uuid)"; CM1="$(uuid)"; CM2="$(uuid)"; CM3="$(uuid)"; CM4="$(uuid)"; CM5="$(uuid)"
+psqlx >/dev/null -c "begin; $as_admin select public.create_concern('$ACADEMY','$CONCERN','$CM1','Race concern','Opening','{}'); commit;"
+send_cm() { echo "$as_admin select public.send_concern_message('$ACADEMY','$CONCERN','$1','$2');"; }
+cm_seqs() { psqlx -tA -c "select string_agg(seq::text, ',' order by seq) from public.concern_messages where concern_id = '$CONCERN'"; }
+# CN1. Two sends at once get distinct consecutive sequence numbers.
+hold cn1a cn1b "$(send_cm "$CM2" 'First')"
+start cn1b "$(send_cm "$CM3" 'Second')"
+wait
+expect_ok cn1a "the holding send failed"; expect_ok cn1b "the queued send failed"
+[ "$(cm_seqs)" = "1,2,3" ] || fail "concurrent sends did not serialize: $(cm_seqs)"
+# CN2. A retried send racing its original creates one message.
+hold cn2a cn2b "$(send_cm "$CM4" 'Retry')"
+start cn2b "$(send_cm "$CM4" 'Retry')"
+wait
+expect_ok cn2a "the original send failed"; expect_ok cn2b "the retried send failed"
+[ "$(cm_seqs)" = "1,2,3,4" ] || fail "a retried send duplicated a message: $(cm_seqs)"
+# CN3. An edit holds the concern; a deletion waits, then removes the edited text.
+hold cn3a cn3b "$as_admin select public.edit_concern_message('$ACADEMY','$CONCERN','$CM2','Edited');"
+start cn3b "$as_admin select public.delete_concern_message('$ACADEMY','$CONCERN','$CM2');"
+wait
+expect_ok cn3a "the holding edit failed"; expect_ok cn3b "the deletion behind an edit failed"
+psqlx -tA -c "select body is null and deleted_at is not null from public.concern_messages where id = '$CM2'" | grep -qx t \
+  || fail "an edit survived a later deletion"
+# CN4. A deletion holds the concern; a queued edit then finds the placeholder.
+hold cn4a cn4b "$as_admin select public.delete_concern_message('$ACADEMY','$CONCERN','$CM3');"
+start cn4b "$as_admin select public.edit_concern_message('$ACADEMY','$CONCERN','$CM3','Too late');"
+wait
+expect_ok cn4a "the holding deletion failed"
+expect_rejected cn4b "an edit rewrote a deleted message" message_deleted
+# CN5. Settlement (as EDRA-292 will do it, under the same lock) holds the concern; a queued send is refused.
+hold cn5a cn5b "set local request.jwt.claim.sub = '$ADMIN'; select edra_private.require_concern('$ACADEMY','$CONCERN',true,true);
+  update public.concerns set status = 'settled', settled_at = now(), settled_by = '$ADMIN', outcome = 'Race outcome' where id = '$CONCERN';"
+start cn5b "$(send_cm "$CM5" 'After settle')"
+wait
+expect_ok cn5a "the settlement holding the concern failed"
+expect_rejected cn5b "a message was sent into a concern settled concurrently" concern_settled
+run cn5c "$(send_cm "$CM4" 'Retry')"; expect_ok cn5c "a completed send retry failed after settlement"
+[ "$(cm_seqs)" = "1,2,3,4" ] || fail "settlement race changed messages: $(cm_seqs)"
+psqlx -tA -c "select count(*) from public.concern_events where concern_id = '$CONCERN' and kind = 'message_sent'" | grep -qx 4 \
+  || fail "message events do not match messages"
+grep -qi deadlock "$OUT"/cn* && fail "a concern messaging race deadlocked"
 
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
