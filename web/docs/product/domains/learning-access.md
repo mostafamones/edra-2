@@ -74,6 +74,18 @@ Each code can be redeemed once and becomes permanently associated with the redee
 
 Owners, Head Admins, Admins and active Instructors may generate and distribute coupons and inspect redemption state. Manager authority to revoke unused codes remains unchanged; this update does not infer instructor code-revocation authority. Students redeem their own codes; staff do not redeem on their behalf or reassign redeemed coupons. Raw codes and exports remain restricted to authorized academy staff and are not exposed through student browsing.
 
+### Printable coupon sheets — EDRA-279
+
+Confirmed with the owner, 2026-11-04. This defines the printing delivery for existing academy coupon batches; it does not claim implemented printing controls.
+
+Owners, Head Admins, Admins and active Instructors may open a print preview for one existing batch. The preview offers a status selector, defaulting to Unused, with Unused, Redeemed, Revoked and All choices. It shows the selected coupon count and page count before opening the browser print dialog. Staff may print or use the browser's Save as PDF destination; a separately generated PDF download is outside this delivery.
+
+Use A4 portrait sheets with cut-out cards in three columns and eight rows, up to 24 coupons per page, with cut lines. Each card contains the academy name, coupon type and full prefixed code as readable text, with no QR code. Preserve each issued code and its original batch prefix even if the type's current prefix changes. Redeemed and revoked cards additionally show the visible text Redeemed or Revoked; color alone is insufficient to communicate those states.
+
+The preview and printed sheets use the same selected coupons and ordering. Cards must remain intact across page breaks, and the final partial page leaves unused positions blank rather than repeating coupons. The full code remains readable, including mixed-direction academy/type names. Show a distinct no-matching-coupons state and disable printing when the chosen status has no coupons. The printed document contains the coupon sheets, without the application navigation, preview controls or unrelated batch-table data.
+
+Printing is an authorized read of existing coupons. It does not generate, consume, revoke or change them, create a printed status, or alter grants and redemption history. Preserve existing batch-reading permissions, including historical-batch read rules. Status markings reflect the prepared snapshot; printing or saving a PDF does not reserve a coupon or guarantee it remains unused afterward.
+
 ## Unit prerequisites
 
 An instructor can require that a student previously unlocked a selected unit, and can additionally select specific assignments/quizzes from it. Every selected assessment must have an official submission and also requires previous activation of its source unit; submissions alone cannot bypass that activation. Expired source access counts, while revoked access does not qualify. A unit-only requirement needs no assessment. Draft answers and a score threshold do not satisfy submission requirements. Follow the existing unit ownership and manager-publication workflow: saving working requirements does not change published requirements.

@@ -25,6 +25,7 @@ These are intended product permissions. Current source enforces the Owner, Head 
 | Quiz/exam availability windows/archive | Yes | Yes | Yes | No |
 | Inspect learning access; issue unit-default grants and additional-time extensions | Yes | Yes | Yes | Yes |
 | Generate/distribute unit-access codes; inspect redemption | Yes | Yes | Yes | Yes |
+| Inspect, copy, export and print existing academy coupon batches | Yes | Yes | Yes | Yes |
 | Revoke learning access/unused codes | Yes | Yes | Yes | No |
 | Suspend/restore student academy online access, individual/bulk, including unconnected, archived and closed-year records | Yes | Yes | Yes | No |
 | Inspect student suspension state and latest change, including staff-only reason | Yes | Yes | Yes | Yes |

@@ -68,6 +68,12 @@ Server configuration: `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_SIGNING_KEY_ID`, 
 
 The module now also owns the initial student learning/access slice described below. Student enrollment/account linking remains in its existing module. Answer-material eligibility, assessment execution from units, DRM, watermarking, simultaneous-session policy, notifications and session-to-content access effects remain outside this delivery. Staff preview actions are never exposed to students.
 
+## Academy coupons and planned printing
+
+The current academy coupon workflow lives in `coupons/`: managers maintain academy/year types, active staff generate batches of 1–1,000 eight-character coupons, and `CouponBatchSheet` in `coupons/batch.tsx` reads the complete batch for inspection, copying and CSV export. `loadCouponBatch` in `coupons/actions.server.ts` uses the authorized `get_content_coupon_batch` RPC. It returns each coupon's original issued prefix and unused/redeemed/revoked state; `formatCoupon` supplies the readable prefixed code. These academy coupons supersede the older unit-specific code-generation description in the learning/access section below; historical verification records are retained.
+
+Printable sheets are not implemented yet. The owner-confirmed EDRA-279 delivery is in [learning access — Printable coupon sheets](../../../docs/product/domains/learning-access.md#printable-coupon-sheets--edra-279): one-batch preview with status selection defaulting to unused, coupon/page counts, browser printing or Save as PDF, and A4 portrait cut-out cards in a 3 × 8 grid. Cards show the academy name, coupon type and full original prefixed code, with text labels on redeemed/revoked cards and no QR code. Reuse the current staff batch authority; printing adds no coupon mutation or generated-PDF service.
+
 ## Student learning and access
 
 Progress and resume are owned by `progress/`. Explanation videos complete at 90% unique watched timeline coverage; documents and answer materials are excluded. Attached assessments use official assignment received-work states (`submitted`/`late`) and quiz/exam submission records, never draft attempts or marks. Unit and browse summaries recalculate against the current publication while preserving prior activity for replaced/removed videos.
