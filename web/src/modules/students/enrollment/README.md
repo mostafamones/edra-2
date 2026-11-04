@@ -15,7 +15,7 @@ Connected students reach `/<academySlug>` through the student sidebar; `get_my_s
 ## Data and authority
 
 - `academy_student_profiles.user_id` is the account link: one profile per account per academy, never reassigned (trigger), never written by staff.
-- `academy_student_profiles.access_suspended_at` is the independent staff suspension (EDRA-155 enforcement baseline; management commands and UI are EDRA-277). Archiving the annual record is the other cause; restore clears only `archived_at`. `edra_private.student_access_suspended` is the effective check, and `edra_private.student_caller_record(academy, year)` is the shared resolver for protected student services (quizzes and exams use it).
+- `academy_student_profiles.access_suspended_at` is the independent staff (manual) suspension (EDRA-155 enforcement baseline). EDRA-277 manages it through `set_student_access_suspension`, with `access_suspension_revision` and the append-only `student_access_suspension_events`; see the [records module](../records/README.md#online-access-suspension). Linking never clears it, so a student suspended before connection is suspended once connected. Its lock order (record, then profile) matches account linking. Archiving the annual record is the other cause; restore clears only `archived_at`. `edra_private.student_access_suspended` is the effective check, and `edra_private.student_caller_record(academy, year)` is the shared resolver for protected student services (quizzes and exams use it).
 - `student_enrollment_settings` holds the invite token, whether new annual participation is accepted, and the retired participation-type column (genuinely new students are always `online_only`; returning students keep their latest type). The link lives in Manage → Student enrollment (also reachable from the Add student menu); all staff may read and share it, and Owners, Head Admins and Admins replace or turn it off and change availability. Clients have no table grants.
 - The account's level (set in global setup) is bound to the student: academy onboarding never asks for it, offers only that level's tracks, and is blocked when the academy lacks the level. `complete_student_invite(token, track, group)` ignores any client level.
 - New participation reuses the account's verified phone and verified parent phone. A genuinely new student's record name is the account display name, else its full name; a returning student's new record uses the full name; linking an existing record keeps the academy's name (EDRA-126). Group capacity is checked under a group row lock; a full group returns `group_full`.
@@ -26,7 +26,7 @@ The pending cookie also carries a booking entry (`booking.<token>`, set by `/inv
 
 ## Not implemented
 
-Staff commands and UI for independent suspension (EDRA-277), per-program enrollment restrictions, invite lookup rate limiting (tokens are 256-bit), mobile bottom-nav academy entries, and academy pages beyond the landing. The confirmed EDRA-277 management rules are in [learning access](../../../../docs/product/domains/learning-access.md#student-suspension-management--edra-277) and [student records](../../../../docs/product/domains/student-records.md#online-access-management); these product decisions are not a claim of implemented controls.
+Per-program enrollment restrictions, invite lookup rate limiting (tokens are 256-bit), mobile bottom-nav academy entries, and academy pages beyond the landing. Suspension management (EDRA-277) is implemented in the records module.
 
 ## Task 4 resolution evidence — 2026-10-19
 
