@@ -2974,34 +2974,34 @@ export type Database = {
       content_publication_candidates: {
         Row: {
           academy_id: string
+          base_revision: number
           confirmed_at: string
           confirmed_by: string
           document: Json
           id: string
           sequence: number
-          base_revision: number
           unit_id: string
           unit_version: number
         }
         Insert: {
           academy_id: string
+          base_revision: number
           confirmed_at?: string
           confirmed_by: string
           document: Json
           id?: string
           sequence?: never
-          base_revision: number
           unit_id: string
           unit_version: number
         }
         Update: {
           academy_id?: string
+          base_revision?: number
           confirmed_at?: string
           confirmed_by?: string
           document?: Json
           id?: string
           sequence?: never
-          base_revision?: number
           unit_id?: string
           unit_version?: number
         }
@@ -3200,18 +3200,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "content_revisions_candidate_fkey"
-            columns: ["unit_id", "candidate_id"]
-            isOneToOne: false
-            referencedRelation: "content_publication_candidates"
-            referencedColumns: ["unit_id", "id"]
-          },
-          {
             foreignKeyName: "content_revisions_academy_id_unit_id_fkey"
             columns: ["academy_id", "unit_id"]
             isOneToOne: false
             referencedRelation: "content_units"
             referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "content_revisions_candidate_fkey"
+            columns: ["unit_id", "candidate_id"]
+            isOneToOne: false
+            referencedRelation: "content_publication_candidates"
+            referencedColumns: ["unit_id", "id"]
           },
           {
             foreignKeyName: "content_revisions_published_by_fkey"
@@ -8741,6 +8741,7 @@ export type Database = {
         Args: {
           p_academic_year_id: string
           p_academy_id: string
+          p_access?: string
           p_group: string
           p_label_ids?: string[]
           p_level_id: string
@@ -8750,7 +8751,6 @@ export type Database = {
           p_search: string
           p_sorts: Json
           p_status: string
-          p_access?: string
           p_track: string
           p_unlabeled?: boolean
         }
@@ -9407,6 +9407,15 @@ export type Database = {
         Args: { p_expected: string; p_path: string }
         Returns: Json
       }
+      set_student_access_suspension: {
+        Args: {
+          p_academy_id: string
+          p_reason: string
+          p_records: Json
+          p_suspended: boolean
+        }
+        Returns: Json
+      }
       set_student_import_row_excluded: {
         Args: {
           p_excluded: boolean
@@ -9418,15 +9427,6 @@ export type Database = {
       }
       set_student_invite: {
         Args: { p_academy_id: string; p_active: boolean }
-        Returns: Json
-      }
-      set_student_access_suspension: {
-        Args: {
-          p_academy_id: string
-          p_reason: string
-          p_records: Json
-          p_suspended: boolean
-        }
         Returns: Json
       }
       set_student_records_archived: {
@@ -10113,3 +10113,4 @@ export const Constants = {
     },
   },
 } as const
+
