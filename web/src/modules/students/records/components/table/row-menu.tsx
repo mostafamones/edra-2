@@ -60,8 +60,8 @@ function Items({ row, actions, menu, openerRef, openingRef }: Props & {
         <>
           <Separator />
           {row.manuallySuspended
-            ? <Item onSelect={() => actions.onSuspension(row, false)}><HugeiconsIcon icon={UserCheck01Icon} strokeWidth={1.5} />Restore online access</Item>
-            : <Item onSelect={() => actions.onSuspension(row, true)}><HugeiconsIcon icon={UserBlock01Icon} strokeWidth={1.5} />Suspend online access</Item>}
+            ? <Item onSelect={() => actions.onSuspension(row, false)}><HugeiconsIcon icon={UserCheck01Icon} strokeWidth={1.5} />Restore access</Item>
+            : <Item onSelect={() => actions.onSuspension(row, true)}><HugeiconsIcon icon={UserBlock01Icon} strokeWidth={1.5} />Suspend access</Item>}
           {archived
             ? <Item onSelect={() => actions.onArchive(row, false)}><HugeiconsIcon icon={RestoreBinIcon} strokeWidth={1.5} />Restore</Item>
             : <Item variant="destructive" onSelect={() => actions.onArchive(row, true)}><HugeiconsIcon icon={Archive02Icon} strokeWidth={1.5} />Archive</Item>}

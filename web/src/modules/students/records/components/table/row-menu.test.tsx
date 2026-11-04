@@ -38,7 +38,7 @@ describe("student row menus", () => {
     show(record(), actions());
     fireEvent.contextMenu(screen.getByTestId("row"));
     const context = items(await screen.findByRole("menu"));
-    expect(context).toEqual(["Edit", "Student code", "Labels", "Suspend online access", "Archive"]);
+    expect(context).toEqual(["Edit", "Student code", "Labels", "Suspend access", "Archive"]);
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
     fireEvent.pointerDown(screen.getByRole("button", { name: "Actions for Amal" }), { button: 0, ctrlKey: false, pointerType: "mouse" });
     expect(items(await screen.findByRole("menu"))).toEqual(context);
@@ -56,7 +56,7 @@ describe("student row menus", () => {
   it("offer View, Labels and Restore on an archived record, and nothing managerial to other staff", async () => {
     show(record("2030-10-01T00:00:00Z"), actions());
     fireEvent.contextMenu(screen.getByTestId("row"));
-    expect(items(await screen.findByRole("menu"))).toEqual(["View", "Labels", "Suspend online access", "Restore"]);
+    expect(items(await screen.findByRole("menu"))).toEqual(["View", "Labels", "Suspend access", "Restore"]);
     cleanup();
     show(record(), actions({ canManage: false, onCode: undefined }));
     fireEvent.contextMenu(screen.getByTestId("row"));
@@ -68,10 +68,10 @@ describe("student row menus", () => {
     const row = record("2030-10-01T00:00:00Z", true);
     show(row, actions({ onSuspension }));
     fireEvent.contextMenu(screen.getByTestId("row"));
-    fireEvent.click(within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Restore online access" }));
+    fireEvent.click(within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Restore access" }));
     expect(onSuspension).toHaveBeenCalledWith(row, false);
     fireEvent.pointerDown(screen.getByRole("button", { name: "Actions for Amal" }), { button: 0, ctrlKey: false, pointerType: "mouse" });
-    fireEvent.click(within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Restore online access" }));
+    fireEvent.click(within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Restore access" }));
     expect(onSuspension).toHaveBeenCalledTimes(2);
   });
 

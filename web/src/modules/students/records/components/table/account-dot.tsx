@@ -16,7 +16,7 @@ const STATUS_TOOLTIP_DELAY_MS = 1500;
 export function AccountDot({ state, manuallySuspended = false }: { state: OnlineAccount; manuallySuspended?: boolean }) {
   const unlinkedSuspended = state === "not_connected" && manuallySuspended;
   if (state === "not_connected" && !unlinkedSuspended) return null;
-  const label = state === "connected" ? "Account linked" : "Online access suspended";
+  const label = state === "connected" ? "Active online access" : "Suspended online access";
   return (
     <TooltipProvider delayDuration={STATUS_TOOLTIP_DELAY_MS} skipDelayDuration={0}>
       <Tooltip>

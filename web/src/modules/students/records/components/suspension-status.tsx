@@ -32,7 +32,7 @@ export function SuspensionStatus({ student, onChange }: Props) {
       {onChange && (
         <Button variant="outline" size="sm" onClick={() => onChange(!student.manuallySuspended)}>
           <HugeiconsIcon icon={student.manuallySuspended ? UserCheck01Icon : UserBlock01Icon} strokeWidth={1.5} data-icon="inline-start" />
-          {student.manuallySuspended ? "Restore online access" : "Suspend online access"}
+          {student.manuallySuspended ? "Restore" : "Suspend"}
         </Button>
       )}
     </div>

@@ -16,8 +16,9 @@ type Props = {
     restorable: number;
     onArchive: () => void;
     onRestore: () => void;
-    onChangeGroup: () => void;
-    /** Selected records last seen without, and with, manual suspension. */
+    /** Omitted unless one active group can take every selected student. */
+    onChangeGroup?: () => void;
+    /** Selected records last seen without, and with, manual suspension. A mixed selection gets neither action. */
     suspendable: number;
     unsuspendable: number;
     onSuspension: (suspend: boolean) => void;
@@ -32,19 +33,19 @@ export function BulkBar({ selected, labels, manager, onClear }: Props) {
       <span className="px-2 font-medium tabular-nums" aria-live="polite">{selected} selected</span>
       <ActionBarSeparator />
       {labels}
-      {manager && (
+      {manager?.onChangeGroup && (
         <Button variant="ghost" size="sm" onClick={manager.onChangeGroup}>
           <HugeiconsIcon icon={FolderEditIcon} />Change group
         </Button>
       )}
-      {manager && manager.suspendable > 0 && (
+      {manager && manager.suspendable > 0 && manager.unsuspendable === 0 && (
         <Button variant="ghost" size="sm" onClick={() => manager.onSuspension(true)}>
-          <HugeiconsIcon icon={UserBlock01Icon} strokeWidth={1.5} />Suspend online access
+          <HugeiconsIcon icon={UserBlock01Icon} strokeWidth={1.5} />Suspend
         </Button>
       )}
-      {manager && manager.unsuspendable > 0 && (
+      {manager && manager.unsuspendable > 0 && manager.suspendable === 0 && (
         <Button variant="ghost" size="sm" onClick={() => manager.onSuspension(false)}>
-          <HugeiconsIcon icon={UserCheck01Icon} strokeWidth={1.5} />Restore online access
+          <HugeiconsIcon icon={UserCheck01Icon} strokeWidth={1.5} />Restore
         </Button>
       )}
       {manager && manager.archivable > 0 && (

@@ -54,7 +54,7 @@ An inaccessible old parent number requires the future support process; it does n
 
 Place a small dot immediately after a linked student's academy record name. A linked student with suspended online access uses a destructive red variant. Suspension includes effective archival or independent staff suspension under the existing access rules. Unlinked students have no dot.
 
-The dot has a deliberately long-delay tooltip: “Account linked” or “Online access suspended”, as applicable, and an accessible equivalent. It indicates connection/access state, never online presence. It does not add account-linking or suspension-management actions.
+The dot has a deliberately long-delay tooltip: “Active online access” or “Suspended online access”, as applicable, and an accessible equivalent. It indicates connection/access state, never online presence. It does not add account-linking or suspension-management actions.
 
 ## Completion and boundaries
 

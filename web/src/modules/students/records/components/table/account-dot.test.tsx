@@ -11,10 +11,10 @@ describe("account dot", () => {
     const { container, rerender } = render(<AccountDot state="not_connected" />);
     expect(container.innerHTML).toBe("");
     rerender(<AccountDot state="not_connected" manuallySuspended />);
-    expect(screen.getByRole("img", { name: "Online access suspended" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Suspended online access" })).toBeTruthy();
     rerender(<AccountDot state="connected" />);
-    expect(screen.getByRole("img", { name: "Account linked" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Active online access" })).toBeTruthy();
     rerender(<AccountDot state="suspended" />);
-    expect(screen.getByRole("img", { name: "Online access suspended" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Suspended online access" })).toBeTruthy();
   });
 });

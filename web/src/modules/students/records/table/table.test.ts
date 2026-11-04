@@ -5,7 +5,7 @@ import { COLUMN_WIDTHS, DATA_COLUMNS } from "./config";
 import { clampTrade, fitWidths } from "./layout";
 import { defaultPreferences, moveColumn, preferencesKey, readPreferences, sanitizePreferences } from "./preferences";
 import { DEFAULT_LIST_PARAMS } from "../list-params";
-import { bulkTargets, pageSelectionState, selectionScope, syncSelection, togglePage, toggleRow } from "./selection";
+import { bulkTargets, hasSharedGroup, pageSelectionState, selectionScope, syncSelection, togglePage, toggleRow } from "./selection";
 
 describe("table preferences", () => {
   it("are scoped by schema version, user, and academy", () => {
@@ -107,11 +107,25 @@ describe("selection", () => {
     }
   });
 
+  it("offers a group change only when one active group can take every selected student", () => {
+    const placed = (id: string, levelId: string, trackId: string | null, archived = false) => ({ ...row(id, 1, archived), levelId, trackId });
+    const select = (...rows: StudentRecordRow[]) => togglePage({}, rows, true);
+    const wide = { level_id: "l1", track_id: null, archived_at: null };
+    const scienceOnly = { level_id: "l1", track_id: "science", archived_at: null };
+    expect(hasSharedGroup(select(placed("a", "l1", "science"), placed("b", "l1", "arts")), [wide])).toBe(true);
+    expect(hasSharedGroup(select(placed("a", "l1", "science"), placed("b", "l1", "arts")), [scienceOnly])).toBe(false);
+    expect(hasSharedGroup(select(placed("a", "l1", "science"), placed("b", "l1", "science")), [scienceOnly])).toBe(true);
+    expect(hasSharedGroup(select(placed("a", "l1", null), placed("b", "l2", null)), [wide, { ...wide, level_id: "l2" }])).toBe(false);
+    expect(hasSharedGroup(select(placed("a", "l1", null), placed("b", "l1", null, true)), [wide])).toBe(false);
+    expect(hasSharedGroup(select(placed("a", "l1", null)), [{ ...wide, archived_at: "x" }])).toBe(false);
+    expect(hasSharedGroup({}, [wide])).toBe(false);
+  });
+
   it("refreshes versions of reloaded rows and keeps identity when nothing changed", () => {
     const selection = togglePage({}, pageOne, true);
     expect(syncSelection(selection, pageOne)).toBe(selection);
     const synced = syncSelection(selection, [row("a", 3, true, true)]);
-    expect(synced.a).toEqual({ version: 3, archived: true, suspended: true });
+    expect(synced.a).toEqual({ version: 3, archived: true, suspended: true, revision: 0, levelId: "preparatory-3", trackId: null });
     expect(synced.b).toEqual(selection.b);
   });
 });

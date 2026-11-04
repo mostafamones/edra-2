@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { LabelIcon, Loading03Icon, Settings02Icon } from "@hugeicons/core-free-icons";
+import { LabelIcon, Settings02Icon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,8 +11,6 @@ import { LabelSwatch, useLabels, type Label } from "@/modules/labels";
 
 type Props = {
   academyId: string;
-  /** A bulk write is running: nothing else can start. */
-  pending: boolean;
   /** Applies (true) or removes (false) one label on the whole selection; other labels stay. */
   onApply: (label: Label, applied: boolean) => void;
   /** Shown only to label managers. */
@@ -20,7 +18,7 @@ type Props = {
 };
 
 /** The selection bar's Labels menu: explicit Apply and Remove, never a replacement of a record's labels. */
-export function BulkLabels({ academyId, pending, onApply, onManage }: Props) {
+export function BulkLabels({ academyId, onApply, onManage }: Props) {
   const trigger = useRef<HTMLButtonElement>(null);
   const labels = useLabels(academyId, "students");
   const items = (applied: boolean) => labels.isPending ? <DropdownMenuItem disabled>Loading labels…</DropdownMenuItem>
@@ -35,8 +33,8 @@ export function BulkLabels({ academyId, pending, onApply, onManage }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button ref={trigger} variant="ghost" size="sm" disabled={pending} aria-busy={pending}>
-          <HugeiconsIcon icon={pending ? Loading03Icon : LabelIcon} strokeWidth={1.5} className={pending ? "animate-spin" : undefined} aria-hidden="true" />Labels
+        <Button ref={trigger} variant="ghost" size="sm">
+          <HugeiconsIcon icon={LabelIcon} strokeWidth={1.5} aria-hidden="true" />Labels
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-44">
