@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FloatingSheet, FloatingSheetContent, FloatingSheetTitle } from "@/components/ui/floating-sheet";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { browserScopeGeneration } from "@/lib/browser-scope";
 import { useAuth } from "@/modules/auth";
@@ -47,6 +47,7 @@ function ScopedConcernPanel({ academyId, userId, manager, owner, children }: Con
   const [everOpened, setEverOpened] = useState(false);
   const setOpen = useCallback((value: boolean) => { setEverOpened(true); setOpenState(value); }, []);
   const [view, setView] = useState<"list" | "create" | "recover" | "chat" | "loading" | "error">("list");
+  const [draftTitle, setDraftTitle] = useState<string | null>(null);
   // The concern an Owner was just denied, offered for explicit recovery.
   const [deniedId, setDeniedId] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ id: string; title: string; target: ConcernJump | null } | null>(null);
@@ -86,12 +87,15 @@ function ScopedConcernPanel({ academyId, userId, manager, owner, children }: Con
   }, [academyId, client, current, scope, setOpen]);
   const context = useMemo(() => ({ openConcern: (target: ConcernTarget) => activate(target) }), [activate]);
   const back = () => { activation.current += 1; setView("list"); setFailure(null); setDeniedId(null); };
-  const title = view === "create" ? "New concern" : view === "recover" ? "Recover concern" : view === "chat" ? selected?.title ?? "Concern" : "Concerns";
+  const title = view === "create" ? draftTitle ?? "New concern" : view === "recover" ? "Recover concern" : view === "chat" ? selected?.title ?? "Concern" : "Concerns";
   return <Context.Provider value={context}>{children}<TooltipProvider delayDuration={350}>
-    <Button ref={launcher} className="fixed end-4 bottom-4 z-40 rounded-full shadow-lg" aria-label="Open concerns" aria-expanded={open} onClick={() => setOpen(true)}>
-      <HugeiconsIcon icon={Message01Icon} strokeWidth={1.5} aria-hidden="true" /><span>Concerns</span>{unread.data && unread.data.messages > 0 && <Badge variant="secondary" aria-label={`${unread.data.messages} unread messages`}>{unread.data.messages}</Badge>}
-      {unread.isError && <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={1.5} aria-label="Unread count unavailable" />}
+    <Tooltip><TooltipTrigger asChild>
+    <Button ref={launcher} size="icon" className="fixed end-4 bottom-4 z-40 size-12 rounded-full shadow-lg [&_svg:not([class*='size-'])]:size-6" aria-label="Open concerns" aria-expanded={open} onClick={() => setOpen(true)}>
+      <HugeiconsIcon icon={Message01Icon} strokeWidth={1.5} aria-hidden="true" />
+      {unread.data && unread.data.messages > 0 && <Badge variant="secondary" className="absolute -end-1 -top-1 min-w-5 px-1 shadow-sm" aria-label={`${unread.data.messages} unread messages`}>{unread.data.messages}</Badge>}
+      {unread.isError && <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={1.5} className="absolute -end-1 -top-1 size-5 rounded-full bg-background text-destructive" aria-label="Unread count unavailable" />}
     </Button>
+    </TooltipTrigger><TooltipContent side="left">Concerns</TooltipContent></Tooltip>
     {(open || everOpened) && <Activity mode={open ? "visible" : "hidden"}>
     <FloatingSheet open modal={mobile} onOpenChange={setOpen}>
       <FloatingSheetContent ref={content} data-concern-panel="" aria-modal={mobile || undefined} aria-describedby={undefined} showCloseButton={false}
@@ -115,7 +119,7 @@ function ScopedConcernPanel({ academyId, userId, manager, owner, children }: Con
         {view === "error" && <ConcernFeedback>{failure}</ConcernFeedback>}
         {view === "error" && owner && deniedId && <RecoverConcern key={deniedId} scope={scope} initialId={deniedId} onRecovered={(id) => { void activate({ academyId, concernId: id }); }} />}
         {view === "recover" && owner && <RecoverConcern scope={scope} onRecovered={(id) => { void activate({ academyId, concernId: id }); }} />}
-        {view === "create" && manager && <CreateConcern scope={scope} isCurrent={current} onCreated={(id) => { void activate({ academyId, concernId: id }); }} />}
+        {view === "create" && manager && <CreateConcern scope={scope} isCurrent={current} onTitle={setDraftTitle} onCreated={(id) => { void activate({ academyId, concernId: id }); }} />}
         {selected && <div className={view === "chat" ? "flex min-h-0 flex-1 flex-col" : "hidden"}><ConcernConversation key={selected.id} scope={scope} concernId={selected.id} active={open && view === "chat"} target={selected.target} onDenied={denied} /></div>}
       </FloatingSheetContent>
     </FloatingSheet>

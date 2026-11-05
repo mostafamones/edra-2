@@ -160,21 +160,25 @@ describe("floating concern panel consumers", () => {
     expect(state.rpc.mock.calls.some(([name]) => name === "concern_messages_page")).toBe(false);
   });
 
-  it("creates with active staff/whole-team snapshot and reuses both IDs after a failed attempt", async () => {
+  it("picks people and a title, then creates on the first message and reuses both IDs after a failed attempt", async () => {
     mount();
     state.createConcern.mockResolvedValueOnce({ ok: false, code: "invalid_participant", message: "Someone you selected is no longer active staff." });
     fireEvent.click(screen.getByRole("button", { name: "Open concerns" }));
     fireEvent.click(await screen.findByRole("button", { name: "New concern" }));
-    await screen.findByText("Omar");
+    await screen.findByRole("button", { name: "Omar" });
     expect(screen.queryByText("Suspended")).toBeNull();
-    expect(screen.getByRole("checkbox", { name: "Mona (you)" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByRole("button", { name: "Mona" })).toBeNull();
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Follow up" } });
-    fireEvent.change(screen.getByLabelText("Opening message"), { target: { value: "Please check attendance" } });
-    fireEvent.click(screen.getByRole("checkbox", { name: "Whole team" }));
-    fireEvent.click(screen.getByRole("button", { name: "Create concern" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Retry creation" }));
-    await screen.findByLabelText("Message");
-    expect(state.createConcern).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "Continue" }).hasAttribute("disabled")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Everyone" }));
+    expect(screen.getByRole("button", { name: "Omar" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("heading", { name: "Follow up" });
+    expect(state.createConcern).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Please check attendance" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Retry send" }));
+    await waitFor(() => expect(state.createConcern).toHaveBeenCalledTimes(2));
     expect(state.createConcern.mock.calls[1][0]).toEqual(state.createConcern.mock.calls[0][0]);
     expect(state.createConcern.mock.calls[0][0]).toMatchObject({ academyId: "academy-a", title: "Follow up", body: "Please check attendance", wholeTeam: true });
   });
