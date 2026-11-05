@@ -2323,6 +2323,94 @@ export type Database = {
           },
         ]
       }
+      concern_attachments: {
+        Row: {
+          academy_id: string
+          bytes: number
+          concern_id: string
+          content_type: string | null
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          kind: string
+          message_id: string | null
+          name: string
+          position: number | null
+          purge_claimed_at: string | null
+          purged_at: string | null
+          removed_at: string | null
+          state: string
+          storage_path: string | null
+          upload_expires_at: string | null
+          uploader_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          academy_id: string
+          bytes: number
+          concern_id: string
+          content_type?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id: string
+          kind: string
+          message_id?: string | null
+          name: string
+          position?: number | null
+          purge_claimed_at?: string | null
+          purged_at?: string | null
+          removed_at?: string | null
+          state?: string
+          storage_path?: string | null
+          upload_expires_at?: string | null
+          uploader_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          academy_id?: string
+          bytes?: number
+          concern_id?: string
+          content_type?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          kind?: string
+          message_id?: string | null
+          name?: string
+          position?: number | null
+          purge_claimed_at?: string | null
+          purged_at?: string | null
+          removed_at?: string | null
+          state?: string
+          storage_path?: string | null
+          upload_expires_at?: string | null
+          uploader_id?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concern_attachments_academy_id_concern_id_fkey"
+            columns: ["academy_id", "concern_id"]
+            isOneToOne: false
+            referencedRelation: "concerns"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "concern_attachments_concern_id_message_id_fkey"
+            columns: ["concern_id", "message_id"]
+            isOneToOne: false
+            referencedRelation: "concern_messages"
+            referencedColumns: ["concern_id", "id"]
+          },
+          {
+            foreignKeyName: "concern_attachments_uploader_id_fkey"
+            columns: ["uploader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       concern_events: {
         Row: {
           academy_id: string
@@ -8172,6 +8260,7 @@ export type Database = {
         }
         Returns: string
       }
+      claim_concern_media_purge: { Args: { p_limit?: number }; Returns: Json }
       claim_login_phone_change: {
         Args: {
           p_operation_id: string
@@ -8183,6 +8272,10 @@ export type Database = {
       claim_my_exam_editor: {
         Args: { p_academy_id: string; p_exam_id: string; p_token: string }
         Returns: Json
+      }
+      complete_concern_media_purge: {
+        Args: { p_ids: string[] }
+        Returns: undefined
       }
       complete_content_document: {
         Args: { p_academy_id: string; p_asset_id: string }
@@ -8198,6 +8291,22 @@ export type Database = {
       }
       complete_student_invite: {
         Args: { p_group_id: string; p_token: string; p_track_id: string }
+        Returns: Json
+      }
+      concern_attachment_access: {
+        Args: {
+          p_academy_id: string
+          p_attachment_id: string
+          p_concern_id: string
+        }
+        Returns: Json
+      }
+      concern_attachment_upload: {
+        Args: {
+          p_academy_id: string
+          p_attachment_id: string
+          p_concern_id: string
+        }
         Returns: Json
       }
       concern_detail: {
@@ -8622,6 +8731,14 @@ export type Database = {
       dev_run_targets: { Args: { p_run_id: string }; Returns: Json }
       dev_session_revoked: {
         Args: { p_control_id: string; p_session_id: string }
+        Returns: undefined
+      }
+      discard_concern_attachment: {
+        Args: {
+          p_academy_id: string
+          p_attachment_id: string
+          p_concern_id: string
+        }
         Returns: undefined
       }
       edit_concern_message: {
@@ -9520,6 +9637,17 @@ export type Database = {
         }
         Returns: Json
       }
+      reserve_concern_attachment: {
+        Args: {
+          p_academy_id: string
+          p_attachment_id: string
+          p_bytes: number
+          p_concern_id: string
+          p_kind: string
+          p_name: string
+        }
+        Returns: Json
+      }
       resolve_assignment_student: {
         Args: { p_academy_id: string; p_assignment_id: string; p_code: string }
         Returns: Json
@@ -9763,49 +9891,15 @@ export type Database = {
       send_concern_message: {
         Args: {
           p_academy_id: string
+          p_attachment_ids?: string[]
           p_body: string
           p_concern_id: string
           p_mentions?: string[]
           p_message_id: string
           p_reply_to_id?: string
-          p_attachment_ids?: string[]
         }
         Returns: Json
       }
-      reserve_concern_attachment: {
-        Args: {
-          p_academy_id: string
-          p_attachment_id: string
-          p_bytes: number
-          p_concern_id: string
-          p_kind: string
-          p_name: string
-        }
-        Returns: Json
-      }
-      concern_attachment_upload: {
-        Args: { p_academy_id: string; p_attachment_id: string; p_concern_id: string }
-        Returns: Json
-      }
-      concern_attachment_access: {
-        Args: { p_academy_id: string; p_attachment_id: string; p_concern_id: string }
-        Returns: Json
-      }
-      discard_concern_attachment: {
-        Args: { p_academy_id: string; p_attachment_id: string; p_concern_id: string }
-        Returns: undefined
-      }
-      verify_concern_attachment: {
-        Args: {
-          p_accept: boolean
-          p_attachment_id: string
-          p_content_type: string
-          p_duration_seconds?: number
-        }
-        Returns: Json
-      }
-      claim_concern_media_purge: { Args: { p_limit?: number }; Returns: Json }
-      complete_concern_media_purge: { Args: { p_ids: string[] }; Returns: undefined }
       session_academy: { Args: { p_session_id: string }; Returns: string }
       session_archive_impact: {
         Args: { p_academy_id: string; p_session_id: string }
@@ -10281,6 +10375,15 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      verify_concern_attachment: {
+        Args: {
+          p_accept: boolean
+          p_attachment_id: string
+          p_content_type: string
+          p_duration_seconds?: number
+        }
+        Returns: Json
       }
       verify_contact_change_code: {
         Args: {

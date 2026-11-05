@@ -262,13 +262,11 @@ concernMediaSummary(message.attachments))` ("Voice note", "Attachment", "N attac
 messages expose no attachments, so a late delivery cannot describe removed media. Event ids
 deduplicate delivery.
 
-Types: `database.types.ts` is the CI `database-types` artifact from run 41973557672 (authority/
-lifecycle schema, replacing the earlier handwritten EDRA-292 entries) plus provisional handwritten
-media entries: `send_concern_message.p_attachment_ids`, `reserve_concern_attachment`,
-`concern_attachment_upload`, `concern_attachment_access`, `discard_concern_attachment`,
-`verify_concern_attachment`, `claim_concern_media_purge`, `complete_concern_media_purge`. Replace
-them with the next CI artifact (which will also add `concern_attachments`). Nullable `p_body` is
-passed with a documented cast because generated argument types omit nullability.
+Types: `database.types.ts` was regenerated from the disposable CI `database-types` artifact
+from run 41979631658 at media commit `41d6d9cca3321f6f94f95156170b0d18c032666d`.
+This includes `concern_attachments` and all media function signatures, replacing the handwritten
+media placeholders. Nullable `p_body` is passed with a documented cast because generated argument
+types omit nullability. Uncommitted notification signatures belong to the unfinished EDRA-296 slice.
 
 Media verification (2026-11-05, local): Vitest covers byte sniffing, Opus TOC validation, WebM/Ogg
 measurement with understated headers/granules/timestamps, the 300/300.02 s boundary and fail-closed
@@ -282,7 +280,7 @@ with an uncertain retry reusing ids, limits, upload retry/renewal and recovered 
 cancel/discard, late scope results, unsupported/blocked/recovered microphone, review/attach and late
 permission release (`components/media.test.tsx`). SQL `concern_media.sql` (including verification
 denials when settled, revoked or discarded, and purge deferral until upload URLs expire) and races
-CN12–CN16 are registered for the disposable CI database and have not run yet. Unverified: real
+CN12–CN16 passed in disposable CI run 41979631658, along with all six required jobs. Unverified: real
 recordings and playback per browser engine (including Safari 18.4+ WebM), Storage Range and
 existing-object signing behaviour against the hosted project, the deployed Cron Trigger, visual
 review (both themes, 360/1440 px) and the multi-user journey.
