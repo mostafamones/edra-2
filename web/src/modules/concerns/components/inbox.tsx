@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConcernInbox, useConcernSearch, type ConcernScope } from "../queries";
 import type { ConcernSearchHit } from "../validation";
+import { concernMediaLabel } from "../media";
 import { ConcernFeedback } from "./feedback";
 
 export function ConcernInbox({ scope, active, onSelect }: { scope: ConcernScope; active: boolean; onSelect: (hit: Pick<ConcernSearchHit, "concernId" | "messageId" | "seq">) => void }) {
@@ -28,7 +29,7 @@ export function ConcernInbox({ scope, active, onSelect }: { scope: ConcernScope;
           : !search.data?.length ? <ConcernFeedback>No matching concerns or messages</ConcernFeedback>
           : <ul>{search.data.map((hit) => <li key={`${hit.concernId}:${hit.messageId ?? "title"}`}><Button type="button" variant="ghost" className="h-auto w-full flex-col items-stretch justify-start space-y-1 rounded-none border-x-0 border-t-0 border-b border-border px-4 py-3 text-start font-normal whitespace-normal focus-visible:outline-2 focus-visible:outline-ring" onClick={() => onSelect(hit)}>
             <span className="block font-medium break-words" dir="auto">{hit.title}</span><span className="text-xs text-muted-foreground">{hit.status === "settled" ? "Settled" : "Ongoing"}</span>
-            {hit.body && <span className="block line-clamp-3 whitespace-pre-wrap break-words text-sm" dir="auto">{hit.body}</span>}
+            {hit.messageId && <span className="block line-clamp-3 whitespace-pre-wrap break-words text-sm" dir="auto">{hit.body ?? concernMediaLabel(hit.media)}</span>}
           </Button></li>)}</ul>}
       </> : <>
         {inbox.isLoading ? <ConcernFeedback>Loading concerns…</ConcernFeedback>
@@ -36,7 +37,7 @@ export function ConcernInbox({ scope, active, onSelect }: { scope: ConcernScope;
           : entries.length === 0 ? <ConcernFeedback>No {status} concerns</ConcernFeedback>
           : <ul>{entries.map((entry) => <li key={entry.id}><Button type="button" variant="ghost" className="flex h-auto w-full items-start justify-start gap-3 rounded-none border-x-0 border-t-0 border-b border-border px-4 py-3 text-start font-normal whitespace-normal focus-visible:outline-2 focus-visible:outline-ring" onClick={() => onSelect({ concernId: entry.id, messageId: null, seq: null })}>
             <span className="min-w-0 flex-1"><span className="block font-medium break-words" dir="auto">{entry.title}</span>
-              {entry.last && <span className="mt-1 block line-clamp-2 break-words text-sm text-muted-foreground" dir="auto">{entry.last.deleted ? "Message deleted" : entry.last.body}</span>}
+              {entry.last && <span className="mt-1 block line-clamp-2 break-words text-sm text-muted-foreground" dir="auto">{entry.last.deleted ? "Message deleted" : entry.last.body ?? concernMediaLabel(entry.last.media)}</span>}
             </span>{entry.unread > 0 && <Badge aria-label={`${entry.unread} unread messages`}>{entry.unread}</Badge>}
           </Button></li>)}</ul>}
         {inbox.isError && inbox.data && <ConcernFeedback retry={() => void inbox.refetch()}>Could not refresh concerns</ConcernFeedback>}

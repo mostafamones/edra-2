@@ -9768,9 +9768,44 @@ export type Database = {
           p_mentions?: string[]
           p_message_id: string
           p_reply_to_id?: string
+          p_attachment_ids?: string[]
         }
         Returns: Json
       }
+      reserve_concern_attachment: {
+        Args: {
+          p_academy_id: string
+          p_attachment_id: string
+          p_bytes: number
+          p_concern_id: string
+          p_kind: string
+          p_name: string
+        }
+        Returns: Json
+      }
+      concern_attachment_upload: {
+        Args: { p_academy_id: string; p_attachment_id: string; p_concern_id: string }
+        Returns: Json
+      }
+      concern_attachment_access: {
+        Args: { p_academy_id: string; p_attachment_id: string; p_concern_id: string }
+        Returns: Json
+      }
+      discard_concern_attachment: {
+        Args: { p_academy_id: string; p_attachment_id: string; p_concern_id: string }
+        Returns: undefined
+      }
+      verify_concern_attachment: {
+        Args: {
+          p_accept: boolean
+          p_attachment_id: string
+          p_content_type: string
+          p_duration_seconds?: number
+        }
+        Returns: Json
+      }
+      claim_concern_media_purge: { Args: { p_limit?: number }; Returns: Json }
+      complete_concern_media_purge: { Args: { p_ids: string[] }; Returns: undefined }
       session_academy: { Args: { p_session_id: string }; Returns: string }
       session_archive_impact: {
         Args: { p_academy_id: string; p_session_id: string }
@@ -9814,11 +9849,7 @@ export type Database = {
         Returns: Json
       }
       set_concern_typing: {
-        Args: {
-          p_academy_id: string
-          p_concern_id: string
-          p_typing: boolean
-        }
+        Args: { p_academy_id: string; p_concern_id: string; p_typing: boolean }
         Returns: undefined
       }
       set_content_unit_label: {

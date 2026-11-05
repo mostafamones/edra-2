@@ -6,11 +6,12 @@ export {
   type ConcernScope, type ConcernStatusFilter,
 } from "./queries";
 export { useConcernInboxLive, useConcernLive, type ConcernLiveStatus } from "./live";
-export { useConcernCommands, useConcernLifecycle, useCreateConcern, useRecoverConcern } from "./commands";
+export { useConcernCommands, useConcernLifecycle, useConcernMedia, useCreateConcern, useRecoverConcern } from "./commands";
+export { concernMediaLabel, concernMediaSummary, concernMediaUrl } from "./media";
 export { TYPING_TTL_MS } from "./thread";
 export {
   CONCERN_BODY_MAX, CONCERN_TITLE_MAX, concernEmojiSchema,
-  type ConcernDetail, type ConcernHistoryEntry, type ConcernInboxEntry, type ConcernState, type ConcernInboxPage, type ConcernMessage, type ConcernParticipant,
+  type ConcernDetail, type ConcernHistoryEntry, type ConcernMediaSummary, type ConcernInboxEntry, type ConcernState, type ConcernInboxPage, type ConcernMessage, type ConcernParticipant,
   type ConcernSearchHit, type ConcernThread, type ConcernUnread,
 } from "./validation";
 

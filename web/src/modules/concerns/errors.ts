@@ -1,7 +1,8 @@
 export type ConcernErrorCode =
   | "validation" | "forbidden" | "conflict" | "concern_settled" | "message_not_found" | "message_deleted"
   | "edit_expired" | "reply_unavailable" | "invalid_mention" | "invalid_participant" | "not_permitted" | "stale"
-  | "concern_not_found" | "unavailable";
+  | "concern_not_found" | "attachment_unavailable" | "attachment_limit" | "attachment_too_large" | "unsupported_media" | "voice_too_long"
+  | "unavailable";
 export type ConcernFailure = { ok: false; code: ConcernErrorCode; message: string };
 
 const MESSAGES: Record<ConcernErrorCode, string> = {
@@ -18,6 +19,11 @@ const MESSAGES: Record<ConcernErrorCode, string> = {
   not_permitted: "Only an Owner, Head Admin or Admin can do this.",
   stale: "This concern changed. Review the latest state and try again.",
   concern_not_found: "No concern matches this ID.",
+  attachment_unavailable: "This attachment is no longer available. Remove it and try again.",
+  attachment_limit: "Too many attachments. Send or remove some first.",
+  attachment_too_large: "Files can be up to 25 MB.",
+  unsupported_media: "This voice note could not be checked. Record it again in this panel.",
+  voice_too_long: "Voice notes can be up to 5 minutes.",
   unavailable: "Could not reach the server. Check your connection and try again.",
 };
 

@@ -32,8 +32,8 @@ do $$ begin
     or has_table_privilege('anon','public.concern_messages','select')
     or not has_table_privilege('authenticated','public.concern_messages','select')
     or has_sequence_privilege('authenticated','public.concern_revision_seq','usage')
-    or has_function_privilege('anon','public.send_concern_message(uuid,uuid,uuid,text,uuid,uuid[])','execute')
-    or not has_function_privilege('authenticated','public.send_concern_message(uuid,uuid,uuid,text,uuid,uuid[])','execute')
+    or has_function_privilege('anon','public.send_concern_message(uuid,uuid,uuid,text,uuid,uuid[],uuid[])','execute')
+    or not has_function_privilege('authenticated','public.send_concern_message(uuid,uuid,uuid,text,uuid,uuid[],uuid[])','execute')
     or has_function_privilege('anon','public.create_concern(uuid,uuid,uuid,text,text,uuid[],boolean,uuid[])','execute')
     or has_function_privilege('authenticated','edra_private.post_concern_message(public.concerns,uuid,text,uuid,uuid[])','execute')
     or has_function_privilege('authenticated','edra_private.my_concerns(uuid)','execute') then

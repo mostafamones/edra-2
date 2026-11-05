@@ -6,11 +6,12 @@ import {
   addConcernParticipants, recoverConcern, removeConcernParticipant, reopenConcern, settleConcern,
   createConcern, deleteConcernMessage, editConcernMessage, markConcernRead, sendConcernMessage, setConcernReaction,
 } from "./actions";
+import { discardConcernUpload, finishConcernUpload, startConcernUpload } from "./media-actions";
 import { forgetConcern, invalidateConcernLists, concernKeys, type ConcernScope } from "./queries";
 import { mergeMessages, withRetry } from "./thread";
 import type { ConcernDetail, ConcernThread, CreateConcernInput, SendMessageInput } from "./validation";
 
-type Body = { body: string; mentions: string[] };
+type Body = { body: string | null; mentions: string[] };
 
 /**
  * Commands for one concern. The scope is captured when each call starts: a result arriving after
@@ -40,7 +41,7 @@ export function useConcernCommands(scope: ConcernScope, concernId: string, onDen
 
   return {
     /** Generate `messageId` once per message (crypto.randomUUID) and reuse it for manual retries. */
-    send: async (input: Body & { messageId: string; replyToId: string | null }) => {
+    send: async (input: Body & { messageId: string; replyToId: string | null; attachmentIds: string[] }) => {
       const target = { ...scope };
       const generation = browserScopeGeneration();
       const original = cacheIdentity();
@@ -92,6 +93,29 @@ export function useConcernCommands(scope: ConcernScope, concernId: string, onDen
       }
       return result;
     },
+  };
+}
+
+/**
+ * Upload steps for one concern. Each is retry-safe by attachment id. A `forbidden` result forgets
+ * the concern, like other commands; results for a replaced scope change nothing.
+ */
+export function useConcernMedia(scope: ConcernScope, concernId: string, onDenied?: () => void) {
+  const queryClient = useQueryClient();
+  const run = async <T extends { ok: boolean; code?: string }>(call: (academyId: string) => Promise<T>) => {
+    const target = { ...scope };
+    const generation = browserScopeGeneration();
+    const result = await withRetry(() => call(target.academyId));
+    if (generation === browserScopeGeneration() && result.code === "forbidden") { onDenied?.(); await forgetConcern(queryClient, target, concernId); }
+    else if (generation === browserScopeGeneration() && result.code === "concern_settled") void queryClient.invalidateQueries({ queryKey: concernKeys.detail(target, concernId) });
+    return result;
+  };
+  return {
+    start: (input: { attachmentId: string; kind: "file" | "voice"; name: string; bytes: number }) =>
+      run((academyId) => startConcernUpload({ academyId, concernId, ...input })),
+    finish: (attachmentId: string) => run((academyId) => finishConcernUpload({ academyId, concernId, attachmentId })),
+    /** Best effort; unsent uploads also expire on the server after a day. */
+    discard: (attachmentId: string) => run((academyId) => discardConcernUpload({ academyId, concernId, attachmentId })),
   };
 }
 

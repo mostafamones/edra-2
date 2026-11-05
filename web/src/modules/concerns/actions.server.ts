@@ -42,18 +42,19 @@ export async function sendConcernMessage(value: unknown): Promise<ConcernMessage
   if (!parsed.success) return concernFailure("validation");
   const v = parsed.data;
   return runConcernCommand((db) => db.rpc("send_concern_message", {
-    p_academy_id: v.academyId, p_concern_id: v.concernId, p_message_id: v.messageId, p_body: v.body,
-    p_reply_to_id: v.replyToId ?? undefined, p_mentions: v.mentions,
+    // Null text (a media-only message) is valid SQL input; generated types omit argument nullability.
+    p_academy_id: v.academyId, p_concern_id: v.concernId, p_message_id: v.messageId, p_body: v.body as string,
+    p_reply_to_id: v.replyToId ?? undefined, p_mentions: v.mentions, p_attachment_ids: v.attachmentIds,
   }), toMessage);
 }
 
-/** The author's own message, within five minutes of sending by the database clock. */
+/** The author's own message, within five minutes of sending by the database clock. Bound media are kept. */
 export async function editConcernMessage(value: unknown): Promise<ConcernMessageResult> {
   const parsed = editMessageInput.safeParse(value);
   if (!parsed.success) return concernFailure("validation");
   const v = parsed.data;
   return runConcernCommand((db) => db.rpc("edit_concern_message", {
-    p_academy_id: v.academyId, p_concern_id: v.concernId, p_message_id: v.messageId, p_body: v.body, p_mentions: v.mentions,
+    p_academy_id: v.academyId, p_concern_id: v.concernId, p_message_id: v.messageId, p_body: v.body as string, p_mentions: v.mentions,
   }), toMessage);
 }
 
@@ -61,6 +62,7 @@ export async function deleteConcernMessage(value: unknown): Promise<ConcernMessa
   const parsed = deleteMessageInput.safeParse(value);
   if (!parsed.success) return concernFailure("validation");
   const v = parsed.data;
+  // Retrieval of the message's media stops in the same transaction; scheduled maintenance reclaims bytes.
   return runConcernCommand((db) => db.rpc("delete_concern_message", {
     p_academy_id: v.academyId, p_concern_id: v.concernId, p_message_id: v.messageId,
   }), toMessage);

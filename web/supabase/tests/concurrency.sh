@@ -1583,6 +1583,54 @@ expect_ok cn11a "the holding recovery failed"; expect_ok cn11b "the queued recov
 [ "$(cl_count owner_recovered)" = 1 ] || fail "concurrent recoveries recorded $(cl_count owner_recovered) events"
 grep -qi deadlock "$OUT"/cn* && fail "a concern lifecycle race deadlocked"
 
+# CN12-CN16. Concern media binding and server acceptance share the concern lock with sends,
+#            discards, deletion and settlement; expiry skips attachments a send has locked.
+MC="$(uuid)"; MC_M1="$(uuid)"; MC_M2="$(uuid)"; MC_M3="$(uuid)"; MC_M4="$(uuid)"; MC_A1="$(uuid)"; MC_A2="$(uuid)"; MC_A3="$(uuid)"
+psqlx >/dev/null -c "begin; $as_admin select public.create_concern('$ACADEMY','$MC','$MC_M1','Media race','Opening','{}');
+  select public.reserve_concern_attachment('$ACADEMY','$MC',id,'file','race.bin',10) from unnest(array['$MC_A1','$MC_A2','$MC_A3']::uuid[]) id; commit;"
+psqlx >/dev/null -c "begin; set local role service_role;
+  select public.verify_concern_attachment(id,true,'application/octet-stream') from unnest(array['$MC_A1','$MC_A2','$MC_A3']::uuid[]) id; commit;"
+send_media() { echo "$as_admin select public.send_concern_message('$ACADEMY','$MC','$1',null,null,'{}',array['$2']::uuid[]);"; }
+# CN12. Two different sends racing for the same upload: one binds it, the other is refused.
+hold cn12a cn12b "$(send_media "$MC_M2" "$MC_A1")"
+start cn12b "$(send_media "$MC_M3" "$MC_A1")"
+wait
+expect_ok cn12a "the send holding the upload failed"
+expect_rejected cn12b "one upload was bound to two messages" attachment_unavailable
+psqlx -tA -c "select count(*) from public.concern_attachments where id = '$MC_A1' and message_id = '$MC_M2' and state = 'bound'" | grep -qx 1 \
+  || fail "the upload is not bound exactly once"
+# CN13. A deletion holds the concern; a queued retry of the same send returns the deleted original, never rebinding.
+hold cn13a cn13b "$as_admin select public.delete_concern_message('$ACADEMY','$MC','$MC_M2');"
+start cn13b "$(send_media "$MC_M2" "$MC_A1")"
+wait
+expect_ok cn13a "the deletion holding the concern failed"; expect_ok cn13b "the send retry behind a deletion failed"
+psqlx -tA -c "select state from public.concern_attachments where id = '$MC_A1'" | grep -qx removed || fail "deleted media was rebound"
+# CN14. A send holding an upload; expiry running beside it skips the locked row and the send binds it.
+psqlx >/dev/null -c "update public.concern_attachments set created_at = now() - interval '2 days' where id = '$MC_A2'"
+hold cn14a cn14b "$(send_media "$MC_M4" "$MC_A2")"
+start cn14b "select edra_private.expire_concern_uploads(500);"
+wait
+expect_ok cn14a "the send holding an expiring upload failed"; expect_ok cn14b "expiry beside a send failed"
+psqlx -tA -c "select state from public.concern_attachments where id = '$MC_A2'" | grep -qx bound || fail "expiry removed media a send bound"
+# CN15. A discard holds the concern; the server's queued acceptance then finds the upload removed.
+MC_A4="$(uuid)"; MC_A5="$(uuid)"
+psqlx >/dev/null -c "begin; $as_admin select public.reserve_concern_attachment('$ACADEMY','$MC',id,'file','race.bin',10) from unnest(array['$MC_A4','$MC_A5']::uuid[]) id; commit;"
+verify_media() { echo "set local role service_role; select public.verify_concern_attachment('$1',true,'application/octet-stream');"; }
+hold cn15a cn15b "$as_admin select public.discard_concern_attachment('$ACADEMY','$MC','$MC_A4');"
+start cn15b "$(verify_media "$MC_A4")"
+wait
+expect_ok cn15a "the discard holding the concern failed"
+expect_rejected cn15b "a discarded upload was accepted" attachment_unavailable
+psqlx -tA -c "select state from public.concern_attachments where id = '$MC_A4'" | grep -qx removed || fail "a discarded upload was resurrected"
+# CN16. Settlement holds the concern; the server's queued acceptance is refused as settled.
+hold cn16a cn16b "$as_admin select public.settle_concern('$ACADEMY','$MC','Media race outcome',1,'$(uuid)');"
+start cn16b "$(verify_media "$MC_A5")"
+wait
+expect_ok cn16a "the settlement holding the concern failed"
+expect_rejected cn16b "an upload was accepted into a concern settled concurrently" concern_settled
+psqlx -tA -c "select state from public.concern_attachments where id = '$MC_A5'" | grep -qx pending || fail "settlement race accepted an upload"
+grep -qi deadlock "$OUT"/cn1[3456]* && fail "a concern media race deadlocked"
+
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
 #     neither deadlocks. After the commit the worker finds a closed year and the command is refused.

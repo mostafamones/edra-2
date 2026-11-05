@@ -4,7 +4,7 @@ import { Copy01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { resolveProfileAvatars } from "@/modules/account/browser";
-import { useConcernCommands, useConcernLifecycle } from "../commands";
+import { useConcernCommands, useConcernLifecycle, useConcernMedia } from "../commands";
 import { useConcernLive } from "../live";
 import { concernKeys, isConcernDenied, loadConcernTarget, syncConcernThread, useConcernDetail, useConcernThread, type ConcernScope } from "../queries";
 import { ConcernFeedback } from "./feedback";
@@ -34,6 +34,7 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
   const isCurrent = useConcernFence();
   const commands = useConcernCommands(scope, concernId, () => { if (isCurrent()) onDenied(); });
   const lifecycle = useConcernLifecycle(scope, concernId, () => { if (isCurrent()) onDenied(); });
+  const media = useConcernMedia(scope, concernId, () => { if (isCurrent()) onDenied(); });
   const [section, setSection] = useState<"messages" | "people" | "history">("messages");
   const [deciding, setDeciding] = useState<"settle" | "reopen" | null>(null);
   const [copied, setCopied] = useState<boolean | null>(null);
@@ -135,11 +136,11 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
       {thread.data?.hasMore && <div className="p-2 text-center"><Button size="sm" variant="ghost" disabled={thread.loadingOlder || jumping} onClick={() => void thread.loadOlder()}>{thread.loadingOlder ? "Loading…" : "Load older messages"}</Button></div>}
       {!!thread.olderError && <ConcernFeedback retry={() => void thread.loadOlder()}>Could not load older messages</ConcernFeedback>}
       {!messages.length && !thread.isLoading && <ConcernFeedback>No messages</ConcernFeedback>}
-      {messages.map((message) => <ConcernMessageItem key={message.id} message={message} userId={scope.userId} settled={settled || detail.isError} commands={commands} onReply={(item) => { setReplyId(item.id); }} participants={participants}
+      {messages.map((message) => <ConcernMessageItem key={message.id} message={message} academyId={scope.academyId} userId={scope.userId} settled={settled || detail.isError} commands={commands} onReply={(item) => { setReplyId(item.id); }} participants={participants}
         receipts={participants.filter((participant) => participant.lastReadSeq === message.seq)} avatarUrls={avatars.data ?? {}} />)}
     </div>
     {readError && reading && <div role="alert" className="flex items-center gap-2 px-4 text-xs"><span>Could not update read receipt</span><Button size="sm" variant="ghost" onClick={() => setReadRetry((value) => value + 1)}>Retry receipt</Button></div>}
     {decision && <ConcernLifecycleForm key={decision} mode={decision} detail={detail.data} lifecycle={lifecycle} onClose={() => setDeciding(null)} />}
-    {reading && !decision && !settled && !detail.isError && <ConcernComposer send={commands.send} participants={participants} reply={reply} onReplyChange={(message) => setReplyId(message?.id ?? null)} onTyping={setTyping} onSent={() => { pinned.current = true; scroll.current?.scrollTo({ top: scroll.current.scrollHeight }); }} />}
+    {reading && !decision && !settled && !detail.isError && <ConcernComposer send={commands.send} media={media} participants={participants} reply={reply} onReplyChange={(message) => setReplyId(message?.id ?? null)} onTyping={setTyping} onSent={() => { pinned.current = true; scroll.current?.scrollTo({ top: scroll.current.scrollHeight }); }} />}
   </div>;
 }

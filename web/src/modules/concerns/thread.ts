@@ -1,4 +1,5 @@
 import { concernFailure } from "./errors";
+import { concernMediaSummary } from "./media";
 import type { ConcernMessage, ConcernThread } from "./validation";
 
 /** Typing shows for this long after the last presence update, so a stalled client cannot pin it on. */
@@ -28,8 +29,10 @@ export function mergeMessages(thread: ConcernThread, incoming: ConcernMessage[])
     const parent = quote && parents.get(quote.id);
     if (!quote || !parent || (quote.deleted && !parent.deletedAt)) continue;
     const deleted = parent.deletedAt !== null;
-    if (quote.body === parent.body && quote.deleted === deleted && quote.authorName === parent.authorName) continue;
-    byId.set(id, { ...message, replyTo: { ...quote, body: parent.body, deleted, authorName: parent.authorName } });
+    const media = deleted ? null : concernMediaSummary(parent.attachments);
+    if (quote.body === parent.body && quote.deleted === deleted && quote.authorName === parent.authorName
+      && quote.media?.count === media?.count && quote.media?.voice === media?.voice) continue;
+    byId.set(id, { ...message, replyTo: { ...quote, body: parent.body, deleted, authorName: parent.authorName, media } });
     changed = true;
   }
   if (!changed) return thread;
