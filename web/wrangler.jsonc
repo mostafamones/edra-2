@@ -5,5 +5,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
   "assets": { "directory": "./dist/client" },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // Concern media purge (src/server.ts scheduled handler).
+  "triggers": { "crons": ["*/15 * * * *"] }
 }

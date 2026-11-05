@@ -26,6 +26,19 @@ describe("concern commands", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("accepts media-only sends and refuses empty or duplicated media before the database", async () => {
+    const attachmentId = "44444444-4444-4444-8444-444444444444";
+    expect(await sendConcernMessage({ academyId, concernId, messageId, body: null, replyToId: null, mentions: [] })).toMatchObject({ code: "validation" });
+    expect(await sendConcernMessage({ academyId, concernId, messageId, body: null, replyToId: null, mentions: [], attachmentIds: [attachmentId, attachmentId] }))
+      .toMatchObject({ code: "validation" });
+    expect(await sendConcernMessage({ academyId, concernId, messageId, body: null, replyToId: null, mentions: [], attachmentIds: Array.from({ length: 11 }, () => attachmentId) }))
+      .toMatchObject({ code: "validation" });
+    expect(rpc).not.toHaveBeenCalled();
+    rpc.mockResolvedValue({ data: { ...stored, body: null, attachments: [{ id: attachmentId, name: "a.pdf", contentType: "application/pdf", bytes: 4, kind: "file", durationSeconds: null }] }, error: null });
+    expect(await sendConcernMessage({ academyId, concernId, messageId, body: null, replyToId: null, mentions: [], attachmentIds: [attachmentId] })).toMatchObject({ ok: true, message: { body: null, deletedAt: null } });
+    expect(rpc).toHaveBeenCalledWith("send_concern_message", expect.objectContaining({ p_body: null, p_attachment_ids: [attachmentId] }));
+  });
+
   it("passes the caller-chosen id so retries are idempotent", async () => {
     rpc.mockResolvedValue({ data: stored, error: null });
     const result = await sendConcernMessage({ academyId, concernId, messageId, body: "Hi", replyToId: null, mentions: [] });

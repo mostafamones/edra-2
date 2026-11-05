@@ -9,6 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { useConcernCommands } from "../commands";
 import { CONCERN_LIMITS } from "../contracts";
 import { CONCERN_BODY_MAX, concernEmojiSchema, type ConcernMessage, type ConcernParticipant } from "../validation";
+import { concernMediaLabel } from "../media";
+import { ConcernAttachments } from "./attachments";
 import { ConcernBody } from "./body";
 import { ConcernIconButton } from "./icon-button";
 import { ConcernMentions, mentionIds, type MentionChoice } from "./mentions";
@@ -16,8 +18,8 @@ import { ConcernReceipts } from "./receipts";
 import { browserScopeGeneration } from "@/lib/browser-scope";
 
 type Commands = ReturnType<typeof useConcernCommands>;
-export function ConcernMessageItem({ message, userId, settled, commands, onReply, participants, receipts, avatarUrls }: {
-  message: ConcernMessage; userId: string; settled: boolean; commands: Commands; onReply: (message: ConcernMessage) => void;
+export function ConcernMessageItem({ message, academyId, userId, settled, commands, onReply, participants, receipts, avatarUrls }: {
+  message: ConcernMessage; academyId: string; userId: string; settled: boolean; commands: Commands; onReply: (message: ConcernMessage) => void;
   participants: ConcernParticipant[]; receipts: ConcernParticipant[]; avatarUrls: Record<string, string>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -31,7 +33,9 @@ export function ConcernMessageItem({ message, userId, settled, commands, onReply
   const busy = useRef(false);
   const menuFocus = useRef<"reply" | "edit" | null>(null);
   const own = message.authorId === userId;
-  const deleted = message.deletedAt !== null || message.body === null;
+  // Only deletion makes a placeholder: a live media-only message has no text.
+  const deleted = message.deletedAt !== null;
+  const hasMedia = message.attachments.length > 0;
   const editable = own && now < Date.parse(message.createdAt) + CONCERN_LIMITS.editWindowSeconds * 1000;
   useEffect(() => {
     if (!own || deleted || settled) return;
@@ -68,11 +72,12 @@ export function ConcernMessageItem({ message, userId, settled, commands, onReply
         {own && <DropdownMenuItem variant="destructive" onSelect={() => void run(() => commands.remove(message.id))}>Delete</DropdownMenuItem>}
       </DropdownMenuContent></DropdownMenu>}
     </div>
-    {message.replyTo && <blockquote className="mb-2 border-s-2 ps-2 text-xs text-muted-foreground"><span className="block font-medium" dir="auto">{message.replyTo.authorName ?? "Staff"}</span><span className="line-clamp-2 break-words" dir="auto">{message.replyTo.deleted || !message.replyTo.body ? "Message deleted" : message.replyTo.body}</span></blockquote>}
-    {deleted ? <p className="text-sm italic text-muted-foreground">Message deleted</p> : editing && !settled ? <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); if (body.trim()) void run(() => commands.edit(message.id, { body, mentions: mentionIds(body, mentions) }), () => setEditing(false)); }}>
+    {message.replyTo && <blockquote className="mb-2 border-s-2 ps-2 text-xs text-muted-foreground"><span className="block font-medium" dir="auto">{message.replyTo.authorName ?? "Staff"}</span><span className="line-clamp-2 break-words" dir="auto">{message.replyTo.deleted ? "Message deleted" : message.replyTo.body ?? concernMediaLabel(message.replyTo.media)}</span></blockquote>}
+    {deleted ? <p className="text-sm italic text-muted-foreground">Message deleted</p> : editing && !settled ? <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); if (body.trim() || hasMedia) void run(() => commands.edit(message.id, { body: body.trim() ? body : null, mentions: body.trim() ? mentionIds(body, mentions) : [] }), () => setEditing(false)); }}>
       <Label htmlFor={`edit-${message.id}`} className="sr-only">Edit message</Label><Textarea id={`edit-${message.id}`} value={body} maxLength={CONCERN_BODY_MAX} disabled={pending} onChange={(event) => setBody(event.target.value)} />
-      <div className="flex flex-wrap gap-2"><ConcernMentions participants={participants} disabled={pending} onSelect={(participant) => { setBody((current) => `${current} @${participant.name ?? "Staff"} `); setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant]); }} /><Button size="sm" type="submit" disabled={pending || !body.trim()}>{pending ? "Saving…" : "Save"}</Button><Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setEditing(false)}>Cancel</Button></div>
-    </form> : <ConcernBody body={message.body!} />}
+      <div className="flex flex-wrap gap-2"><ConcernMentions participants={participants} disabled={pending} onSelect={(participant) => { setBody((current) => `${current} @${participant.name ?? "Staff"} `); setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant]); }} /><Button size="sm" type="submit" disabled={pending || (!body.trim() && !hasMedia)}>{pending ? "Saving…" : "Save"}</Button><Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setEditing(false)}>Cancel</Button></div>
+    </form> : message.body !== null && <ConcernBody body={message.body} />}
+    {!deleted && <ConcernAttachments attachments={message.attachments} academyId={academyId} concernId={message.concernId} />}
     {!deleted && message.editedAt && <span className="text-xs text-muted-foreground">Edited</span>}
     {!deleted && <div className="mt-2 flex flex-wrap items-center gap-1">
       {message.reactions.map((reaction) => <Button key={reaction.emoji} type="button" size="sm" variant={reaction.userIds.includes(userId) ? "secondary" : "outline"} aria-label={`${reaction.emoji}, ${reaction.userIds.length} reactions`} aria-pressed={reaction.userIds.includes(userId)} disabled={settled || pending} onClick={() => react(reaction.emoji)}>{reaction.emoji} {reaction.userIds.length}</Button>)}

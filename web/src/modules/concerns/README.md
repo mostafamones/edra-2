@@ -51,8 +51,8 @@ Broadcasts carry only ids and revisions, never content; typing is a database-att
 participants and expired on the viewer's clock. Channels rejoin every 20 minutes to re-run
 authorization, and a degraded channel falls back to polling the change feed.
 
-Attachments and voice notes (EDRA-294) extend the message `attachments` array, currently always
-empty. Notification delivery (EDRA-296) remains separate integration work. Generated database types and
+Attachments and voice notes (EDRA-294) fill the message `attachments` array; see "Media" below.
+Notification delivery (EDRA-296) remains separate integration work. Generated database types and
 database assertions are verified against the disposable CI database, not a shared
 cloud reset or local developer stack.
 
@@ -154,8 +154,7 @@ The Owner gets a Recover concern view (ID or any link containing it) and, when a
 denied, a prefilled recovery form; recovery then reopens through the access-rechecking activation.
 
 Still required before EDRA-295 completion: mute and browser push controls plus actual in-app/browser
-notification routing/delivery; attachments, image/PDF/download and voice-note controls with real
-upload/playback commands. Preserve the documented media limits. Typing remains labelled generically. Database types come from the disposable CI artifact for the messaging schema; the seven EDRA-292 RPC entries in `database.types.ts` were added by hand (provisional) and must be replaced by the next CI `database-types` artifact.
+notification routing/delivery. Media controls are described under "Media" below. Typing remains labelled generically. Database types for the messaging and EDRA-292 schema now come from the disposable CI `database-types` artifact (run 41973557672); see "Types" under Media for the remaining provisional entries.
 
 Acceptance contract/task notes are recorded on EDRA-295. Vitest exercises actual panel consumers
 with one real QueryClient and mocked domain transport, including navigation/close persistence,
@@ -172,3 +171,118 @@ for production builds. Lint has no errors and 12 unrelated baseline warnings; ty
 Targeted consumer/query/live/staff tests pass, with actual channel cleanup/reconnect simulated at
 the client boundary. The parent must review and commit/push this slice before its CI evidence can
 be attached to a new head. The existing draft PR remains #67; this slice does not mark the issue Done.
+
+## Media: attachments and voice notes (EDRA-294)
+
+Migration `20261105053033_concern_media.sql` adds the private `concern-media` bucket (25 MB object
+limit, no MIME allowlist, no browser Storage policies) and `concern_attachments`
+(pending → ready → bound, any → removed; removal is final). Browsers cannot read the table;
+descriptors reach clients only inside message JSON and contain no path or URL.
+
+Flow (retry-safe by caller-chosen attachment id; every write takes the concern lock first, then
+the attachment, like sends, deletion and lifecycle commands):
+
+1. `startConcernUpload` → `reserve_concern_attachment` under the concern write lock: participant,
+   ongoing, 1 B–25 MB, name without path separators/control characters, at most 20 unsent uploads
+   per person per concern. Each pending result records `upload_expires_at` (now + 3 h: the
+   provider's default 2-hour signed upload lifetime, documented in the installed storage-js, plus
+   margin). The server then signs a one-time upload URL for a fresh object (no upsert, so stored
+   bytes are never replaced). `url` is null once accepted, and also when signing is refused but the
+   object already exists (an earlier attempt's bytes arrived): the client then goes straight to
+   verification with the same id instead of failing forever.
+2. The browser PUTs the bytes with real progress/abort (`upload.ts`).
+3. `finishConcernUpload` → `concern_attachment_upload` (caller's own open upload, live session and
+   write access), then the server reads the stored bytes with the service role: size must equal the
+   reservation; files are typed by magic bytes (JPEG/PNG/GIF/WebP/PDF, else
+   `application/octet-stream`); voice notes are measured by `probe.ts` (below) and must be at most
+   300 s exactly; the measured length is stored rounded up to 0.01 s. Service-role
+   `verify_concern_attachment` locks the concern, re-reads the attachment, and accepts only a
+   still-pending upload in an ongoing concern whose uploader is still a current participant with
+   live membership and the captured membership identity (`concern_settled`/`forbidden` otherwise).
+   Discarded, expired or rejected uploads are never resurrected; rejection (cleanup) stays allowed
+   when settled.
+4. `send_concern_message(..., p_attachment_ids)` binds up to 10 of the caller's own ready, unbound
+   uploads from this concern/academy in the same transaction and concern lock as the send; racing
+   sends cannot share an upload. Media-only messages have `body = null` with `deletedAt = null`:
+   only `deletedAt` makes a tombstone. Creation's opening message still requires text.
+5. `discardConcernUpload` removes the caller's unsent upload (allowed when settled).
+
+Edits keep bound media (a media message's text may be cleared). Deletion marks its media removed in
+the same transaction: message JSON, quotes (`replyTo.media`), inbox (`last.media`) and search
+(`media`, live attachment names) stop describing it, and retrieval/binding stop immediately.
+
+Voice formats: Opus only, in WebM or Ogg. `probe.ts` fails closed unless the file is one
+well-formed stream it fully accounts for: WebM needs the EBML header, exactly one TrackEntry
+(audio, `A_OPUS`, declared before any block), unlaced Simple/Blocks of that track only, no
+ContentEncodings/encrypted/virtual blocks/slices, and no truncated or unknown-size elements other
+than Segment/Cluster; Ogg needs one logical stream, OpusHead then OpusTags, consistent
+beginning/continuation flags and no truncated page or open final packet. Every audio packet's
+length comes from its own Opus TOC (invalid TOCs or >120 ms packets are refused); the duration is
+the maximum of that packet sum, the timestamps/granule and any declared duration, so understated
+headers cannot hide audio. MP4/AAC is refused because its timing comes from uploader-controlled
+tables; the recorder only offers WebM/Opus or Ogg/Opus (Chromium/Edge, Firefox, Safari 18.4+) and
+tells other browsers voice notes are unsupported. It stops at 4:58 so container overhead stays within
+the exact server limit. Synthetic fixtures exercise these rules; they are not proof against every
+adversarial file, and real recordings from each engine still need browser verification.
+
+Retrieval: `GET /api/concerns/<academy>/<concern>/<attachment>` (`media.server.ts`). Each request,
+including every Range request while seeking, calls `concern_attachment_access` as the signed-in
+caller (current membership + participation + bound + message not deleted; settled concerns stay
+readable) before the service role streams Storage bytes with the Range header forwarded. Responses are
+`private, no-store`, `nosniff`, same-origin CORP, no-referrer; only proven image/PDF/voice types are
+inline and everything else is `application/octet-stream` attachment with a sandbox CSP.
+`?download=1` forces a download. No signed or public read URL is ever issued.
+
+Cleanup: Supabase Cron `edra-concern-upload-expiry` (every 10 minutes, ≤500 rows) removes unsent
+uploads older than 24 hours, skipping rows a send has locked. Physical deletion runs without user
+traffic in the Worker's Cron Trigger (`wrangler.jsonc` `triggers.crons`, every 15 minutes →
+`src/server.ts` `scheduled` → `runConcernMediaMaintenance`, ≤10 batches of 50): it leases removed
+objects whose upload URLs have all expired (`claim_concern_media_purge`, 10-minute lease), deletes
+them through the Storage API and marks them purged. Waiting for `upload_expires_at` means a
+still-valid URL can only recreate an object before its purge, never after. SQL cannot delete
+Storage objects and this project has no pg_net/vault. Requires the existing `SUPABASE_SERVICE_ROLE_KEY`
+Worker secret; without it uploads, retrieval and purge fail closed (`unavailable`/503/no-op).
+
+Client: `useConcernMedia` (start/finish/discard with scope/cache fences), `components/use-uploads.ts`
+(per-item progress, cancel → abort + discard, retry reusing the id while the server might hold the
+bytes and renewing it after a definite refusal), `recorder.tsx` (feature detection, review/playback/
+discard/attach, blocked/missing/busy/unsupported microphone messages, recovery through permission
+change or Try again; collapsing the panel, closing or leaving stops the microphone, discards the take
+and releases late streams/object URLs), `voice.tsx` (play/pause, seek, 1×/1.5×/2×, playback failure
+with download), `attachments.tsx` (image preview opening full size, PDF Open/Download, other files
+Download). The composer keeps the uncertain send's text, reply, mentions and attachment ids until
+Retry or a definite refusal; uploads in progress block sending. Pending uploads continue while the
+panel is collapsed; late results from a previous browser scope are ignored. Unsent uploads left by a
+lost scope, settlement or an unmounted conversation expire on the server.
+
+Notification contract for EDRA-296: `message_sent` events now record `attachments` (ids, in order)
+and `voice` (boolean) beside `seq`/`mentions`; no text, names or URLs. Build previews by reading the
+current message at delivery time: `body` when present, otherwise `concernMediaLabel(
+concernMediaSummary(message.attachments))` ("Voice note", "Attachment", "N attachments"). Deleted
+messages expose no attachments, so a late delivery cannot describe removed media. Event ids
+deduplicate delivery.
+
+Types: `database.types.ts` is the CI `database-types` artifact from run 41973557672 (authority/
+lifecycle schema, replacing the earlier handwritten EDRA-292 entries) plus provisional handwritten
+media entries: `send_concern_message.p_attachment_ids`, `reserve_concern_attachment`,
+`concern_attachment_upload`, `concern_attachment_access`, `discard_concern_attachment`,
+`verify_concern_attachment`, `claim_concern_media_purge`, `complete_concern_media_purge`. Replace
+them with the next CI artifact (which will also add `concern_attachments`). Nullable `p_body` is
+passed with a documented cast because generated argument types omit nullability.
+
+Media verification (2026-11-05, local): Vitest covers byte sniffing, Opus TOC validation, WebM/Ogg
+measurement with understated headers/granules/timestamps, the 300/300.02 s boundary and fail-closed
+lacing, multi-track/multi-stream, foreign-track, encoded, invalid-TOC, truncated and incomplete
+inputs (`probe.test.ts`); delivery authority, revoked/deleted 404s, octet-stream/sandbox/no-store
+headers, Range passthrough, forced download, signing after reservation, existing-object recovery,
+exact limit with rounded-up storage, MP4 refusal, settled acceptance and scheduled purge batching/
+failure/credential handling (`media.server.test.ts`); panel consumers for media labels, media-only
+messages vs deletion placeholders, image/PDF/download links, voice speed, progress, media-only send
+with an uncertain retry reusing ids, limits, upload retry/renewal and recovered verification,
+cancel/discard, late scope results, unsupported/blocked/recovered microphone, review/attach and late
+permission release (`components/media.test.tsx`). SQL `concern_media.sql` (including verification
+denials when settled, revoked or discarded, and purge deferral until upload URLs expire) and races
+CN12–CN16 are registered for the disposable CI database and have not run yet. Unverified: real
+recordings and playback per browser engine (including Safari 18.4+ WebM), Storage Range and
+existing-object signing behaviour against the hosted project, the deployed Cron Trigger, visual
+review (both themes, 360/1440 px) and the multi-user journey.

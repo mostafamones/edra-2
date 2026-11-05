@@ -38,12 +38,25 @@ describe("thread merging", () => {
 
   it("removes cached quote text when an older parent is deleted outside the loaded window", () => {
     const value: ConcernThread = { ...thread([5], true), messages: [message(5, 5, {
-      replyTo: { id: "m1", seq: 1, authorId: "a", authorName: "A", body: "private text", deleted: false },
+      replyTo: { id: "m1", seq: 1, authorId: "a", authorName: "A", body: "private text", deleted: false, media: null },
     })] };
     const merged = applyChanges(value, { messages: [message(1, 9, { body: null, deletedAt: "now" })], cursor: 9 });
     expect(seqs(merged)).toEqual([5]);
     expect(merged.messages[0].replyTo).toMatchObject({ body: null, deleted: true });
     expect(mergeMessages(merged, [message(1, 1)]).messages[0].replyTo).toMatchObject({ body: null, deleted: true });
+  });
+
+  it("keeps media-only quotes live and drops their media once the parent is deleted", () => {
+    const voice = { id: "v", name: "Voice note.webm", contentType: "audio/webm", bytes: 9, kind: "voice" as const, durationSeconds: 3 };
+    const value: ConcernThread = { ...thread([5], true), messages: [message(5, 5, {
+      replyTo: { id: "m1", seq: 1, authorId: "a", authorName: "A", body: null, deleted: false, media: null },
+    })] };
+    const live = applyChanges(value, { messages: [message(1, 8, { body: null, attachments: [voice] })], cursor: 8 });
+    expect(live.messages[0].replyTo).toMatchObject({ body: null, deleted: false, media: { count: 1, voice: true } });
+    const deleted = applyChanges(live, { messages: [message(1, 9, { body: null, deletedAt: "now" })], cursor: 9 });
+    expect(deleted.messages[0].replyTo).toMatchObject({ deleted: true, media: null });
+    // A media-only live message is valid; deletion alone is the tombstone.
+    expect(concernMessageSchema.parse(message(1, 8, { body: null, attachments: [voice] })).deletedAt).toBeNull();
   });
 
   it("prepends older pages and takes their hasMore", () => {

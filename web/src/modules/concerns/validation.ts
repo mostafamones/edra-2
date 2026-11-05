@@ -16,24 +16,27 @@ const ids = z.array(z.guid()).max(50);
 const timestamp = z.string();
 const status = z.enum(["ongoing", "settled"]);
 
-const attachmentSchema = z.object({
-  id: z.string(), name: z.string(), contentType: z.string(), bytes: z.number().int().max(CONCERN_LIMITS.attachmentBytes),
-  kind: z.enum(["file", "voice"]), durationSeconds: z.number().max(CONCERN_LIMITS.voiceSeconds).nullable(),
+export const concernAttachmentSchema = z.object({
+  id: z.string(), name: z.string(), contentType: z.string(), bytes: z.number().int().min(1).max(CONCERN_LIMITS.attachmentBytes),
+  kind: z.enum(["file", "voice"]), durationSeconds: z.number().positive().max(CONCERN_LIMITS.voiceSeconds).nullable(),
 });
+/** A live message's media, for previews of quotes, the inbox and search. Null when it has none or was deleted. */
+const mediaSummary = z.object({ count: z.number().int().min(1), voice: z.boolean() }).nullable().default(null);
+export type ConcernMediaSummary = z.infer<typeof mediaSummary>;
 
 export const concernMessageSchema = z.object({
   id: z.string(), concernId: z.string(), seq: z.number().int(), revision: z.number().int(),
   authorId: z.string(), authorName: z.string().nullable(),
-  /** Null once deleted: show the "Message deleted" placeholder. */
+  /** Null once deleted, or for a media-only message. `deletedAt` alone decides the placeholder. */
   body: z.string().nullable(),
   mentions: z.array(z.string()),
   createdAt: timestamp, editedAt: timestamp.nullable(), deletedAt: timestamp.nullable(),
   replyTo: z.object({
     id: z.string(), seq: z.number().int(), authorId: z.string(), authorName: z.string().nullable(),
-    body: z.string().nullable(), deleted: z.boolean(),
+    body: z.string().nullable(), deleted: z.boolean(), media: mediaSummary,
   }).nullable(),
   reactions: z.array(z.object({ emoji: z.string(), userIds: z.array(z.string()) })),
-  attachments: z.array(attachmentSchema),
+  attachments: z.array(concernAttachmentSchema).max(CONCERN_LIMITS.attachmentsPerMessage),
 });
 export type ConcernMessage = z.infer<typeof concernMessageSchema>;
 
@@ -65,7 +68,7 @@ export const concernInboxSchema = z.object({
     id: z.string(), title: z.string(), status, updatedAt: timestamp, muted: z.boolean(), lastReadSeq: z.number().int(),
     unread: z.number().int(), unreadMentions: z.number().int(),
     last: z.object({ seq: z.number().int(), authorId: z.string(), authorName: z.string().nullable(), body: z.string().nullable(),
-      deleted: z.boolean(), createdAt: timestamp }).nullable(),
+      deleted: z.boolean(), createdAt: timestamp, media: mediaSummary }).nullable(),
   })),
 });
 export type ConcernInboxPage = z.infer<typeof concernInboxSchema>;
@@ -77,7 +80,7 @@ export type ConcernUnread = z.infer<typeof concernUnreadSchema>;
 /** A concern title match has no message fields. */
 export const concernSearchSchema = z.array(z.object({
   concernId: z.string(), title: z.string(), status, messageId: z.string().nullable(), seq: z.number().int().nullable(),
-  body: z.string().nullable(), authorName: z.string().nullable(), createdAt: timestamp,
+  body: z.string().nullable(), authorName: z.string().nullable(), createdAt: timestamp, media: mediaSummary,
 }));
 export type ConcernSearchHit = z.infer<typeof concernSearchSchema>[number];
 
@@ -98,8 +101,14 @@ export const createConcernInput = z.object({
   academyId: z.guid(), concernId: z.guid(), messageId: z.guid(), title: concernTitleSchema, body: concernBodySchema,
   participantIds: z.array(z.guid()).max(500), wholeTeam: z.boolean(), mentions: ids,
 });
-export const sendMessageInput = target.extend({ messageId: z.guid(), body: concernBodySchema, replyToId: z.guid().nullable(), mentions: ids });
-export const editMessageInput = target.extend({ messageId: z.guid(), body: concernBodySchema, mentions: ids });
+/** Text, media or both. Media are the sender's own verified uploads, bound once by the database. */
+export const sendMessageInput = target.extend({
+  messageId: z.guid(), body: concernBodySchema.nullable(), replyToId: z.guid().nullable(), mentions: ids,
+  attachmentIds: z.array(z.guid()).max(CONCERN_LIMITS.attachmentsPerMessage).default([]),
+}).refine((value) => value.body !== null || value.attachmentIds.length > 0)
+  .refine((value) => new Set(value.attachmentIds).size === value.attachmentIds.length);
+/** Null text is accepted only for a message with media; the database checks that. */
+export const editMessageInput = target.extend({ messageId: z.guid(), body: concernBodySchema.nullable(), mentions: ids });
 export const deleteMessageInput = target.extend({ messageId: z.guid() });
 export const reactionInput = target.extend({ messageId: z.guid(), emoji: concernEmojiSchema, on: z.boolean() });
 export const markReadInput = target.extend({ seq: z.number().int().min(0) });
@@ -111,9 +120,17 @@ export const removeParticipantInput = target.extend({ ...request, userId: z.guid
 export const settleInput = target.extend({ ...request, outcome: concernNoteSchema, expectedVersion: z.number().int().min(1) });
 export const reopenInput = target.extend({ ...request, reason: concernNoteSchema, expectedVersion: z.number().int().min(1) });
 export const recoverInput = target.extend(request);
+/** Names are stored as given for display and download; path separators and control characters are refused. */
+export const attachmentNameSchema = z.string().trim().min(1).max(255).regex(/^[^/\\\p{Cc}]+$/u);
+export const reserveAttachmentInput = target.extend({
+  attachmentId: z.guid(), kind: z.enum(["file", "voice"]), name: attachmentNameSchema,
+  bytes: z.number().int().min(1).max(CONCERN_LIMITS.attachmentBytes),
+});
+export const attachmentInput = target.extend({ attachmentId: z.guid() });
 
 export type CreateConcernInput = z.infer<typeof createConcernInput>;
-export type SendMessageInput = z.infer<typeof sendMessageInput>;
+export type SendMessageInput = z.input<typeof sendMessageInput>;
+export type ReserveAttachmentInput = z.infer<typeof reserveAttachmentInput>;
 export type EditMessageInput = z.infer<typeof editMessageInput>;
 export type DeleteMessageInput = z.infer<typeof deleteMessageInput>;
 export type ReactionInput = z.infer<typeof reactionInput>;
