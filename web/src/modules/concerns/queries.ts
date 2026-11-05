@@ -5,7 +5,7 @@ import { browserScopeGeneration } from "@/lib/browser-scope";
 import { createClient } from "@/lib/supabase/client";
 import { applyChanges, prependOlder } from "./thread";
 import {
-  concernDetailSchema, concernInboxSchema, concernMessageSchema, concernSearchSchema, concernThreadSchema, concernUnreadSchema,
+  concernDetailSchema, concernHistorySchema, concernInboxSchema, concernMessageSchema, concernSearchSchema, concernThreadSchema, concernUnreadSchema,
   type ConcernThread,
 } from "./validation";
 import { z } from "zod";
@@ -26,6 +26,7 @@ export const concernKeys = {
   concern: (scope: ConcernScope, concernId: string) => [...root(scope), "concern", concernId] as const,
   detail: (scope: ConcernScope, concernId: string) => [...root(scope), "concern", concernId, "detail"] as const,
   thread: (scope: ConcernScope, concernId: string) => [...root(scope), "concern", concernId, "thread"] as const,
+  history: (scope: ConcernScope, concernId: string) => [...root(scope), "concern", concernId, "history"] as const,
   search: (scope: ConcernScope, query: string) => [...root(scope), "search", query] as const,
 };
 
@@ -53,6 +54,8 @@ export const loadConcernChanges = (scope: ConcernScope, concernId: string, after
     z.object({ messages: z.array(concernMessageSchema), hasMore: z.boolean(), cursor: z.number().int() }));
 export const loadConcernDetail = (scope: ConcernScope, concernId: string) =>
   read((rpc) => rpc("concern_detail", { p_academy_id: scope.academyId, p_concern_id: concernId }), concernDetailSchema);
+export const loadConcernHistory = (scope: ConcernScope, concernId: string) =>
+  read((rpc) => rpc("concern_history", { p_academy_id: scope.academyId, p_concern_id: concernId }), concernHistorySchema);
 export const loadConcernUnread = (scope: ConcernScope) =>
   read((rpc) => rpc("concern_unread", { p_academy_id: scope.academyId }), concernUnreadSchema);
 export const loadConcernSearch = (scope: ConcernScope, query: string) =>
@@ -167,6 +170,13 @@ export function useConcernDetail(scope: ConcernScope, concernId: string | null, 
     retry,
   });
   useForgetOnDenied(scope, concernId ?? "", query.error);
+  return query;
+}
+
+/** Lifecycle and membership history; refetched whenever detail changes. */
+export function useConcernHistory(scope: ConcernScope, concernId: string, enabled = true) {
+  const query = useQuery({ queryKey: concernKeys.history(scope, concernId), queryFn: () => loadConcernHistory(scope, concernId), enabled, retry });
+  useForgetOnDenied(scope, concernId, query.error);
   return query;
 }
 

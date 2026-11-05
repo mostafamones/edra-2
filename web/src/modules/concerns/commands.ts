@@ -3,6 +3,7 @@ import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
+  addConcernParticipants, recoverConcern, removeConcernParticipant, reopenConcern, settleConcern,
   createConcern, deleteConcernMessage, editConcernMessage, markConcernRead, sendConcernMessage, setConcernReaction,
 } from "./actions";
 import { forgetConcern, invalidateConcernLists, concernKeys, type ConcernScope } from "./queries";
@@ -102,6 +103,58 @@ export function useCreateConcern(scope: ConcernScope) {
     const generation = browserScopeGeneration();
     const result = await withRetry(() => createConcern({ ...input, academyId: target.academyId }));
     if (result.ok && generation === browserScopeGeneration()) void invalidateConcernLists(queryClient, target);
+    return result;
+  };
+}
+
+/** Refreshes what a lifecycle or membership change affects, never the message window. */
+function refreshConcern(queryClient: ReturnType<typeof useQueryClient>, scope: ConcernScope, concernId: string) {
+  void queryClient.invalidateQueries({ queryKey: concernKeys.detail(scope, concernId) });
+  void queryClient.invalidateQueries({ queryKey: concernKeys.history(scope, concernId) });
+  void invalidateConcernLists(queryClient, scope);
+}
+
+/**
+ * Participant management and settlement/reopening for one concern. Each call takes a `requestId`
+ * generated once per attempt; reuse it to retry an uncertain result. `stale`, `not_permitted` and
+ * `concern_settled` refresh the detail so the panel shows the current state and capabilities.
+ */
+export function useConcernLifecycle(scope: ConcernScope, concernId: string, onDenied?: () => void) {
+  const queryClient = useQueryClient();
+  const cacheIdentity = () => queryClient.getQueryCache().find({ queryKey: concernKeys.detail(scope, concernId), exact: true });
+  const run = async <T extends { ok: boolean; code?: string }>(call: (target: ConcernScope) => Promise<T>) => {
+    const target = { ...scope };
+    const generation = browserScopeGeneration();
+    const original = cacheIdentity();
+    const result = await withRetry(() => call(target));
+    if (generation !== browserScopeGeneration() || original !== cacheIdentity()) return result;
+    if (result.code === "forbidden") { onDenied?.(); await forgetConcern(queryClient, target, concernId); }
+    else if (result.ok || result.code !== "unavailable") refreshConcern(queryClient, target, concernId);
+    return result;
+  };
+  return {
+    add: (userIds: string[], requestId: string) =>
+      run((target) => addConcernParticipants({ academyId: target.academyId, concernId, userIds, requestId })),
+    remove: (userId: string, requestId: string) =>
+      run((target) => removeConcernParticipant({ academyId: target.academyId, concernId, userId, requestId })),
+    settle: (outcome: string, expectedVersion: number, requestId: string) =>
+      run((target) => settleConcern({ academyId: target.academyId, concernId, outcome, expectedVersion, requestId })),
+    reopen: (reason: string, expectedVersion: number, requestId: string) =>
+      run((target) => reopenConcern({ academyId: target.academyId, concernId, reason, expectedVersion, requestId })),
+  };
+}
+
+/**
+ * Owner recovery of one concern by id. The database checks the current Owner role; a result for a
+ * previous academy/account scope is returned but changes nothing.
+ */
+export function useRecoverConcern(scope: ConcernScope) {
+  const queryClient = useQueryClient();
+  return async (concernId: string, requestId: string) => {
+    const target = { ...scope };
+    const generation = browserScopeGeneration();
+    const result = await withRetry(() => recoverConcern({ academyId: target.academyId, concernId, requestId }));
+    if (result.ok && generation === browserScopeGeneration()) refreshConcern(queryClient, target, concernId);
     return result;
   };
 }

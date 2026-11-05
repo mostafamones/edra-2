@@ -7831,6 +7831,15 @@ export type Database = {
         Returns: boolean
       }
       accept_staff_invitation: { Args: { p_token: string }; Returns: Json }
+      add_concern_participants: {
+        Args: {
+          p_academy_id: string
+          p_concern_id: string
+          p_request_id: string
+          p_user_ids: string[]
+        }
+        Returns: Json
+      }
       add_session_attendee: {
         Args: {
           p_academy_id: string
@@ -8147,6 +8156,10 @@ export type Database = {
       concern_has_access: {
         Args: { p_academy_id: string; p_concern_id: string }
         Returns: boolean
+      }
+      concern_history: {
+        Args: { p_academy_id: string; p_concern_id: string }
+        Returns: Json
       }
       concern_inbox: {
         Args: {
@@ -9319,6 +9332,14 @@ export type Database = {
         Args: { p_event_id: string; p_quiz_id: string }
         Returns: Json
       }
+      recover_concern: {
+        Args: {
+          p_academy_id: string
+          p_concern_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       redeem_content_coupon: {
         Args: {
           p_academy_id: string
@@ -9357,6 +9378,15 @@ export type Database = {
         }
         Returns: Json
       }
+      remove_concern_participant: {
+        Args: {
+          p_academy_id: string
+          p_concern_id: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       remove_staff_member: {
         Args: { p_academy_id: string; p_user_id: string }
         Returns: Json
@@ -9380,6 +9410,16 @@ export type Database = {
       }
       renew_my_exam_editor: {
         Args: { p_academy_id: string; p_exam_id: string; p_token: string }
+        Returns: Json
+      }
+      reopen_concern: {
+        Args: {
+          p_academy_id: string
+          p_concern_id: string
+          p_expected_version: number
+          p_reason: string
+          p_request_id: string
+        }
         Returns: Json
       }
       request_content_video_deletion: {
@@ -9713,6 +9753,14 @@ export type Database = {
         }
         Returns: Json
       }
+      set_concern_typing: {
+        Args: {
+          p_academy_id: string
+          p_concern_id: string
+          p_typing: boolean
+        }
+        Returns: undefined
+      }
       set_content_unit_label: {
         Args: {
           p_academy_id: string
@@ -9765,6 +9813,16 @@ export type Database = {
           p_record_ids: string[]
         }
         Returns: number
+      }
+      settle_concern: {
+        Args: {
+          p_academy_id: string
+          p_concern_id: string
+          p_expected_version: number
+          p_outcome: string
+          p_request_id: string
+        }
+        Returns: Json
       }
       settle_login_phone_change: {
         Args: { p_end: boolean; p_operation_id: string; p_user_id: string }

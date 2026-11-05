@@ -1471,6 +1471,61 @@ psqlx -tA -c "select count(*) from public.concern_events where concern_id = '$CO
   || fail "message events do not match messages"
 grep -qi deadlock "$OUT"/cn* && fail "a concern messaging race deadlocked"
 
+# CN6-CN11. Concern lifecycle, membership and recovery commands take the same concern lock.
+CL_ADMIN="$(uuid)"; CL_INST="$(uuid)"; CL="$(uuid)"; CL_M1="$(uuid)"; CL_M2="$(uuid)"; CL_M3="$(uuid)"
+psqlx >/dev/null <<SQL
+insert into auth.users (id) values ('$CL_ADMIN'), ('$CL_INST');
+insert into public.academy_memberships (academy_id, user_id, role, created_by) values
+  ('$ACADEMY', '$CL_ADMIN', 'admin', '$ADMIN'), ('$ACADEMY', '$CL_INST', 'instructor', '$ADMIN');
+SQL
+as_cl="$(as_user "$CL_ADMIN")"; as_inst="$(as_user "$CL_INST")"
+psqlx >/dev/null -c "begin; $as_cl select public.create_concern('$ACADEMY','$CL','$CL_M1','Lifecycle race','Opening',array['$CL_INST']::uuid[]); commit;"
+cl_count() { psqlx -tA -c "select count(*) from public.concern_events where concern_id = '$CL' and kind = '$1'"; }
+settle() { echo "$as_cl select public.settle_concern('$ACADEMY','$CL','$1',$2,'$3');"; }
+reopen() { echo "$as_cl select public.reopen_concern('$ACADEMY','$CL','$1',$2,'$3');"; }
+# CN6. A send holds the concern; a queued settlement waits, then settles after the message.
+hold cn6a cn6b "$as_inst select public.send_concern_message('$ACADEMY','$CL','$CL_M2','Before settle');"
+start cn6b "$(settle 'Race outcome' 1 "$(uuid)")"
+wait
+expect_ok cn6a "the send holding the concern failed"; expect_ok cn6b "the settlement behind a send failed"
+psqlx -tA -c "select status || ':' || version from public.concerns where id = '$CL'" | grep -qx settled:2 || fail "settlement behind a send did not apply"
+# CN7. Two reopenings from the same settled version: one wins, the other is stale.
+hold cn7a cn7b "$(reopen 'First reason' 2 "$(uuid)")"
+start cn7b "$(reopen 'Second reason' 2 "$(uuid)")"
+wait
+expect_ok cn7a "the holding reopening failed"
+expect_rejected cn7b "a stale reopening overwrote a newer state" stale
+[ "$(cl_count reopened)" = 1 ] || fail "concurrent reopenings recorded $(cl_count reopened) events"
+# CN8. A retried settlement racing its original settles once.
+REQ="$(uuid)"
+hold cn8a cn8b "$(settle 'Retried' 3 "$REQ")"
+start cn8b "$(settle 'Retried' 3 "$REQ")"
+wait
+expect_ok cn8a "the original settlement failed"; expect_ok cn8b "the retried settlement failed"
+[ "$(cl_count settled)" = 2 ] || fail "a retried settlement duplicated history: $(cl_count settled)"
+# CN9. Settlement holds the concern; a queued participant addition is refused as settled.
+run cn9r "$(reopen 'Reopen for CN9' 4 "$(uuid)")"; expect_ok cn9r "the CN9 reopening failed"
+hold cn9a cn9b "$(settle 'Final' 5 "$(uuid)")"
+start cn9b "$as_cl select public.add_concern_participants('$ACADEMY','$CL',array['$ADMIN']::uuid[],'$(uuid)');"
+wait
+expect_ok cn9a "the settlement holding the concern failed"
+expect_rejected cn9b "a participant was added to a concern settled concurrently" concern_settled
+run cn9c "$(reopen 'Reopen for CN10' 6 "$(uuid)")"; expect_ok cn9c "the CN10 reopening failed"
+# CN10. A removal holds the concern; the removed participant's queued send is refused.
+hold cn10a cn10b "$as_cl select public.remove_concern_participant('$ACADEMY','$CL','$CL_INST','$(uuid)');"
+start cn10b "$as_inst select public.send_concern_message('$ACADEMY','$CL','$CL_M3','After removal');"
+wait
+expect_ok cn10a "the removal holding the concern failed"
+expect_rejected cn10b "a removed participant sent a message" forbidden
+psqlx -tA -c "select count(*) from public.concern_messages where id = '$CL_M3'" | grep -qx 0 || fail "a message from a removed participant was stored"
+# CN11. Two Owner recoveries at once record one audited recovery.
+hold cn11a cn11b "$as_admin select public.recover_concern('$ACADEMY','$CL','$(uuid)');"
+start cn11b "$as_admin select public.recover_concern('$ACADEMY','$CL','$(uuid)');"
+wait
+expect_ok cn11a "the holding recovery failed"; expect_ok cn11b "the queued recovery failed"
+[ "$(cl_count owner_recovered)" = 1 ] || fail "concurrent recoveries recorded $(cl_count owner_recovered) events"
+grep -qi deadlock "$OUT"/cn* && fail "a concern lifecycle race deadlocked"
+
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
 #     neither deadlocks. After the commit the worker finds a closed year and the command is refused.
