@@ -21,7 +21,7 @@ describe("list parameters", () => {
   it("round-trips every parameter through the URL", () => {
     const params = {
       search: "0101 234", status: "all" as const, levelId: "secondary-2", track: TRACK, group: GROUP,
-      participationType: "online_only" as const, labels: [LABEL_A, LABEL_B], unlabeled: false, sorts: [{ id: "level" as const, desc: true }, { id: "group" as const, desc: false }],
+      participationType: "online_only" as const, labels: [LABEL_A, LABEL_B], unlabeled: false, access: "suspended" as const, sorts: [{ id: "level" as const, desc: true }, { id: "group" as const, desc: false }],
       pageIndex: 3, pageSize: 50 as const,
     };
     expect(read(writeListParams(params).toString())).toEqual({ params, valid: true });
@@ -38,10 +38,16 @@ describe("list parameters", () => {
 
   it("replaces invalid values with defaults and reports them", () => {
     for (const query of ["status=deleted", "size=25", "page=0", "page=abc", "sort=password.asc", "type=hybrid",
-      "group=1;drop", "level=Grade%2010", "track=" + TRACK, "q=" + "x".repeat(101)]) {
+      "group=1;drop", "level=Grade%2010", "access=connected", "access=", "track=" + TRACK, "q=" + "x".repeat(101)]) {
       expect(read(query).valid).toBe(false);
     }
     expect(read("size=25&page=0&status=deleted").params).toEqual(DEFAULT_LIST_PARAMS);
+  });
+
+  it("reads the online-access filter and counts it as filtering", () => {
+    expect(read("access=has_access")).toEqual({ params: { ...DEFAULT_LIST_PARAMS, access: "has_access" }, valid: true });
+    expect(writeListParams({ ...DEFAULT_LIST_PARAMS, access: "suspended" }).toString()).toBe("access=suspended");
+    expect(isFiltering({ ...DEFAULT_LIST_PARAMS, access: "suspended" })).toBe(true);
   });
 
   it("drops a track filter without a level", () => {

@@ -9,11 +9,12 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "
 import type { Group, Level, Track } from "@/modules/groups";
 import { LabelFilter, type Label } from "@/modules/labels";
 import {
-  DEFAULT_LIST_PARAMS, MAX_SEARCH_LENGTH, NONE, type StatusFilter, type StudentListParams,
+  ACCESS_FILTERS, DEFAULT_LIST_PARAMS, MAX_SEARCH_LENGTH, NONE, type AccessFilter, type StatusFilter, type StudentListParams,
 } from "../../list-params";
 import { isParticipationType, PARTICIPATION_LABELS, PARTICIPATION_TYPES } from "../../validation";
 
 const ALL = "all";
+const ACCESS_LABELS: Record<AccessFilter, string> = { suspended: "Suspended", has_access: "Has Access" };
 const SEARCH_DELAY = 300;
 
 type Props = {
@@ -119,6 +120,11 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
       options: [{ value: ALL, label: "All types" }, ...PARTICIPATION_TYPES.map((type) => ({ value: type, label: PARTICIPATION_LABELS[type] }))],
       onChange: (value) => onFiltersChange({ participationType: isParticipationType(value) ? value : null }),
     },
+    {
+      id: "access", label: "Online access", value: params.access ?? ALL, defaultValue: ALL,
+      options: [{ value: ALL, label: "All" }, ...ACCESS_FILTERS.map((access) => ({ value: access, label: ACCESS_LABELS[access] }))],
+      onChange: (value) => onFiltersChange({ access: (ACCESS_FILTERS as readonly string[]).includes(value) ? value as AccessFilter : null }),
+    },
   ];
 
   // Shown once the academy has labels, or while a label filter is still set.
@@ -146,6 +152,10 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
     active.push({ key: "type", label: PARTICIPATION_LABELS[params.participationType], clear: () => onFiltersChange({ participationType: null }) });
   }
 
+  if (params.access) {
+    active.push({ key: "access", label: `Online access: ${ACCESS_LABELS[params.access]}`, clear: () => onFiltersChange({ access: null }) });
+  }
+
   for (const id of params.labels) {
     // A deleted label stays until removed: dropping it silently would widen the results.
     const name = labels ? labels.find((label) => label.id === id)?.name ?? "Unknown label" : "Label";
@@ -155,7 +165,7 @@ export function StudentsToolbar({ params, onSearch, codesEnabled, onFiltersChang
 
   function clearAll() {
     onFiltersChange({
-      status: DEFAULT_LIST_PARAMS.status, levelId: null, track: null, group: null, participationType: null, labels: [], unlabeled: false,
+      status: DEFAULT_LIST_PARAMS.status, levelId: null, track: null, group: null, participationType: null, labels: [], unlabeled: false, access: null,
     });
   }
 

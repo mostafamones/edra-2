@@ -8,6 +8,7 @@ import { isAcademyManager, type AcademyRole } from "@/modules/academies/roles";
  * - Owners, Head Admins and Admins also change placement (level, track, group) and student type, archive or restore,
  *   import students, and change groups in bulk.
  * - Every staff role selects records and applies or removes existing labels, individually and in bulk.
+ * - Owners, Head Admins and Admins suspend or restore online access; every staff role sees the state and latest change.
  */
 export type StaffRole = AcademyRole;
 
@@ -20,3 +21,4 @@ export const canArchiveStudentRecords = (role: StaffRole) => isManager(role);
 export const canImportStudents = (role: StaffRole) => isManager(role);
 export const canChangeStudentGroups = (role: StaffRole) => isManager(role);
 export const canApplyStudentLabels = (role: StaffRole) => Boolean(role);
+export const canManageStudentSuspension = (role: StaffRole) => isManager(role);

@@ -5,7 +5,7 @@ import { COLUMN_WIDTHS, DATA_COLUMNS } from "./config";
 import { clampTrade, fitWidths } from "./layout";
 import { defaultPreferences, moveColumn, preferencesKey, readPreferences, sanitizePreferences } from "./preferences";
 import { DEFAULT_LIST_PARAMS } from "../list-params";
-import { bulkTargets, pageSelectionState, selectionScope, syncSelection, togglePage, toggleRow } from "./selection";
+import { bulkTargets, hasSharedGroup, pageSelectionState, selectionScope, syncSelection, togglePage, toggleRow } from "./selection";
 
 describe("table preferences", () => {
   it("are scoped by schema version, user, and academy", () => {
@@ -71,11 +71,11 @@ describe("table layout", () => {
   });
 });
 
-const row = (id: string, version = 1, archived = false): StudentRecordRow => ({
+const row = (id: string, version = 1, archived = false, manuallySuspended = false): StudentRecordRow => ({
   id, academyStudentProfileId: `p-${id}`, fullName: id, studentPhone: "+201012345678", parentPhone: "+201112223333",
   levelId: "preparatory-3", levelName: "Third Preparatory", trackId: null, trackName: null, primaryGroupId: null, groupName: null,
   participationType: "in_person", archivedAt: archived ? "2030-10-01T00:00:00Z" : null,
-  createdAt: "2030-09-01T00:00:00Z", updatedAt: "2030-09-01T00:00:00Z", version, onlineAccount: "not_connected", accountName: null, labelIds: [],
+  createdAt: "2030-09-01T00:00:00Z", updatedAt: "2030-09-01T00:00:00Z", version, onlineAccount: "not_connected", manuallySuspended, suspensionRevision: 0, accountName: null, labelIds: [],
 });
 
 describe("selection", () => {
@@ -102,16 +102,30 @@ describe("selection", () => {
   it("clears on identity, year and filter changes, but not on paging or sorting", () => {
     const scope = (change = {}, user = "u", year = "y") => selectionScope({ ...DEFAULT_LIST_PARAMS, ...change }, user, year);
     expect(scope({ pageIndex: 3, sorts: [{ id: "level", desc: true }], pageSize: 50 })).toBe(scope());
-    for (const other of [scope({ labels: ["l"] }), scope({ unlabeled: true }), scope({ search: "a" }), scope({ group: "g" }), scope({}, "other"), scope({}, "u", "other")]) {
+    for (const other of [scope({ labels: ["l"] }), scope({ unlabeled: true }), scope({ access: "suspended" }), scope({ access: "has_access" }), scope({ search: "a" }), scope({ group: "g" }), scope({}, "other"), scope({}, "u", "other")]) {
       expect(other).not.toBe(scope());
     }
+  });
+
+  it("offers a group change only when one active group can take every selected student", () => {
+    const placed = (id: string, levelId: string, trackId: string | null, archived = false) => ({ ...row(id, 1, archived), levelId, trackId });
+    const select = (...rows: StudentRecordRow[]) => togglePage({}, rows, true);
+    const wide = { level_id: "l1", track_id: null, archived_at: null };
+    const scienceOnly = { level_id: "l1", track_id: "science", archived_at: null };
+    expect(hasSharedGroup(select(placed("a", "l1", "science"), placed("b", "l1", "arts")), [wide])).toBe(true);
+    expect(hasSharedGroup(select(placed("a", "l1", "science"), placed("b", "l1", "arts")), [scienceOnly])).toBe(false);
+    expect(hasSharedGroup(select(placed("a", "l1", "science"), placed("b", "l1", "science")), [scienceOnly])).toBe(true);
+    expect(hasSharedGroup(select(placed("a", "l1", null), placed("b", "l2", null)), [wide, { ...wide, level_id: "l2" }])).toBe(false);
+    expect(hasSharedGroup(select(placed("a", "l1", null), placed("b", "l1", null, true)), [wide])).toBe(false);
+    expect(hasSharedGroup(select(placed("a", "l1", null)), [{ ...wide, archived_at: "x" }])).toBe(false);
+    expect(hasSharedGroup({}, [wide])).toBe(false);
   });
 
   it("refreshes versions of reloaded rows and keeps identity when nothing changed", () => {
     const selection = togglePage({}, pageOne, true);
     expect(syncSelection(selection, pageOne)).toBe(selection);
-    const synced = syncSelection(selection, [row("a", 3, true)]);
-    expect(synced.a).toEqual({ version: 3, archived: true });
+    const synced = syncSelection(selection, [row("a", 3, true, true)]);
+    expect(synced.a).toEqual({ version: 3, archived: true, suspended: true, revision: 0, levelId: "preparatory-3", trackId: null });
     expect(synced.b).toEqual(selection.b);
   });
 });

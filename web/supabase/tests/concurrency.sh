@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Separate-session race tests for staff access, schedule/group/slot, student-record, import,
-# student-code, check-in, attendance-correction, quiz and exam locking, label assignment/deletion, scheduled content publication and concern messaging. Run only through `npm run test:db`, which validates the isolated target and
+# student-code, check-in, attendance-correction, quiz and exam locking, label assignment/deletion, student online-access suspension, scheduled content publication and concern messaging. Run only through `npm run test:db`, which validates the isolated target and
 # exports its connection. Races need real concurrent transactions, so fixtures are committed under a
 # run-specific academy, admin and ids. They are retained: preserved history (sessions, attendance,
 # code ledger) cannot be removed through normal flows. Fresh identities keep reruns collision-free.
@@ -1335,6 +1335,63 @@ expect_ok lb7a "the first bulk removal failed"
 expect_ok lb7b "the overlapping bulk removal failed"
 [ "$(student_label_uses "$LABEL_C")" = 0 ] || fail "overlapping removals left associations"
 grep -qi deadlock "$OUT"/lb4a "$OUT"/lb4b "$OUT"/lb5a "$OUT"/lb5b "$OUT"/lb6a "$OUT"/lb6b "$OUT"/lb7a "$OUT"/lb7b && fail "a student label race deadlocked"
+
+# SU1-SU5. Student online-access suspension. The command locks annual records (key share) then profiles
+#     (update), both in id order: the same order as enrollment links and archive/restore.
+SU_A="$(new_student 'Suspension race A' 01077770201 null)"
+SU_B="$(new_student 'Suspension race B' 01077770202 null)"
+[ -n "$SU_A" ] && [ -n "$SU_B" ] || fail "could not create suspension race students"
+suspend() { # $1 JSON targets, $2 true/false
+  echo "$as_admin select public.set_student_access_suspension('$ACADEMY','$1'::jsonb,$2,'race');"
+}
+su_target() { echo "{\"id\":\"$1\",\"revision\":$2}"; }
+su_state() { psqlx -tA -c "select (p.access_suspended_at is not null)::text || ':' || p.access_suspension_revision from public.academy_student_profiles p join public.annual_student_records r on r.academy_student_profile_id = p.id where r.id = '$1'"; }
+su_events() { psqlx -tA -c "select count(*) from public.student_access_suspension_events e join public.annual_student_records r on r.academy_student_profile_id = e.academy_student_profile_id where r.id = '$1'"; }
+# SU1. The same suspension twice at once (a retry race): one change, one unchanged, one event.
+hold su1a su1b "$(suspend "[$(su_target "$SU_A" 0)]" true)"
+start su1b "$(suspend "[$(su_target "$SU_A" 0)]" true)"
+wait
+expect_ok su1a "the first suspension failed"
+expect_ok su1b "the repeated suspension failed"
+grep -q '"changed": \[\]' "$OUT/su1b" || fail "the repeated suspension changed again: $(out su1b)"
+[ "$(su_state "$SU_A")" = "true:1" ] && [ "$(su_events "$SU_A")" = 1 ] || fail "a repeated suspension changed the revision or events"
+# SU2. A restore holds the profile; the delayed retry of the original suspension then sees a newer revision and is rejected.
+hold su2a su2b "$(suspend "[$(su_target "$SU_A" 1)]" false)"
+start su2b "$(suspend "[$(su_target "$SU_A" 0)]" true)"
+wait
+expect_ok su2a "the restore failed"
+expect_rejected su2b "a delayed retry reversed a newer restore" stale_suspension
+[ "$(su_state "$SU_A")" = "false:2" ] || fail "the stale retry changed the profile: $(su_state "$SU_A")"
+# SU3. Overlapping bulk selections in opposite orders and opposite actions: no deadlock; the second sees the first.
+hold su3a su3b "$(suspend "[$(su_target "$SU_A" 2),$(su_target "$SU_B" 0)]" true)"
+start su3b "$(suspend "[$(su_target "$SU_B" 0),$(su_target "$SU_A" 2)]" false)"
+wait
+expect_ok su3a "the first bulk suspension failed"
+expect_rejected su3b "an opposing bulk restore with old revisions crossed the suspension" stale_suspension
+[ "$(su_state "$SU_A")" = "true:3" ] && [ "$(su_state "$SU_B")" = "true:1" ] || fail "the rejected bulk restore changed a profile"
+# SU4. Archiving holds the record; a concurrent manual restore waits, then both causes are as written.
+hold su4a su4b "$as_admin select public.set_student_records_archived('$ACADEMY','$YEAR','[{\"id\":\"$SU_B\",\"version\":1}]',true);"
+start su4b "$(suspend "[$(su_target "$SU_B" 1)]" false)"
+wait
+expect_ok su4a "the archive failed"
+expect_ok su4b "the manual restore behind the archive failed"
+psqlx -tA -c "select (archived_at is not null)::text || ':' || version from public.annual_student_records where id = '$SU_B'" | grep -qx 'true:2' \
+  || fail "the manual restore changed the archived record"
+[ "$(su_state "$SU_B")" = "false:2" ] || fail "the manual restore was lost behind the archive"
+# SU5. An account link (record FOR SHARE, then the profile, as in enrollment) holds the profile; a suspension
+#     waits, then applies to the now connected profile without changing the link.
+SU_ACCOUNT="$(uuid)"
+psqlx >/dev/null -c "insert into auth.users (id) values ('$SU_ACCOUNT');"
+hold su5a su5b "select 1 from public.annual_student_records where id = '$SU_A' for share;
+  update public.academy_student_profiles p set user_id = '$SU_ACCOUNT', linked_at = now() from public.annual_student_records r where r.id = '$SU_A' and p.id = r.academy_student_profile_id;"
+start su5b "$(suspend "[$(su_target "$SU_A" 3)]" false)"
+wait
+expect_ok su5a "the account link failed"
+expect_ok su5b "the restore behind the account link failed"
+psqlx -tA -c "select p.user_id from public.academy_student_profiles p join public.annual_student_records r on r.academy_student_profile_id = p.id where r.id = '$SU_A'" | grep -qx "$SU_ACCOUNT" \
+  || fail "the suspension change lost the account link"
+[ "$(su_state "$SU_A")" = "false:4" ] || fail "the restore behind the link did not apply"
+grep -qi deadlock "$OUT"/su1a "$OUT"/su1b "$OUT"/su2a "$OUT"/su2b "$OUT"/su3a "$OUT"/su3b "$OUT"/su4a "$OUT"/su4b "$OUT"/su5a "$OUT"/su5b && fail "a suspension race deadlocked"
 
 # P1-P7. Scheduled publication. Every command and the worker meet on the content_units row: commands wait
 #     for it and the worker skips a locked one, so each pair has one order and no duplicate publication.

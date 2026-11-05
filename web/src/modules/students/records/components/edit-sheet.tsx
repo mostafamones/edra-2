@@ -135,7 +135,7 @@ function SheetBody({ academy, recordId, onSaved, onCancel, onStatusChange, onBus
         </FloatingSheetTitle>
         {record && (
           <p className="text-sm text-muted-foreground">
-            Online account: {ONLINE_ACCOUNT_LABELS[record.onlineAccount]}
+            Online account: {record.onlineAccount === "not_connected" && record.manuallySuspended ? "Not connected, access suspended" : ONLINE_ACCOUNT_LABELS[record.onlineAccount]}
           </p>
         )}
         {record && !archived && codesEnabled && (

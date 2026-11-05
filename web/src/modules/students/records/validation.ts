@@ -10,9 +10,9 @@ export const PARTICIPATION_LABELS: Record<ParticipationType, string> = {
   online_only: "Online only",
 };
 /** Mirrors list_student_records and edra_private.student_access_suspended: either cause suspends a linked account. */
-export function onlineAccountState(userId: string | null | undefined, archivedAt: string | null, accessSuspendedAt: string | null | undefined): OnlineAccount {
-  if (!userId) return "not_connected";
-  return archivedAt || accessSuspendedAt ? "suspended" : "connected";
+export function onlineAccountState(connected: boolean, archivedAt: string | null, manuallySuspended: boolean): OnlineAccount {
+  if (!connected) return "not_connected";
+  return archivedAt || manuallySuspended ? "suspended" : "connected";
 }
 
 export const isParticipationType = (value: unknown): value is ParticipationType =>
@@ -140,3 +140,12 @@ export function formatPhone(canonical: string) {
   const domestic = toDomesticPhone(canonical);
   return /^0\d{10}$/.test(domestic) ? `${domestic.slice(0, 4)} ${domestic.slice(4, 7)} ${domestic.slice(7)}` : canonical;
 }
+
+/** The most records one suspension change takes, and the longest staff-only reason; the database enforces both. */
+export const MAX_SUSPENSION_TARGETS = 500;
+export const MAX_SUSPENSION_REASON = 500;
+
+/** An optional reason: trimmed, blank becomes null. */
+export const suspensionReasonSchema = z.string().nullish()
+  .transform((value) => value?.trim() || null)
+  .refine((value) => value === null || value.length <= MAX_SUSPENSION_REASON, `Keep the reason under ${MAX_SUSPENSION_REASON} characters.`);

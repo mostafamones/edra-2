@@ -110,7 +110,7 @@ export function buildColumns(options: ColumnOptions): ColumnDef<StudentRecordRow
           {/* dir="auto" puts the dot after the name in its reading direction, including Arabic names. */}
           <div dir="auto" className="inline-flex min-w-0 items-center gap-1.5">
             <NameToggle recordName={row.original.fullName} accountName={row.original.accountName} />
-            <AccountDot state={row.original.onlineAccount} />
+            <AccountDot state={row.original.onlineAccount} manuallySuspended={row.original.manuallySuspended} />
           </div>
           {labelIds.length > 0 && (options.catalog
             ? <LabelOverflow labels={options.catalog.filter((label) => labelIds.includes(label.id))} className="min-w-20" />

@@ -20,6 +20,10 @@ export type StudentRecordRow = {
   version: number;
   /** Online account connection; `suspended` when connected but archived or independently suspended. */
   onlineAccount: OnlineAccount;
+  /** Manual (staff) suspension of the academy profile, across its annual records; independent of archival and connection. */
+  manuallySuspended: boolean;
+  /** The profile's suspension revision, separate from the record version; expected by suspension changes. */
+  suspensionRevision: number;
   /** The linked account's own name (display name, else full name); null when no account is linked. */
   accountName: string | null;
   /** The annual record's staff-only labels, resolved from the academy's students catalog for display. */
@@ -28,10 +32,38 @@ export type StudentRecordRow = {
 
 export type OnlineAccount = "not_connected" | "connected" | "suspended";
 
+/** The latest manual suspension change of a profile, for staff only. */
+export type SuspensionChange = {
+  action: "suspended" | "restored";
+  reason: string | null;
+  at: string;
+  /** Null once the acting account was deleted. */
+  actorName: string | null;
+};
+
 /** One record as loaded fresh for the edit sheet. */
 export type StudentRecord = Omit<StudentRecordRow, "levelName" | "trackName" | "groupName" | "accountName"> & {
   academyId: string;
   academicYearId: string;
+  /** Null when the profile has no recorded change, including suspensions that predate the audit. */
+  latestSuspensionChange: SuspensionChange | null;
+};
+
+/** One selected record with its profile's fresh suspension state, for confirmation. */
+export type SuspensionPreviewRow = {
+  recordId: string;
+  profileId: string;
+  fullName: string;
+  archived: boolean;
+  yearClosed: boolean;
+  connected: boolean;
+  suspended: boolean;
+  revision: number;
+};
+
+export type SuspensionOutcome = {
+  changed: { recordId: string; profileId: string; revision: number }[];
+  unchanged: { recordId: string; profileId: string; revision: number }[];
 };
 
 export type StudentListResult = {
@@ -63,7 +95,9 @@ export type StudentRecordErrorCode =
   | "stale_revision"
   | "stage_conflict"
   | "incomplete_staging"
-  | "outcome_changed";
+  | "outcome_changed"
+  // Online-access suspension.
+  | "stale_suspension";
 
 export type StudentRecordField =
   | "fullName" | "studentPhone" | "parentPhone" | "levelId" | "trackId" | "primaryGroupId" | "participationType";
