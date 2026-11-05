@@ -1,6 +1,6 @@
 import { classifyHost, describeRoute } from './index'
 
-const infrastructure = /^(?:\/api|\/_serverFn|\/_build)(?:\/|$)|^\/(?:favicon\.ico|robots\.txt|sitemap\.xml|(?:next|vercel|file|globe|window)\.svg)$/
+const infrastructure = /^(?:\/api|\/_serverFn|\/_build)(?:\/|$)|^\/(?:favicon\.ico|robots\.txt|sitemap\.xml|notifications-sw\.js|(?:next|vercel|file|globe|window)\.svg)$/
 function platform(url: URL) {
   if (typeof window !== 'undefined' && url.origin !== window.location.origin) return null
   try {

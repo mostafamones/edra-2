@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Separate-session race tests for staff access, schedule/group/slot, student-record, import,
-# student-code, check-in, attendance-correction, quiz and exam locking, label assignment/deletion, student online-access suspension, scheduled content publication and concern messaging. Run only through `npm run test:db`, which validates the isolated target and
+# student-code, check-in, attendance-correction, quiz and exam locking, label assignment/deletion, student online-access suspension, scheduled content publication, concern messaging and concern notifications. Run only through `npm run test:db`, which validates the isolated target and
 # exports its connection. Races need real concurrent transactions, so fixtures are committed under a
 # run-specific academy, admin and ids. They are retained: preserved history (sessions, attendance,
 # code ledger) cannot be removed through normal flows. Fresh identities keep reruns collision-free.
@@ -1630,6 +1630,30 @@ expect_ok cn16a "the settlement holding the concern failed"
 expect_rejected cn16b "an upload was accepted into a concern settled concurrently" concern_settled
 psqlx -tA -c "select state from public.concern_attachments where id = '$MC_A5'" | grep -qx pending || fail "settlement race accepted an upload"
 grep -qi deadlock "$OUT"/cn1[3456]* && fail "a concern media race deadlocked"
+
+# CN17-CN18. Concern notifications: dispatch claims skip leased rows, and recipients are resolved
+#            under the concern lock, so a concurrent removal is honoured. Synthetic endpoint; nothing is sent.
+NC="$(uuid)"; NC_M1="$(uuid)"; NC_M2="$(uuid)"; NC_M3="$(uuid)"
+psqlx >/dev/null -c "begin; $as_inst select public.register_push_subscription('https://fcm.googleapis.com/fcm/send/race-$RUN',
+  'BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4','BTBZMqHH6r4Tts7J_aSIgg'); commit;"
+psqlx >/dev/null -c "begin; $as_admin select public.create_concern('$ACADEMY','$NC','$NC_M1','Notify race','Opening',array['$CL_INST']::uuid[]);
+  select public.send_concern_message('$ACADEMY','$NC','$NC_M2','Second'); commit;"
+claim_nd="set local role service_role; select jsonb_array_length(public.claim_notification_deliveries(50));"
+nc_deliveries() { psqlx -tA -c "select count(*) || ':' || sum(attempts) || ':' || count(*) filter (where lease_until is not null)
+  from public.notification_deliveries d join public.notifications n on n.id = d.notification_id where n.concern_id = '$NC'"; }
+# CN17. Two dispatch workers at once: each delivery (added + message) is leased exactly once.
+hold cn17a cn17b "$claim_nd"
+start cn17b "$claim_nd"
+wait
+expect_ok cn17a "the dispatch worker holding the leases failed"; expect_ok cn17b "the concurrent dispatch worker failed"
+[ "$(nc_deliveries)" = "2:2:2" ] || fail "concurrent dispatch claimed a delivery twice: $(nc_deliveries)"
+# CN18. A removal holds the concern; the queued send then notifies nobody removed.
+hold cn18a cn18b "$as_admin select public.remove_concern_participant('$ACADEMY','$NC','$CL_INST','$(uuid)');"
+start cn18b "$as_admin select public.send_concern_message('$ACADEMY','$NC','$NC_M3','After removal');"
+wait
+expect_ok cn18a "the removal holding the concern failed"; expect_ok cn18b "the send behind a removal failed"
+psqlx -tA -c "select count(*) from public.notifications where message_id = '$NC_M3'" | grep -qx 0 || fail "a participant removed concurrently was notified"
+grep -qi deadlock "$OUT"/cn1[78]* && fail "a concern notification race deadlocked"
 
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and

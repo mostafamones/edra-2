@@ -120,6 +120,8 @@ export const removeParticipantInput = target.extend({ ...request, userId: z.guid
 export const settleInput = target.extend({ ...request, outcome: concernNoteSchema, expectedVersion: z.number().int().min(1) });
 export const reopenInput = target.extend({ ...request, reason: concernNoteSchema, expectedVersion: z.number().int().min(1) });
 export const recoverInput = target.extend(request);
+/** The caller's own notification preference; allowed when settled. */
+export const muteInput = target.extend({ muted: z.boolean() });
 /** Names are stored as given for display and download; path separators and control characters are refused. */
 export const attachmentNameSchema = z.string().trim().min(1).max(255).regex(/^[^/\\\p{Cc}]+$/u);
 export const reserveAttachmentInput = target.extend({

@@ -6,6 +6,7 @@ import { SuspendedAccess } from "@/modules/auth/components/suspended-access";
 import { PortalHeader } from "@/modules/navigation/components/header";
 import { StaffSidebar } from "@/modules/navigation/components/staff-sidebar";
 import { ConcernPanelProvider } from "@/modules/concerns";
+import { NotificationCenter } from "@/modules/notifications";
 import { loadStaffAcademy } from "@/routes/-functions/staff";
 
 function AcademyLayout() {
@@ -26,6 +27,7 @@ function AcademyLayout() {
           </SidebarInset>
         </BreadcrumbTitleProvider>
       </SidebarProvider>
+      <NotificationCenter />
       </ConcernPanelProvider>
     </ScopedAcademyProvider>
   );

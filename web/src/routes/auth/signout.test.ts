@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.hoisted(() => vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co"));
-const state = vi.hoisted(() => ({ claims: null as { sub: string } | null, signOut: vi.fn(), endPreview: vi.fn(async () => true) }));
+const state = vi.hoisted(() => ({ claims: null as { sub: string } | null, signOut: vi.fn(), rpc: vi.fn(), endPreview: vi.fn(async () => true) }));
 vi.mock("@/lib/server/request", () => ({
   cookies: async () => ({ getAll: () => [{ name: "edra-auth-v1.0", value: "old" }] }),
   headers: async () => new Headers({ "x-edra-platform": "student" }),
 }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: {
   getClaims: async () => ({ data: { claims: state.claims } }), signOut: state.signOut,
-} }) }));
+}, rpc: state.rpc }) }));
 vi.mock("@/modules/staff/server", () => ({ PENDING_STAFF_INVITE_COOKIE: "edra_pending_staff_invite", pendingStaffInviteCookie: { path: "/", httpOnly: true, sameSite: "lax" } }));
 vi.mock("@/modules/development/server", () => ({
   endPreviewForSignOut: state.endPreview,
@@ -15,7 +15,7 @@ vi.mock("@/modules/development/server", () => ({
   clearedFailureCookie: () => ({ name: "edra-dev-failure", value: "", path: "/", maxAge: 0 }),
 }));
 import { POST } from "@/lib/api/adapters/auth/signout/handler.server";
-beforeEach(() => { state.claims = null; state.signOut.mockReset(); state.endPreview.mockClear(); vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co"); });
+beforeEach(() => { state.claims = null; state.signOut.mockReset(); state.rpc.mockReset(); state.endPreview.mockClear(); vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co"); });
 afterEach(() => vi.unstubAllEnvs());
 describe("platform sign-out", () => {
   it("expires both cookie scopes and chunks even without a valid token", async () => {
@@ -29,6 +29,15 @@ describe("platform sign-out", () => {
   });
   it("preserves global revocation for an authenticated sign-out", async () => {
     state.claims = { sub: "user" };
+    await POST(new Request("http://learn.lvh.me:3000/auth/signout"));
+    expect(state.signOut).toHaveBeenCalledWith({ scope: "global" });
+    // Browser push for the account ends with the sessions, first.
+    expect(state.rpc).toHaveBeenCalledWith("forget_push_subscriptions");
+    expect(state.rpc.mock.invocationCallOrder[0]).toBeLessThan(state.signOut.mock.invocationCallOrder[0]);
+  });
+  it("still signs out when push cleanup fails", async () => {
+    state.claims = { sub: "user" };
+    state.rpc.mockRejectedValue(new Error("down"));
     await POST(new Request("http://learn.lvh.me:3000/auth/signout"));
     expect(state.signOut).toHaveBeenCalledWith({ scope: "global" });
   });

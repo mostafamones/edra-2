@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const rpc = vi.fn();
 vi.mock("@tanstack/react-start/server-only", () => ({}));
 vi.mock("@/lib/supabase/authority", () => ({ cookieAuthority: vi.fn(async () => ({ userId: "u", db: { rpc } })) }));
+const afterResponse = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/server/after-response", () => ({ afterResponse }));
 
 const { sendConcernMessage, editConcernMessage, markConcernRead, createConcern, settleConcern, reopenConcern, recoverConcern, addConcernParticipants } = await import("./actions.server");
 
@@ -15,7 +17,19 @@ const stored = {
 };
 
 describe("concern commands", () => {
-  beforeEach(() => rpc.mockReset());
+  beforeEach(() => { rpc.mockReset(); afterResponse.mockReset(); });
+
+  it("schedules push dispatch only after a successful notifying command", async () => {
+    rpc.mockResolvedValue({ data: stored, error: null });
+    await sendConcernMessage({ academyId, concernId, messageId, body: "Hi", replyToId: null, mentions: [] });
+    expect(afterResponse).toHaveBeenCalledTimes(1);
+    rpc.mockResolvedValue({ data: { lastReadSeq: 1, readAt: null }, error: null });
+    await markConcernRead({ academyId, concernId, seq: 1 });
+    expect(afterResponse).toHaveBeenCalledTimes(1);
+    rpc.mockResolvedValue({ data: null, error: { code: "42501" } });
+    expect(await sendConcernMessage({ academyId, concernId, messageId, body: "Hi", replyToId: null, mentions: [] })).toMatchObject({ code: "forbidden" });
+    expect(afterResponse).toHaveBeenCalledTimes(1);
+  });
 
   it("validates at the trust boundary before calling the database", async () => {
     expect(await sendConcernMessage({ academyId, concernId, messageId, body: "   ", replyToId: null, mentions: [] }))

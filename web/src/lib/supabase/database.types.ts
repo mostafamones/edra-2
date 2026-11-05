@@ -10410,6 +10410,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      // Provisional (EDRA-296, migration 20261105062945): replace with the next CI database-types artifact.
+      notification_inbox: { Args: { p_academy_id: string; p_before?: string; p_before_id?: string; p_limit?: number }; Returns: Json }
+      notification_unread: { Args: { p_academy_id: string }; Returns: Json }
+      mark_notifications_read: { Args: { p_academy_id: string; p_ids?: string[] }; Returns: Json }
+      set_concern_muted: { Args: { p_academy_id: string; p_concern_id: string; p_muted: boolean }; Returns: Json }
+      set_concern_focus: { Args: { p_academy_id: string; p_concern_id: string; p_client_id: string }; Returns: undefined }
+      register_push_subscription: { Args: { p_auth: string; p_endpoint: string; p_p256dh: string }; Returns: Json }
+      push_subscription_state: { Args: { p_auth: string; p_endpoint: string }; Returns: Json }
+      release_push_subscription: { Args: { p_auth: string; p_endpoint: string }; Returns: undefined }
+      forget_push_subscriptions: { Args: never; Returns: undefined }
+      claim_notification_deliveries: { Args: { p_limit?: number }; Returns: Json }
+      complete_notification_delivery: { Args: { p_delivery_id: string; p_outcome: string; p_retry_after?: number; p_status?: number }; Returns: undefined }
     }
     Enums: {
       academy_role: "owner" | "head_admin" | "admin" | "instructor"
