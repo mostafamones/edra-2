@@ -1,11 +1,9 @@
 import { useMemo } from "react";
 
-import { HeaderActions } from "@/components/shared/header-actions";
 import { browserScopeGeneration } from "@/lib/browser-scope";
 import { useAuth } from "@/modules/auth";
 import { usePushSubscription } from "../push";
 import { NotificationActivation } from "./activation";
-import { NotificationPopover } from "./popover";
 
 /**
  * Mount inside `ConcernPanelProvider` in the academy layout. Keyed by academy, account and browser
@@ -19,11 +17,7 @@ export function NotificationCenter() {
 
 function ScopedNotifications({ academyId, slug, userId }: { academyId: string; slug: string; userId: string }) {
   const scope = useMemo(() => ({ academyId, userId }), [academyId, userId]);
-  // Runs on every load, not only when the popover opens: another account's subscription on this
-  // browser is released (and its previews closed) as soon as this account is in use.
-  const push = usePushSubscription(userId);
-  return <>
-    <HeaderActions><NotificationPopover scope={scope} push={push} /></HeaderActions>
-    <NotificationActivation scope={scope} slug={slug} />
-  </>;
+  // Another account's subscription on this browser is released (and its previews closed) as soon as this account is in use.
+  usePushSubscription(userId);
+  return <NotificationActivation scope={scope} slug={slug} />;
 }

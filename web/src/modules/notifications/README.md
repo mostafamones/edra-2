@@ -54,8 +54,9 @@ is sent; in-app notifications are unaffected.
 ## Browser
 
 - `NotificationCenter` (public, mounted inside `ConcernPanelProvider` in the academy layout, keyed by
-  academy/account/browser scope) renders the header bell into `HeaderActions` and the activation
-  handler. Query keys live under `concernKeys.scope(scope)` + `notifications`, so concern live activity
+  academy/account/browser scope) renders only the activation handler and keeps the push-subscription
+  ownership check running. The header bell popover and its push switch were removed at the owner's request
+  (2026-11-05); `queries.ts`/`push.ts` remain for the next surface. Query keys live under `concernKeys.scope(scope)` + `notifications`, so concern live activity
   refreshes them and `forgetConcernScope` removes them on academy/account/preview switches.
 - Popover (shadcn Popover/Tooltip/Badge/Empty/Switch): server unread total on the bell (also a 2 min
   fallback refresh), list loaded only while open (20 per page, Load more), loading/empty/error
