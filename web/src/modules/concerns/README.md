@@ -52,7 +52,7 @@ participants and expired on the viewer's clock. Channels rejoin every 20 minutes
 authorization, and a degraded channel falls back to polling the change feed.
 
 Attachments and voice notes (EDRA-294) fill the message `attachments` array; see "Media" below.
-Notification delivery (EDRA-296) remains separate integration work. Generated database types and
+Notification delivery (EDRA-296) lives in `src/modules/notifications` (see its README). Generated database types and
 database assertions are verified against the disposable CI database, not a shared
 cloud reset or local developer stack.
 
@@ -153,8 +153,8 @@ recovery, settlements and reopenings with their notes. Every participant can cop
 The Owner gets a Recover concern view (ID or any link containing it) and, when an opened concern is
 denied, a prefilled recovery form; recovery then reopens through the access-rechecking activation.
 
-Still required before EDRA-295 completion: mute and browser push controls plus actual in-app/browser
-notification routing/delivery. Media controls are described under "Media" below. Typing remains labelled generically. Database types for the messaging and EDRA-292 schema now come from the disposable CI `database-types` artifact (run 41973557672); see "Types" under Media for the remaining provisional entries.
+Mute and browser push controls plus in-app/browser notification routing/delivery are implemented by
+EDRA-296 (conversation header mute; header notification popover with the push switch). Media controls are described under "Media" below. Typing remains labelled generically. Database types for the messaging and EDRA-292 schema now come from the disposable CI `database-types` artifact (run 41973557672); see "Types" under Media for the remaining provisional entries.
 
 Acceptance contract/task notes are recorded on EDRA-295. Vitest exercises actual panel consumers
 with one real QueryClient and mocked domain transport, including navigation/close persistence,
@@ -284,3 +284,16 @@ CN12–CN16 passed in disposable CI run 41979631658, along with all six required
 recordings and playback per browser engine (including Safari 18.4+ WebM), Storage Range and
 existing-object signing behaviour against the hosted project, the deployed Cron Trigger, visual
 review (both themes, 360/1440 px) and the multi-user journey.
+
+## Notifications (EDRA-296)
+
+`set_concern_muted(academy, concern, muted)` (`useConcernLifecycle().mute`, conversation header
+Mute/Unmute) is the caller's own preference, allowed when settled; detail `muted` reflects it. Muted
+participants get no ordinary message alerts (in-app or push); mentions, being added, settlement and
+reopening still notify, and unread counts are unchanged. `set_concern_focus(academy, concern|null,
+tab)` is sent every 20 s by `components/use-focus-signal.ts` while the conversation is open in the
+panel, the document is visible and the window focused, and cleared at once when any of those stop.
+Commands that can notify (`createConcern`, `sendConcernMessage`, add participants, settle, reopen)
+pass `notify` to `runConcernCommand`, which schedules push dispatch after the response with the
+Worker's `waitUntil`; the per-minute Cron Trigger retries. Recipients, previews and authority are in
+the database; see the notifications module README.

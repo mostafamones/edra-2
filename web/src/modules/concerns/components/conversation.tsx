@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Notification01Icon, NotificationOff01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { resolveProfileAvatars } from "@/modules/account/browser";
@@ -16,6 +16,7 @@ import { ConcernLifecycleForm } from "./lifecycle";
 import { ConcernPeople } from "./people";
 import { useConcernFence } from "./use-fence";
 import { useViewedConcernMessages } from "./use-viewed";
+import { useConcernFocusSignal } from "./use-focus-signal";
 
 export type ConcernJump = { messageId: string; seq?: number | null };
 export function ConcernConversation({ scope, concernId, active, target, onDenied }: {
@@ -38,7 +39,10 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
   const [section, setSection] = useState<"messages" | "people" | "history">("messages");
   const [deciding, setDeciding] = useState<"settle" | "reopen" | null>(null);
   const [copied, setCopied] = useState<boolean | null>(null);
+  const [muting, setMuting] = useState(false);
+  const [muteError, setMuteError] = useState(false);
   const reading = section === "messages";
+  useConcernFocusSignal(scope, concernId, active && !!detail.data && !detail.isError);
   const live = useConcernLive({ scope, concernId: active && !!detail.data && !detail.isError ? concernId : null, typing: active && reading && !jumping && typing && detail.data?.status === "ongoing" });
   const scroll = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
@@ -110,6 +114,11 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
   const reply = messages.find((message) => message.id === replyId) ?? null;
   // A form opened for one state closes itself once someone else changes it.
   const decision = deciding === (settled ? "reopen" : "settle") && detail.data.canManage && !detail.isError ? deciding : null;
+  const toggleMute = () => {
+    const muted = !detail.data?.muted;
+    setMuting(true); setMuteError(false);
+    void lifecycle.mute(muted).then((result) => { if (!isCurrent()) return; setMuting(false); setMuteError(!result.ok); });
+  };
   const copy = () => { void navigator.clipboard.writeText(concernId).then(() => { if (isCurrent()) setCopied(true); }, () => { if (isCurrent()) setCopied(false); }); };
   return <div className="flex min-h-0 flex-1 flex-col">
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2 text-xs text-muted-foreground">
@@ -119,6 +128,9 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
       <span className="ms-auto flex items-center gap-1">
         <ConcernIconButton label={copied ? "Concern ID copied" : "Copy concern ID"} icon={Copy01Icon} onClick={copy} />
         {copied === false && <span role="alert">Could not copy</span>}
+        {muteError && <span role="alert">Could not change notifications</span>}
+        <ConcernIconButton label={detail.data.muted ? "Unmute concern" : "Mute concern"} icon={detail.data.muted ? NotificationOff01Icon : Notification01Icon}
+          disabled={muting || detail.isError} onClick={toggleMute} />
         {detail.data.canManage && !detail.isError && !decision && <Button size="sm" variant="outline" onClick={() => { setDeciding(settled ? "reopen" : "settle"); setSection("messages"); }}>{settled ? "Reopen" : "Settle"}</Button>}
       </span>
     </div>

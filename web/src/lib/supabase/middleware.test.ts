@@ -16,6 +16,11 @@ describe('session refresh', () => {
     const res = await updateSession(new Request('http://app.lvh.me:3000/assets/students'), describeRoute('staff', '/assets/students'))
     expect(res.redirect?.headers.get('location')).toBe('http://app.lvh.me:3000/auth/login?next=%2Fassets%2Fstudents')
   })
+  it('never redirects the push service worker script to sign-in', async () => {
+    const res = await updateSession(new Request('http://app.lvh.me:3000/notifications-sw.js'), describeRoute('staff', '/notifications-sw.js'))
+    expect(res.redirect).toBeUndefined()
+    expect((await updateSession(new Request('http://app.lvh.me:3000/notifications-sw.jsx'), describeRoute('staff', '/notifications-sw.jsx'))).redirect?.status).toBe(307)
+  })
   it('does not redirect mutations', async () => { const res = await updateSession(new Request('http://app.lvh.me:3000/magd/students', { method: 'POST' }), describeRoute('staff', '/magd/students')); expect(res.redirect).toBeUndefined() })
   it('treats a recovery session as signed out', async () => { state.getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1', amr: [{ method: 'otp', timestamp: 1 }] } } }); expect((await updateSession(new Request('https://edra.test/app'))).redirect?.status).toBe(307); expect((await updateSession(new Request('https://edra.test/auth/login'))).redirect).toBeUndefined() })
   it('redirects authenticated users away from login using safe next', async () => { state.getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1', amr: [{ method: 'password', timestamp: 1 }] } } }); expect((await updateSession(new Request('https://edra.test/auth/login'))).redirect?.headers.get('location')).toBe('https://edra.test/') })

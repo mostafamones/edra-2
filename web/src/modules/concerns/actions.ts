@@ -13,6 +13,7 @@ import {
   settleConcern as settleConcernServer,
   reopenConcern as reopenConcernServer,
   recoverConcern as recoverConcernServer,
+  setConcernMuted as setConcernMutedServer,
 } from "./actions.server";
 
 const createConcernFn = createServerFn({ method: "POST", strict: false })
@@ -101,4 +102,12 @@ const recoverConcernFn = createServerFn({ method: "POST", strict: false })
 
 export async function recoverConcern(...args: Parameters<typeof recoverConcernServer>): Promise<Awaited<ReturnType<typeof recoverConcernServer>>> {
   return recoverConcernFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof recoverConcernServer>>>;
+}
+
+const setConcernMutedFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ args: z.tuple([z.unknown()]) }))
+  .handler(({ data }) => setConcernMutedServer(...(data.args as Parameters<typeof setConcernMutedServer>)));
+
+export async function setConcernMuted(...args: Parameters<typeof setConcernMutedServer>): Promise<Awaited<ReturnType<typeof setConcernMutedServer>>> {
+  return setConcernMutedFn({ data: { args } }) as Promise<Awaited<ReturnType<typeof setConcernMutedServer>>>;
 }

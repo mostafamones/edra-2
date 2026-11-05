@@ -13,14 +13,14 @@ const state = vi.hoisted(() => ({
   academyId: "academy-a", userId: "user-a", role: "admin", mobile: false,
   rpc: vi.fn(), members: vi.fn(), avatars: vi.fn(), live: vi.fn(), inboxLive: vi.fn(),
   createConcern: vi.fn(), sendConcernMessage: vi.fn(), editConcernMessage: vi.fn(), deleteConcernMessage: vi.fn(), setConcernReaction: vi.fn(), markConcernRead: vi.fn(),
-  addConcernParticipants: vi.fn(), removeConcernParticipant: vi.fn(), settleConcern: vi.fn(), reopenConcern: vi.fn(), recoverConcern: vi.fn(),
+  addConcernParticipants: vi.fn(), removeConcernParticipant: vi.fn(), settleConcern: vi.fn(), reopenConcern: vi.fn(), recoverConcern: vi.fn(), setConcernMuted: vi.fn(),
 }));
 vi.mock("@/modules/auth", () => ({ useAuth: () => ({ user: { id: state.userId }, activeAcademy: { id: state.academyId, role: state.role } }) }));
 vi.mock("@/modules/account/browser", () => ({ accountName: (profile: { full_name: string }) => profile.full_name, resolveProfileAvatars: state.avatars }));
 vi.mock("@/modules/staff", () => ({ fetchTeamMembers: state.members, staffQueryKeys: { members: (user: string, academy: string) => ["staff", user, academy, "members"] } }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ rpc: state.rpc }) }));
 vi.mock("../actions", () => ({ createConcern: state.createConcern, sendConcernMessage: state.sendConcernMessage, editConcernMessage: state.editConcernMessage, deleteConcernMessage: state.deleteConcernMessage, setConcernReaction: state.setConcernReaction, markConcernRead: state.markConcernRead,
-  addConcernParticipants: state.addConcernParticipants, removeConcernParticipant: state.removeConcernParticipant, settleConcern: state.settleConcern, reopenConcern: state.reopenConcern, recoverConcern: state.recoverConcern }));
+  addConcernParticipants: state.addConcernParticipants, removeConcernParticipant: state.removeConcernParticipant, settleConcern: state.settleConcern, reopenConcern: state.reopenConcern, recoverConcern: state.recoverConcern, setConcernMuted: state.setConcernMuted }));
 vi.mock("../live", () => ({ useConcernLive: (args: unknown) => { state.live(args); return { status: "live", typers: ["untrusted"], reconnect: vi.fn() }; }, useConcernInboxLive: (scope: unknown) => { state.inboxLive(scope); return { status: "live" }; } }));
 
 const stamp = new Date().toISOString();
@@ -73,6 +73,7 @@ beforeEach(() => {
       { id: "h3", kind: "reopened", occurredAt: stamp, actorId: "user-a", actorName: "Mona", subjectId: null, subjectName: null, note: "New evidence" },
     ], error: null };
     if (name === "concern_message_changes") return { data: { messages: [], cursor: 2, hasMore: false }, error: null };
+    if (name === "set_concern_focus") return { data: null, error: null };
     throw new Error(`Unexpected RPC ${name}`);
   });
   vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: state.mobile, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
@@ -489,6 +490,32 @@ describe("floating concern panel consumers", () => {
     await screen.findByText("You no longer have access to this concern.");
     expect(screen.queryByText("Message 1")).toBeNull();
     expect(mounted.client.getQueryData(concernKeys.thread({ academyId: "academy-a", userId: "user-a" }, "concern-1"))).toBeUndefined();
+  });
+
+  it("mutes only this participant's ordinary alerts, keeps failures visible, and signals focus only while the open chat is visible and focused", async () => {
+    mount();
+    await openChat();
+    const focus = () => state.rpc.mock.calls.filter(([name]) => name === "set_concern_focus").map(([, input]) => input.p_concern_id);
+    await waitFor(() => expect(focus()).toEqual(["concern-1"]));
+    const tab = state.rpc.mock.calls.find(([name]) => name === "set_concern_focus")![1].p_client_id;
+    expect(tab).toMatch(/^[0-9a-f-]{36}$/);
+    state.setConcernMuted.mockResolvedValueOnce({ ok: false, code: "validation", message: "x" });
+    fireEvent.click(screen.getByRole("button", { name: "Mute concern" }));
+    expect(await screen.findByText("Could not change notifications")).toBeTruthy();
+    state.setConcernMuted.mockImplementation(async ({ muted }) => { currentDetail = detail({ muted }); return { ok: true, muted }; });
+    fireEvent.click(screen.getByRole("button", { name: "Mute concern" }));
+    await screen.findByRole("button", { name: "Unmute concern" });
+    expect(state.setConcernMuted).toHaveBeenLastCalledWith({ academyId: "academy-a", concernId: "concern-1", muted: true });
+    expect(screen.queryByText("Could not change notifications")).toBeNull();
+    vi.mocked(document.hasFocus).mockReturnValue(false);
+    act(() => { window.dispatchEvent(new Event("blur")); });
+    await waitFor(() => expect(focus().at(-1)).toBeNull());
+    vi.mocked(document.hasFocus).mockReturnValue(true);
+    act(() => { window.dispatchEvent(new Event("focus")); });
+    await waitFor(() => expect(focus().at(-1)).toBe("concern-1"));
+    fireEvent.click(screen.getByRole("button", { name: "Close concerns" }));
+    await waitFor(() => expect(focus().at(-1)).toBeNull());
+    expect(state.rpc.mock.calls.filter(([name]) => name === "set_concern_focus").every(([, input]) => input.p_client_id === tab && input.p_academy_id === "academy-a")).toBe(true);
   });
 
   it("shows preserved lifecycle history with outcomes and reasons", async () => {

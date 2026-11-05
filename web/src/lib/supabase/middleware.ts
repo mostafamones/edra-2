@@ -23,7 +23,8 @@ export async function updateSession(request: Request, descriptor?: RouteDescript
   const user = data?.claims && !isPhoneCodeSession(data.claims) ? data.claims : null
   const url = new URL(request.url); const pathname = url.pathname
   const platform = descriptor?.platform === 'student' ? 'student' : 'staff'
-  const commonPublic = /^(?:\/auth|\/invite|\/api|\/_serverFn|\/_build)(?:\/|$)/.test(pathname)
+  // The push service worker script must never redirect to sign-in (a redirected script fails registration/update).
+  const commonPublic = /^(?:\/auth|\/invite|\/api|\/_serverFn|\/_build)(?:\/|$)|^\/notifications-sw\.js$/.test(pathname)
   const protectedRoute = (!commonPublic && descriptor && descriptor.platform !== 'marketing') || /^(?:\/app|\/learn|\/onboarding)(?:\/|$)/.test(pathname)
   responseHeaders.set('cache-control', 'private, no-store')
   for (const name of jar.keys()) if (isLegacyAuthCookie(name)) {

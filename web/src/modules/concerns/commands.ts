@@ -3,7 +3,7 @@ import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
-  addConcernParticipants, recoverConcern, removeConcernParticipant, reopenConcern, settleConcern,
+  addConcernParticipants, recoverConcern, removeConcernParticipant, reopenConcern, setConcernMuted, settleConcern,
   createConcern, deleteConcernMessage, editConcernMessage, markConcernRead, sendConcernMessage, setConcernReaction,
 } from "./actions";
 import { discardConcernUpload, finishConcernUpload, startConcernUpload } from "./media-actions";
@@ -165,6 +165,8 @@ export function useConcernLifecycle(scope: ConcernScope, concernId: string, onDe
       run((target) => settleConcern({ academyId: target.academyId, concernId, outcome, expectedVersion, requestId })),
     reopen: (reason: string, expectedVersion: number, requestId: string) =>
       run((target) => reopenConcern({ academyId: target.academyId, concernId, reason, expectedVersion, requestId })),
+    /** Idempotent: a retry sets the same value. */
+    mute: (muted: boolean) => run((target) => setConcernMuted({ academyId: target.academyId, concernId, muted })),
   };
 }
 
