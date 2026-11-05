@@ -1,3 +1,4 @@
+import { browserScopeGeneration } from "@/lib/browser-scope";
 import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -15,17 +16,20 @@ type Body = { body: string; mentions: string[] };
  * an academy switch or removal only updates that scope's cache entries, and only if they still exist.
  * Messages update the cached window in place (higher revision wins); nothing is granted optimistically.
  */
-export function useConcernCommands(scope: ConcernScope, concernId: string) {
+export function useConcernCommands(scope: ConcernScope, concernId: string, onDenied?: () => void) {
   const queryClient = useQueryClient();
+  const cacheIdentity = () => queryClient.getQueryCache().find({ queryKey: concernKeys.detail(scope, concernId), exact: true });
   const readScope = `${scope.academyId}:${scope.userId}:${concernId}`;
   const lastRead = useRef({ scope: readScope, seq: 0 });
 
-  async function settle<T extends { ok: boolean; code?: string; message?: unknown }>(target: ConcernScope, result: T) {
+  async function settle<T extends { ok: boolean; code?: string; message?: unknown }>(target: ConcernScope, result: T, generation: number, original: ReturnType<typeof cacheIdentity>) {
+    if (generation !== browserScopeGeneration() || original !== cacheIdentity()) return result;
     if (result.ok) {
       const message = (result as unknown as { message: ConcernThread["messages"][number] }).message;
       queryClient.setQueryData<ConcernThread>(concernKeys.thread(target, concernId), (current) => current && mergeMessages(current, [message]));
       void invalidateConcernLists(queryClient, target);
     } else if (result.code === "forbidden") {
+      onDenied?.();
       await forgetConcern(queryClient, target, concernId);
     } else if (result.code === "concern_settled") {
       void queryClient.invalidateQueries({ queryKey: concernKeys.detail(target, concernId) });
@@ -37,24 +41,34 @@ export function useConcernCommands(scope: ConcernScope, concernId: string) {
     /** Generate `messageId` once per message (crypto.randomUUID) and reuse it for manual retries. */
     send: async (input: Body & { messageId: string; replyToId: string | null }) => {
       const target = { ...scope };
+      const generation = browserScopeGeneration();
+      const original = cacheIdentity();
       const payload: SendMessageInput = { academyId: target.academyId, concernId, ...input };
-      return settle(target, await withRetry(() => sendConcernMessage(payload)));
+      return settle(target, await withRetry(() => sendConcernMessage(payload)), generation, original);
     },
     edit: async (messageId: string, input: Body) => {
       const target = { ...scope };
-      return settle(target, await withRetry(() => editConcernMessage({ academyId: target.academyId, concernId, messageId, ...input })));
+      const generation = browserScopeGeneration();
+      const original = cacheIdentity();
+      return settle(target, await withRetry(() => editConcernMessage({ academyId: target.academyId, concernId, messageId, ...input })), generation, original);
     },
     remove: async (messageId: string) => {
       const target = { ...scope };
-      return settle(target, await withRetry(() => deleteConcernMessage({ academyId: target.academyId, concernId, messageId })));
+      const generation = browserScopeGeneration();
+      const original = cacheIdentity();
+      return settle(target, await withRetry(() => deleteConcernMessage({ academyId: target.academyId, concernId, messageId })), generation, original);
     },
     react: async (messageId: string, emoji: string, on: boolean) => {
       const target = { ...scope };
-      return settle(target, await withRetry(() => setConcernReaction({ academyId: target.academyId, concernId, messageId, emoji, on })));
+      const generation = browserScopeGeneration();
+      const original = cacheIdentity();
+      return settle(target, await withRetry(() => setConcernReaction({ academyId: target.academyId, concernId, messageId, emoji, on })), generation, original);
     },
     /** Call with the latest message seq actually shown; repeated or lower values send nothing. */
     markRead: async (seq: number) => {
       const target = { ...scope };
+      const generation = browserScopeGeneration();
+      const original = cacheIdentity();
       if (lastRead.current.scope !== readScope) lastRead.current = { scope: readScope, seq: 0 };
       const own = queryClient.getQueryData<ConcernDetail>(concernKeys.detail(target, concernId))
         ?.participants.find((participant) => participant.userId === target.userId)?.lastReadSeq ?? 0;
@@ -62,6 +76,7 @@ export function useConcernCommands(scope: ConcernScope, concernId: string) {
       const progress = lastRead.current;
       progress.seq = seq;
       const result = await withRetry(() => markConcernRead({ academyId: target.academyId, concernId, seq }));
+      if (generation !== browserScopeGeneration() || original !== cacheIdentity()) return result;
       if (result.ok) {
         queryClient.setQueryData<ConcernDetail>(concernKeys.detail(target, concernId), (current) => current && {
           ...current,
@@ -72,7 +87,7 @@ export function useConcernCommands(scope: ConcernScope, concernId: string) {
       } else {
         // Allow a later attempt to try again.
         progress.seq = Math.min(progress.seq, own);
-        if (result.code === "forbidden") await forgetConcern(queryClient, target, concernId);
+        if (result.code === "forbidden") { onDenied?.(); await forgetConcern(queryClient, target, concernId); }
       }
       return result;
     },
@@ -84,8 +99,9 @@ export function useCreateConcern(scope: ConcernScope) {
   const queryClient = useQueryClient();
   return async (input: Omit<CreateConcernInput, "academyId">) => {
     const target = { ...scope };
+    const generation = browserScopeGeneration();
     const result = await withRetry(() => createConcern({ ...input, academyId: target.academyId }));
-    if (result.ok) void invalidateConcernLists(queryClient, target);
+    if (result.ok && generation === browserScopeGeneration()) void invalidateConcernLists(queryClient, target);
     return result;
   };
 }

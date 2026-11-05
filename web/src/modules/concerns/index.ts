@@ -1,7 +1,7 @@
 export { CONCERN_LIMITS, type ConcernAttachment, type ConcernEvent, type ConcernEventKind, type ConcernStatus, type ConcernTarget } from "./contracts";
 export { concernFailure, type ConcernErrorCode, type ConcernFailure } from "./errors";
 export {
-  concernKeys, ConcernReadError, forgetConcern, forgetConcernScope, invalidateConcernLists, syncConcernThread,
+  concernKeys, ConcernReadError, loadConcernPage, loadConcernTarget, forgetConcern, forgetConcernScope, invalidateConcernLists, syncConcernThread,
   useConcernDetail, useConcernInbox, useConcernSearch, useConcernThread, useConcernUnread,
   type ConcernScope, type ConcernStatusFilter,
 } from "./queries";
@@ -13,3 +13,5 @@ export {
   type ConcernDetail, type ConcernInboxEntry, type ConcernInboxPage, type ConcernMessage, type ConcernParticipant,
   type ConcernSearchHit, type ConcernThread, type ConcernUnread,
 } from "./validation";
+
+export { ConcernPanelProvider, useConcernPanel, type OpenConcernResult } from "./components/panel";

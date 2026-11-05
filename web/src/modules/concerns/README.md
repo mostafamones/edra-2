@@ -52,15 +52,76 @@ participants and expired on the viewer's clock. Channels rejoin every 20 minutes
 authorization, and a degraded channel falls back to polling the change feed.
 
 Attachments and voice notes (EDRA-294) extend the message `attachments` array, currently always
-empty. Participant management, Owner recovery, settlement/reopening (EDRA-292), the panel
-(EDRA-295) and notification delivery (EDRA-296) are not implemented here. Generated database types and
+empty. Participant management, Owner recovery, settlement/reopening (EDRA-292) and notification delivery (EDRA-296) remain separate integration work. Generated database types and
 database assertions are verified against the disposable CI database, not a shared
 cloud reset or local developer stack.
 
-Current verification limits: messaging SQL/concurrency assertions await the next disposable CI
-run. RPC TypeScript signatures are provisional manual additions; replace them with the CI
-`database-types` artifact, including the new tables. Multi-user Realtime delivery is unverified.
+Current verification limits: messaging SQL/concurrency assertions passed the disposable CI run
+41902873421 at base HEAD `084a24c8`; the uncommitted panel changes have no CI run yet. The parent replaced provisional RPC signatures with the actual `database-types` artifact from
+that disposable CI run, including all concern tables (trailing blank line normalized). Multi-user Realtime delivery is unverified.
 Presence typing is advisory and client keys can impersonate another participant; it must become
 server-attributed before final delivery. Existing channels may retain access to activity hints and
 presence until reauthorization; message content always requires a fresh authorized read. These
 live-state limitations remain explicit integration work, not completed acceptance criteria.
+
+
+## Floating text panel (EDRA-295, Batch 1)
+
+`ConcernPanelProvider` mounts inside the persistent academy layout, under the existing auth and
+QueryClient providers. It composes the existing shadcn FloatingSheet: modeless at desktop widths,
+full-screen modal below 768px. The centered Dialog alternative would obscure the academy page;
+the edge panel preserves navigation context and compact list/chat switching. React Activity keeps
+an opened panel's local form/scroll state while collapsed and pauses its effects/subscriptions.
+Nothing is persisted to browser storage. Academy/account/preview keys reset the entire panel;
+cleanup cancels/removes the prior concern scope. Commands and incremental/older reads fence both
+browser generations and replaced cache entries, including leave-and-return races.
+
+Public activation: `useConcernPanel()?.openConcern({ academyId, concernId, messageId? })` returns
+`opened`, `different_academy`, `unavailable` or `superseded`. It always rechecks current access
+before displaying content, including when detail is already cached. A future notification adapter
+must route to the appropriate academy before calling it, handle `different_academy`, and never
+present notification payload text as current authorized content. ID-only message activation pages
+until the message is found; search supplies the sequence for a more direct historical page read.
+`loadConcernPage` and `loadConcernTarget` are also public loaders. Callers of the latter provide a
+current-scope fence for navigation work. Search jumps bridge missing pages and preserve the live
+revision cursor/newer revisions. They do not acknowledge unseen newer messages.
+
+Implemented UI: server unread totals on the collapsed launcher; paginated Ongoing/Settled inbox;
+debounced permitted concern/message search; manager creation with active staff/whole-team snapshot
+and automatic creator inclusion; text and explicit HTTP(S) links without enrichment; replies,
+participant mentions, arbitrary emoji reactions, author edit/delete controls, edited/deleted states;
+settled outcome/read-only presentation; live status, reconnect and generic advisory typing activity;
+mandatory avatar receipts with name/time disclosure. Only intersecting messages in the open,
+focused panel advance read state. Query/refetch failures preserve safe conversation state while
+writes are disabled when detail authority could not be refreshed. Retry UI keeps create/send IDs
+and payloads; unconfirmed commands cannot be edited into a duplicate attempt.
+
+Component extension points: `panel.tsx` owns entry/list/create/chat composition and authorization;
+`conversation.tsx` owns status/outcome/history/receipts; `composer.tsx` owns the text send attempt;
+`message.tsx` owns author/reply/reaction controls. Add lifecycle commands to the conversation header
+and outcome area, participant/history management as real authorized surfaces, media to the composer
+and message body, and notification preferences/activation through the panel context. No placeholder
+buttons claim those actions exist.
+
+Still required before EDRA-295 completion: participant add/remove, Owner recovery, settlement and
+reopening with recorded reasons/history; mute and browser push controls plus actual in-app/browser
+notification routing/delivery; attachments, image/PDF/download and voice-note controls with real
+upload/playback commands. Preserve the documented media limits. Typing identity remains untrusted
+and generic; server-attributed typing and prompt live revocation remain authority/final integration
+gaps. Database types now come from the disposable CI artifact for the messaging schema.
+
+Acceptance contract/task notes are recorded on EDRA-295. Vitest exercises actual panel consumers
+with one real QueryClient and mocked domain transport, including navigation/close persistence,
+academy/account/preview and late results, retry IDs, editing/deletion/settled state, mentions/reactions,
+remote search recovery/history jump and visible/focused receipts. Query tests cover optional-read
+budgets, debounce/late searches, contiguous target windows/cursors and removed/recreated caches.
+These are client interaction/cache checks, not multi-user backend or visual proof. No server,
+local database or SQL fixture suite was started. Visual review (both themes, 360/1440px and reflow)
+and the complete multi-user journey remain unavailable and required for final integration.
+
+
+Batch-1 local verification (2026-11-05) uses the required placeholder public Supabase environment
+for production builds. Lint has no errors and 12 unrelated baseline warnings; typecheck passes.
+Targeted consumer/query/live/staff tests pass, with actual channel cleanup/reconnect simulated at
+the client boundary. The parent must review and commit/push this slice before its CI evidence can
+be attached to a new head. The existing draft PR remains #67; this slice does not mark the issue Done.

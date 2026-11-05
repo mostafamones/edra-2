@@ -45,7 +45,7 @@ export function useConcernLive({ scope, concernId, typing }: { scope: ConcernSco
       if (pending || closed) return;
       pending = setTimeout(() => { pending = null; if (!closed) void syncConcernThread(queryClient, target, concernId); }, COALESCE_MS);
     };
-    const refreshDetail = () => { void queryClient.invalidateQueries({ queryKey: concernKeys.detail(target, concernId) }); };
+    const refreshDetail = () => { if (closed) return; void queryClient.invalidateQueries({ queryKey: concernKeys.detail(target, concernId) }); };
 
     const channel = db.channel(`concern:${academyId}:${concernId}`, { config: { private: true, presence: { key: userId } } });
     channel
@@ -55,8 +55,9 @@ export function useConcernLive({ scope, concernId, typing }: { scope: ConcernSco
       })
       // Receipts and membership: the refetch rechecks access and forgets the concern if it ended.
       .on("broadcast", { event: "participants" }, refreshDetail)
-      .on("broadcast", { event: "concern" }, () => { refreshDetail(); void invalidateConcernLists(queryClient, target); })
+      .on("broadcast", { event: "concern" }, () => { if (closed) return; refreshDetail(); void invalidateConcernLists(queryClient, target); })
       .on("presence", { event: "sync" }, () => {
+        if (closed) return;
         // A typing entry counts from when this client first saw its current update, never the sender's clock.
         const received = Date.now();
         const next = new Map<string, { sent: unknown; received: number }>();
@@ -124,7 +125,7 @@ export function useConcernLive({ scope, concernId, typing }: { scope: ConcernSco
   const { data: detail } = useConcernDetail(scope, concernId);
   const participantIds = useMemo(() => new Set(detail?.participants.map((participant) => participant.userId) ?? []), [detail]);
   const typers = activeTypers(seen, participantIds, userId, now);
-  return { status, typers };
+  return { status, typers, reconnect: () => setGeneration((value) => value + 1) };
 }
 
 /**
@@ -156,6 +157,7 @@ export function useConcernInboxLive(scope: ConcernScope) {
       touched.clear();
     };
     const schedule = (concernId?: string) => {
+      if (closed) return;
       if (concernId) touched.add(concernId);
       pending ??= setTimeout(flush, 300);
     };
