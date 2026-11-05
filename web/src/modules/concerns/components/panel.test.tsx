@@ -13,12 +13,14 @@ const state = vi.hoisted(() => ({
   academyId: "academy-a", userId: "user-a", role: "admin", mobile: false,
   rpc: vi.fn(), members: vi.fn(), avatars: vi.fn(), live: vi.fn(), inboxLive: vi.fn(),
   createConcern: vi.fn(), sendConcernMessage: vi.fn(), editConcernMessage: vi.fn(), deleteConcernMessage: vi.fn(), setConcernReaction: vi.fn(), markConcernRead: vi.fn(),
+  addConcernParticipants: vi.fn(), removeConcernParticipant: vi.fn(), settleConcern: vi.fn(), reopenConcern: vi.fn(), recoverConcern: vi.fn(),
 }));
 vi.mock("@/modules/auth", () => ({ useAuth: () => ({ user: { id: state.userId }, activeAcademy: { id: state.academyId, role: state.role } }) }));
 vi.mock("@/modules/account/browser", () => ({ accountName: (profile: { full_name: string }) => profile.full_name, resolveProfileAvatars: state.avatars }));
 vi.mock("@/modules/staff", () => ({ fetchTeamMembers: state.members, staffQueryKeys: { members: (user: string, academy: string) => ["staff", user, academy, "members"] } }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ rpc: state.rpc }) }));
-vi.mock("../actions", () => ({ createConcern: state.createConcern, sendConcernMessage: state.sendConcernMessage, editConcernMessage: state.editConcernMessage, deleteConcernMessage: state.deleteConcernMessage, setConcernReaction: state.setConcernReaction, markConcernRead: state.markConcernRead }));
+vi.mock("../actions", () => ({ createConcern: state.createConcern, sendConcernMessage: state.sendConcernMessage, editConcernMessage: state.editConcernMessage, deleteConcernMessage: state.deleteConcernMessage, setConcernReaction: state.setConcernReaction, markConcernRead: state.markConcernRead,
+  addConcernParticipants: state.addConcernParticipants, removeConcernParticipant: state.removeConcernParticipant, settleConcern: state.settleConcern, reopenConcern: state.reopenConcern, recoverConcern: state.recoverConcern }));
 vi.mock("../live", () => ({ useConcernLive: (args: unknown) => { state.live(args); return { status: "live", typers: ["untrusted"], reconnect: vi.fn() }; }, useConcernInboxLive: (scope: unknown) => { state.inboxLive(scope); return { status: "live" }; } }));
 
 const stamp = new Date().toISOString();
@@ -27,6 +29,7 @@ function message(seq: number, extra: Partial<ConcernMessage> = {}): ConcernMessa
 }
 function detail(extra: Partial<ConcernDetail> = {}): ConcernDetail {
   return { id: "concern-1", title: "Attendance follow-up", status: "ongoing", createdAt: stamp, createdBy: "user-a", settledAt: null, outcome: null, lastSeq: 2, muted: false,
+    version: 1, settledBy: null, settledByName: null, canManage: true,
     participants: [{ userId: "user-a", name: "Mona", avatarPath: null, lastReadSeq: 0, readAt: null }, { userId: "user-b", name: "Omar", avatarPath: "omar.webp", lastReadSeq: 1, readAt: stamp }], ...extra };
 }
 let currentDetail: ConcernDetail;
@@ -49,6 +52,7 @@ beforeEach(() => {
     { user_id: "user-a", suspended_at: null, profiles: { full_name: "Mona" } },
     { user_id: "user-b", suspended_at: null, profiles: { full_name: "Omar" } },
     { user_id: "suspended", suspended_at: stamp, profiles: { full_name: "Suspended" } },
+    { user_id: "user-c", suspended_at: null, profiles: { full_name: "Salma" } },
   ]);
   state.avatars.mockResolvedValue({ "omar.webp": "https://avatar.example/temporary" });
   state.markConcernRead.mockImplementation(async ({ seq }) => ({ ok: true, lastReadSeq: seq, readAt: stamp }));
@@ -63,6 +67,11 @@ beforeEach(() => {
     if (name === "concern_messages_page") return { data: { messages: currentMessages, hasMore: false, cursor: 2 }, error: null };
     if (name === "concern_inbox") return { data: { concerns: input.p_status === "settled" ? [] : [{ id: "concern-1", title: "Attendance follow-up", status: "ongoing", updatedAt: stamp, muted: false, lastReadSeq: 0, unread: 2, unreadMentions: 0, last: { seq: 2, authorId: "user-a", authorName: "Mona", body: "Message 2", deleted: false, createdAt: stamp } }], hasMore: false }, error: null };
     if (name === "search_concerns") return { data: [], error: null };
+    if (name === "concern_history") return { data: [
+      { id: "h1", kind: "created", occurredAt: stamp, actorId: "user-a", actorName: "Mona", subjectId: null, subjectName: null, note: null },
+      { id: "h2", kind: "settled", occurredAt: stamp, actorId: "user-a", actorName: "Mona", subjectId: null, subjectName: null, note: "First outcome" },
+      { id: "h3", kind: "reopened", occurredAt: stamp, actorId: "user-a", actorName: "Mona", subjectId: null, subjectName: null, note: "New evidence" },
+    ], error: null };
     if (name === "concern_message_changes") return { data: { messages: [], cursor: 2, hasMore: false }, error: null };
     throw new Error(`Unexpected RPC ${name}`);
   });
@@ -379,4 +388,149 @@ describe("floating concern panel consumers", () => {
     expect(inputs.every((input) => JSON.stringify(input) === JSON.stringify(inputs[0]))).toBe(true);
   });
 
+
+  it("settles with a written outcome on the shown version, retries uncertainty with the same request, and becomes read-only", async () => {
+    mount(); await openChat();
+    state.settleConcern.mockResolvedValueOnce({ ok: false, code: "unavailable", message: "Could not reach the server." })
+      .mockResolvedValueOnce({ ok: false, code: "unavailable", message: "Could not reach the server." })
+      .mockResolvedValueOnce({ ok: false, code: "unavailable", message: "Could not reach the server." })
+      .mockImplementationOnce(async () => {
+        currentDetail = detail({ status: "settled", outcome: "Parents informed", settledAt: stamp, settledBy: "user-a", settledByName: "Mona", version: 2 });
+        return { ok: true, state: { concernId: "concern-1", status: "settled", version: 2 } };
+      });
+    fireEvent.click(screen.getByRole("button", { name: "Settle" }));
+    expect(screen.queryByLabelText("Message")).toBeNull();
+    expect((screen.getByRole("button", { name: "Settle concern" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Outcome"), { target: { value: "Parents informed" } });
+    fireEvent.click(screen.getByRole("button", { name: "Settle concern" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Retry settlement" }, { timeout: 4000 }));
+    await screen.findByText("Parents informed");
+    const inputs = state.settleConcern.mock.calls.map(([input]) => input);
+    expect(inputs).toHaveLength(4);
+    expect(inputs.every((input) => JSON.stringify(input) === JSON.stringify(inputs[0]))).toBe(true);
+    expect(inputs[0]).toMatchObject({ academyId: "academy-a", concernId: "concern-1", outcome: "Parents informed", expectedVersion: 1 });
+    expect(screen.getByText("Settled", { selector: "[role=status]" })).toBeTruthy();
+    expect(screen.queryByLabelText("Message")).toBeNull();
+    expect(screen.getByRole("button", { name: "Reopen" })).toBeTruthy();
+  });
+
+  it("keeps a reopening reason through a stale refusal and resubmits on the refreshed version", async () => {
+    currentDetail = detail({ status: "settled", outcome: "Done", settledAt: stamp, version: 2 });
+    mount(); await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open concerns" })); });
+    fireEvent.click(await screen.findByRole("button", { name: /Attendance follow-up/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Reopen" }));
+    state.reopenConcern.mockImplementationOnce(async () => {
+      currentDetail = detail({ status: "settled", outcome: "Done again", settledAt: stamp, version: 4 });
+      return { ok: false, code: "stale", message: "This concern changed. Review the latest state and try again." };
+    }).mockResolvedValueOnce({ ok: true, state: { concernId: "concern-1", status: "ongoing", version: 5 } });
+    fireEvent.change(screen.getByLabelText("Reason for reopening"), { target: { value: "New evidence" } });
+    fireEvent.click(screen.getByRole("button", { name: "Reopen concern" }));
+    await screen.findByText("This concern changed. Review the latest state and try again.");
+    await screen.findByText("Done again");
+    expect((screen.getByLabelText("Reason for reopening") as HTMLTextAreaElement).value).toBe("New evidence");
+    fireEvent.click(screen.getByRole("button", { name: "Reopen concern" }));
+    await waitFor(() => expect(state.reopenConcern).toHaveBeenCalledTimes(2));
+    const [first, second] = state.reopenConcern.mock.calls.map(([input]) => input);
+    expect(first.expectedVersion).toBe(2); expect(second.expectedVersion).toBe(4);
+    expect(second.requestId).not.toBe(first.requestId);
+  });
+
+  it("adds active non-participants and confirms removal; instructors see participants without management", async () => {
+    mount(); await openChat();
+    state.addConcernParticipants.mockResolvedValue({ ok: true, state: { concernId: "concern-1", status: "ongoing", version: 1 } });
+    state.removeConcernParticipant.mockResolvedValue({ ok: true, state: { concernId: "concern-1", status: "ongoing", version: 1 } });
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "People" }));
+    expect(within(await screen.findByRole("list", { name: "Participants" })).getByText("Mona (you)")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Add people" }));
+    const picker = await screen.findByRole("listbox");
+    expect(within(picker).queryByText("Omar")).toBeNull();
+    expect(within(picker).queryByText("Suspended")).toBeNull();
+    fireEvent.click(within(picker).getByText("Salma"));
+    await waitFor(() => expect(state.addConcernParticipants).toHaveBeenCalledWith(expect.objectContaining({ academyId: "academy-a", concernId: "concern-1", userIds: ["user-c"] })));
+    fireEvent.click(screen.getByRole("button", { name: "Remove Omar" }));
+    expect(state.removeConcernParticipant).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(state.removeConcernParticipant).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-b" })));
+    expect(state.rpc.mock.calls.filter(([name]) => name === "concern_detail").length).toBeGreaterThan(1);
+    cleanup(); clients.forEach((client) => client.clear());
+    state.role = "instructor"; currentDetail = detail({ canManage: false });
+    mount(); await openChat();
+    expect(screen.queryByRole("button", { name: "Settle" })).toBeNull();
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "People" }));
+    await screen.findByRole("list", { name: "Participants" });
+    expect(screen.queryByRole("button", { name: "Add people" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Remove Omar" })).toBeNull();
+  });
+
+  it("allows authorized removal of a suspended participant", async () => {
+    currentDetail = detail({ participants: [...detail().participants,
+      { userId: "suspended", name: "Paused staff", avatarPath: null, lastReadSeq: 0, readAt: null, suspended: true }] });
+    state.removeConcernParticipant.mockResolvedValue({ ok: true, state: { concernId: "concern-1", status: "ongoing", version: 1 } });
+    mount(); await openChat();
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "People" }));
+    expect(await screen.findByText("Paused staff")).toBeTruthy();
+    expect(screen.getByText("Suspended")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Remove Paused staff" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(state.removeConcernParticipant).toHaveBeenCalledWith(expect.objectContaining({ userId: "suspended" })));
+  });
+
+  it("treats a management refusal as a capability refresh but lost access as a purge", async () => {
+    const mounted = mount(); await openChat();
+    state.removeConcernParticipant.mockResolvedValueOnce({ ok: false, code: "not_permitted", message: "Only an Owner, Head Admin or Admin can do this." })
+      .mockResolvedValueOnce({ ok: false, code: "forbidden", message: "You no longer have access to this concern." });
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "People" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Omar" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove" }));
+    await screen.findByText("Only an Owner, Head Admin or Admin can do this.");
+    expect(screen.getByRole("list", { name: "Participants" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Remove Omar" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove" }));
+    await screen.findByText("You no longer have access to this concern.");
+    expect(screen.queryByText("Message 1")).toBeNull();
+    expect(mounted.client.getQueryData(concernKeys.thread({ academyId: "academy-a", userId: "user-a" }, "concern-1"))).toBeUndefined();
+  });
+
+  it("shows preserved lifecycle history with outcomes and reasons", async () => {
+    mount(); await openChat();
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "History" }));
+    const history = await screen.findByRole("list", { name: "Concern history" });
+    expect(within(history).getByText("Mona settled the concern")).toBeTruthy();
+    expect(within(history).getByText("First outcome")).toBeTruthy();
+    expect(within(history).getByText("New evidence")).toBeTruthy();
+  });
+
+  it("offers only the Owner targeted recovery of a denied concern, then opens it after a fresh access check", async () => {
+    state.role = "owner";
+    let recovered = false;
+    state.rpc.mockImplementation(async (name: string) => {
+      if (name === "concern_detail") return recovered ? { data: detail(), error: null } : { data: null, error: { code: "42501" } };
+      if (name === "concern_messages_page") return { data: { messages: currentMessages, hasMore: false, cursor: 2 }, error: null };
+      return { data: { concerns: 0, messages: 0, mentions: 0 }, error: null };
+    });
+    state.recoverConcern.mockImplementation(async () => { recovered = true; return { ok: true, state: { concernId: "11111111-1111-4111-8111-111111111111", status: "settled", version: 2, recovered: true } }; });
+    const mounted = mount();
+    const id = "11111111-1111-4111-8111-111111111111";
+    await act(async () => { expect(await mounted.getControl()!.openConcern({ academyId: "academy-a", concernId: id })).toBe("unavailable"); });
+    expect((screen.getByLabelText("Concern ID or link") as HTMLInputElement).value).toBe(id);
+    expect(state.recoverConcern).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Recover access" }));
+    await screen.findByLabelText("Message");
+    expect(state.recoverConcern).toHaveBeenCalledWith(expect.objectContaining({ academyId: "academy-a", concernId: id }));
+    fireEvent.click(screen.getByRole("button", { name: "Back to concerns" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recover concern" }));
+    fireEvent.change(screen.getByLabelText("Concern ID or link"), { target: { value: "not a concern" } });
+    expect(screen.getByText("Enter a concern ID or a link that contains one.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Recover access" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Concern ID or link"), { target: { value: `https://edra.example/app/x?concern=${id.toUpperCase()}` } });
+    expect((screen.getByRole("button", { name: "Recover access" }) as HTMLButtonElement).disabled).toBe(false);
+    cleanup(); clients.forEach((client) => client.clear());
+    state.role = "head_admin"; recovered = false;
+    const head = mount();
+    fireEvent.click(screen.getByRole("button", { name: "Open concerns" }));
+    expect(screen.queryByRole("button", { name: "Recover concern" })).toBeNull();
+    await act(async () => { await head.getControl()!.openConcern({ academyId: "academy-a", concernId: id }); });
+    expect(screen.getByText("You no longer have access to this concern.")).toBeTruthy();
+    expect(screen.queryByLabelText("Concern ID or link")).toBeNull();
+  });
 });

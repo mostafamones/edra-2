@@ -4,6 +4,7 @@ import type { ConcernFailure } from "./errors";
 import { concernFailure } from "./errors";
 import { runConcernCommand } from "./server";
 import {
+  addParticipantsInput, concernStateSchema, recoverInput, removeParticipantInput, reopenInput, settleInput, type ConcernState,
   concernMessageSchema, createConcernInput, deleteMessageInput, editMessageInput, markReadInput, reactionInput, sendMessageInput,
   type ConcernMessage,
 } from "./validation";
@@ -12,6 +13,9 @@ import { z } from "zod";
 export type ConcernMessageResult = { ok: true; message: ConcernMessage } | ConcernFailure;
 export type CreateConcernResult = { ok: true; concernId: string; message: ConcernMessage } | ConcernFailure;
 export type MarkReadResult = { ok: true; lastReadSeq: number; readAt: string | null } | ConcernFailure;
+
+export type ConcernStateResult = { ok: true; state: ConcernState } | ConcernFailure;
+const toState = (data: unknown) => ({ ok: true as const, state: concernStateSchema.parse(data) });
 
 const toMessage = (data: unknown) => ({ ok: true as const, message: concernMessageSchema.parse(data) });
 
@@ -78,4 +82,55 @@ export async function markConcernRead(value: unknown): Promise<MarkReadResult> {
   const v = parsed.data;
   return runConcernCommand((db) => db.rpc("mark_concern_read", { p_academy_id: v.academyId, p_concern_id: v.concernId, p_seq: v.seq }),
     (data) => ({ ok: true as const, ...z.object({ lastReadSeq: z.number().int(), readAt: z.string().nullable() }).parse(data) }));
+}
+
+/**
+ * Lifecycle and membership commands: participating Owner/Head Admin/Admin, ongoing only (except
+ * reading). `requestId` is generated once per attempt so a retry returns the completed result.
+ */
+export async function addConcernParticipants(value: unknown): Promise<ConcernStateResult> {
+  const parsed = addParticipantsInput.safeParse(value);
+  if (!parsed.success) return concernFailure("validation");
+  const v = parsed.data;
+  return runConcernCommand((db) => db.rpc("add_concern_participants", {
+    p_academy_id: v.academyId, p_concern_id: v.concernId, p_user_ids: v.userIds, p_request_id: v.requestId,
+  }), toState);
+}
+
+export async function removeConcernParticipant(value: unknown): Promise<ConcernStateResult> {
+  const parsed = removeParticipantInput.safeParse(value);
+  if (!parsed.success) return concernFailure("validation");
+  const v = parsed.data;
+  return runConcernCommand((db) => db.rpc("remove_concern_participant", {
+    p_academy_id: v.academyId, p_concern_id: v.concernId, p_user_id: v.userId, p_request_id: v.requestId,
+  }), toState);
+}
+
+/** Refused as `stale` when the concern's lifecycle moved on since `expectedVersion`. */
+export async function settleConcern(value: unknown): Promise<ConcernStateResult> {
+  const parsed = settleInput.safeParse(value);
+  if (!parsed.success) return concernFailure("validation");
+  const v = parsed.data;
+  return runConcernCommand((db) => db.rpc("settle_concern", {
+    p_academy_id: v.academyId, p_concern_id: v.concernId, p_outcome: v.outcome, p_expected_version: v.expectedVersion, p_request_id: v.requestId,
+  }), toState);
+}
+
+export async function reopenConcern(value: unknown): Promise<ConcernStateResult> {
+  const parsed = reopenInput.safeParse(value);
+  if (!parsed.success) return concernFailure("validation");
+  const v = parsed.data;
+  return runConcernCommand((db) => db.rpc("reopen_concern", {
+    p_academy_id: v.academyId, p_concern_id: v.concernId, p_reason: v.reason, p_expected_version: v.expectedVersion, p_request_id: v.requestId,
+  }), toState);
+}
+
+/** Academy Owner only: joins a concern by its id, audited, even when settled. */
+export async function recoverConcern(value: unknown): Promise<ConcernStateResult> {
+  const parsed = recoverInput.safeParse(value);
+  if (!parsed.success) return concernFailure("validation");
+  const v = parsed.data;
+  return runConcernCommand((db) => db.rpc("recover_concern", {
+    p_academy_id: v.academyId, p_concern_id: v.concernId, p_request_id: v.requestId,
+  }), toState);
 }

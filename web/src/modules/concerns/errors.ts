@@ -1,6 +1,7 @@
 export type ConcernErrorCode =
   | "validation" | "forbidden" | "conflict" | "concern_settled" | "message_not_found" | "message_deleted"
-  | "edit_expired" | "reply_unavailable" | "invalid_mention" | "invalid_participant" | "unavailable";
+  | "edit_expired" | "reply_unavailable" | "invalid_mention" | "invalid_participant" | "not_permitted" | "stale"
+  | "concern_not_found" | "unavailable";
 export type ConcernFailure = { ok: false; code: ConcernErrorCode; message: string };
 
 const MESSAGES: Record<ConcernErrorCode, string> = {
@@ -14,6 +15,9 @@ const MESSAGES: Record<ConcernErrorCode, string> = {
   reply_unavailable: "The message you replied to was deleted.",
   invalid_mention: "Someone you mentioned is no longer in this concern.",
   invalid_participant: "Someone you selected is no longer active staff.",
+  not_permitted: "Only an Owner, Head Admin or Admin can do this.",
+  stale: "This concern changed. Review the latest state and try again.",
+  concern_not_found: "No concern matches this ID.",
   unavailable: "Could not reach the server. Check your connection and try again.",
 };
 

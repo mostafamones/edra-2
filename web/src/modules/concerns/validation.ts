@@ -42,6 +42,7 @@ export const concernThreadSchema = z.object({ messages: z.array(concernMessageSc
 export type ConcernThread = z.infer<typeof concernThreadSchema>;
 
 export const concernParticipantSchema = z.object({
+  suspended: z.boolean().optional(),
   userId: z.string(), name: z.string().nullable(), avatarPath: z.string().nullable(),
   lastReadSeq: z.number().int(), readAt: timestamp.nullable(),
 });
@@ -50,6 +51,10 @@ export type ConcernParticipant = z.infer<typeof concernParticipantSchema>;
 export const concernDetailSchema = z.object({
   id: z.string(), title: z.string(), status, createdAt: timestamp, createdBy: z.string(),
   settledAt: timestamp.nullable(), outcome: z.string().nullable(), lastSeq: z.number().int(), muted: z.boolean(),
+  /** Lifecycle version: settle/reopen must name the version they were decided on. */
+  version: z.number().int(), settledBy: z.string().nullable(), settledByName: z.string().nullable(),
+  /** Presentation only: the database rechecks the current role on every command. */
+  canManage: z.boolean(),
   participants: z.array(concernParticipantSchema),
 });
 export type ConcernDetail = z.infer<typeof concernDetailSchema>;
@@ -76,6 +81,18 @@ export const concernSearchSchema = z.array(z.object({
 }));
 export type ConcernSearchHit = z.infer<typeof concernSearchSchema>[number];
 
+/** Lifecycle and membership history; `note` is the settlement outcome or reopening reason. */
+export const concernHistorySchema = z.array(z.object({
+  id: z.string(),
+  kind: z.enum(["created", "participant_added", "participant_removed", "owner_recovered", "settled", "reopened"]),
+  occurredAt: timestamp, actorId: z.string(), actorName: z.string().nullable(),
+  subjectId: z.string().nullable(), subjectName: z.string().nullable(), note: z.string().nullable(),
+}));
+export type ConcernHistoryEntry = z.infer<typeof concernHistorySchema>[number];
+
+export const concernStateSchema = z.object({ concernId: z.string(), status, version: z.number().int(), recovered: z.boolean().optional() });
+export type ConcernState = z.infer<typeof concernStateSchema>;
+
 const target = z.object({ academyId: z.guid(), concernId: z.guid() });
 export const createConcernInput = z.object({
   academyId: z.guid(), concernId: z.guid(), messageId: z.guid(), title: concernTitleSchema, body: concernBodySchema,
@@ -86,6 +103,14 @@ export const editMessageInput = target.extend({ messageId: z.guid(), body: conce
 export const deleteMessageInput = target.extend({ messageId: z.guid() });
 export const reactionInput = target.extend({ messageId: z.guid(), emoji: concernEmojiSchema, on: z.boolean() });
 export const markReadInput = target.extend({ seq: z.number().int().min(0) });
+/** Settlement outcomes and reopening reasons share the message limits. */
+export const concernNoteSchema = concernBodySchema;
+const request = { requestId: z.guid() };
+export const addParticipantsInput = target.extend({ ...request, userIds: z.array(z.guid()).min(1).max(50) });
+export const removeParticipantInput = target.extend({ ...request, userId: z.guid() });
+export const settleInput = target.extend({ ...request, outcome: concernNoteSchema, expectedVersion: z.number().int().min(1) });
+export const reopenInput = target.extend({ ...request, reason: concernNoteSchema, expectedVersion: z.number().int().min(1) });
+export const recoverInput = target.extend(request);
 
 export type CreateConcernInput = z.infer<typeof createConcernInput>;
 export type SendMessageInput = z.infer<typeof sendMessageInput>;
@@ -93,3 +118,8 @@ export type EditMessageInput = z.infer<typeof editMessageInput>;
 export type DeleteMessageInput = z.infer<typeof deleteMessageInput>;
 export type ReactionInput = z.infer<typeof reactionInput>;
 export type MarkReadInput = z.infer<typeof markReadInput>;
+export type AddParticipantsInput = z.infer<typeof addParticipantsInput>;
+export type RemoveParticipantInput = z.infer<typeof removeParticipantInput>;
+export type SettleInput = z.infer<typeof settleInput>;
+export type ReopenInput = z.infer<typeof reopenInput>;
+export type RecoverInput = z.infer<typeof recoverInput>;
