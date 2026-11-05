@@ -83,7 +83,7 @@ function CouponWorkspace({ academy }: { academy: AcademyEntry }) {
         </section>
       </>}</QueryContent>
     </div>
-    <CouponBatchSheet academyId={academy.id} userId={user?.id} batch={opened} onClose={() => setOpened(null)} onChanged={refresh}
+    <CouponBatchSheet academyId={academy.id} academyName={academy.name} userId={user?.id} batch={opened} onClose={() => setOpened(null)} onChanged={refresh}
       onCloseAutoFocus={event => { if (returnFocus.current?.isConnected) { event.preventDefault(); returnFocus.current.focus(); } }} />
   </main>;
 }

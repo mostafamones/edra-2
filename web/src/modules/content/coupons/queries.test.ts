@@ -1,8 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
-const api = vi.hoisted(() => ({ loadCouponOptions: vi.fn(), loadCouponBatches: vi.fn() }));
+const api = vi.hoisted(() => ({ loadCouponOptions: vi.fn(), loadCouponBatches: vi.fn(), loadCouponBatch: vi.fn() }));
 vi.mock("./actions", () => api);
-import { couponBatchesOptions, couponRootKey } from "./queries";
+import { couponBatchOptions, couponBatchesOptions, couponRootKey } from "./queries";
 
 it("reuses a warm read, invalidates only its academy and separates account keys", async () => {
   api.loadCouponBatches.mockImplementation(async ({ academyId }: { academyId: string }) => ({ ok: true, value: { userId: "one", batches: [{ id: academyId }] } }));
@@ -26,5 +26,14 @@ it("a late old-account response cannot fill the new account's key", async () => 
   resolve({ ok: true, value: { userId: "old", batches: [{ id: "old-data" }] } });
   await pending;
   expect(cache.getQueryData(couponBatchesOptions("new", "a", "year", null, "", 0).queryKey)).toBeUndefined();
+  cache.clear();
+});
+
+it("keeps the batch key under the account and academy root and rejects another account's batch", async () => {
+  expect(couponBatchOptions("one", "a", "batch").queryKey).toEqual(["content-coupons", "one", "a", "batch", "batch"]);
+  api.loadCouponBatch.mockResolvedValue({ ok: true, value: { userId: "two", manager: true, codes: [] } });
+  const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  await expect(cache.fetchQuery(couponBatchOptions("one", "a", "batch"))).rejects.toThrow("Your account changed");
+  expect(api.loadCouponBatch).toHaveBeenCalledWith({ academyId: "a", batchId: "batch" });
   cache.clear();
 });

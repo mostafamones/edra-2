@@ -1,0 +1,85 @@
+/* Printable coupon sheets: fixed A4 geometry, theme-independent black on white. */
+.coupon-sheet {
+  box-sizing: border-box;
+  width: 210mm;
+  height: 297mm;
+  padding: 10mm;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(8, minmax(0, 1fr));
+  overflow: hidden;
+  background: #fff;
+  color: #000;
+  font-family: var(--font-figtree), var(--font-arabic-fallback), sans-serif;
+  page: coupon-sheet;
+  break-after: page;
+  break-inside: avoid;
+}
+.coupon-sheet:last-child { break-after: auto; }
+.coupon-card {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2mm;
+  padding: 2.5mm 4mm;
+  overflow: hidden;
+  text-align: center;
+  line-height: 1.2;
+  border-right: 0.25mm dashed #000;
+  border-bottom: 0.25mm dashed #000;
+  break-inside: avoid;
+}
+.coupon-card:nth-child(3n + 1) { border-left: 0.25mm dashed #000; }
+.coupon-card:nth-child(-n + 3) { border-top: 0.25mm dashed #000; }
+.coupon-card-academy, .coupon-card-type {
+  max-width: 100%;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.coupon-card-academy { font-size: 7.5pt; font-weight: 600; }
+.coupon-card-type { font-size: 9pt; }
+/* The code is never clipped: legacy long prefixes wrap instead. */
+.coupon-card-code {
+  max-width: 100%;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12pt;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+  unicode-bidi: isolate;
+}
+.coupon-card-status {
+  padding: 0.2mm 1.8mm;
+  border: 0.25mm solid #000;
+  border-radius: 1mm;
+  font-size: 7pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Preview: the same sheets, scaled to the dialog width. */
+.coupon-preview { container-type: inline-size; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+.coupon-preview .coupon-sheet { zoom: 0.38; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.2); }
+@container (min-width: 440px) { .coupon-preview .coupon-sheet { zoom: 0.55; } }
+@container (min-width: 640px) { .coupon-preview .coupon-sheet { zoom: 0.75; } }
+
+.coupon-print-root { display: none; }
+@page coupon-sheet { size: A4 portrait; margin: 0; }
+@media print {
+  /* Undo application shell sizing and dialog scroll locks so nothing clips or rescales the sheets. */
+  html.coupon-printing, html.coupon-printing body {
+    width: auto !important; height: auto !important; min-height: 0 !important;
+    margin: 0 !important; padding: 0 !important; overflow: visible !important; background: #fff !important;
+  }
+  html.coupon-printing body > :not(.coupon-print-root) { display: none !important; }
+  html.coupon-printing .coupon-print-root { display: block !important; }
+}

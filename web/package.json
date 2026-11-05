@@ -19,7 +19,7 @@
     "test:e2e:attendance": "playwright test --config playwright.attendance.config.ts",
     "ui:preview": "vite --config ui-preview/vite.config.mts",
     "test:ui": "playwright test --config playwright.ui.config.ts",
-    "test:ui:unit": "vitest run src/components/shared/query-content.test.tsx src/modules/content/coupons/page.test.tsx src/modules/content/coupons/queries.test.ts src/modules/content/panels.test.tsx src/modules/content/components/editor.test.tsx",
+    "test:ui:unit": "vitest run src/components/shared/query-content.test.tsx src/modules/content/coupons/page.test.tsx src/modules/content/coupons/queries.test.ts src/modules/content/coupons/pages.test.ts src/modules/content/coupons/print.test.tsx src/modules/content/panels.test.tsx src/modules/content/components/editor.test.tsx",
     "preview": "vite preview",
     "test:workers": "node workers-test/run.mjs",
     "check:client-secrets": "node workers-test/client-secrets.mjs"

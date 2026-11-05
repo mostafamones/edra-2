@@ -15,23 +15,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { unwrapContent } from "../types";
 import { learningDate } from "../access/types";
-import { loadCouponBatch, revokeCoupon } from "./actions";
+import { revokeCoupon } from "./actions";
+import { couponBatchOptions } from "./queries";
+import { CouponPrintDialog } from "./print";
 import { batchProgram, formatCoupon, type CouponBatch } from "./types";
 
 const STATUS_DOT = { unused: "bg-muted-foreground/50", redeemed: "bg-primary", revoked: "bg-destructive" } as const;
 const capitalize = (value: string) => value[0].toUpperCase() + value.slice(1);
 
-/** Shows every coupon in one generated batch, with copy, export and revoke. */
-export function CouponBatchSheet({ academyId, userId, batch, onClose, onChanged, onCloseAutoFocus }: { academyId: string; userId: string | undefined; batch: CouponBatch | null; onClose: () => void; onChanged: () => Promise<void>; onCloseAutoFocus?: (event: Event) => void }) {
+/** Shows every coupon in one generated batch, with copy, export, print and revoke. */
+export function CouponBatchSheet({ academyId, academyName, userId, batch, onClose, onChanged, onCloseAutoFocus }: { academyId: string; academyName: string; userId: string | undefined; batch: CouponBatch | null; onClose: () => void; onChanged: () => Promise<void>; onCloseAutoFocus?: (event: Event) => void }) {
   const container = useRef<HTMLDivElement>(null);
   const request = useRef<{ key: string; id: string } | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const codes = useQuery({ queryKey: ["content-coupons", userId, academyId, "batch", batch?.id], enabled: Boolean(userId && batch), queryFn: async () => {
-    const result = unwrapContent(await loadCouponBatch({ academyId, batchId: batch!.id }));
-    if (result.userId !== userId) throw new Error("Your account changed. Reload this page.");
-    return result;
-  } });
+  const codes = useQuery(couponBatchOptions(userId ?? "", academyId, batch?.id ?? ""));
   const labels = codes.data?.codes.map(c => formatCoupon(c.code, c.prefix)) ?? [];
   async function copy(values: string[]) {
     try { await copyText(values.join("\n"), container.current ?? document.body); toast.success("Copied."); }
@@ -66,6 +64,7 @@ export function CouponBatchSheet({ academyId, userId, batch, onClose, onChanged,
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={!labels.length} onClick={() => copy(labels)}><HugeiconsIcon icon={Copy01Icon} strokeWidth={1.5} aria-hidden="true" />Copy all</Button>
             <Button variant="outline" size="sm" disabled={!labels.length} onClick={exportCsv}><HugeiconsIcon icon={Download01Icon} strokeWidth={1.5} aria-hidden="true" />Export CSV</Button>
+            {batch && userId && <CouponPrintDialog academyId={academyId} academyName={academyName} userId={userId} batch={batch} disabled={!labels.length} />}
           </div>
           {codes.isLoading ? <Skeleton className="h-48 w-full rounded-lg" /> : codes.data && (codes.data.codes.length === 0
             ? <Empty className="min-h-48 rounded-lg border border-dashed"><EmptyHeader><EmptyTitle>No coupons</EmptyTitle></EmptyHeader></Empty>
