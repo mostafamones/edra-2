@@ -7,3 +7,6 @@ export type { StaffJoinState } from "./types";
 export { isTerminalJoinState } from "./types";
 export { parseStaffInviteLink } from "./link";
 export { copyInvitationLink } from "./clipboard";
+
+export { fetchTeamMembers, staffQueryKeys } from "./queries";
+export type { TeamMember } from "./types";

@@ -5,6 +5,7 @@ import { ScopedAcademyProvider } from "@/modules/auth/components/provider";
 import { SuspendedAccess } from "@/modules/auth/components/suspended-access";
 import { PortalHeader } from "@/modules/navigation/components/header";
 import { StaffSidebar } from "@/modules/navigation/components/staff-sidebar";
+import { ConcernPanelProvider } from "@/modules/concerns";
 import { loadStaffAcademy } from "@/routes/-functions/staff";
 
 function AcademyLayout() {
@@ -13,6 +14,7 @@ function AcademyLayout() {
   const { academy, defaultOpen } = result;
   return (
     <ScopedAcademyProvider academy={academy}>
+      <ConcernPanelProvider>
       <SidebarProvider defaultOpen={defaultOpen} className="h-svh min-h-0 overflow-hidden"
         style={{ "--sidebar-width": "calc(var(--spacing) * 68)", "--header-height": "calc(var(--spacing) * 16)" } as React.CSSProperties}>
         <StaffSidebar />
@@ -24,6 +26,7 @@ function AcademyLayout() {
           </SidebarInset>
         </BreadcrumbTitleProvider>
       </SidebarProvider>
+      </ConcernPanelProvider>
     </ScopedAcademyProvider>
   );
 }
