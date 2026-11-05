@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.17"
-  }
   public: {
     Tables: {
       academic_years: {
@@ -2322,6 +2317,292 @@ export type Database = {
           {
             foreignKeyName: "attendance_sheets_last_published_by_fkey"
             columns: ["last_published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concern_events: {
+        Row: {
+          academy_id: string
+          actor_id: string
+          concern_id: string
+          detail: Json
+          id: string
+          kind: string
+          occurred_at: string
+          subject_id: string | null
+        }
+        Insert: {
+          academy_id: string
+          actor_id: string
+          concern_id: string
+          detail?: Json
+          id?: string
+          kind: string
+          occurred_at?: string
+          subject_id?: string | null
+        }
+        Update: {
+          academy_id?: string
+          actor_id?: string
+          concern_id?: string
+          detail?: Json
+          id?: string
+          kind?: string
+          occurred_at?: string
+          subject_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concern_events_academy_id_concern_id_fkey"
+            columns: ["academy_id", "concern_id"]
+            isOneToOne: false
+            referencedRelation: "concerns"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "concern_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concern_messages: {
+        Row: {
+          academy_id: string
+          author_id: string
+          body: string | null
+          concern_id: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          mentions: string[]
+          reply_to_id: string | null
+          revision: number
+          seq: number
+        }
+        Insert: {
+          academy_id: string
+          author_id: string
+          body?: string | null
+          concern_id: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id: string
+          mentions?: string[]
+          reply_to_id?: string | null
+          revision: number
+          seq: number
+        }
+        Update: {
+          academy_id?: string
+          author_id?: string
+          body?: string | null
+          concern_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          mentions?: string[]
+          reply_to_id?: string | null
+          revision?: number
+          seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concern_messages_academy_id_concern_id_fkey"
+            columns: ["academy_id", "concern_id"]
+            isOneToOne: false
+            referencedRelation: "concerns"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "concern_messages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concern_messages_concern_id_reply_to_id_fkey"
+            columns: ["concern_id", "reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "concern_messages"
+            referencedColumns: ["concern_id", "id"]
+          },
+        ]
+      }
+      concern_participants: {
+        Row: {
+          academy_id: string
+          added_at: string
+          added_by: string
+          concern_id: string
+          last_read_seq: number
+          membership_created_at: string
+          muted: boolean
+          read_at: string | null
+          removed_at: string | null
+          removed_by: string | null
+          user_id: string
+        }
+        Insert: {
+          academy_id: string
+          added_at?: string
+          added_by: string
+          concern_id: string
+          last_read_seq?: number
+          membership_created_at: string
+          muted?: boolean
+          read_at?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          user_id: string
+        }
+        Update: {
+          academy_id?: string
+          added_at?: string
+          added_by?: string
+          concern_id?: string
+          last_read_seq?: number
+          membership_created_at?: string
+          muted?: boolean
+          read_at?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concern_participants_academy_id_concern_id_fkey"
+            columns: ["academy_id", "concern_id"]
+            isOneToOne: false
+            referencedRelation: "concerns"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "concern_participants_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concern_participants_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concern_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concern_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concern_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "concern_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concern_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concerns: {
+        Row: {
+          academy_id: string
+          created_at: string
+          created_by: string
+          id: string
+          outcome: string | null
+          settled_at: string | null
+          settled_by: string | null
+          status: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          created_by: string
+          id: string
+          outcome?: string | null
+          settled_at?: string | null
+          settled_by?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          outcome?: string | null
+          settled_at?: string | null
+          settled_by?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concerns_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concerns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concerns_settled_by_fkey"
+            columns: ["settled_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -7699,66 +7980,6 @@ export type Database = {
       }
     }
     Functions: {
-      can_join_concern_channel: { Args: { p_topic: string }; Returns: boolean }
-      concern_detail: { Args: { p_academy_id: string; p_concern_id: string }; Returns: Json }
-      concern_has_access: { Args: { p_academy_id: string; p_concern_id: string }; Returns: boolean }
-      concern_inbox: {
-        Args: {
-          p_academy_id: string
-          p_before_id?: string
-          p_before_updated_at?: string
-          p_limit?: number
-          p_status?: string
-        }
-        Returns: Json
-      }
-      concern_message_changes: {
-        Args: { p_academy_id: string; p_after_revision: number; p_concern_id: string; p_limit?: number }
-        Returns: Json
-      }
-      concern_messages_page: {
-        Args: { p_academy_id: string; p_before_seq?: number; p_concern_id: string; p_limit?: number }
-        Returns: Json
-      }
-      concern_unread: { Args: { p_academy_id: string }; Returns: Json }
-      create_concern: {
-        Args: {
-          p_academy_id: string
-          p_body: string
-          p_concern_id: string
-          p_mentions?: string[]
-          p_message_id: string
-          p_participant_ids: string[]
-          p_title: string
-          p_whole_team?: boolean
-        }
-        Returns: Json
-      }
-      delete_concern_message: {
-        Args: { p_academy_id: string; p_concern_id: string; p_message_id: string }
-        Returns: Json
-      }
-      edit_concern_message: {
-        Args: { p_academy_id: string; p_body: string; p_concern_id: string; p_mentions?: string[]; p_message_id: string }
-        Returns: Json
-      }
-      mark_concern_read: { Args: { p_academy_id: string; p_concern_id: string; p_seq: number }; Returns: Json }
-      search_concerns: { Args: { p_academy_id: string; p_limit?: number; p_query: string }; Returns: Json }
-      send_concern_message: {
-        Args: {
-          p_academy_id: string
-          p_body: string
-          p_concern_id: string
-          p_mentions?: string[]
-          p_message_id: string
-          p_reply_to_id?: string
-        }
-        Returns: Json
-      }
-      set_concern_reaction: {
-        Args: { p_academy_id: string; p_concern_id: string; p_emoji: string; p_message_id: string; p_on: boolean }
-        Returns: Json
-      }
       academy_role_for: {
         Args: { target_academy_id: string }
         Returns: Database["public"]["Enums"]["academy_role"]
@@ -7910,6 +8131,7 @@ export type Database = {
         Args: { target_academy_id: string; target_schedule_id: string }
         Returns: boolean
       }
+      can_join_concern_channel: { Args: { p_topic: string }; Returns: boolean }
       can_read_avatar_object: { Args: { p_name: string }; Returns: boolean }
       cancel_account_password_challenge: {
         Args: { p_challenge_id: string; p_user_id: string }
@@ -8080,6 +8302,43 @@ export type Database = {
         Args: { p_group_id: string; p_token: string; p_track_id: string }
         Returns: Json
       }
+      concern_detail: {
+        Args: { p_academy_id: string; p_concern_id: string }
+        Returns: Json
+      }
+      concern_has_access: {
+        Args: { p_academy_id: string; p_concern_id: string }
+        Returns: boolean
+      }
+      concern_inbox: {
+        Args: {
+          p_academy_id: string
+          p_before_id?: string
+          p_before_updated_at?: string
+          p_limit?: number
+          p_status?: string
+        }
+        Returns: Json
+      }
+      concern_message_changes: {
+        Args: {
+          p_academy_id: string
+          p_after_revision: number
+          p_concern_id: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      concern_messages_page: {
+        Args: {
+          p_academy_id: string
+          p_before_seq?: number
+          p_concern_id: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      concern_unread: { Args: { p_academy_id: string }; Returns: Json }
       configure_exam_availability: {
         Args: {
           p_academy_id: string
@@ -8247,6 +8506,19 @@ export type Database = {
         }
         Returns: Json
       }
+      create_concern: {
+        Args: {
+          p_academy_id: string
+          p_body: string
+          p_concern_id: string
+          p_mentions?: string[]
+          p_message_id: string
+          p_participant_ids: string[]
+          p_title: string
+          p_whole_team?: boolean
+        }
+        Returns: Json
+      }
       create_content_assessment: {
         Args: {
           p_academy_id: string
@@ -8368,6 +8640,14 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: number
       }
+      delete_concern_message: {
+        Args: {
+          p_academy_id: string
+          p_concern_id: string
+          p_message_id: string
+        }
+        Returns: Json
+      }
       delete_content_coupon_type: {
         Args: { p_academy_id: string; p_request_id: string; p_type_id: string }
         Returns: Json
@@ -8441,6 +8721,16 @@ export type Database = {
       dev_session_revoked: {
         Args: { p_control_id: string; p_session_id: string }
         Returns: undefined
+      }
+      edit_concern_message: {
+        Args: {
+          p_academy_id: string
+          p_body: string
+          p_concern_id: string
+          p_mentions?: string[]
+          p_message_id: string
+        }
+        Returns: Json
       }
       end_session: {
         Args: { p_academy_id: string; p_session_id: string }
@@ -9012,6 +9302,10 @@ export type Database = {
         }
         Returns: Json
       }
+      mark_concern_read: {
+        Args: { p_academy_id: string; p_concern_id: string; p_seq: number }
+        Returns: Json
+      }
       mark_unrecorded_absent: {
         Args: {
           p_academy_id: string
@@ -9542,6 +9836,21 @@ export type Database = {
         }
         Returns: Json
       }
+      search_concerns: {
+        Args: { p_academy_id: string; p_limit?: number; p_query: string }
+        Returns: Json
+      }
+      send_concern_message: {
+        Args: {
+          p_academy_id: string
+          p_body: string
+          p_concern_id: string
+          p_mentions?: string[]
+          p_message_id: string
+          p_reply_to_id?: string
+        }
+        Returns: Json
+      }
       session_academy: { Args: { p_session_id: string }; Returns: string }
       session_archive_impact: {
         Args: { p_academy_id: string; p_session_id: string }
@@ -9571,6 +9880,16 @@ export type Database = {
           p_assessment_id: string
           p_label_id: string
           p_type: string
+        }
+        Returns: Json
+      }
+      set_concern_reaction: {
+        Args: {
+          p_academy_id: string
+          p_concern_id: string
+          p_emoji: string
+          p_message_id: string
+          p_on: boolean
         }
         Returns: Json
       }
