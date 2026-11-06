@@ -78,7 +78,8 @@ export function ConcernMessageItem({ message, academyId, userId, settled, comman
         <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setEditing(false)}>Cancel</Button>
         <Button size="sm" type="submit" disabled={pending || (!body.trim() && !hasMedia)}>{pending ? "Saving…" : "Save"}</Button>
       </ConcernMessageInput>
-    </form> : message.body !== null && <ConcernBody body={message.body} />}
+    </form> : message.body !== null && <ConcernBody body={message.body} scope={{ academyId, userId }}
+      mentions={participants.filter((participant) => message.mentions.includes(participant.userId)).map((participant) => ({ userId: participant.userId, name: participant.name, avatarUrl: avatarUrls[participant.avatarPath ?? ""] }))} />}
     {!deleted && <ConcernAttachments attachments={message.attachments} academyId={academyId} concernId={message.concernId} />}
     {!deleted && message.editedAt && <span className="text-xs text-muted-foreground">Edited</span>}
     {!deleted && <div className="mt-2 flex flex-wrap items-center gap-1">
