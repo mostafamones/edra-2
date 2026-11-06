@@ -12,11 +12,11 @@ import { usePathname, useRouter } from "@/lib/navigation";
 
 import type { readMyUnits, Scope } from "../data";
 import { Pager } from "./pager";
-import { UNIT_STATUSES, unitStarted, unitStatus, type UnitStatus } from "../started";
+import { UNIT_STATUSES, unitStatus, type UnitStatus } from "../started";
 import { ViewSettings } from "./view-settings";
 
 
-// My courses lists every course the student holds a grant for, started or not; expired ones stay behind the status filter.
+// Discover shows all eligible releases; My courses is limited to current and expired grants.
 const HELD = ["active", "expired"];
 
 export function UnitsList({ started, search: initialSearch, scope, initialView, initialStatuses, initialGroup, groups, now, academies }: {
@@ -29,7 +29,9 @@ export function UnitsList({ started, search: initialSearch, scope, initialView, 
   const picked = scope?.slug;
   const [statuses, setStatuses] = useState(initialStatuses);
   const [group, setGroup] = useState(initialGroup);
-  const courses = groups.flatMap(({ academy, items }) => (items ?? []).filter((unit) => (started ? HELD.includes(unit.access.status) : !unitStarted(unit)) && statuses.includes(unitStatus(unit, now)) && unit.title.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())).map((unit) => ({ unit, academy })))
+  const eligible = groups.flatMap(({ academy, items }) => (items ?? []).filter((unit) => !started || HELD.includes(unit.access.status)).map((unit) => ({ unit, academy })));
+  const statusFiltered = statuses.length !== UNIT_STATUSES.length;
+  const courses = eligible.filter(({ unit }) => statuses.includes(unitStatus(unit, now)) && unit.title.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
     .sort((a, b) => {
       const aExpiry = a.unit.access.expiresAt;
       const bExpiry = b.unit.access.expiresAt;
@@ -43,7 +45,7 @@ export function UnitsList({ started, search: initialSearch, scope, initialView, 
   const title = started ? "My courses" : "Discover";
   const layout = started ? view : "grid";
   // Settings survive the search, paging, and each other.
-  const settings = { ...(layout === "list" && { view: "list" }), ...(picked && { academy: picked }), ...(group !== "none" && { group }), ...(!(statuses.length === 1 && statuses[0] === "active") && { status: statuses.join(",") || "none" }) };
+  const settings = { ...(layout === "list" && { view: "list" }), ...(picked && { academy: picked }), ...(group !== "none" && { group }), ...(statusFiltered && { status: statuses.join(",") || "none" }) };
   const query = { ...(search && { q: search }), ...settings };
   // Picking an academy reloads the list scoped to it, so its pages are complete.
   const pick = (academy: string | undefined) => {
@@ -72,8 +74,8 @@ export function UnitsList({ started, search: initialSearch, scope, initialView, 
       {failed.length > 0 && <Alert><AlertTitle>Could not load {failed.map((group) => group.academy.name).join(", ")}.</AlertTitle></Alert>}
       {courses.length === 0 ? (
         <Empty className="rounded-xl border border-dashed py-16">
-          <EmptyHeader><EmptyTitle>{search ? "No matching courses" : "No courses to show"}</EmptyTitle></EmptyHeader>
-          {search && <Button variant="outline" onClick={() => setSearch("")}>Clear search</Button>}
+          <EmptyHeader><EmptyTitle>{search || statusFiltered ? "No matching courses" : "No courses to show"}</EmptyTitle></EmptyHeader>
+          {(search || statusFiltered) && <Button variant="outline" onClick={() => { setSearch(""); setStatuses([...UNIT_STATUSES]); }}>Clear filters</Button>}
         </Empty>
       ) : (
         <div className="space-y-6">

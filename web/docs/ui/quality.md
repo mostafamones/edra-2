@@ -24,6 +24,16 @@ Keep the initial surface focused on the frequent task. Reveal less frequent cont
 
 Use these where the task calls for them. Do not add a sheet, preference store, confirmation or context menu solely to satisfy this table. The current learning search is limited to loaded pages; copying its visual layout does not authorize promising a full-catalog search. Existing assessment tooltips do not override the owner's helper-text rule.
 
+## Design the whole journey
+
+Before polishing one screen, lay out the entry, working view, blocked state, confirmation and return together. Reuse the existing shell and keep the same object name, status terms and return destination across them. Make the most useful action follow the current state: a new student can start, a returning student can resume, and a blocked student can open the prerequisite or renew. Keep completion and access separate; an expired course can still be complete.
+
+- **Make limits visible before commitment.** Use a compact count beside the action and show the exact consequence in the confirmation when the choice consumes a limited allowance. For example, an extension shows `1 of 1 left`, then `1 → 0` before confirmation. After success, show the acknowledged outcome. Never infer a count that the domain contract cannot supply.
+- **Keep uncommon work near its trigger.** [Coupon printing](https://github.com/mostafamones/edra-2/pull/66) keeps the preview and final action in the batch context. [Student suspension](https://github.com/mostafamones/edra-2/pull/65) uses the same confirmation for row, bulk and detail entry points. Reuse the interaction where the underlying action is the same, including pending, stale and retry behavior.
+- **Keep the useful context, and clear it when scope changes.** The draft [Concerns panel](https://github.com/mostafamones/edra-2/pull/67) carries the conversation through navigation in one academy and clears it on an academy or account switch. Use it as a source reference for continuity; the draft is not an approved visual baseline.
+- **Separate filtering from eligibility.** Review defaults with realistic mixtures of active, locked, completed and expired records. If a filter hides all loaded results, offer a way to clear it. Distinguish a failed read from an empty result; never widen server visibility to make an empty screen look populated.
+- **Review the transitions as well as the layout.** Walk through the main path, one blocked or exhausted state, cancel and retry. On mobile, keep the same next action visible and reflow supporting information below it. Verify what happens when data changes between review and commit; keep failed input or selection where it is safe to retry.
+
 ## PR evidence
 
 The existing `web` GitHub Actions job runs `npm test`, including Mones's assessment and label regressions. Relevant examples:

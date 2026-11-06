@@ -13,8 +13,8 @@ export function scopeParam({ academy, page }: Record<string, string | string[] |
 }
 
 /** Course list settings from the query: search, layout, and which statuses show. */
-export function unitListParams({ q, view, finished, status, group }: Record<string, string | string[] | undefined>) {
-  const selected = typeof status === "string" ? status.split(",").filter((value): value is UnitStatus => UNIT_STATUSES.includes(value as UnitStatus)) : finished === "1" ? [...UNIT_STATUSES] : ["active" as const];
+export function unitListParams({ q, view, status, group }: Record<string, string | string[] | undefined>) {
+  const selected = typeof status === "string" ? UNIT_STATUSES.filter((value): value is UnitStatus => status.split(",").includes(value)) : [...UNIT_STATUSES];
   const grouping: "none" | "academy" | "status" = group === "academy" || group === "status" ? group : "none";
   return {
     search: typeof q === "string" ? q.trim().slice(0, 100) : "",
