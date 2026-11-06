@@ -68,9 +68,9 @@ export function ConcernMessageItem({ message, outgoing, first = true, last = tru
   const time = <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()} className="text-xs text-muted-foreground">{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>;
   const mentioned = participants.filter((participant) => message.mentions.includes(participant.userId)).map((participant) => ({ userId: participant.userId, name: participant.name, avatarUrl: avatarUrls[participant.avatarPath ?? ""] }));
   return <article data-concern-seq={outgoing ? undefined : message.seq} data-concern-message={message.id} tabIndex={-1}
-    className={cn("group/message flex min-w-0 gap-2 rounded-lg px-3 py-0.5 focus-visible:outline-2 focus-visible:outline-ring target:bg-muted", own && "flex-row-reverse", first && "mt-3")}>
-    {!own && <div className="w-8 shrink-0 self-end">{last && <Avatar aria-hidden="true"><AvatarImage src={avatarUrls[author?.avatarPath ?? ""]} alt="" /><AvatarFallback className="text-xs">{name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</AvatarFallback></Avatar>}</div>}
-    <div className={cn("flex min-w-0 flex-col", editing ? "flex-1" : "max-w-[85%]", own ? "items-end" : "items-start")}>
+    className={cn("group/message flex min-w-0 gap-2 rounded-lg ps-3 pe-1 py-px focus-visible:outline-2 focus-visible:outline-ring target:bg-muted", first && "mt-3")}>
+    {!own && <div className="w-8 shrink-0 self-start">{first && <Avatar aria-hidden="true"><AvatarImage src={avatarUrls[author?.avatarPath ?? ""]} alt="" /><AvatarFallback className="text-xs">{name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</AvatarFallback></Avatar>}</div>}
+    <div className={cn("flex min-w-0 flex-col", editing ? "flex-1" : "max-w-[80%]", own ? "ms-auto items-end" : "items-start")}>
       {first && <div className="mb-1 flex items-baseline gap-2 px-1">{!own && <span className="text-xs font-medium break-words" dir="auto">{name}</span>}{time}</div>}
       {editing && !settled && !deleted ? <form className="w-full" onSubmit={(event) => { event.preventDefault(); if (body.trim() || hasMedia) { setEditing(false); void run(() => commands.edit(message.id, { body: body.trim() ? body : null, mentions: body.trim() ? mentionIds(body, mentions) : [] }), undefined, () => setEditing(true)); } }}>
         <ConcernMessageInput id={`edit-${message.id}`} label="Edit message" value={body} onChange={setBody} disabled={pending} participants={participants}
@@ -80,7 +80,9 @@ export function ConcernMessageItem({ message, outgoing, first = true, last = tru
           <Button size="sm" type="submit" disabled={pending || (!body.trim() && !hasMedia)}>{pending ? "Saving…" : "Save"}</Button>
         </ConcernMessageInput>
       </form> : <div className={cn("relative flex items-center gap-1", own && "flex-row-reverse")}>
-        <div className={cn("min-w-0 rounded-2xl px-3 py-2 text-sm transition-opacity", outgoing && !outgoing.failure && "opacity-70", deleted ? "border italic text-muted-foreground" : own ? "bg-primary text-primary-foreground" : "bg-muted")}>
+        <div className={cn("min-w-0 rounded-2xl px-3 py-2 text-sm transition-opacity",
+          // Square the corners that face the rest of the run, on the author's side.
+          !first && (own ? "rounded-se-md" : "rounded-ss-md"), !last && (own ? "rounded-ee-md" : "rounded-es-md"), outgoing && !outgoing.failure && "opacity-70", deleted ? "border italic text-muted-foreground" : own ? "bg-primary text-primary-foreground" : "bg-muted")}>
           {message.replyTo && <blockquote className="mb-1.5 rounded-md border-s-2 border-current/40 bg-background/15 px-2 py-1 text-xs opacity-80"><span className="block font-medium" dir="auto">{message.replyTo.authorName ?? "Staff"}</span><span className="line-clamp-2 break-words" dir="auto">{message.replyTo.deleted ? "Message deleted" : message.replyTo.body ?? concernMediaLabel(message.replyTo.media)}</span></blockquote>}
           {deleted ? "Message deleted" : message.body !== null && <ConcernBody body={message.body} scope={{ academyId, userId }} mentions={mentioned} />}
           {!deleted && <ConcernAttachments attachments={message.attachments} academyId={academyId} concernId={message.concernId} />}
@@ -123,7 +125,7 @@ export function ConcernMessageItem({ message, outgoing, first = true, last = tru
         {outgoing.failure.code !== "unavailable" && <Button type="button" size="xs" variant="ghost" onClick={outgoing.onDiscard}>Discard</Button>}
       </div>}
       {error && <p role="alert" className="px-1 text-sm text-destructive">{error}</p>}
-      <ConcernReceipts participants={receipts} avatarUrls={avatarUrls} />
     </div>
+    <div className={cn("w-4 shrink-0 self-end", !own && "ms-auto")}><ConcernReceipts participants={receipts} avatarUrls={avatarUrls} /></div>
   </article>;
 }
