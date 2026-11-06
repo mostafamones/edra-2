@@ -1,3 +1,4 @@
+import { newUuid } from "@/lib/uuid";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Edit02Icon, SentIcon, Tick02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
@@ -107,7 +108,7 @@ export function CreateConcern({ scope, isCurrent, onCreated, onTitle }: { scope:
     <form className="shrink-0 space-y-2 p-3" onSubmit={(event) => {
       event.preventDefault();
       if (!body.trim() || locked) return;
-      void submit({ concernId: crypto.randomUUID(), messageId: crypto.randomUUID(), title: title.trim(), body, participantIds: selected, wholeTeam, mentions: mentionIds(body, mentions) });
+      void submit({ concernId: newUuid(), messageId: newUuid(), title: title.trim(), body, participantIds: selected, wholeTeam, mentions: mentionIds(body, mentions) });
     }}>
       <ConcernMessageInput id="concern-message" label="Message" inputRef={input} value={body} onChange={setBody} disabled={locked} participants={participants}
         onMention={(participant) => setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant])}

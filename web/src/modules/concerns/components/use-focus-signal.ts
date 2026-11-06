@@ -1,10 +1,11 @@
+import { newUuid } from "@/lib/uuid";
 import { useEffect } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 import type { ConcernScope } from "../queries";
 
 /** Separates this tab's heartbeat from the account's other tabs; the account comes from the session. */
-const TAB_ID = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : null;
+const TAB_ID = typeof crypto !== "undefined" ? newUuid() : null;
 export const FOCUS_HEARTBEAT_MS = 20_000;
 
 /**

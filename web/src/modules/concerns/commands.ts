@@ -40,7 +40,7 @@ export function useConcernCommands(scope: ConcernScope, concernId: string, onDen
   }
 
   return {
-    /** Generate `messageId` once per message (crypto.randomUUID) and reuse it for manual retries. */
+    /** Generate `messageId` once per message (newUuid) and reuse it for manual retries. */
     send: async (input: Body & { messageId: string; replyToId: string | null; attachmentIds: string[] }) => {
       const target = { ...scope };
       const generation = browserScopeGeneration();
