@@ -7,8 +7,13 @@ import { resolveProfileAvatars } from "@/modules/account/browser";
 import { useConcernCommands, useConcernLifecycle, useConcernMedia } from "../commands";
 import { useConcernLive } from "../live";
 import { concernKeys, isConcernDenied, loadConcernTarget, syncConcernThread, useConcernDetail, useConcernThread, type ConcernScope } from "../queries";
+import type { ConcernMessage } from "../validation";
 import { ConcernFeedback } from "./feedback";
-import { ConcernComposer } from "./composer";
+import { ConcernComposer, type ConcernSendPayload } from "./composer";
+import type { ConcernAttachment } from "../contracts";
+import type { ConcernFailure } from "../errors";
+import { concernMediaSummary } from "../media";
+import { browserScopeGeneration } from "@/lib/browser-scope";
 import { ConcernMessageItem } from "./message";
 import { ConcernHistory } from "./history";
 import { ConcernIconButton } from "./icon-button";
@@ -41,6 +46,17 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
   const [copied, setCopied] = useState<boolean | null>(null);
   const [muting, setMuting] = useState(false);
   const [muteError, setMuteError] = useState(false);
+  // Sends show at once; each stays here until the server's copy is in the thread or it is discarded.
+  const [outgoing, setOutgoing] = useState<Outgoing[]>([]);
+  async function deliver(item: Outgoing) {
+    setOutgoing((list) => list.some((entry) => entry.message.id === item.message.id)
+      ? list.map((entry) => entry.message.id === item.message.id ? { ...item, failure: null } : entry) : [...list, { ...item, failure: null }]);
+    const generation = browserScopeGeneration();
+    const result = await commands.send(item.payload);
+    if (generation !== browserScopeGeneration()) return;
+    setOutgoing((list) => result.ok ? list.filter((entry) => entry.message.id !== item.message.id)
+      : list.map((entry) => entry.message.id === item.message.id ? { ...entry, failure: result } : entry));
+  }
   const reading = section === "messages";
   useConcernFocusSignal(scope, concernId, active && !!detail.data && !detail.isError);
   const live = useConcernLive({ scope, concernId: active && !!detail.data && !detail.isError ? concernId : null, typing: active && reading && !jumping && typing && detail.data?.status === "ongoing" });
@@ -111,6 +127,7 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
   if (thread.isError && !thread.data) return <ConcernFeedback retry={() => void thread.refetch()}>Could not load messages</ConcernFeedback>;
   const settled = detail.data.status === "settled";
   const participants = detail.data.participants.filter((participant) => !participant.suspended);
+  const shown = [...messages, ...outgoing.filter((entry) => !messages.some((message) => message.id === entry.message.id)).map((entry) => entry.message)];
   const reply = messages.find((message) => message.id === replyId) ?? null;
   // A form opened for one state closes itself once someone else changes it.
   const decision = deciding === (settled ? "reopen" : "settle") && detail.data.canManage && !detail.isError ? deciding : null;
@@ -148,11 +165,34 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
       {thread.data?.hasMore && <div className="p-2 text-center"><Button size="sm" variant="ghost" disabled={thread.loadingOlder || jumping} onClick={() => void thread.loadOlder()}>{thread.loadingOlder ? "Loading…" : "Load older messages"}</Button></div>}
       {!!thread.olderError && <ConcernFeedback retry={() => void thread.loadOlder()}>Could not load older messages</ConcernFeedback>}
       {!messages.length && !thread.isLoading && <ConcernFeedback>No messages</ConcernFeedback>}
-      {messages.map((message) => <ConcernMessageItem key={message.id} message={message} academyId={scope.academyId} userId={scope.userId} settled={settled || detail.isError} commands={commands} onReply={(item) => { setReplyId(item.id); }} participants={participants}
-        receipts={participants.filter((participant) => participant.lastReadSeq === message.seq)} avatarUrls={avatars.data ?? {}} />)}
+      {shown.map((message, index) => { const pending = outgoing.find((entry) => entry.message.id === message.id);
+        return <ConcernMessageItem key={message.id} message={message} first={!sameRun(shown[index - 1], message)} last={!sameRun(message, shown[index + 1])} academyId={scope.academyId} userId={scope.userId} settled={settled || detail.isError} commands={commands} onReply={(item) => { setReplyId(item.id); }} participants={participants}
+          receipts={pending ? [] : participants.filter((participant) => participant.lastReadSeq === message.seq && participant.userId !== scope.userId && participant.userId !== message.authorId)} avatarUrls={avatars.data ?? {}}
+          outgoing={pending && { failure: pending.failure, onRetry: () => void deliver(pending), onDiscard: () => setOutgoing((list) => list.filter((entry) => entry !== pending)) }} />; })}
     </div>
     {readError && reading && <div role="alert" className="flex items-center gap-2 px-4 text-xs"><span>Could not update read receipt</span><Button size="sm" variant="ghost" onClick={() => setReadRetry((value) => value + 1)}>Retry receipt</Button></div>}
     {decision && <ConcernLifecycleForm key={decision} mode={decision} detail={detail.data} lifecycle={lifecycle} onClose={() => setDeciding(null)} />}
-    {reading && !decision && !settled && !detail.isError && <ConcernComposer send={commands.send} media={media} participants={participants} reply={reply} onReplyChange={(message) => setReplyId(message?.id ?? null)} onTyping={setTyping} onSent={() => { pinned.current = true; scroll.current?.scrollTo({ top: scroll.current.scrollHeight }); }} />}
+    {reading && !decision && !settled && !detail.isError && <ConcernComposer media={media} participants={participants} reply={reply} onReplyChange={(message) => setReplyId(message?.id ?? null)} onTyping={setTyping}
+      onSend={(payload, preview) => {
+        pinned.current = true;
+        void deliver({ payload, failure: null, message: outgoingMessage(payload, preview, concernId, scope.userId, participants.find((participant) => participant.userId === scope.userId)?.name ?? null) });
+        requestAnimationFrame(() => scroll.current?.scrollTo({ top: scroll.current.scrollHeight }));
+      }} />}
   </div>;
+}
+
+/** Consecutive messages from one author form a run with one name and avatar, until an hour passes. */
+function sameRun(previous: ConcernMessage | undefined, next: ConcernMessage | undefined) {
+  return !!previous && !!next && previous.authorId === next.authorId && Date.parse(next.createdAt) - Date.parse(previous.createdAt) < 60 * 60_000;
+}
+
+type Outgoing = { payload: ConcernSendPayload; message: ConcernMessage; failure: ConcernFailure | null };
+/** The local stand-in shown while a message is on its way; the server's copy replaces it by id. */
+function outgoingMessage(payload: ConcernSendPayload, preview: { reply: ConcernMessage | null; attachments: ConcernAttachment[] }, concernId: string, userId: string, name: string | null): ConcernMessage {
+  const reply = preview.reply;
+  return {
+    id: payload.messageId, concernId, seq: -1, revision: 0, authorId: userId, authorName: name, body: payload.body, mentions: payload.mentions,
+    createdAt: new Date().toISOString(), editedAt: null, deletedAt: null, reactions: [], attachments: preview.attachments,
+    replyTo: reply && { id: reply.id, seq: reply.seq, authorId: reply.authorId, authorName: reply.authorName, body: reply.body, deleted: !!reply.deletedAt, media: concernMediaSummary(reply.attachments) },
+  };
 }

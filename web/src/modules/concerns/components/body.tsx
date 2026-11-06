@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { fetchTeamMembers, ROLE_LABELS, staffQueryKeys } from "@/modules/staff";
 import type { ConcernScope } from "../queries";
@@ -32,7 +31,7 @@ function Mention({ person, scope }: { person: MentionPerson; scope: ConcernScope
   const role = members.data?.find((member) => member.user_id === person.userId)?.role;
   return <Popover open={open} onOpenChange={setOpen}>
     <PopoverTrigger asChild>
-      <Badge asChild variant="secondary" className="cursor-pointer align-baseline"><button type="button">@{person.name}</button></Badge>
+      <button type="button" className="rounded-md bg-current/15 px-1 font-semibold hover:bg-current/25">@{person.name}</button>
     </PopoverTrigger>
     <PopoverContent className="flex w-64 items-center gap-3" align="start">
       <Avatar size="lg" aria-hidden="true"><AvatarImage src={person.avatarUrl} alt="" /><AvatarFallback>{initials(person.name)}</AvatarFallback></Avatar>

@@ -8,6 +8,7 @@ import { advanceBrowserScope } from "@/lib/browser-scope";
 import type { ConcernDetail, ConcernMessage, ConcernThread } from "../validation";
 import { concernKeys } from "../queries";
 import { ConcernPanelProvider, useConcernPanel } from "./panel";
+import { messageText, typeMessage } from "./editor.testing";
 
 const state = vi.hoisted(() => ({
   academyId: "academy-a", userId: "user-a", role: "admin", mobile: false,
@@ -116,15 +117,15 @@ describe("floating concern panel consumers", () => {
     expect(state.rpc.mock.calls.map(([name]) => name)).toEqual(["concern_unread"]);
     await openChat();
     expect(screen.getByRole("dialog").getAttribute("aria-modal")).not.toBe("true");
-    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Keep my draft" } });
+    typeMessage(screen.getByLabelText("Message"), "Keep my draft");
     fireEvent.click(screen.getByRole("button", { name: "Navigate within academy" }));
     expect(screen.getByRole("heading", { name: "Team" })).toBeTruthy();
-    expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toBe("Keep my draft");
+    expect(messageText(screen.getByLabelText("Message"))).toBe("Keep my draft");
     fireEvent.click(screen.getByRole("button", { name: "Close concerns" }));
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open concerns" })));
     expect(screen.queryByRole("dialog")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Open concerns" }));
-    expect((await screen.findByLabelText("Message") as HTMLTextAreaElement).value).toBe("Keep my draft");
+    expect(messageText(await screen.findByLabelText("Message"))).toBe("Keep my draft");
     expect(state.rpc.mock.calls.filter(([name]) => name === "concern_messages_page")).toHaveLength(1);
   });
 
@@ -175,7 +176,7 @@ describe("floating concern panel consumers", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     await screen.findByRole("heading", { name: "Follow up" });
     expect(state.createConcern).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Please check attendance" } });
+    typeMessage(screen.getByLabelText("Message"), "Please check attendance");
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
     fireEvent.click(await screen.findByRole("button", { name: "Retry send" }));
     await waitFor(() => expect(state.createConcern).toHaveBeenCalledTimes(2));
@@ -187,13 +188,13 @@ describe("floating concern panel consumers", () => {
     const mounted = mount(); await openChat();
     state.sendConcernMessage.mockResolvedValueOnce({ ok: false, code: "reply_unavailable", message: "The message you replied to was deleted." });
     const first = document.querySelector('[data-concern-seq="1"]');
-    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Check https://example.com" } });
+    typeMessage(screen.getByLabelText("Message"), "Check https://example.com");
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
     fireEvent.click(await screen.findByRole("button", { name: "Retry send" }));
     await screen.findByRole("link", { name: "https://example.com" });
     expect(state.sendConcernMessage.mock.calls[1][0]).toEqual(state.sendConcernMessage.mock.calls[0][0]);
     expect(document.querySelector('[data-concern-seq="1"]')).toBe(first);
-    expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toBe("");
+    expect(messageText(screen.getByLabelText("Message"))).toBe("");
     expect(mounted.client.getQueryData<ConcernThread>(concernKeys.thread({ academyId: "academy-a", userId: "user-a" }, "concern-1"))?.messages).toHaveLength(3);
   });
 
@@ -201,10 +202,10 @@ describe("floating concern panel consumers", () => {
     mount(); await openChat();
     await menu(); fireEvent.click(await screen.findByRole("menuitem", { name: "Edit" }));
     state.editConcernMessage.mockResolvedValueOnce({ ok: false, code: "edit_expired", message: "Messages can only be edited within five minutes of sending." });
-    fireEvent.change(screen.getByLabelText("Edit message"), { target: { value: "Corrected" } });
+    typeMessage(screen.getByLabelText("Edit message"), "Corrected");
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await screen.findByText("Messages can only be edited within five minutes of sending.");
-    expect((screen.getByLabelText("Edit message") as HTMLTextAreaElement).value).toBe("Corrected");
+    expect(messageText(screen.getByLabelText("Edit message"))).toBe("Corrected");
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await screen.findByText("Edited");
     expect(screen.getByText("Corrected")).toBeTruthy();
@@ -308,8 +309,8 @@ describe("floating concern panel consumers", () => {
     fireEvent.mouseDown(option, { button: 0 });
     fireEvent.mouseUp(option, { button: 0 });
     fireEvent.click(option);
-    await waitFor(() => expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toContain("@Omar"));
-    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "@Omar please check" } });
+    await waitFor(() => expect(messageText(screen.getByLabelText("Message"))).toContain("@Omar"));
+    typeMessage(screen.getByLabelText("Message"), "@Omar please check");
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
     await waitFor(() => expect(state.sendConcernMessage).toHaveBeenCalledWith(expect.objectContaining({ replyToId: "message-1", mentions: ["user-b"], body: "@Omar please check" })));
     const first = document.querySelector('[data-concern-seq="1"]')! as HTMLElement;
@@ -326,15 +327,17 @@ describe("floating concern panel consumers", () => {
     mount(); await openChat();
     const waiting = deferred<{ ok: true; message: ConcernMessage }>();
     state.sendConcernMessage.mockReturnValueOnce(waiting.promise);
-    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Finish while closed" } });
+    typeMessage(screen.getByLabelText("Message"), "Finish while closed");
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
     await screen.findByText("Sending…");
+    expect(screen.getByText("Finish while closed")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Close concerns" }));
-    await act(async () => waiting.resolve({ ok: true, message: message(3, { body: "Finish while closed" }) }));
+    const sentId = state.sendConcernMessage.mock.calls[0][0].messageId;
+    await act(async () => waiting.resolve({ ok: true, message: message(3, { id: sentId, body: "Finish while closed" }) }));
     expect(screen.queryByRole("dialog")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Open concerns" }));
     await screen.findByText("Finish while closed");
-    expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toBe("");
+    expect(messageText(screen.getByLabelText("Message"))).toBe("");
     expect(screen.queryByText("Sending…")).toBeNull();
     expect(state.sendConcernMessage).toHaveBeenCalledTimes(1);
   });
@@ -349,13 +352,13 @@ describe("floating concern panel consumers", () => {
     await router.load();
     render(<RouterProvider router={router} />);
     await screen.findByText("Home route"); await openChat();
-    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Route draft" } });
+    typeMessage(screen.getByLabelText("Message"), "Route draft");
     const original = screen.getByLabelText("Message");
     act(() => router.history.push("/team"));
     await screen.findByText("Team route");
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(screen.getByLabelText("Message")).toBe(original);
-    expect((original as HTMLTextAreaElement).value).toBe("Route draft");
+    expect(messageText(original)).toBe("Route draft");
     expect(state.rpc.mock.calls.filter(([name]) => name === "concern_messages_page")).toHaveLength(1);
   });
 
@@ -374,16 +377,17 @@ describe("floating concern panel consumers", () => {
     expect(state.rpc.mock.calls.filter(([name]) => name === "concern_unread")).toHaveLength(1);
   });
 
-  it("locks an uncertain send payload through automatic/manual retry and panel collapse", async () => {
+  it("shows a send at once and keeps an uncertain payload retryable (never discardable) through panel collapse", async () => {
     mount(); await openChat();
     state.sendConcernMessage.mockResolvedValueOnce({ ok: false, code: "unavailable", message: "Could not reach the server." })
       .mockResolvedValueOnce({ ok: false, code: "unavailable", message: "Could not reach the server." })
       .mockResolvedValueOnce({ ok: false, code: "unavailable", message: "Could not reach the server." });
-    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Keep the original payload" } });
+    typeMessage(screen.getByLabelText("Message"), "Keep the original payload");
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    expect(screen.getByText("Keep the original payload")).toBeTruthy();
+    expect(messageText(screen.getByLabelText("Message"))).toBe("");
     await screen.findByRole("button", { name: "Retry send" }, { timeout: 4000 });
-    expect(screen.queryByRole("button", { name: "Edit message" })).toBeNull();
-    expect((screen.getByLabelText("Message") as HTMLTextAreaElement).disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: "Discard" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Close concerns" }));
     fireEvent.click(screen.getByRole("button", { name: "Open concerns" }));
     fireEvent.click(await screen.findByRole("button", { name: "Retry send" }));

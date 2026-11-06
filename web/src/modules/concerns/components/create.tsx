@@ -43,7 +43,7 @@ export function CreateConcern({ scope, isCurrent, onCreated, onTitle }: { scope:
   const [uncertain, setUncertain] = useState(false);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const inFlight = useRef(false);
-  const input = useRef<HTMLTextAreaElement>(null);
+  const input = useRef<HTMLElement>(null);
   const create = useCreateConcern(scope);
   const chosen = others.filter((person) => wholeTeam || selected.includes(person.userId));
   const ready = title.trim().length > 0 && chosen.length > 0;
