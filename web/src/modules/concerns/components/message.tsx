@@ -2,18 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { MoreHorizontalIcon, SmileIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { useConcernCommands } from "../commands";
 import { CONCERN_LIMITS } from "../contracts";
-import { CONCERN_BODY_MAX, concernEmojiSchema, type ConcernMessage, type ConcernParticipant } from "../validation";
+import { concernEmojiSchema, type ConcernMessage, type ConcernParticipant } from "../validation";
 import { concernMediaLabel } from "../media";
 import { ConcernAttachments } from "./attachments";
 import { ConcernBody } from "./body";
 import { ConcernIconButton } from "./icon-button";
-import { ConcernMentions, mentionIds, type MentionChoice } from "./mentions";
+import { ConcernMessageInput, mentionIds, type MentionChoice } from "./mentions";
 import { ConcernReceipts } from "./receipts";
 import { browserScopeGeneration } from "@/lib/browser-scope";
 
@@ -74,8 +72,12 @@ export function ConcernMessageItem({ message, academyId, userId, settled, comman
     </div>
     {message.replyTo && <blockquote className="mb-2 border-s-2 ps-2 text-xs text-muted-foreground"><span className="block font-medium" dir="auto">{message.replyTo.authorName ?? "Staff"}</span><span className="line-clamp-2 break-words" dir="auto">{message.replyTo.deleted ? "Message deleted" : message.replyTo.body ?? concernMediaLabel(message.replyTo.media)}</span></blockquote>}
     {deleted ? <p className="text-sm italic text-muted-foreground">Message deleted</p> : editing && !settled ? <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); if (body.trim() || hasMedia) void run(() => commands.edit(message.id, { body: body.trim() ? body : null, mentions: body.trim() ? mentionIds(body, mentions) : [] }), () => setEditing(false)); }}>
-      <Label htmlFor={`edit-${message.id}`} className="sr-only">Edit message</Label><Textarea id={`edit-${message.id}`} value={body} maxLength={CONCERN_BODY_MAX} disabled={pending} onChange={(event) => setBody(event.target.value)} />
-      <div className="flex flex-wrap gap-2"><ConcernMentions participants={participants} disabled={pending} onSelect={(participant) => { setBody((current) => `${current} @${participant.name ?? "Staff"} `); setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant]); }} /><Button size="sm" type="submit" disabled={pending || (!body.trim() && !hasMedia)}>{pending ? "Saving…" : "Save"}</Button><Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setEditing(false)}>Cancel</Button></div>
+      <ConcernMessageInput id={`edit-${message.id}`} label="Edit message" value={body} onChange={setBody} disabled={pending} participants={participants}
+        onMention={(participant) => setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant])}>
+        <div className="flex-1" />
+        <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setEditing(false)}>Cancel</Button>
+        <Button size="sm" type="submit" disabled={pending || (!body.trim() && !hasMedia)}>{pending ? "Saving…" : "Save"}</Button>
+      </ConcernMessageInput>
     </form> : message.body !== null && <ConcernBody body={message.body} />}
     {!deleted && <ConcernAttachments attachments={message.attachments} academyId={academyId} concernId={message.concernId} />}
     {!deleted && message.editedAt && <span className="text-xs text-muted-foreground">Edited</span>}

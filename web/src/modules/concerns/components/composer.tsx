@@ -4,15 +4,13 @@ import { Attachment01Icon, Cancel01Icon, File01Icon, Mic01Icon, RefreshIcon, Sen
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import type { useConcernCommands, useConcernMedia } from "../commands";
 import { CONCERN_LIMITS } from "../contracts";
 import { concernMediaLabel, concernMediaSummary, formatBytes, formatDuration } from "../media";
-import { CONCERN_BODY_MAX, type ConcernMessage, type ConcernParticipant } from "../validation";
+import { type ConcernMessage, type ConcernParticipant } from "../validation";
 import type { ConcernFailure } from "../errors";
 import { ConcernIconButton } from "./icon-button";
-import { ConcernMentions, mentionIds, type MentionChoice } from "./mentions";
+import { ConcernMessageInput, mentionIds, type MentionChoice } from "./mentions";
 import { ConcernRecorder } from "./recorder";
 import { useConcernFence } from "./use-fence";
 import { useConcernUploads, type ConcernUpload } from "./use-uploads";
@@ -65,24 +63,22 @@ export function ConcernComposer({ send, media, participants, reply, onReplyChang
       {uploads.items.map((item) => <PendingUpload key={item.id} item={item} locked={locked} onRetry={() => uploads.retry(item)} onRemove={() => { uploads.remove(item); setProblem(null); }} />)}
     </ul>}
     {recording && !locked && <ConcernRecorder onClose={() => setRecording(false)} onAttach={(voice) => add([{ ...voice, kind: "voice" }])} />}
-    <Label htmlFor="concern-message" className="sr-only">Message</Label>
-    <Textarea ref={input} id="concern-message" value={body} maxLength={CONCERN_BODY_MAX} disabled={locked} className="max-h-40 min-h-20 resize-none overflow-y-auto" onChange={(event) => { setBody(event.target.value); onTyping(event.target.value.trim().length > 0); }} onBlur={() => onTyping(false)} />
     <input ref={picker} type="file" multiple hidden tabIndex={-1} aria-hidden="true" onChange={(event) => {
       const files = [...(event.currentTarget.files ?? [])];
       event.currentTarget.value = "";
       if (files.length) add(files.map((file) => ({ blob: file, name: file.name, kind: "file" as const })));
     }} />
-    <div className="flex items-center gap-1"><ConcernMentions participants={participants} disabled={locked} onSelect={(participant) => {
-      setBody((current) => `${current}${current ? " " : ""}@${participant.name ?? "Staff"} `);
-      setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant]); input.current?.focus();
-    }} />
+    <ConcernMessageInput id="concern-message" label="Message" inputRef={input} value={body} disabled={locked} participants={participants}
+      onChange={(text) => { setBody(text); onTyping(text.trim().length > 0); }}
+      onMention={(participant) => setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant])}
+      onBlur={() => onTyping(false)}>
       <ConcernIconButton label="Attach files" icon={Attachment01Icon} disabled={locked || full} onClick={() => picker.current?.click()} />
       <ConcernIconButton label="Record voice note" icon={Mic01Icon} aria-pressed={recording} disabled={locked || full} onClick={() => setRecording((value) => !value)} />
       <div className="flex-1" />
       {pending ? <span role="status" className="text-xs text-muted-foreground">Sending…</span>
         : attempt ? <><Button type="button" size="sm" onClick={() => void submit(attempt)}>Retry send</Button>{failure?.code !== "unavailable" && <Button type="button" size="sm" variant="outline" onClick={() => { setAttempt(null); setFailure(null); input.current?.focus(); }}>Edit message</Button>}</>
-          : <ConcernIconButton label="Send message" icon={SentIcon} type="submit" disabled={!sendable} />}
-    </div>
+          : <ConcernIconButton label="Send message" icon={SentIcon} type="submit" variant="default" className="rounded-full" disabled={!sendable} />}
+    </ConcernMessageInput>
     {problem && <p role="alert" className="text-sm text-destructive">{problem}</p>}
     {failure && <p role="alert" className="text-sm text-destructive">{failure.message}</p>}
   </form>;
