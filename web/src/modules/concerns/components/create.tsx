@@ -6,17 +6,16 @@ import { Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, Ava
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Toggle } from "@/components/ui/toggle";
 import { accountName } from "@/modules/account/browser";
 import { fetchTeamMembers, staffQueryKeys } from "@/modules/staff";
 import { useCreateConcern } from "../commands";
 import type { ConcernScope } from "../queries";
-import { CONCERN_BODY_MAX, CONCERN_TITLE_MAX, type CreateConcernInput } from "../validation";
+import { CONCERN_TITLE_MAX, type CreateConcernInput } from "../validation";
 import { useConcernFence } from "./use-fence";
 import { ConcernFeedback } from "./feedback";
 import { ConcernIconButton } from "./icon-button";
-import { ConcernMentions, mentionIds, type MentionChoice } from "./mentions";
+import { ConcernMessageInput, mentionIds, type MentionChoice } from "./mentions";
 
 type Attempt = Omit<CreateConcernInput, "academyId">;
 type Person = { userId: string; name: string | null; avatarUrl?: string };
@@ -105,23 +104,19 @@ export function CreateConcern({ scope, isCurrent, onCreated, onTitle }: { scope:
       <ConcernIconButton label="Edit details" icon={Edit02Icon} disabled={locked} onClick={() => setStep("details")} />
     </div>
     <div className="min-h-0 flex-1" />
-    <form className="shrink-0 space-y-2 border-t p-3" onSubmit={(event) => {
+    <form className="shrink-0 space-y-2 p-3" onSubmit={(event) => {
       event.preventDefault();
       if (!body.trim() || locked) return;
       void submit({ concernId: crypto.randomUUID(), messageId: crypto.randomUUID(), title: title.trim(), body, participantIds: selected, wholeTeam, mentions: mentionIds(body, mentions) });
     }}>
-      <Label htmlFor="concern-message" className="sr-only">Message</Label>
-      <Textarea ref={input} id="concern-message" value={body} maxLength={CONCERN_BODY_MAX} disabled={locked} className="max-h-40 min-h-20 resize-none overflow-y-auto" onChange={(event) => setBody(event.target.value)} />
-      <div className="flex items-center gap-1">
-        <ConcernMentions participants={participants} disabled={locked} onSelect={(participant) => {
-          setBody((current) => `${current}${current ? " " : ""}@${participant.name ?? "Staff"} `);
-          setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant]); input.current?.focus();
-        }} />
+      <ConcernMessageInput id="concern-message" label="Message" inputRef={input} value={body} onChange={setBody} disabled={locked} participants={participants}
+        onMention={(participant) => setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant])}
+       >
         <div className="flex-1" />
         {pending ? <span role="status" className="text-xs text-muted-foreground">Sending…</span>
           : attempt ? <><Button type="button" size="sm" onClick={() => void submit(attempt)}>Retry send</Button>{!uncertain && <Button type="button" size="sm" variant="outline" onClick={() => { setAttempt(null); setError(null); input.current?.focus(); }}>Edit message</Button>}</>
-            : <ConcernIconButton label="Send message" icon={SentIcon} type="submit" disabled={!body.trim()} />}
-      </div>
+            : <ConcernIconButton label="Send message" icon={SentIcon} type="submit" variant="default" className="rounded-full" disabled={!body.trim()} />}
+      </ConcernMessageInput>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     </form>
   </div>;
