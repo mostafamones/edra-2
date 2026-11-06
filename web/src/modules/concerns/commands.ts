@@ -9,14 +9,21 @@ import {
 import { discardConcernUpload, finishConcernUpload, startConcernUpload } from "./media-actions";
 import { forgetConcern, invalidateConcernLists, concernKeys, type ConcernScope } from "./queries";
 import { mergeMessages, withRetry } from "./thread";
-import type { ConcernDetail, ConcernThread, CreateConcernInput, SendMessageInput } from "./validation";
+import type { ConcernDetail, ConcernMessage, ConcernThread, CreateConcernInput, SendMessageInput } from "./validation";
 
 type Body = { body: string | null; mentions: string[] };
+
+export function toggleReaction(reactions: ConcernMessage["reactions"], emoji: string, userId: string, on: boolean) {
+  const next = reactions.map((reaction) => reaction.emoji !== emoji ? reaction
+    : { ...reaction, userIds: on ? [...new Set([...reaction.userIds, userId])] : reaction.userIds.filter((id) => id !== userId) }).filter((reaction) => reaction.userIds.length > 0);
+  return on && !next.some((reaction) => reaction.emoji === emoji) ? [...next, { emoji, userIds: [userId] }] : next;
+}
 
 /**
  * Commands for one concern. The scope is captured when each call starts: a result arriving after
  * an academy switch or removal only updates that scope's cache entries, and only if they still exist.
- * Messages update the cached window in place (higher revision wins); nothing is granted optimistically.
+ * Messages update the cached window in place (higher revision wins). Edits, deletions and reactions
+ * show at once and are rolled back if refused; sends are shown as pending by the conversation.
  */
 export function useConcernCommands(scope: ConcernScope, concernId: string, onDenied?: () => void) {
   const queryClient = useQueryClient();
@@ -39,6 +46,24 @@ export function useConcernCommands(scope: ConcernScope, concernId: string, onDen
     return result;
   }
 
+  /** Applies a change to the cached message now; the returned undo restores it unless the server already moved it on. */
+  function optimistic(target: ConcernScope, messageId: string, change: (message: ConcernMessage) => ConcernMessage) {
+    const key = concernKeys.thread(target, concernId);
+    let before: ConcernMessage | undefined;
+    queryClient.setQueryData<ConcernThread>(key, (current) => current && { ...current, messages: current.messages.map((message) => message.id === messageId ? change(before = message) : message) });
+    return () => queryClient.setQueryData<ConcernThread>(key, (current) => current && before && {
+      ...current, messages: current.messages.map((message) => message.id === messageId && message.revision === before!.revision ? before! : message),
+    });
+  }
+  async function guarded<T extends { ok: boolean; code?: string; message?: unknown }>(target: ConcernScope, messageId: string, change: (message: ConcernMessage) => ConcernMessage, call: () => Promise<T>) {
+    const generation = browserScopeGeneration();
+    const original = cacheIdentity();
+    const undo = optimistic(target, messageId, change);
+    const result = await withRetry(call);
+    if (!result.ok && generation === browserScopeGeneration() && original === cacheIdentity()) undo();
+    return settle(target, result, generation, original);
+  }
+
   return {
     /** Generate `messageId` once per message (newUuid) and reuse it for manual retries. */
     send: async (input: Body & { messageId: string; replyToId: string | null; attachmentIds: string[] }) => {
@@ -50,21 +75,18 @@ export function useConcernCommands(scope: ConcernScope, concernId: string, onDen
     },
     edit: async (messageId: string, input: Body) => {
       const target = { ...scope };
-      const generation = browserScopeGeneration();
-      const original = cacheIdentity();
-      return settle(target, await withRetry(() => editConcernMessage({ academyId: target.academyId, concernId, messageId, ...input })), generation, original);
+      return guarded(target, messageId, (message) => ({ ...message, ...input, editedAt: new Date().toISOString() }),
+        () => editConcernMessage({ academyId: target.academyId, concernId, messageId, ...input }));
     },
     remove: async (messageId: string) => {
       const target = { ...scope };
-      const generation = browserScopeGeneration();
-      const original = cacheIdentity();
-      return settle(target, await withRetry(() => deleteConcernMessage({ academyId: target.academyId, concernId, messageId })), generation, original);
+      return guarded(target, messageId, (message) => ({ ...message, body: null, deletedAt: new Date().toISOString(), attachments: [], reactions: [] }),
+        () => deleteConcernMessage({ academyId: target.academyId, concernId, messageId }));
     },
     react: async (messageId: string, emoji: string, on: boolean) => {
       const target = { ...scope };
-      const generation = browserScopeGeneration();
-      const original = cacheIdentity();
-      return settle(target, await withRetry(() => setConcernReaction({ academyId: target.academyId, concernId, messageId, emoji, on })), generation, original);
+      return guarded(target, messageId, (message) => ({ ...message, reactions: toggleReaction(message.reactions, emoji, target.userId, on) }),
+        () => setConcernReaction({ academyId: target.academyId, concernId, messageId, emoji, on }));
     },
     /** Call with the latest message seq actually shown; repeated or lower values send nothing. */
     markRead: async (seq: number) => {
