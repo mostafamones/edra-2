@@ -15,6 +15,7 @@ Fill this in task notes or the implementation plan before coding. A few concrete
 ## Interaction
 
 - Entry → selection/edit → commit → destination:
+- If the journey spans screens: list the review frames or routes in order, including what changes after the main action and where Back or Cancel returns:
 - Main action and secondary/back action:
 - Keyboard/focus and narrow-screen behavior:
 - Loading / empty / no matches / read failure:

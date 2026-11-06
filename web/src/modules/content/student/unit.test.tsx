@@ -6,7 +6,10 @@ import type { LearningUnit } from "../access/types";
 const mocks = vi.hoisted(() => ({ loadLearningUnit: vi.fn(), redeemUnitCode: vi.fn(), extendMyUnitAccess: vi.fn(), auth: vi.fn() }));
 vi.mock("../access/actions", () => mocks);
 vi.mock("@/modules/auth", () => ({ useAuth: mocks.auth }));
-vi.mock("./material", () => ({ StudentMaterial: () => <button>Open protected material</button> }));
+vi.mock("./material", () => ({
+  StudentMaterial: () => <button>Open protected material</button>,
+  StudentMaterialViewer: ({ itemId }: { itemId: string }) => <div aria-label="Playback">{itemId}</div>,
+}));
 import { StudentLearningUnit } from "./unit";
 vi.mock("@/components/shared/link", () => ({ default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => <a href={href} {...props}>{children}</a> }));
 vi.mock("@/lib/navigation", () => ({ usePathname: () => "/learn/units/unit" }));
@@ -100,13 +103,54 @@ it("retains the code and request identity when redemption must be retried", asyn
 });
 it("offers the annual extension only on expired access while the allowance remains", async () => {
   const initial = unit(); initial.access = { status: "expired", expiresAt: "2026-10-20T12:00:00Z", grantId: "grant" }; open(initial);
-  expect(await screen.findByRole("button", { name: "Use 48-hour extension" })).toBeTruthy();
+  const trigger = await screen.findByRole("button", { name: "Use 48-hour extension" });
+  expect(screen.getByText("1 of 1 left this academic year")).toBeTruthy();
+  fireEvent.click(trigger);
+  const dialog = screen.getByRole("alertdialog", { name: "Use your only extension?" });
+  expect(dialog.textContent).toContain("1 → 0");
+  expect(mocks.extendMyUnitAccess).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(mocks.extendMyUnitAccess).not.toHaveBeenCalled();
+});
+
+it("shows a spent allowance as status while keeping coupon renewal available", async () => {
+  const initial = unit();
+  initial.extensionAvailable = false;
+  initial.access = { status: "expired", expiresAt: "2026-10-20T12:00:00Z", grantId: "grant" };
+  open(initial);
+  expect(await screen.findByText("0 of 1 left this academic year")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Use 48-hour extension" })).toBeNull();
+  fireEvent.change(screen.getByLabelText("Coupon"), { target: { value: "AB7K-9M3R" } });
+  expect((screen.getByRole("button", { name: "Redeem coupon" }) as HTMLButtonElement).disabled).toBe(false);
 });
 it("does not show another account's cached learning unit", () => {
   mocks.auth.mockReturnValue({ user: { id: "different-student" }, loading: false }); open();
   expect(screen.queryByText("Revision lesson")).toBeNull();
   expect(screen.queryByLabelText("Coupon")).toBeNull();
   expect(mocks.loadLearningUnit).not.toHaveBeenCalled();
+});
+
+it("resumes the unfinished video and lets the student switch lessons or return to the overview", async () => {
+  const initial = unit();
+  initial.access = { status: "active", expiresAt: "2026-11-20T12:00:00Z", grantId: "grant" };
+  initial.items = [
+    { id: "first", kind: "explanation", title: "First video", available: true, assessmentKind: null },
+    { id: "partial", kind: "explanation", title: "Unfinished video", available: true, assessmentKind: null },
+    { id: "locked", kind: "explanation", title: "Unavailable video", available: false, assessmentKind: null },
+  ];
+  initial.progress = { completed: 0, total: 3, items: [{ itemId: "partial", completed: false, positionSeconds: 45, watchedSeconds: 45, durationSeconds: 120 }] };
+  open(initial);
+  expect(screen.queryByLabelText("Playback")).toBeNull();
+  fireEvent.click(await screen.findByRole("button", { name: "Resume lesson" }));
+  expect(screen.getByLabelText("Playback").textContent).toBe("partial");
+  expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Unfinished video" }));
+  expect(screen.queryByRole("button", { name: "Unavailable video" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "First video" }));
+  expect(screen.getByLabelText("Playback").textContent).toBe("first");
+  fireEvent.click(screen.getByRole("button", { name: "Course overview" }));
+  expect(screen.queryByLabelText("Playback")).toBeNull();
+  expect(document.activeElement).toBe(screen.getByRole("heading", { name: initial.title }));
 });
 
 it("clears coupon input and errors when navigating between units", async () => {
