@@ -1,3 +1,4 @@
+import { newUuid } from "@/lib/uuid";
 import { useRef, useState } from "react";
 import type { ConcernFailure } from "../errors";
 import { useConcernFence } from "./use-fence";
@@ -27,7 +28,7 @@ export function useConcernAttempt() {
   }
   return {
     pending, failure, uncertain: uncertain !== null,
-    run: (call: (requestId: string) => Promise<Result>, onSuccess?: () => void) => attempt(call, crypto.randomUUID(), onSuccess),
+    run: (call: (requestId: string) => Promise<Result>, onSuccess?: () => void) => attempt(call, newUuid(), onSuccess),
     retry: () => { if (uncertain) void attempt(uncertain.call, uncertain.requestId, uncertain.onSuccess); },
     reset: () => { setFailure(null); setUncertain(null); },
   };

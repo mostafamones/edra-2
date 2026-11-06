@@ -1,3 +1,4 @@
+import { newUuid } from "@/lib/uuid";
 import { useCallback, useRef, useState } from "react";
 import { browserScopeGeneration } from "@/lib/browser-scope";
 import type { useConcernMedia } from "../commands";
@@ -55,7 +56,7 @@ export function useConcernUploads(media: Media) {
     const empty = files.find((file) => file.blob.size === 0);
     if (empty) return `${empty.name} is empty.`;
     const created = files.map((file): ConcernUpload => ({
-      id: crypto.randomUUID(), kind: file.kind, name: file.name.trim().replace(/[/\\\p{Cc}]/gu, "_").slice(0, 255) || "file",
+      id: newUuid(), kind: file.kind, name: file.name.trim().replace(/[/\\\p{Cc}]/gu, "_").slice(0, 255) || "file",
       bytes: file.blob.size, blob: file.blob, durationSeconds: file.durationSeconds ?? null,
       status: "uploading", progress: 0, error: null, reuseId: true, attachment: null,
     }));
@@ -65,7 +66,7 @@ export function useConcernUploads(media: Media) {
   }, [transfer]);
 
   const retry = useCallback((item: ConcernUpload) => {
-    const next = item.reuseId ? item : { ...item, id: crypto.randomUUID() };
+    const next = item.reuseId ? item : { ...item, id: newUuid() };
     if (next.id !== item.id) setItems((current) => current.map((entry) => entry.id === item.id ? next : entry));
     void transfer(next);
   }, [transfer]);

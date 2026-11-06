@@ -1,3 +1,4 @@
+import { newUuid } from "@/lib/uuid";
 import { useRef, useState } from "react";
 import { browserScopeGeneration } from "@/lib/browser-scope";
 import { Attachment01Icon, Cancel01Icon, File01Icon, Mic01Icon, RefreshIcon, SentIcon } from "@hugeicons/core-free-icons";
@@ -55,7 +56,7 @@ export function ConcernComposer({ send, media, participants, reply, onReplyChang
   return <form className="shrink-0 space-y-2 border-t p-3" onSubmit={(event) => {
     event.preventDefault();
     if (!sendable || locked) return;
-    void submit({ messageId: crypto.randomUUID(), body: body.trim() ? body : null, mentions: body.trim() ? mentionIds(body, mentions) : [],
+    void submit({ messageId: newUuid(), body: body.trim() ? body : null, mentions: body.trim() ? mentionIds(body, mentions) : [],
       replyToId: reply?.id ?? null, attachmentIds: uploads.items.map((item) => item.id) });
   }}>
     {reply && <div className="flex items-start gap-2 border-s-2 ps-2 text-xs"><div className="min-w-0 flex-1"><span className="font-medium" dir="auto">Reply to {reply.authorName ?? "Staff"}</span><p className="line-clamp-2 break-words" dir="auto">{reply.deletedAt ? "Message deleted" : reply.body ?? concernMediaLabel(concernMediaSummary(reply.attachments))}</p></div><ConcernIconButton label="Cancel reply" icon={Cancel01Icon} disabled={locked} onClick={() => onReplyChange(null)} /></div>}
