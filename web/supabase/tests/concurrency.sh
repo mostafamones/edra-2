@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Separate-session race tests for staff access, schedule/group/slot, student-record, import,
-# student-code, check-in, attendance-correction, quiz and exam locking, label assignment/deletion, student online-access suspension, and scheduled content publication. Run only through `npm run test:db`, which validates the isolated target and
+# student-code, check-in, attendance-correction, quiz and exam locking, label assignment/deletion, student online-access suspension, scheduled content publication, concern messaging and concern notifications. Run only through `npm run test:db`, which validates the isolated target and
 # exports its connection. Races need real concurrent transactions, so fixtures are committed under a
 # run-specific academy, admin and ids. They are retained: preserved history (sessions, attendance,
 # code ledger) cannot be removed through normal flows. Fresh identities keep reruns collision-free.
@@ -1483,6 +1483,177 @@ expect_ok p7a "the worker holding the unit failed"
 expect_rejected p7b "a reschedule crossed an execution" schedule_conflict
 [ "$(pub_doc "$U")" = "Live,Candidate" ] || fail "execution did not stand beside a reschedule: $(pub_doc "$U")"
 grep -qi deadlock "$OUT"/p[1-7]* && fail "a scheduled publication race deadlocked"
+
+# CN1-CN5. Concern messaging. Every command locks the concern row, so sequence numbers, edits,
+#          deletions and lifecycle changes serialize instead of interleaving.
+CONCERN="$(uuid)"; CM1="$(uuid)"; CM2="$(uuid)"; CM3="$(uuid)"; CM4="$(uuid)"; CM5="$(uuid)"
+psqlx >/dev/null -c "begin; $as_admin select public.create_concern('$ACADEMY','$CONCERN','$CM1','Race concern','Opening','{}'); commit;"
+send_cm() { echo "$as_admin select public.send_concern_message('$ACADEMY','$CONCERN','$1','$2');"; }
+cm_seqs() { psqlx -tA -c "select string_agg(seq::text, ',' order by seq) from public.concern_messages where concern_id = '$CONCERN'"; }
+# CN1. Two sends at once get distinct consecutive sequence numbers.
+hold cn1a cn1b "$(send_cm "$CM2" 'First')"
+start cn1b "$(send_cm "$CM3" 'Second')"
+wait
+expect_ok cn1a "the holding send failed"; expect_ok cn1b "the queued send failed"
+[ "$(cm_seqs)" = "1,2,3" ] || fail "concurrent sends did not serialize: $(cm_seqs)"
+# CN2. A retried send racing its original creates one message.
+hold cn2a cn2b "$(send_cm "$CM4" 'Retry')"
+start cn2b "$(send_cm "$CM4" 'Retry')"
+wait
+expect_ok cn2a "the original send failed"; expect_ok cn2b "the retried send failed"
+[ "$(cm_seqs)" = "1,2,3,4" ] || fail "a retried send duplicated a message: $(cm_seqs)"
+# CN3. An edit holds the concern; a deletion waits, then removes the edited text.
+hold cn3a cn3b "$as_admin select public.edit_concern_message('$ACADEMY','$CONCERN','$CM2','Edited');"
+start cn3b "$as_admin select public.delete_concern_message('$ACADEMY','$CONCERN','$CM2');"
+wait
+expect_ok cn3a "the holding edit failed"; expect_ok cn3b "the deletion behind an edit failed"
+psqlx -tA -c "select body is null and deleted_at is not null from public.concern_messages where id = '$CM2'" | grep -qx t \
+  || fail "an edit survived a later deletion"
+# CN4. A deletion holds the concern; a queued edit then finds the placeholder.
+hold cn4a cn4b "$as_admin select public.delete_concern_message('$ACADEMY','$CONCERN','$CM3');"
+start cn4b "$as_admin select public.edit_concern_message('$ACADEMY','$CONCERN','$CM3','Too late');"
+wait
+expect_ok cn4a "the holding deletion failed"
+expect_rejected cn4b "an edit rewrote a deleted message" message_deleted
+# CN5. Settlement (as EDRA-292 will do it, under the same lock) holds the concern; a queued send is refused.
+hold cn5a cn5b "set local request.jwt.claim.sub = '$ADMIN'; select edra_private.require_concern('$ACADEMY','$CONCERN',true,true);
+  update public.concerns set status = 'settled', settled_at = now(), settled_by = '$ADMIN', outcome = 'Race outcome' where id = '$CONCERN';"
+start cn5b "$(send_cm "$CM5" 'After settle')"
+wait
+expect_ok cn5a "the settlement holding the concern failed"
+expect_rejected cn5b "a message was sent into a concern settled concurrently" concern_settled
+run cn5c "$(send_cm "$CM4" 'Retry')"; expect_ok cn5c "a completed send retry failed after settlement"
+[ "$(cm_seqs)" = "1,2,3,4" ] || fail "settlement race changed messages: $(cm_seqs)"
+psqlx -tA -c "select count(*) from public.concern_events where concern_id = '$CONCERN' and kind = 'message_sent'" | grep -qx 4 \
+  || fail "message events do not match messages"
+grep -qi deadlock "$OUT"/cn* && fail "a concern messaging race deadlocked"
+
+# CN6-CN11. Concern lifecycle, membership and recovery commands take the same concern lock.
+CL_ADMIN="$(uuid)"; CL_INST="$(uuid)"; CL="$(uuid)"; CL_M1="$(uuid)"; CL_M2="$(uuid)"; CL_M3="$(uuid)"
+psqlx >/dev/null <<SQL
+insert into auth.users (id) values ('$CL_ADMIN'), ('$CL_INST');
+insert into public.academy_memberships (academy_id, user_id, role, created_by) values
+  ('$ACADEMY', '$CL_ADMIN', 'admin', '$ADMIN'), ('$ACADEMY', '$CL_INST', 'instructor', '$ADMIN');
+SQL
+as_cl="$(as_user "$CL_ADMIN")"; as_inst="$(as_user "$CL_INST")"
+psqlx >/dev/null -c "begin; $as_cl select public.create_concern('$ACADEMY','$CL','$CL_M1','Lifecycle race','Opening',array['$CL_INST']::uuid[]); commit;"
+cl_count() { psqlx -tA -c "select count(*) from public.concern_events where concern_id = '$CL' and kind = '$1'"; }
+settle() { echo "$as_cl select public.settle_concern('$ACADEMY','$CL','$1',$2,'$3');"; }
+reopen() { echo "$as_cl select public.reopen_concern('$ACADEMY','$CL','$1',$2,'$3');"; }
+# CN6. A send holds the concern; a queued settlement waits, then settles after the message.
+hold cn6a cn6b "$as_inst select public.send_concern_message('$ACADEMY','$CL','$CL_M2','Before settle');"
+start cn6b "$(settle 'Race outcome' 1 "$(uuid)")"
+wait
+expect_ok cn6a "the send holding the concern failed"; expect_ok cn6b "the settlement behind a send failed"
+psqlx -tA -c "select status || ':' || version from public.concerns where id = '$CL'" | grep -qx settled:2 || fail "settlement behind a send did not apply"
+# CN7. Two reopenings from the same settled version: one wins, the other is stale.
+hold cn7a cn7b "$(reopen 'First reason' 2 "$(uuid)")"
+start cn7b "$(reopen 'Second reason' 2 "$(uuid)")"
+wait
+expect_ok cn7a "the holding reopening failed"
+expect_rejected cn7b "a stale reopening overwrote a newer state" stale
+[ "$(cl_count reopened)" = 1 ] || fail "concurrent reopenings recorded $(cl_count reopened) events"
+# CN8. A retried settlement racing its original settles once.
+REQ="$(uuid)"
+hold cn8a cn8b "$(settle 'Retried' 3 "$REQ")"
+start cn8b "$(settle 'Retried' 3 "$REQ")"
+wait
+expect_ok cn8a "the original settlement failed"; expect_ok cn8b "the retried settlement failed"
+[ "$(cl_count settled)" = 2 ] || fail "a retried settlement duplicated history: $(cl_count settled)"
+# CN9. Settlement holds the concern; a queued participant addition is refused as settled.
+run cn9r "$(reopen 'Reopen for CN9' 4 "$(uuid)")"; expect_ok cn9r "the CN9 reopening failed"
+hold cn9a cn9b "$(settle 'Final' 5 "$(uuid)")"
+start cn9b "$as_cl select public.add_concern_participants('$ACADEMY','$CL',array['$ADMIN']::uuid[],'$(uuid)');"
+wait
+expect_ok cn9a "the settlement holding the concern failed"
+expect_rejected cn9b "a participant was added to a concern settled concurrently" concern_settled
+run cn9c "$(reopen 'Reopen for CN10' 6 "$(uuid)")"; expect_ok cn9c "the CN10 reopening failed"
+# CN10. A removal holds the concern; the removed participant's queued send is refused.
+hold cn10a cn10b "$as_cl select public.remove_concern_participant('$ACADEMY','$CL','$CL_INST','$(uuid)');"
+start cn10b "$as_inst select public.send_concern_message('$ACADEMY','$CL','$CL_M3','After removal');"
+wait
+expect_ok cn10a "the removal holding the concern failed"
+expect_rejected cn10b "a removed participant sent a message" forbidden
+psqlx -tA -c "select count(*) from public.concern_messages where id = '$CL_M3'" | grep -qx 0 || fail "a message from a removed participant was stored"
+# CN11. Two Owner recoveries at once record one audited recovery.
+hold cn11a cn11b "$as_admin select public.recover_concern('$ACADEMY','$CL','$(uuid)');"
+start cn11b "$as_admin select public.recover_concern('$ACADEMY','$CL','$(uuid)');"
+wait
+expect_ok cn11a "the holding recovery failed"; expect_ok cn11b "the queued recovery failed"
+[ "$(cl_count owner_recovered)" = 1 ] || fail "concurrent recoveries recorded $(cl_count owner_recovered) events"
+grep -qi deadlock "$OUT"/cn* && fail "a concern lifecycle race deadlocked"
+
+# CN12-CN16. Concern media binding and server acceptance share the concern lock with sends,
+#            discards, deletion and settlement; expiry skips attachments a send has locked.
+MC="$(uuid)"; MC_M1="$(uuid)"; MC_M2="$(uuid)"; MC_M3="$(uuid)"; MC_M4="$(uuid)"; MC_A1="$(uuid)"; MC_A2="$(uuid)"; MC_A3="$(uuid)"
+psqlx >/dev/null -c "begin; $as_admin select public.create_concern('$ACADEMY','$MC','$MC_M1','Media race','Opening','{}');
+  select public.reserve_concern_attachment('$ACADEMY','$MC',id,'file','race.bin',10) from unnest(array['$MC_A1','$MC_A2','$MC_A3']::uuid[]) id; commit;"
+psqlx >/dev/null -c "begin; set local role service_role;
+  select public.verify_concern_attachment(id,true,'application/octet-stream') from unnest(array['$MC_A1','$MC_A2','$MC_A3']::uuid[]) id; commit;"
+send_media() { echo "$as_admin select public.send_concern_message('$ACADEMY','$MC','$1',null,null,'{}',array['$2']::uuid[]);"; }
+# CN12. Two different sends racing for the same upload: one binds it, the other is refused.
+hold cn12a cn12b "$(send_media "$MC_M2" "$MC_A1")"
+start cn12b "$(send_media "$MC_M3" "$MC_A1")"
+wait
+expect_ok cn12a "the send holding the upload failed"
+expect_rejected cn12b "one upload was bound to two messages" attachment_unavailable
+psqlx -tA -c "select count(*) from public.concern_attachments where id = '$MC_A1' and message_id = '$MC_M2' and state = 'bound'" | grep -qx 1 \
+  || fail "the upload is not bound exactly once"
+# CN13. A deletion holds the concern; a queued retry of the same send returns the deleted original, never rebinding.
+hold cn13a cn13b "$as_admin select public.delete_concern_message('$ACADEMY','$MC','$MC_M2');"
+start cn13b "$(send_media "$MC_M2" "$MC_A1")"
+wait
+expect_ok cn13a "the deletion holding the concern failed"; expect_ok cn13b "the send retry behind a deletion failed"
+psqlx -tA -c "select state from public.concern_attachments where id = '$MC_A1'" | grep -qx removed || fail "deleted media was rebound"
+# CN14. A send holding an upload; expiry running beside it skips the locked row and the send binds it.
+psqlx >/dev/null -c "update public.concern_attachments set created_at = now() - interval '2 days' where id = '$MC_A2'"
+hold cn14a cn14b "$(send_media "$MC_M4" "$MC_A2")"
+start cn14b "select edra_private.expire_concern_uploads(500);"
+wait
+expect_ok cn14a "the send holding an expiring upload failed"; expect_ok cn14b "expiry beside a send failed"
+psqlx -tA -c "select state from public.concern_attachments where id = '$MC_A2'" | grep -qx bound || fail "expiry removed media a send bound"
+# CN15. A discard holds the concern; the server's queued acceptance then finds the upload removed.
+MC_A4="$(uuid)"; MC_A5="$(uuid)"
+psqlx >/dev/null -c "begin; $as_admin select public.reserve_concern_attachment('$ACADEMY','$MC',id,'file','race.bin',10) from unnest(array['$MC_A4','$MC_A5']::uuid[]) id; commit;"
+verify_media() { echo "set local role service_role; select public.verify_concern_attachment('$1',true,'application/octet-stream');"; }
+hold cn15a cn15b "$as_admin select public.discard_concern_attachment('$ACADEMY','$MC','$MC_A4');"
+start cn15b "$(verify_media "$MC_A4")"
+wait
+expect_ok cn15a "the discard holding the concern failed"
+expect_rejected cn15b "a discarded upload was accepted" attachment_unavailable
+psqlx -tA -c "select state from public.concern_attachments where id = '$MC_A4'" | grep -qx removed || fail "a discarded upload was resurrected"
+# CN16. Settlement holds the concern; the server's queued acceptance is refused as settled.
+hold cn16a cn16b "$as_admin select public.settle_concern('$ACADEMY','$MC','Media race outcome',1,'$(uuid)');"
+start cn16b "$(verify_media "$MC_A5")"
+wait
+expect_ok cn16a "the settlement holding the concern failed"
+expect_rejected cn16b "an upload was accepted into a concern settled concurrently" concern_settled
+psqlx -tA -c "select state from public.concern_attachments where id = '$MC_A5'" | grep -qx pending || fail "settlement race accepted an upload"
+grep -qi deadlock "$OUT"/cn1[3456]* && fail "a concern media race deadlocked"
+
+# CN17-CN18. Concern notifications: dispatch claims skip leased rows, and recipients are resolved
+#            under the concern lock, so a concurrent removal is honoured. Synthetic endpoint; nothing is sent.
+NC="$(uuid)"; NC_M1="$(uuid)"; NC_M2="$(uuid)"; NC_M3="$(uuid)"
+psqlx >/dev/null -c "begin; $as_inst select public.register_push_subscription('https://fcm.googleapis.com/fcm/send/race-$RUN',
+  'BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4','BTBZMqHH6r4Tts7J_aSIgg'); commit;"
+psqlx >/dev/null -c "begin; $as_admin select public.create_concern('$ACADEMY','$NC','$NC_M1','Notify race','Opening',array['$CL_INST']::uuid[]);
+  select public.send_concern_message('$ACADEMY','$NC','$NC_M2','Second'); commit;"
+claim_nd="set local role service_role; select jsonb_array_length(public.claim_notification_deliveries(50));"
+nc_deliveries() { psqlx -tA -c "select count(*) || ':' || sum(attempts) || ':' || count(*) filter (where lease_until is not null)
+  from public.notification_deliveries d join public.notifications n on n.id = d.notification_id where n.concern_id = '$NC'"; }
+# CN17. Two dispatch workers at once: each delivery (added + message) is leased exactly once.
+hold cn17a cn17b "$claim_nd"
+start cn17b "$claim_nd"
+wait
+expect_ok cn17a "the dispatch worker holding the leases failed"; expect_ok cn17b "the concurrent dispatch worker failed"
+[ "$(nc_deliveries)" = "2:2:2" ] || fail "concurrent dispatch claimed a delivery twice: $(nc_deliveries)"
+# CN18. A removal holds the concern; the queued send then notifies nobody removed.
+hold cn18a cn18b "$as_admin select public.remove_concern_participant('$ACADEMY','$NC','$CL_INST','$(uuid)');"
+start cn18b "$as_admin select public.send_concern_message('$ACADEMY','$NC','$NC_M3','After removal');"
+wait
+expect_ok cn18a "the removal holding the concern failed"; expect_ok cn18b "the send behind a removal failed"
+psqlx -tA -c "select count(*) from public.notifications where message_id = '$NC_M3'" | grep -qx 0 || fail "a participant removed concurrently was notified"
+grep -qi deadlock "$OUT"/cn1[78]* && fail "a concern notification race deadlocked"
 
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and

@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { clearedControlCookie, clearedFailureCookie, endPreviewForSignOut } from "@/modules/development/server";
 import { PENDING_STAFF_INVITE_COOKIE, pendingStaffInviteCookie } from "@/modules/staff/server";
 import { safeNextPath } from "@/modules/auth/return-path";
+import { forgetPushSubscriptions } from "@/modules/notifications/server";
 
 export async function POST(request: Request) {
   const next = new URL(request.url).searchParams.get("next");
@@ -16,7 +17,11 @@ export async function POST(request: Request) {
   if (!(await endPreviewForSignOut().catch(() => false))) console.error("Developer mode sign-out cleanup needs a retry");
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  if (data?.claims) await supabase.auth.signOut({ scope: "global" });
+  if (data?.claims) {
+    // Global sign-out also ends browser push previews on every device for this account.
+    await forgetPushSubscriptions(supabase);
+    await supabase.auth.signOut({ scope: "global" });
+  }
   const platform = (await headers()).get(ROUTE_HEADER) === "student" ? "student" : "staff";
   const login = new URL("/auth/login", platformOrigin(platform));
   if (next) login.searchParams.set("next", safeNextPath(next, "/", platform));

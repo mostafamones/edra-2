@@ -76,6 +76,7 @@ import { Route as InviteBookingTokenIndexRouteImport } from './routes/invite/boo
 import { Route as InviteBookingTokenJoinRouteImport } from './routes/invite/booking/$token/join'
 import { Route as LearnAcademyAcademySlugIndexRouteImport } from './routes/learn/academy/$academySlug/index'
 import { Route as LearnAcademyAcademySlugSplatRouteImport } from './routes/learn/academy/$academySlug/$'
+import { Route as ApiConcernsAcademyIdConcernIdAttachmentIdRouteImport } from './routes/api/concerns/$academyId/$concernId/$attachmentId'
 import { Route as ApiStudentExamsExamIdDepartureRouteImport } from './routes/api/student/exams/$examId/departure'
 import { Route as ApiStudentsImportsIdRowsRouteImport } from './routes/api/students/imports/$id/rows'
 import { Route as ApiV1AcademiesAcademyIdAssignmentsRouteImport } from './routes/api/v1/academies/$academyId/assignments'
@@ -479,6 +480,12 @@ const LearnAcademyAcademySlugSplatRoute =
     path: '/academy/$academySlug/$',
     getParentRoute: () => LearnRouteRoute,
   } as any)
+const ApiConcernsAcademyIdConcernIdAttachmentIdRoute =
+  ApiConcernsAcademyIdConcernIdAttachmentIdRouteImport.update({
+    id: '/api/concerns/$academyId/$concernId/$attachmentId',
+    path: '/api/concerns/$academyId/$concernId/$attachmentId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiStudentExamsExamIdDepartureRoute =
   ApiStudentExamsExamIdDepartureRouteImport.update({
     id: '/api/student/exams/$examId/departure',
@@ -866,6 +873,7 @@ export interface FileRoutesByFullPath {
   '/app/$academySlug/students/': typeof AppAcademySlugStudentsIndexRoute
   '/invite/booking/$token/': typeof InviteBookingTokenIndexRoute
   '/learn/academy/$academySlug/': typeof LearnAcademyAcademySlugIndexRoute
+  '/api/concerns/$academyId/$concernId/$attachmentId': typeof ApiConcernsAcademyIdConcernIdAttachmentIdRoute
   '/api/student/exams/$examId/departure': typeof ApiStudentExamsExamIdDepartureRoute
   '/api/students/imports/$id/rows': typeof ApiStudentsImportsIdRowsRoute
   '/api/v1/academies/$academyId/assignments': typeof ApiV1AcademiesAcademyIdAssignmentsRoute
@@ -984,6 +992,7 @@ export interface FileRoutesByTo {
   '/app/$academySlug/students': typeof AppAcademySlugStudentsIndexRoute
   '/invite/booking/$token': typeof InviteBookingTokenIndexRoute
   '/learn/academy/$academySlug': typeof LearnAcademyAcademySlugIndexRoute
+  '/api/concerns/$academyId/$concernId/$attachmentId': typeof ApiConcernsAcademyIdConcernIdAttachmentIdRoute
   '/api/student/exams/$examId/departure': typeof ApiStudentExamsExamIdDepartureRoute
   '/api/students/imports/$id/rows': typeof ApiStudentsImportsIdRowsRoute
   '/api/v1/academies/$academyId/assignments': typeof ApiV1AcademiesAcademyIdAssignmentsRoute
@@ -1107,6 +1116,7 @@ export interface FileRoutesById {
   '/app/$academySlug/students/': typeof AppAcademySlugStudentsIndexRoute
   '/invite/booking/$token/': typeof InviteBookingTokenIndexRoute
   '/learn/academy/$academySlug/': typeof LearnAcademyAcademySlugIndexRoute
+  '/api/concerns/$academyId/$concernId/$attachmentId': typeof ApiConcernsAcademyIdConcernIdAttachmentIdRoute
   '/api/student/exams/$examId/departure': typeof ApiStudentExamsExamIdDepartureRoute
   '/api/students/imports/$id/rows': typeof ApiStudentsImportsIdRowsRoute
   '/api/v1/academies/$academyId/assignments': typeof ApiV1AcademiesAcademyIdAssignmentsRoute
@@ -1231,6 +1241,7 @@ export interface FileRouteTypes {
     | '/app/$academySlug/students/'
     | '/invite/booking/$token/'
     | '/learn/academy/$academySlug/'
+    | '/api/concerns/$academyId/$concernId/$attachmentId'
     | '/api/student/exams/$examId/departure'
     | '/api/students/imports/$id/rows'
     | '/api/v1/academies/$academyId/assignments'
@@ -1349,6 +1360,7 @@ export interface FileRouteTypes {
     | '/app/$academySlug/students'
     | '/invite/booking/$token'
     | '/learn/academy/$academySlug'
+    | '/api/concerns/$academyId/$concernId/$attachmentId'
     | '/api/student/exams/$examId/departure'
     | '/api/students/imports/$id/rows'
     | '/api/v1/academies/$academyId/assignments'
@@ -1471,6 +1483,7 @@ export interface FileRouteTypes {
     | '/app/$academySlug/students/'
     | '/invite/booking/$token/'
     | '/learn/academy/$academySlug/'
+    | '/api/concerns/$academyId/$concernId/$attachmentId'
     | '/api/student/exams/$examId/departure'
     | '/api/students/imports/$id/rows'
     | '/api/v1/academies/$academyId/assignments'
@@ -1555,6 +1568,7 @@ export interface RootRouteChildren {
   ApiV1SessionsSessionIdRoute: typeof ApiV1SessionsSessionIdRouteWithChildren
   InviteBookingTokenJoinRoute: typeof InviteBookingTokenJoinRoute
   InviteBookingTokenIndexRoute: typeof InviteBookingTokenIndexRoute
+  ApiConcernsAcademyIdConcernIdAttachmentIdRoute: typeof ApiConcernsAcademyIdConcernIdAttachmentIdRoute
   ApiStudentExamsExamIdDepartureRoute: typeof ApiStudentExamsExamIdDepartureRoute
 }
 
@@ -2028,6 +2042,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/learn/academy/$academySlug/$'
       preLoaderRoute: typeof LearnAcademyAcademySlugSplatRouteImport
       parentRoute: typeof LearnRouteRoute
+    }
+    '/api/concerns/$academyId/$concernId/$attachmentId': {
+      id: '/api/concerns/$academyId/$concernId/$attachmentId'
+      path: '/api/concerns/$academyId/$concernId/$attachmentId'
+      fullPath: '/api/concerns/$academyId/$concernId/$attachmentId'
+      preLoaderRoute: typeof ApiConcernsAcademyIdConcernIdAttachmentIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/student/exams/$examId/departure': {
       id: '/api/student/exams/$examId/departure'
@@ -2818,6 +2839,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1SessionsSessionIdRoute: ApiV1SessionsSessionIdRouteWithChildren,
   InviteBookingTokenJoinRoute: InviteBookingTokenJoinRoute,
   InviteBookingTokenIndexRoute: InviteBookingTokenIndexRoute,
+  ApiConcernsAcademyIdConcernIdAttachmentIdRoute:
+    ApiConcernsAcademyIdConcernIdAttachmentIdRoute,
   ApiStudentExamsExamIdDepartureRoute: ApiStudentExamsExamIdDepartureRoute,
 }
 export const routeTree = rootRouteImport
