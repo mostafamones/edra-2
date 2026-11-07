@@ -22,7 +22,7 @@ export function PortalFooter({ portal = "staff" }: { portal?: "staff" | "student
   const { setOpenMobile } = useSidebar();
 
   return (
-    <div className="flex items-center gap-0 rounded-lg px-1 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+    <div className="flex items-center gap-0 rounded-lg py-1 group-data-[collapsible=icon]:justify-center">
       {portal === "staff" && <Button asChild variant="ghost" size="icon" className="text-sidebar-foreground/75 group-data-[collapsible=icon]:hidden" aria-label="Manage">
         <Link href={href("/app/manage")} onClick={() => setOpenMobile(false)}>
           <HugeiconsIcon icon={Settings01Icon} size={20} strokeWidth={1.5} aria-hidden="true" />
