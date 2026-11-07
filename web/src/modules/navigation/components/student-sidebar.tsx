@@ -46,15 +46,15 @@ export function StudentSidebar({ academies = [] }: { academies?: StudentSidebarA
   const href = useCanonicalHref();
   const pathname = usePathname();
   const studentPath = usePortalPath("student");
-  const { open, isMobile, setOpenMobile } = useSidebar();
+  const { setOpenMobile } = useSidebar();
   const closeMobile = () => setOpenMobile(false);
   const isActive = (item: string) => studentPath === item || (item !== "/learn" && studentPath.startsWith(`${item}/`));
   return (
     <Sidebar collapsible="icon" variant="inset" className="group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]">
       <SidebarHeader>
-        <SidebarMenu className="-mx-1 w-auto group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:py-2">
+        <SidebarMenu className="-mx-2 w-auto min-h-12 justify-center">
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="font-heading">
+            <SidebarMenuButton size="lg" asChild className="font-heading transition-[width,height,padding,margin] group-data-[collapsible=icon]:ms-2">
               <Link href={href("/learn")} onClick={closeMobile}>
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <HugeiconsIcon icon={Mortarboard01Icon} strokeWidth={1.5} className="size-4" aria-hidden="true" />
@@ -64,11 +64,11 @@ export function StudentSidebar({ academies = [] }: { academies?: StudentSidebarA
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="mt-2 flex px-1 group-data-[collapsible=icon]:hidden">
+        <div className="mt-2 flex group-data-[collapsible=icon]:hidden">
           <SearchMenu platform="student" academies={academies} />
         </div>
       </SidebarHeader>
-      <SidebarContent className={open || isMobile ? "px-1" : ""}>
+      <SidebarContent>
         {STUDENT_GROUPS.map((group) => (
           <SidebarGroup key={group.label}>
             {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
