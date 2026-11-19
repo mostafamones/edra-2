@@ -6,9 +6,8 @@ import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native'
 import type { BarItem, NavigationBarProps, TabsProps } from '../features/assignments/platform.ts'
 import type { BarItem as HeaderItem, SearchBar } from '../features/sessions/screens/platform.ts'
 import { hasSearchTabs } from '../chrome/platform'
-import { featureIconSource } from '../platform/chrome/FeatureIcon.tsx'
 import { NavigationBar as SheetBar } from '../platform/chrome/Bars'
-import { TabBottomArea } from './AppChrome.tsx'
+import { barIconSource, TabBottomArea } from './AppChrome.tsx'
 import { createNativeTabsNavigator } from './createNativeTabsNavigator.tsx'
 import { NativeHeader } from './NativeHeader.tsx'
 import type { WorkspaceTabsParamList } from './routes.ts'
@@ -82,7 +81,7 @@ export function WorkspaceTabs({ tabs, selected, onSelect, searchText, onSearchTe
             return (
               <Tabs.Screen key={pane} name={ROUTES[pane]} options={{
                 title,
-                icon: featureIconSource(icon),
+                icon: barIconSource(icon),
                 role: search ? 'search' : undefined,
                 activatesSearch: search && !announce,
                 action: announce ? () => onSelect(pane) : undefined,

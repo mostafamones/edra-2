@@ -1,13 +1,14 @@
 import { CommonActions, type NavigationHelpers, type ParamListBase, type StackNavigationState } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Platform, StyleSheet } from 'react-native'
+import { Image, Platform, StyleSheet } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SafeAreaView } from 'react-native-screens/experimental'
 import type { AppChrome, StackProps, TabsProps } from '../app/contract.ts'
 import { AcademyMenu } from '../chrome/AcademyMenu'
 import { PageHeader } from '../chrome/PageHeader'
 import { featureIconSource } from '../platform/chrome/FeatureIcon.tsx'
+import { pointSized } from './barIcon.ts'
 import { createNativeTabsNavigator } from './createNativeTabsNavigator.tsx'
 import type { ShellTabsParamList } from './routes.ts'
 
@@ -16,6 +17,9 @@ const NativeStack = createNativeStackNavigator()
 const SHELL_ROUTES = { sessions: 'SessionsTab', assessments: 'AssessmentsTab' } as const
 const ROOT = 'Root'
 const empty = () => null
+
+/** A catalog icon declared at the native bar item's point size. */
+export const barIconSource = (name: string) => pointSized(Image.resolveAssetSource(featureIconSource(name))!)
 
 function Tabs({ selected, onSelect, tabs, academy }: TabsProps) {
   return (
@@ -29,7 +33,7 @@ function Tabs({ selected, onSelect, tabs, academy }: TabsProps) {
       backBehavior="none"
     >
       {tabs.map(({ key, title, icon, content }) => (
-        <ShellTabs.Screen key={key} name={SHELL_ROUTES[key]} options={{ title, icon: featureIconSource(icon) }}>
+        <ShellTabs.Screen key={key} name={SHELL_ROUTES[key]} options={{ title, icon: barIconSource(icon) }}>
           {() => Platform.OS === 'android' ? <TabBottomArea>{content}</TabBottomArea> : content}
         </ShellTabs.Screen>
       ))}
@@ -38,7 +42,7 @@ function Tabs({ selected, onSelect, tabs, academy }: TabsProps) {
         component={empty}
         options={{
           title: academy.title,
-          icon: featureIconSource(academy.icon),
+          icon: barIconSource(academy.icon),
           accessibilityLabel: academy.accessibilityLabel,
           role: 'search',
           action: academy.onPress,

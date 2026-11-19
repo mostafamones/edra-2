@@ -5,7 +5,8 @@ import { ActivityIndicator, Platform, Pressable } from 'react-native'
 import type { SearchBarCommands } from 'react-native-screens'
 import { HeaderTextButton } from '../chrome/HeaderIconButton'
 import type { BarItem, HeaderProps } from '../features/sessions/screens/platform.ts'
-import { FeatureIcon, featureIconSource } from '../platform/chrome/FeatureIcon.tsx'
+import { FeatureIcon } from '../platform/chrome/FeatureIcon.tsx'
+import { barIconSource } from './AppChrome.tsx'
 
 function HeaderAction({ item }: { item: BarItem }) {
   if (item.busy) return <ActivityIndicator accessibilityLabel="In progress" />
@@ -24,7 +25,7 @@ function headerItem(item: BarItem): NativeStackHeaderItem[] {
     type: 'button',
     label: item.title,
     accessibilityLabel: item.title,
-    icon: item.icon ? { type: 'image', source: featureIconSource(item.icon) } : undefined,
+    icon: item.icon ? { type: 'image', source: barIconSource(item.icon) } : undefined,
     onPress: item.onPress,
     disabled: item.disabled,
     variant: item.role === 'confirm' ? 'done' : 'plain',
