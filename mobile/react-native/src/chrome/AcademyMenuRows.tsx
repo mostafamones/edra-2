@@ -3,7 +3,6 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { featureIconSource } from "../platform/chrome/FeatureIcon";
 import type { AcademyMenuProps } from "./AcademyMenu.types";
 import { colors } from "./colors";
-import { icons } from "./icons";
 
 /** Menu rows shared by the iOS popover and the Android menu: academies (current checked), Sign out. */
 export function AcademyMenuRows(props: Omit<AcademyMenuProps, "open" | "onClose">) {
@@ -19,11 +18,11 @@ export function AcademyMenuRows(props: Omit<AcademyMenuProps, "open" | "onClose"
             onPress={() => props.onSelect(a.id)}
             style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.fill }]}
           >
-            <Image source={a.icon ? featureIconSource(a.icon) : icons.academy} style={[styles.icon, { tintColor: colors.label }]} />
+            <Image source={featureIconSource(a.icon ?? "school-01")} style={[styles.icon, { tintColor: colors.label }]} />
             <Text numberOfLines={1} style={[styles.text, { color: colors.label }]}>
               {a.name}
             </Text>
-            {checked ? <Image source={icons.check} style={[styles.check, { tintColor: colors.accent }]} /> : null}
+            {checked ? <Image source={featureIconSource("tick-02")} style={[styles.check, { tintColor: colors.accent }]} /> : null}
           </Pressable>
         );
       })}
@@ -33,7 +32,7 @@ export function AcademyMenuRows(props: Omit<AcademyMenuProps, "open" | "onClose"
         onPress={props.onSignOut}
         style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.fill }]}
       >
-        <Image source={icons.signOut} style={[styles.icon, { tintColor: colors.destructive }]} />
+        <Image source={featureIconSource("logout-01")} style={[styles.icon, { tintColor: colors.destructive }]} />
         <Text style={[styles.text, { color: colors.destructive }]}>Sign out</Text>
       </Pressable>
     </View>

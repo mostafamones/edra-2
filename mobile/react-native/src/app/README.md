@@ -32,7 +32,6 @@
 - `chrome.PageHeader`, `chrome.AcademyMenu`: the existing `chrome/PageHeader` and `chrome/AcademyMenu` with icon names in place of fixture academies. The Start session button uses `SessionsPlatform.GlassButton`.
 - `services.newId`: an RFC 4122 v4 UUID source, for example `expo-crypto` `randomUUID` (`npx expo install expo-crypto`). Hermes may not provide `crypto.randomUUID`, which the sessions models use by default.
 - `services.lateDeadlines`: synchronous app-private storage. To keep values from the SwiftUI app, read `lateAfterMinutes.<sessionId>` from `UserDefaults` on iOS. Session ids are UUIDs, so per-academy keys do not collide.
-- Remove `features/shell/AppSession.tsx`, the fixture sign-in and fixture screens once `EdraApp` replaces the root.
 - Dependencies from `features/access/README.md` still apply: `@supabase/supabase-js`, `react-native-url-polyfill` and `expo-secure-store`.
 
 ## Checks
