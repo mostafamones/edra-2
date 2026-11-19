@@ -12,7 +12,7 @@ Students can be selected manually or identified through supported student-code s
 
 ## App shell and navigation — EDRA-124
 
-Confirmed by the owner, 2026-10-18. Follow the supplied iPhone Photos navigation reference: a floating bottom pill on the left contains Sessions and Assessments, each with an icon and label; a separate circular academy button on the right replaces Photos' search button and displays the selected academy's icon. Keep the two controls visually separate. Use native glass on supported systems and a native material fallback on earlier supported iOS versions. Ordinary icons remain bundled Tabler assets.
+Confirmed by the owner, 2026-10-18. Follow the supplied iPhone Photos navigation reference. A floating bottom pill on the left contains Sessions and Assessments, each with an icon and label. A separate circular academy button on the right replaces Photos' search button and displays the selected academy's icon. Keep the two controls visually separate. Use native glass on supported systems and a native material fallback on earlier supported iOS versions. Complete and review the separate Hugeicons update before freezing the iPhone baseline for the React Native migration.
 
 The academy button opens the academy menu with academy names, the current selection and sign-out. Do not move the switcher to the top or retain the old wide bottom academy card. Keep the selected academy's name readable in the page context and available to accessibility; the icon alone may be shared by several academies.
 
@@ -48,7 +48,7 @@ The backend must enforce the approved assessment audience, work-source, closure,
 
 Content preparation, broader student management, notes, reports and team follow-up belong to the provisional enhancements direction. Their native interactions and permissions must be reviewed against the app built by then before implementation planning.
 
-Android uses native Kotlin and achieves functional parity with the iPhone companion at the time of the port. Parity means equivalent academic capabilities and rules; it does not require copying the iPhone interface.
+Android uses the shared React Native companion and achieves functional parity with the iPhone companion at the time of the port. Android follows its platform conventions while preserving equivalent academic capabilities and rules.
 
 ## Recommendation and open decisions
 
