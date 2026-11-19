@@ -39,14 +39,14 @@ const isCurrent = academies.isCurrent                // Sessions `isCurrent(cont
   - `classify.ts` maps supabase-js and native errors by type/status/code only, matching `SupabaseAuthService.classify`.
 - `AuthController.signIn` ignores a completion that arrives after a sign-out and discards the session it stored, unless a newer sign-in owns it.
 
-## Integration (foundation-owned files, not changed here)
+## Foundation integration
 
-- `package.json`/lockfile: add `@supabase/supabase-js@2.119.0`, `react-native-url-polyfill@4.0.0` (supabase-js sets `URL.protocol`, which React Native's URL lacks), and `expo-secure-store@~58.0.3` (`npx expo install expo-secure-store`). Already present: `expo`, `@expo/ui`, `react-native-safe-area-context`.
+- `package.json` pins `@supabase/supabase-js@2.119.0`, `react-native-url-polyfill@4.0.0` (supabase-js sets `URL.protocol`, which React Native's URL lacks), and `expo-secure-store@58.0.3`.
 - `app.config.ts`:
-  - `plugins`: add `"expo-secure-store"` (excludes its data from Android Auto Backup; the Keystore key is not backed up).
-  - `ios.infoPlist`: `EdraSupabaseURL`, `EdraSupabasePublishableKey`, `EdraAPIOrigin` from `process.env.EXPO_PUBLIC_EDRA_SUPABASE_URL`, `…_SUPABASE_PUBLISHABLE_KEY`, `…_API_ORIGIN` (the iOS module validates them with `AppConfiguration`). A Debug-only plain-HTTP API host also needs its `NSExceptionDomains` entry, as in `Configuration/Info-Debug.plist`.
+  - The SecureStore plugin is enabled (excludes its data from Android Auto Backup; the Keystore key is not backed up).
+  - `ios.infoPlist`: `EdraSupabaseURL`, `EdraSupabasePublishableKey`, `EdraAPIOrigin` from `process.env.EXPO_PUBLIC_EDRA_SUPABASE_URL`, `…_SUPABASE_PUBLISHABLE_KEY`, `…_API_ORIGIN` (the iOS module validates them with `AppConfiguration`). The generated Debug plist reuses the exact HTTP exception in Swift’s `Configuration/Info-Debug.plist`. Release uses a separate plist with ATS defaults.
   - Android reads the same `EXPO_PUBLIC_EDRA_*` values at bundle time; `EXPO_PUBLIC_EDRA_DEV_HTTP_HOSTS` (comma-separated) allows plain-HTTP API hosts in development builds only.
-  - iOS session continuity requires the release identity `com.mostafamones.edra` and team `39YK2DQP92` (same Keychain access group as the SwiftUI app). The candidate `com.mostafamones.edra.rn` starts signed out.
+  - iOS session continuity requires the release identity `com.mostafamones.edra` and team `39YK2DQP92` (same Keychain access group as the SwiftUI app). Use the [documented upgrade build](../../../README.md#ios-upgrade-verification) to test this identity. A fresh candidate install with `com.mostafamones.edra.rn` starts signed out.
 - Root composition: `const access = createPlatformAccess()` at module scope, then `<AccessRoot access={access} signedIn={(auth, scope, access) => …} />` around the navigation container. Build `ApiClient` with `access.apiOrigin` and `access.authority`, then use the per-scope wiring above. Replace the fixture `AppSessionProvider` sign-out with `auth.signOut()`.
 - Native risk to check on macOS: `EdraAuth.podspec` uses React Native's `spm_dependency` for supabase-swift. React Native warns that static linking may need `USE_FRAMEWORKS=dynamic`/`expo-build-properties` `ios.useFrameworks`. This has not been compiled.
 

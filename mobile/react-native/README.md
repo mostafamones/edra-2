@@ -1,6 +1,6 @@
 # Edra Instructor — React Native candidate
 
-The Expo/React Native foundation and native-chrome prototype for the approved migration (see `../AGENTS.md`). It installs beside the legacy SwiftUI app (`../EdraInstructor.xcodeproj`), which stays the comparison build until cutover. All screens here use fixture data only: no network, Supabase, or API calls.
+The Expo/React Native foundation and native-chrome prototype for the approved migration (see `../AGENTS.md`). It installs beside the legacy SwiftUI app (`../EdraInstructor.xcodeproj`), which stays the comparison build until cutover. The default entry still opens the fixture prototype. The API-backed screens and their platform adapters are available for the entry and navigation integration.
 
 ## Toolchain (pinned)
 
@@ -11,11 +11,27 @@ The Expo/React Native foundation and native-chrome prototype for the approved mi
 | SwiftUI components | @expo/ui 58.0.29; Liquid Glass: expo-glass-effect 58.0.5 |
 | iOS minimum | 17.0 (`expo-build-properties`; SDK 58 itself supports 16.4+) |
 | Android | minSdk 24, targetSdk 36, compileSdk 37 (SDK 58 defaults) |
-| Node | 22 LTS; npm with the committed `package-lock.json` |
+| Node | 22 LTS (22.18 or newer); npm with the committed `package-lock.json` |
 
-Identity: `com.mostafamones.edra.rn`, display name "Edra RN", scheme `edra-rn`. The release identity is decided at cutover.
+The default iOS bundle ID and Android application ID are `com.mostafamones.edra.rn`. The candidate appears as “Edra RN” and uses the `edra-rn` scheme.
 
 `ios/` and `android/` are generated (Continuous Native Generation) and git-ignored. Change native settings in `app.config.ts` or a config plugin, never in the generated projects.
+
+## App configuration
+
+Set these public values in `.env.local` or export them in your shell before running Expo commands:
+
+```dotenv
+EXPO_PUBLIC_EDRA_SUPABASE_URL=https://your-project-ref.supabase.co
+EXPO_PUBLIC_EDRA_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
+EXPO_PUBLIC_EDRA_API_ORIGIN=https://your-edra-api-host.example
+```
+
+Use the configured Edra development project and an API origin reachable from the device. The values are bundled into iOS plists and inlined into the Android JS bundle. Keep service-role keys and other credentials out of app configuration. An unconfigured real entry presents its setup screen.
+
+Supabase always uses HTTPS. The iOS Debug plist inherits the Swift app's exact `mones.ddns.net` ATS exception. Set `EXPO_PUBLIC_EDRA_DEV_HTTP_HOSTS=mones.ddns.net` to use that same HTTP API host on Android Debug. Both Release builds require an HTTPS API origin. iOS configuration changes require prebuild and a fresh native install. Android public environment changes require a Metro restart or a new embedded bundle.
+
+Expo autolinks the Apple auth and camera modules. The camera plugin enables camera access, with microphone and external storage permissions excluded on Android and no microphone usage description on iOS. The Android scanner builds `expo-camera` from source so ML Kit barcode scanning is included. Android sessions use SecureStore, whose backup rules exclude encrypted session storage.
 
 ## Commands
 
@@ -48,7 +64,19 @@ EDRA_APPLE_TEAM_ID=XXXXXXXXXX npm run ios:release
 npm run android:release        # signed with the debug keystore: local testing only
 ```
 
-Signing accounts, TestFlight, App Store and Play distribution are separate, owner-authorized release actions.
+### iOS upgrade verification
+
+Use a test iPhone with the signed-in Swift app installed and public configuration pointing to the same Supabase project. The upgrade build uses `com.mostafamones.edra` and team `39YK2DQP92` to match the Swift app's Keychain identity. Installing it replaces the Swift app on that device. Run these commands only for that upgrade test:
+
+```sh
+export EDRA_IOS_IDENTITY=upgrade EDRA_APPLE_TEAM_ID=39YK2DQP92
+npm run prebuild -- --platform ios
+npm run ios:release
+unset EDRA_IOS_IDENTITY
+npm run prebuild -- --platform ios   # restore the isolated candidate project
+```
+
+The real entry must be wired before testing whether the existing session restores. Signing accounts, TestFlight, App Store and Play distribution are separate, owner-authorized release actions.
 
 ## Remote Metro: network safety
 
@@ -58,7 +86,7 @@ Metro serves source code, and its dev tools can execute code in the app. Expose 
 - **Same trusted Wi-Fi:** run `npm run start:lan` and open the URL or QR code from the dev client. On WSL2, phones cannot reach the NAT address. Enable `networkingMode=mirrored` in `%UserProfile%\.wslconfig`, then allow inbound TCP 8081 only on the Windows *Private* profile and only for the LAN subnet.
 - **Away from the LAN:** use a private overlay you already control, such as a tailnet: `REACT_NATIVE_PACKAGER_HOSTNAME=<tailnet-ip> npm start`, with ACLs limiting port 8081 to your devices.
 - **Never** port-forward 8081 on a router, bind it to a public interface, or use `expo start --tunnel`/public tunnel services. That would publish Metro to the internet.
-- iOS asks for Local Network permission the first time the dev client discovers Metro; allow it. The generated ATS keeps `NSAllowsArbitraryLoads` off and enables `NSAllowsLocalNetworking`, so connect by IP address or `.local` name. Android debug builds allow cleartext; release builds do not.
+- iOS asks for Local Network permission the first time the dev client discovers Metro; allow it. The generated Debug plist enables `NSAllowsLocalNetworking` for Metro. Connect by IP address or `.local` name. Android debug builds allow cleartext; release builds do not.
 
 ## Prototype coverage and evidence
 
@@ -77,7 +105,6 @@ Metro serves source code, and its dev tools can execute code in the app. Expose 
 
 Known gaps to verify on device or decide:
 - iOS 26.0 lacks the UITab search role in react-native-screens, so it uses the classic three-item layout; the SwiftUI app shows a detached circle there.
-- Release ATS: the Expo template's `NSAllowsLocalNetworking` is in the shared Info.plist. The SwiftUI release build has no ATS exception, so remove it from Release builds before cutover (config plugin).
 - Android colors are light-only until an Android theme is chosen.
 - Row selection uses long press; the SwiftUI app uses a context menu (`@expo/ui` ContextMenu is the candidate).
 

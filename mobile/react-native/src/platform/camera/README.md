@@ -29,14 +29,14 @@ const assessmentPlatform = { ...assessmentCamera(torchIcon), Icon, NavigationBar
 
 `torchIcon(on)` renders the bundled Hugeicons `flash` / `flash-off` assets on Android. iOS renders its own icons natively.
 
-## Foundation wiring (not done here)
+## Foundation wiring
 
-The Expo foundation owns `package.json`, the lockfile and app config. To wire this adapter, it needs:
+The Expo foundation provides the following:
 
-- Dependencies: `expo-camera` at the version pinned by the SDK (`npx expo install expo-camera`; SDK 58 docs list `~58.0.14`). The adapter also needs `expo` (`requireNativeView`, Expo Modules autolinking), `react` and `react-native`.
+- Dependencies: `expo-camera` pinned to SDK 58’s `58.0.14`. The adapter also needs `expo` (`requireNativeView`, Expo Modules autolinking), `react` and `react-native`.
 - Config plugin: `["expo-camera", { "cameraPermission": "Edra uses the camera to scan student cards for attendance.", "microphonePermission": false, "recordAudioAndroid": false }]`. This adds `NSCameraUsageDescription` (the current Info.plist wording) and `android.permission.CAMERA` without microphone or audio permissions. On Android, barcode scanning also requires `expo-camera` in `expo.autolinking.android.buildFromSource` (package.json) per the plugin docs.
 - Local module: Expo autolinking discovers `modules/edra-camera` (default `nativeModulesDir`) through `expo-module.config.json` (`EdraCameraModule`, apple only). Pod target iOS 17. It does not affect Android.
-- Assets: `hugeicons-flash` and `hugeicons-flash-off` must remain in the iOS app asset catalog because `CameraControls` loads them from the main bundle. Android needs equivalent bundled assets for `torchIcon`.
+- Assets: `hugeicons-flash` and `hugeicons-flash-off` are copied from the Swift app’s asset catalog into the generated iOS app catalog because `CameraControls` loads them from the main bundle. Android needs equivalent bundled assets for `torchIcon`.
 
 ## Verification
 
