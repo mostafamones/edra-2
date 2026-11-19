@@ -58,3 +58,11 @@ The trigger also refuses Auth's own phone change API (`updateUser({ phone })` wi
 ## Not implemented
 
 Native settings, a support path for unreachable old numbers, avatar originals or re-cropping without re-selecting the source, and Auth-wide enforcement of the code: a signed-in session can still call Auth's own password update directly, as before this feature.
+
+## Shared profile presentation
+
+`browser.ts` is the lightweight public entry point for `accountName` and
+`resolveProfileAvatars(paths)`. Team and concern consumers share the batch resolver for
+one-hour private avatar URLs under the existing Storage policies. Keep these URLs in memory,
+refresh before expiry and render initials if resolution fails. This entry point avoids pulling
+the account settings UI and image-processing server code into lightweight query consumers.

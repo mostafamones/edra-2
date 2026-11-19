@@ -5,5 +5,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
   "assets": { "directory": "./dist/client" },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // src/server.ts scheduled handler: concern media purge (*/15) and notification push dispatch (every minute).
+  "triggers": { "crons": ["*/15 * * * *", "* * * * *"] }
 }

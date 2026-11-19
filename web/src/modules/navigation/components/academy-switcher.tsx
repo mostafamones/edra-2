@@ -67,11 +67,11 @@ export function AcademySwitcher() {
   }, [open, academies, setActiveAcademy, pathname, activeAcademy?.slug, router]);
 
   return (
-    <SidebarMenu className="-mx-1 w-auto group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:py-2">
+    <SidebarMenu className="-mx-2 w-auto min-h-12 justify-center">
       <SidebarMenuItem>
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton size="lg" className="w-full font-heading data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground" aria-label={activeAcademy ? `Switch academy, current: ${activeAcademy.name}` : "Switch academy"}>
+            <SidebarMenuButton size="lg" className="w-full font-heading transition-[width,height,padding,margin] group-data-[collapsible=icon]:ms-2 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground" aria-label={activeAcademy ? `Switch academy, current: ${activeAcademy.name}` : "Switch academy"}>
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <AcademyIcon icon={activeAcademy?.icon} />
               </span>

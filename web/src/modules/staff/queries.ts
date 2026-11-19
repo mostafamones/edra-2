@@ -1,6 +1,6 @@
 import { createClient } from "../../lib/supabase/client";
 import { academyRoleRank } from "@/modules/academies/roles";
-import { accountName } from "@/modules/account/contract";
+import { accountName, resolveProfileAvatars } from "@/modules/account/browser";
 
 import { getStaffInvitationLinks } from "./actions";
 import { invitationPageSchema, teamMemberRowsSchema, type TeamMember } from "./types";
@@ -47,9 +47,8 @@ export async function fetchTeamMembers(academyId: string, signal?: AbortSignal):
 async function attachAvatarUrls(members: TeamMember[]) {
   const paths = members.flatMap((member) => member.profiles.avatar_path ?? []);
   if (paths.length === 0) return;
-  const { data } = await createClient().storage.from("avatars").createSignedUrls(paths, 60 * 60);
-  const urls = new Map(data?.flatMap((entry) => entry.path && entry.signedUrl ? [[entry.path, entry.signedUrl] as const] : []));
-  for (const member of members) member.avatarUrl = urls.get(member.profiles.avatar_path ?? "");
+  const urls = await resolveProfileAvatars(paths).catch(() => ({} as Record<string, string>));
+  for (const member of members) member.avatarUrl = urls[member.profiles.avatar_path ?? ""];
 }
 
 /** Owner first, then Head Admins, Admins and Instructors, each by name. */

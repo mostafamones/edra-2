@@ -12,8 +12,8 @@ const modules = import.meta.glob([
 ], { eager: true }) as Record<string, { Route: { options: { server?: { handlers?: unknown } } } }>;
 
 describe("HTTP route method responses", () => {
-  it("covers all 46 migrated handlers", () => {
-    expect(Object.keys(modules)).toHaveLength(46);
+  it("covers all 47 handlers", () => {
+    expect(Object.keys(modules)).toHaveLength(47);
   });
 
   it.each(Object.entries(modules))("returns the baseline empty 405 for %s", (_path, module) => {

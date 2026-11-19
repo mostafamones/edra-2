@@ -118,7 +118,7 @@ function WorkspaceSection({ label, icon, items, pathname, closeMobile, sidebarOp
             <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={1.5} className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" aria-hidden="true" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
-        <CollapsibleContent>
+        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
           <SidebarMenuSub>
             {items.map((item) => (
               <SidebarMenuSubItem key={item.href}>
@@ -235,7 +235,7 @@ function ManagementNavigation({ pathname, role, closeMobile, query }: { pathname
 function BackFooter({ closeMobile, returnTo }: { closeMobile: () => void; returnTo: () => string }) {
   const router = useRouter();
   return (
-    <div className="flex rounded-lg px-1 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+    <div className="flex rounded-lg py-1 group-data-[collapsible=icon]:justify-center">
       <Button variant="ghost" className="h-9 w-full justify-start gap-1 px-2 text-sidebar-foreground/75 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0" aria-label="Back" onClick={() => { closeMobile(); router.push(returnTo()); }}>
         <HugeiconsIcon icon={ArrowLeft02Icon} size={20} strokeWidth={1.5} aria-hidden="true" />
         <span className="group-data-[collapsible=icon]:hidden">Back</span>
@@ -258,15 +258,15 @@ export function StaffSidebar() {
     <Sidebar collapsible="icon" variant="inset" className="group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]">
       <SidebarHeader>
         <AcademySwitcher />
-        {management && <div className="mt-2 flex px-1 group-data-[collapsible=icon]:hidden"><SearchMenu platform="staff" /></div>}
+        {management && <div className="mt-2 flex group-data-[collapsible=icon]:hidden"><SearchMenu platform="staff" /></div>}
         {!management && (
-          <div className="flex items-center gap-1 px-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:px-0 mt-2">
+          <div className="mt-2 flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
             <SearchMenu platform="staff" className="group-data-[collapsible=icon]:hidden" />
             <QuickCreate />
           </div>
         )}
       </SidebarHeader>
-      <SidebarContent className={open || isMobile ? "px-1" : ""}>
+      <SidebarContent>
         {management ? (
           <ManagementNavigation pathname={pathname} role={role} closeMobile={closeMobile} query="" />
         ) : (
