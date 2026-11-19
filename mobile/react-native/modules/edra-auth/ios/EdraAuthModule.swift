@@ -48,6 +48,14 @@ public final class EdraAuthModule: Module {
         Function("clearSelection") {
             UserDefaults.standard.removeObject(forKey: Self.selectionKey)
         }
+
+        Function("readLateDeadline") { (sessionId: String) -> Int in
+            UserDefaults.standard.integer(forKey: "lateAfterMinutes.\(sessionId)")
+        }
+
+        Function("writeLateDeadline") { (sessionId: String, minutes: Int) in
+            UserDefaults.standard.set(minutes, forKey: "lateAfterMinutes.\(sessionId)")
+        }
     }
 
     /// The failure case name (`signedOut`, `invalidCredentials`, ...) is the JS error `code`. Never the

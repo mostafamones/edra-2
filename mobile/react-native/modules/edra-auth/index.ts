@@ -15,6 +15,8 @@ export interface EdraAuthNativeModule {
   readSelection(): string | null
   writeSelection(academyId: string): void
   clearSelection(): void
+  readLateDeadline(sessionId: string): number
+  writeLateDeadline(sessionId: string, minutes: number): void
 }
 
 export const loadEdraAuth = () => requireNativeModule<EdraAuthNativeModule>('EdraAuth')
