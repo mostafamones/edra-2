@@ -25,7 +25,7 @@ struct AssignmentsView: View {
             }
         default:
             if model.assignments.isEmpty {
-                ContentUnavailableView("No assignments", image: "tabler-file-pencil")
+                ContentUnavailableView("No assignments", image: "hugeicons-file-edit")
             } else {
                 list
             }

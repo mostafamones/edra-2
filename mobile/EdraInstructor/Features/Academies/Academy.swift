@@ -7,18 +7,18 @@ struct Academy: Decodable, Identifiable, Equatable, Sendable {
     let icon: String
     let role: String
 
-    /// Maps the API's icon id to the bundled Tabler asset (same mapping as the web switcher).
+    /// Maps the API's icon id to the bundled Hugeicons asset (same glyphs as web/src/components/shared/icons.tsx).
     var iconAsset: String {
         switch icon {
-        case "book": "tabler-book"
-        case "graduate": "tabler-school"
-        case "science": "tabler-microscope"
-        case "code": "tabler-code"
-        case "art": "tabler-palette"
-        case "music": "tabler-music"
-        case "trophy": "tabler-trophy"
-        case "world": "tabler-world"
-        default: "tabler-building-community"
+        case "book": "hugeicons-book-open-01"
+        case "graduate": "hugeicons-graduation-cap"
+        case "science": "hugeicons-microscope"
+        case "code": "hugeicons-code"
+        case "art": "hugeicons-paint-board"
+        case "music": "hugeicons-music-note-01"
+        case "trophy": "hugeicons-trophy"
+        case "world": "hugeicons-globe-02"
+        default: "hugeicons-school-01"
         }
     }
 }

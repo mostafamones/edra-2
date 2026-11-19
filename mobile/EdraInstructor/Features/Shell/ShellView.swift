@@ -98,14 +98,14 @@ struct ShellView: View {
         Group {
             if #available(iOS 26, *) {
                 TabView(selection: selection) {
-                    Tab("Sessions", image: "tabler-calendar-clock", value: Destination.sessions) { sessionsStack }
-                    Tab("Assessments", image: "tabler-file-pencil", value: Destination.assessments) { assessmentsStack }
+                    Tab("Sessions", image: "hugeicons-calendar-clock", value: Destination.sessions) { sessionsStack }
+                    Tab("Assessments", image: "hugeicons-file-edit", value: Destination.assessments) { assessmentsStack }
                     Tab(value: Destination.academy, role: .search) { Color.clear } label: { academyLabel }
                 }
             } else {
                 TabView(selection: selection) {
-                    sessionsStack.tabItem { Label("Sessions", image: "tabler-calendar-clock") }.tag(Destination.sessions)
-                    assessmentsStack.tabItem { Label("Assessments", image: "tabler-file-pencil") }.tag(Destination.assessments)
+                    sessionsStack.tabItem { Label("Sessions", image: "hugeicons-calendar-clock") }.tag(Destination.sessions)
+                    assessmentsStack.tabItem { Label("Assessments", image: "hugeicons-file-edit") }.tag(Destination.assessments)
                     Color.clear.tabItem { academyLabel }.tag(Destination.academy)
                 }
             }
@@ -139,7 +139,7 @@ struct ShellView: View {
                 showAcademies = false
                 onSignOut()
             } label: {
-                row("Sign out", icon: "tabler-logout", checked: false).foregroundStyle(.red)
+                row("Sign out", icon: "hugeicons-logout-01", checked: false).foregroundStyle(.red)
             }
         }
         .buttonStyle(.plain)
@@ -152,7 +152,7 @@ struct ShellView: View {
             Image(icon).resizable().scaledToFit().frame(width: 22, height: 22)
             Text(title).lineLimit(1)
             Spacer(minLength: 16)
-            if checked { Image("tabler-check").resizable().scaledToFit().frame(width: 18, height: 18) }
+            if checked { Image("hugeicons-tick-02").resizable().scaledToFit().frame(width: 18, height: 18) }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 11)
@@ -160,7 +160,7 @@ struct ShellView: View {
     }
 
     private var academyLabel: some View {
-        Label("Academy", image: model.selected?.iconAsset ?? "tabler-building-community")
+        Label("Academy", image: model.selected?.iconAsset ?? "hugeicons-school-01")
             .accessibilityLabel(model.selected.map { "Switch academy, current: \($0.name)" } ?? "Switch academy")
     }
 
@@ -172,7 +172,7 @@ struct ShellView: View {
     }
 
     private func startButton(diameter: CGFloat) -> some View {
-        Button { start.presentPicker() } label: { headerIcon("tabler-plus", diameter: diameter) }
+        Button { start.presentPicker() } label: { headerIcon("hugeicons-add-01", diameter: diameter) }
             .nativeGlass()
             .accessibilityLabel("Start session")
     }

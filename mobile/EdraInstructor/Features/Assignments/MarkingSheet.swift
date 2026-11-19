@@ -35,7 +35,7 @@ struct MarkingSheet: View {
                                 Spacer()
                                 if model.canEdit {
                                     // Removing clears the text; a saved feedback is removed on the next Save.
-                                    Button { model.feedback = ""; showFeedback = false } label: { icon("tabler-x", size: 16) }
+                                    Button { model.feedback = ""; showFeedback = false } label: { icon("hugeicons-cancel-01", size: 16) }
                                         .buttonStyle(.plain)
                                         .foregroundStyle(.secondary)
                                         .accessibilityLabel("Remove feedback")
@@ -62,7 +62,7 @@ struct MarkingSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { if model.hasChanges || model.isUncertain { confirmLeave = true } else { onClose() } } label: {
-                        icon("tabler-x")
+                        icon("hugeicons-cancel-01")
                     }
                     .disabled(model.isSaving)
                     .accessibilityLabel("Close")
@@ -332,15 +332,15 @@ struct MarkingSheet: View {
     private var quickBar: some View {
         HStack(spacing: 8) {
             if model.mode == .byQuestion {
-                quick("tabler-chevron-left", "Previous question", disabled: model.questionIndex == 0) { model.goToQuestion(model.questionIndex - 1) }
-                quick("tabler-chevron-right", "Next question", disabled: model.questionIndex >= model.questions.count - 1) {
+                quick("hugeicons-chevron-left", "Previous question", disabled: model.questionIndex == 0) { model.goToQuestion(model.questionIndex - 1) }
+                quick("hugeicons-chevron-right", "Next question", disabled: model.questionIndex >= model.questions.count - 1) {
                     model.goToQuestion(model.questionIndex + 1)
                 }
                 Divider().frame(height: 20)
             }
-            quick("tabler-x", "Zero", disabled: model.quickValue(.zero) == nil) { model.applyQuick(.zero) }
+            quick("hugeicons-cancel-01", "Zero", disabled: model.quickValue(.zero) == nil) { model.applyQuick(.zero) }
             quick(nil, "Half marks", text: "½", disabled: model.quickValue(.half) == nil) { model.applyQuick(.half) }
-            quick("tabler-check", "Full marks", disabled: model.quickValue(.full) == nil) { model.applyQuick(.full) }
+            quick("hugeicons-tick-02", "Full marks", disabled: model.quickValue(.full) == nil) { model.applyQuick(.full) }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 24)

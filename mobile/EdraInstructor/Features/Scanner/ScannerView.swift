@@ -133,7 +133,7 @@ struct ScannerView: View {
                         attendeeCode = code
                         attendee = makeAttendeeModel(code)
                     } label: {
-                        Label { Text("Find student") } icon: { Image("tabler-user-plus") }
+                        Label { Text("Find student") } icon: { Image("hugeicons-user-add-01") }
                             .frame(maxWidth: .infinity, minHeight: 52)
                     }
                     .buttonStyle(.borderedProminent)
@@ -177,7 +177,7 @@ struct CameraControls: View {
         HStack(spacing: 10) {
             if camera.hasTorch {
                 Button { camera.toggleTorch() } label: {
-                    Image(camera.torchOn ? "tabler-bolt" : "tabler-bolt-off")
+                    Image(camera.torchOn ? "hugeicons-flash" : "hugeicons-flash-off")
                         .frame(width: 44, height: 44)
                 }
                 .controlSize(.large)

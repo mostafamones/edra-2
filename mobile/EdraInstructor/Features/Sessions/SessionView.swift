@@ -22,7 +22,7 @@ struct SessionView: View {
             .overlay(alignment: .bottomTrailing) { addButton }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button { showFinalize = true } label: { Image("tabler-check") }
+                    Button { showFinalize = true } label: { Image("hugeicons-tick-02") }
                         .disabled(!model.canPublish)
                         .accessibilityLabel("Finalize attendance")
                 }
@@ -213,24 +213,24 @@ struct SessionView: View {
     private var addButton: some View {
         Menu {
             Toggle(isOn: $model.showAll) {
-                Label { Text("Show all") } icon: { Image("tabler-users") }
+                Label { Text("Show all") } icon: { Image("hugeicons-users") }
             }
             if model.sheet?.session.mandatory == true {
                 Button(role: .destructive) {
                     model.beginAbsenceReview()
                     confirmMarkAbsent = true
-                } label: { Label { Text("Mark rest absent") } icon: { Image("tabler-user-x") } }
+                } label: { Label { Text("Mark rest absent") } icon: { Image("hugeicons-user-x") } }
                     .disabled(!model.canMarkRestAbsent)
             }
             Button { attendeeModel = model.makeAttendeeModel() } label: {
-                Label { Text("Add attendee") } icon: { Image("tabler-user-plus") }
+                Label { Text("Add attendee") } icon: { Image("hugeicons-user-add-01") }
             }
             .disabled(!model.canEdit)
             Divider()
-            Button { showLateSheet = true } label: { Label { Text("Set late deadline") } icon: { Image("tabler-clock") } }
-            Button { showScanner = true } label: { Label { Text("Open scanner") } icon: { Image("tabler-scan") } }
+            Button { showLateSheet = true } label: { Label { Text("Set late deadline") } icon: { Image("hugeicons-clock-01") } }
+            Button { showScanner = true } label: { Label { Text("Open scanner") } icon: { Image("hugeicons-scan") } }
         } label: {
-            Image("tabler-dots")
+            Image("hugeicons-more-horizontal")
                 .resizable().scaledToFit()
                 .frame(width: 26, height: 26)
                 .frame(width: 44, height: 44)

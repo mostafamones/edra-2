@@ -45,7 +45,7 @@ struct AddAttendeeView: View {
         default:
             if model.items.isEmpty {
                 ContentUnavailableView {
-                    Label { Text(model.query.isEmpty ? "No students to add" : "No student matches") } icon: { Image("tabler-user-plus") }
+                    Label { Text(model.query.isEmpty ? "No students to add" : "No student matches") } icon: { Image("hugeicons-user-add-01") }
                 }
             } else {
                 List {
@@ -74,7 +74,7 @@ struct AddAttendeeView: View {
             }
             Spacer()
             if let code = candidate.studentCode { Text(code).font(.subheadline.monospaced()).foregroundStyle(.secondary) }
-            if model.chosen?.candidate == candidate { Image("tabler-check").foregroundStyle(Color.accentColor) }
+            if model.chosen?.candidate == candidate { Image("hugeicons-tick-02").foregroundStyle(Color.accentColor) }
         }
         .contentShape(.rect)
     }

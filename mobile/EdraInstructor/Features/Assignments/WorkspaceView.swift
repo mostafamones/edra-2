@@ -76,23 +76,23 @@ struct WorkspaceView: View {
         })
         if #available(iOS 26, *) {
             TabView(selection: selection) {
-                Tab("Students", image: "tabler-users", value: Pane.students) { page(studentsPage) }
+                Tab("Students", image: "hugeicons-users", value: Pane.students) { page(studentsPage) }
                 if scanAvailable && !model.isSelecting {
-                    Tab("Scan", image: "tabler-scan", value: Pane.scan) { page(AssignmentScanView(workspace: model, scan: scan)) }
+                    Tab("Scan", image: "hugeicons-scan", value: Pane.scan) { page(AssignmentScanView(workspace: model, scan: scan)) }
                 }
                 // Search belongs to the search tab only, so other tabs get no pinned search bar.
                 Tab(value: Pane.search, role: .search) {
                     page(studentsPage).searchable(text: $searchText, prompt: "Search students in this assessment...")
                 } label: {
-                    if model.isSelecting { Label("Announce selected", image: "tabler-check") } else { Label("Search", image: "tabler-search") }
+                    if model.isSelecting { Label("Announce selected", image: "hugeicons-tick-02") } else { Label("Search", image: "hugeicons-search-01") }
                 }
             }
         } else {
             TabView(selection: selection) {
                 page(studentsPage.searchable(text: $searchText, prompt: "Search students in this assessment..."))
-                    .tabItem { Label("Students", image: "tabler-users") }.tag(Pane.students)
+                    .tabItem { Label("Students", image: "hugeicons-users") }.tag(Pane.students)
                 if scanAvailable && !model.isSelecting {
-                    page(AssignmentScanView(workspace: model, scan: scan)).tabItem { Label("Scan", image: "tabler-scan") }.tag(Pane.scan)
+                    page(AssignmentScanView(workspace: model, scan: scan)).tabItem { Label("Scan", image: "hugeicons-scan") }.tag(Pane.scan)
                 }
             }
         }
@@ -145,7 +145,7 @@ struct WorkspaceView: View {
         default:
             if model.students.isEmpty {
                 ContentUnavailableView(model.search.isEmpty && model.filter == .all ? "No students" : "No matching students",
-                                       image: "tabler-users")
+                                       image: "hugeicons-users")
                     .frame(maxHeight: .infinity)
             } else {
                 list
@@ -187,7 +187,7 @@ struct WorkspaceView: View {
         } label: {
             HStack(spacing: 12) {
                 if model.isSelecting {
-                    Image(selected ? "tabler-circle-check" : "tabler-circle").resizable().scaledToFit().frame(width: 20, height: 20)
+                    Image(selected ? "hugeicons-checkmark-circle-02" : "hugeicons-circle").resizable().scaledToFit().frame(width: 20, height: 20)
                         .opacity(model.announceBlocker(student) == nil ? 1 : 0.3)
                 }
                 VStack(alignment: .leading, spacing: 2) {
@@ -228,9 +228,9 @@ struct WorkspaceView: View {
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             if model.isSelecting {
-                Button { model.isSelecting = false } label: { Image("tabler-x") }.accessibilityLabel("Cancel selection")
+                Button { model.isSelecting = false } label: { Image("hugeicons-cancel-01") }.accessibilityLabel("Cancel selection")
             } else {
-                Button { dismiss() } label: { Image("tabler-chevron-left") }.accessibilityLabel("Back")
+                Button { dismiss() } label: { Image("hugeicons-chevron-left") }.accessibilityLabel("Back")
             }
         }
         // Before iOS 26 there is no search tab to turn into the confirm button.
@@ -284,7 +284,7 @@ struct AnnounceSheet: View {
                 .interactiveDismissDisabled(announcement.state == .sending)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button { model.announcement = nil } label: { Image("tabler-x") }
+                        Button { model.announcement = nil } label: { Image("hugeicons-cancel-01") }
                             .disabled(announcement.state == .sending)
                             .accessibilityLabel(isDone(announcement.state) ? "Close" : "Cancel")
                     }
