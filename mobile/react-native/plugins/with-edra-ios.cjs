@@ -3,6 +3,11 @@ const { join } = require('node:path');
 const plist = require('@expo/plist').default;
 const { IOSConfig, withFinalizedMod, withInfoPlist, withXcodeProject } = require('expo/config-plugins');
 
+// The SwiftUI app's Debug exception (mones.ddns.net). AppConfiguration allows HTTP only to these exact hosts.
+const debugExceptionDomains = {
+  'mones.ddns.net': { NSExceptionAllowsInsecureHTTPLoads: true },
+};
+
 module.exports = function withEdraIOS(config) {
   config = withInfoPlist(config, (config) => {
     delete config.modResults.NSAppTransportSecurity;
@@ -31,13 +36,10 @@ module.exports = function withEdraIOS(config) {
     const sourceRoot = IOSConfig.Paths.getSourceRoot(projectRoot);
     const infoPath = join(sourceRoot, 'Info.plist');
     const releasePlist = plist.parse(readFileSync(infoPath, 'utf8'));
-    const swiftDebugPlist = plist.parse(
-      readFileSync(join(projectRoot, '../Configuration/Info-Debug.plist'), 'utf8'),
-    );
     const debugPlist = {
       ...releasePlist,
       NSAppTransportSecurity: {
-        ...swiftDebugPlist.NSAppTransportSecurity,
+        NSExceptionDomains: debugExceptionDomains,
         NSAllowsLocalNetworking: true, // Metro discovery. AppConfiguration checks the exact API host.
       },
     };
@@ -47,10 +49,10 @@ module.exports = function withEdraIOS(config) {
     delete releasePlist.NSLocalNetworkUsageDescription;
     writeFileSync(infoPath, plist.build(releasePlist));
 
-    // The native camera controls and SwiftUI menu items load the Swift app's template Hugeicons from Bundle.main.
-    const swiftIcons = join(projectRoot, '../EdraInstructor/Resources/Assets.xcassets/Icons');
-    for (const name of readdirSync(swiftIcons).filter((entry) => entry.endsWith('.imageset'))) {
-      cpSync(join(swiftIcons, name), join(sourceRoot, 'Images.xcassets', name), { recursive: true });
+    // Native menus and camera controls load these template icons from Bundle.main.
+    const icons = join(projectRoot, 'assets/hugeicons');
+    for (const name of readdirSync(icons).filter((entry) => entry.endsWith('.imageset'))) {
+      cpSync(join(icons, name), join(sourceRoot, 'Images.xcassets', name), { recursive: true });
     }
     return config;
   }]);

@@ -23,6 +23,6 @@ Pod::Spec.new do |s|
     # AppConfiguration allows development HTTP hosts only under DEBUG, as in the SwiftUI app.
     'SWIFT_ACTIVE_COMPILATION_CONDITIONS[config=Debug]' => '$(inherited) DEBUG',
   }
-  # AuthService.swift and AppConfiguration.swift are symlinks to the SwiftUI app's files: one source of truth.
-  s.source_files = '*.swift'
+  # Shared/ is the single source of AuthService and AppConfiguration; the SwiftUI comparison app compiles the same files.
+  s.source_files = '**/*.swift'
 end

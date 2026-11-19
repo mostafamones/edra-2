@@ -47,6 +47,11 @@
 			path = EdraInstructor;
 			sourceTree = "<group>";
 		};
+		A00000000000000000000009 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "react-native/modules/edra-auth/ios/Shared";
+			sourceTree = "<group>";
+		};
 		A00000000000000000000007 /* EdraInstructorTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = EdraInstructorTests;
@@ -78,6 +83,7 @@
 			children = (
 				A00000000000000000000006 /* EdraInstructor */,
 				A00000000000000000000007 /* EdraInstructorTests */,
+				A00000000000000000000009 /* Shared */,
 				A00000000000000000000051 /* Configuration */,
 				A00000000000000000000052 /* Products */,
 			);
@@ -119,6 +125,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				A00000000000000000000006 /* EdraInstructor */,
+				A00000000000000000000009 /* Shared */,
 			);
 			name = EdraInstructor;
 			packageProductDependencies = (

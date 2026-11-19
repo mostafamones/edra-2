@@ -1,1 +1,0 @@
-../../../../EdraInstructor/Core/Configuration/AppConfiguration.swift

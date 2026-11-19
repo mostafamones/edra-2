@@ -45,7 +45,7 @@ This description was checked against source on 2026-10-18. It does not establish
 
 ## React Native candidate
 
-The Expo/React Native migration candidate lives in [`react-native/`](react-native/README.md) with its own dependencies, dev-client/release commands and integration contract. It installs beside this app, which remains the comparison build until cutover.
+The Expo/React Native migration candidate lives in [`react-native/`](react-native/README.md) with its own dependencies, dev-client/release commands and integration contract. It installs beside this app, which remains the comparison build until cutover. This app compiles `AuthService.swift` and `AppConfiguration.swift` from `react-native/modules/edra-auth/ios/Shared/`, the single source for both builds; keep that folder when changing either app.
 
 ## Documentation
 

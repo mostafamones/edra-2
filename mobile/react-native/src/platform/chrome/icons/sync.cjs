@@ -3,7 +3,7 @@ const { readdirSync, readFileSync, writeFileSync } = require('node:fs')
 const { join } = require('node:path')
 const { Resvg } = require('@resvg/resvg-js')
 
-const catalog = join(__dirname, '../../../../../EdraInstructor/Resources/Assets.xcassets/Icons')
+const catalog = join(__dirname, '../../../../assets/hugeicons')
 for (const folder of readdirSync(catalog).filter((name) => name.endsWith('.imageset')).sort()) {
   const name = folder.replace(/^hugeicons-/, '').replace(/\.imageset$/, '')
   const directory = join(catalog, folder)
