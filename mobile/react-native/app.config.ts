@@ -44,7 +44,7 @@ const config: ExpoConfig = {
       recordAudioAndroid: false,
     }],
     ["expo-secure-store", { faceIDPermission: false }],
-    "./plugins/with-edra-ios.cjs",
+    ["./plugins/with-edra-ios.cjs", { keepSigningTeam: upgradeVerification }],
   ],
 };
 

@@ -8,7 +8,8 @@ const debugExceptionDomains = {
   'mones.ddns.net': { NSExceptionAllowsInsecureHTTPLoads: true },
 };
 
-module.exports = function withEdraIOS(config) {
+/** `keepSigningTeam`: write `ios.appleTeamId` into the project (upgrade identity) instead of leaving it to Expo CLI. */
+module.exports = function withEdraIOS(config, { keepSigningTeam = false } = {}) {
   config = withInfoPlist(config, (config) => {
     delete config.modResults.NSAppTransportSecurity;
     return config;
@@ -17,7 +18,7 @@ module.exports = function withEdraIOS(config) {
   config = withXcodeProject(config, (config) => {
     const project = config.modResults;
     const { projectName } = config.modRequest;
-    const { target } = IOSConfig.XcodeUtils.getApplicationNativeTarget({ project, projectName });
+    const { uuid, target } = IOSConfig.XcodeUtils.getApplicationNativeTarget({ project, projectName });
     const configurations = IOSConfig.XcodeUtils.getBuildConfigurationsForListId(
       project,
       target.buildConfigurationList,
@@ -25,6 +26,15 @@ module.exports = function withEdraIOS(config) {
     for (const [, configuration] of configurations) {
       if (configuration.name === 'Debug') {
         configuration.buildSettings.INFOPLIST_FILE = `"${projectName}/Info-Debug.plist"`;
+      }
+      // `expo run:ios` passes -allowProvisioningUpdates/-allowProvisioningDeviceRegistration only when it picks
+      // the team itself (preferring ios.appleTeamId). A prebuilt team skips that, so a first device build of a
+      // new bundle ID fails with "No profiles for ... were found".
+      if (!keepSigningTeam) delete configuration.buildSettings.DEVELOPMENT_TEAM;
+    }
+    if (!keepSigningTeam) {
+      for (const [, item] of Object.entries(IOSConfig.XcodeUtils.getProjectSection(project))) {
+        delete item.attributes?.TargetAttributes?.[uuid]?.DevelopmentTeam;
       }
     }
     return config;
