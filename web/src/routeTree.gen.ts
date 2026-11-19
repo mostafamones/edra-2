@@ -69,6 +69,7 @@ import { Route as AppAcademySlugCalendarIndexRouteImport } from './routes/app/$a
 import { Route as AppAcademySlugContentIndexRouteImport } from './routes/app/$academySlug/content/index'
 import { Route as AppAcademySlugExamsIndexRouteImport } from './routes/app/$academySlug/exams/index'
 import { Route as AppAcademySlugManageAcademyRouteRouteImport } from './routes/app/$academySlug/manage/academy/route'
+import { Route as AppAcademySlugQuestionBankIndexRouteImport } from './routes/app/$academySlug/question-bank/index'
 import { Route as AppAcademySlugQuizzesIndexRouteImport } from './routes/app/$academySlug/quizzes/index'
 import { Route as AppAcademySlugSchedulesIndexRouteImport } from './routes/app/$academySlug/schedules/index'
 import { Route as AppAcademySlugStudentsIndexRouteImport } from './routes/app/$academySlug/students/index'
@@ -437,6 +438,12 @@ const AppAcademySlugManageAcademyRouteRoute =
   AppAcademySlugManageAcademyRouteRouteImport.update({
     id: '/manage/academy',
     path: '/manage/academy',
+    getParentRoute: () => AppAcademySlugRouteRoute,
+  } as any)
+const AppAcademySlugQuestionBankIndexRoute =
+  AppAcademySlugQuestionBankIndexRouteImport.update({
+    id: '/question-bank/',
+    path: '/question-bank/',
     getParentRoute: () => AppAcademySlugRouteRoute,
   } as any)
 const AppAcademySlugQuizzesIndexRoute =
@@ -861,6 +868,7 @@ export interface FileRoutesByFullPath {
   '/app/$academySlug/calendar/': typeof AppAcademySlugCalendarIndexRoute
   '/app/$academySlug/content/': typeof AppAcademySlugContentIndexRoute
   '/app/$academySlug/exams/': typeof AppAcademySlugExamsIndexRoute
+  '/app/$academySlug/question-bank/': typeof AppAcademySlugQuestionBankIndexRoute
   '/app/$academySlug/quizzes/': typeof AppAcademySlugQuizzesIndexRoute
   '/app/$academySlug/schedules/': typeof AppAcademySlugSchedulesIndexRoute
   '/app/$academySlug/students/': typeof AppAcademySlugStudentsIndexRoute
@@ -979,6 +987,7 @@ export interface FileRoutesByTo {
   '/app/$academySlug/calendar': typeof AppAcademySlugCalendarIndexRoute
   '/app/$academySlug/content': typeof AppAcademySlugContentIndexRoute
   '/app/$academySlug/exams': typeof AppAcademySlugExamsIndexRoute
+  '/app/$academySlug/question-bank': typeof AppAcademySlugQuestionBankIndexRoute
   '/app/$academySlug/quizzes': typeof AppAcademySlugQuizzesIndexRoute
   '/app/$academySlug/schedules': typeof AppAcademySlugSchedulesIndexRoute
   '/app/$academySlug/students': typeof AppAcademySlugStudentsIndexRoute
@@ -1102,6 +1111,7 @@ export interface FileRoutesById {
   '/app/$academySlug/calendar/': typeof AppAcademySlugCalendarIndexRoute
   '/app/$academySlug/content/': typeof AppAcademySlugContentIndexRoute
   '/app/$academySlug/exams/': typeof AppAcademySlugExamsIndexRoute
+  '/app/$academySlug/question-bank/': typeof AppAcademySlugQuestionBankIndexRoute
   '/app/$academySlug/quizzes/': typeof AppAcademySlugQuizzesIndexRoute
   '/app/$academySlug/schedules/': typeof AppAcademySlugSchedulesIndexRoute
   '/app/$academySlug/students/': typeof AppAcademySlugStudentsIndexRoute
@@ -1226,6 +1236,7 @@ export interface FileRouteTypes {
     | '/app/$academySlug/calendar/'
     | '/app/$academySlug/content/'
     | '/app/$academySlug/exams/'
+    | '/app/$academySlug/question-bank/'
     | '/app/$academySlug/quizzes/'
     | '/app/$academySlug/schedules/'
     | '/app/$academySlug/students/'
@@ -1344,6 +1355,7 @@ export interface FileRouteTypes {
     | '/app/$academySlug/calendar'
     | '/app/$academySlug/content'
     | '/app/$academySlug/exams'
+    | '/app/$academySlug/question-bank'
     | '/app/$academySlug/quizzes'
     | '/app/$academySlug/schedules'
     | '/app/$academySlug/students'
@@ -1466,6 +1478,7 @@ export interface FileRouteTypes {
     | '/app/$academySlug/calendar/'
     | '/app/$academySlug/content/'
     | '/app/$academySlug/exams/'
+    | '/app/$academySlug/question-bank/'
     | '/app/$academySlug/quizzes/'
     | '/app/$academySlug/schedules/'
     | '/app/$academySlug/students/'
@@ -1980,6 +1993,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAcademySlugManageAcademyRouteRouteImport
       parentRoute: typeof AppAcademySlugRouteRoute
     }
+    '/app/$academySlug/question-bank/': {
+      id: '/app/$academySlug/question-bank/'
+      path: '/question-bank'
+      fullPath: '/app/$academySlug/question-bank/'
+      preLoaderRoute: typeof AppAcademySlugQuestionBankIndexRouteImport
+      parentRoute: typeof AppAcademySlugRouteRoute
+    }
     '/app/$academySlug/quizzes/': {
       id: '/app/$academySlug/quizzes/'
       path: '/quizzes'
@@ -2434,6 +2454,7 @@ interface AppAcademySlugRouteRouteChildren {
   AppAcademySlugCalendarIndexRoute: typeof AppAcademySlugCalendarIndexRoute
   AppAcademySlugContentIndexRoute: typeof AppAcademySlugContentIndexRoute
   AppAcademySlugExamsIndexRoute: typeof AppAcademySlugExamsIndexRoute
+  AppAcademySlugQuestionBankIndexRoute: typeof AppAcademySlugQuestionBankIndexRoute
   AppAcademySlugQuizzesIndexRoute: typeof AppAcademySlugQuizzesIndexRoute
   AppAcademySlugSchedulesIndexRoute: typeof AppAcademySlugSchedulesIndexRoute
   AppAcademySlugStudentsIndexRoute: typeof AppAcademySlugStudentsIndexRoute
@@ -2474,6 +2495,7 @@ const AppAcademySlugRouteRouteChildren: AppAcademySlugRouteRouteChildren = {
   AppAcademySlugCalendarIndexRoute: AppAcademySlugCalendarIndexRoute,
   AppAcademySlugContentIndexRoute: AppAcademySlugContentIndexRoute,
   AppAcademySlugExamsIndexRoute: AppAcademySlugExamsIndexRoute,
+  AppAcademySlugQuestionBankIndexRoute: AppAcademySlugQuestionBankIndexRoute,
   AppAcademySlugQuizzesIndexRoute: AppAcademySlugQuizzesIndexRoute,
   AppAcademySlugSchedulesIndexRoute: AppAcademySlugSchedulesIndexRoute,
   AppAcademySlugStudentsIndexRoute: AppAcademySlugStudentsIndexRoute,

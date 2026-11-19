@@ -12,7 +12,8 @@ import { newStash, PartEditor, type PartStash } from "@/components/shared/assess
 import { sheetTotal, summarizeSheetPart } from "@/components/shared/assessment/sheet/types";
 import { PartsList } from "@/components/shared/assessment/parts-list";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { AcademyEntry } from "@/modules/academies";
+import { isAcademyManager, type AcademyEntry } from "@/modules/academies";
+import { AssessmentQuestionPicker } from "@/modules/question-bank/assessment-picker";
 import { createNewQuiz, saveQuiz } from "../../actions";
 import { quizPermissions } from "../../permissions";
 import { quizzesRootKey } from "../../queries";
@@ -104,7 +105,9 @@ function QuizFields({ academy, quiz, onSaved, onCancel, onStatusChange, context 
       review={({ editDetails, editPart }) => (
         <ReviewStep levelNames={levelNames} tracks={tracks} groups={groups} onEditDetails={editDetails} onEditPart={editPart} />
       )}
-      partEditor={({ index, select, close }) => <PartEditor config={PARTS} index={index} locked={structureLocked} stash={stash} onSelect={select} onClose={close} />}
+      partEditor={({ index, select, close }) => <PartEditor config={PARTS} index={index} locked={structureLocked} stash={stash} onSelect={select} onClose={close}
+        questionPicker={isAcademyManager(academy.role) ? target => <AssessmentQuestionPicker key={index} {...target}
+          academyId={academy.id} academySlug={academy.slug} maxChoices={PARTS.maxChoices} /> : undefined} />}
       wrap={(children) => <ImagesProvider academyId={academy.id}>{children}</ImagesProvider>}
       onSaved={onSaved} onCancel={onCancel} onStatusChange={onStatusChange}
     />

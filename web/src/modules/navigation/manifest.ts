@@ -190,6 +190,12 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
         icon: "assignments",
       },
       {
+        label: "Question bank",
+        href: "/app/question-bank",
+        icon: "quizzes",
+        roles: MANAGERS,
+      },
+      {
         label: "Marking queue",
         href: "/app/marking",
         icon: "marking",

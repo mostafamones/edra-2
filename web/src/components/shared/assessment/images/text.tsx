@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { MathText } from "@/components/shared/math-text";
 
 import { ImageBadge } from "./badge";
 import { imageIds, splitImages } from "./tokens";
@@ -13,7 +14,7 @@ export function RichText({ value }: { value: string }) {
   return (
     <>
       {segments.map((segment, index) => {
-        if (segment.type === "text") return <span key={index}>{segment.text}</span>;
+        if (segment.type === "text") return <MathText key={index} value={segment.text} />;
         const number = position++;
         return <ImageBadge key={`${segment.id}-${index}`} id={segment.id} number={number + 1} onOpen={() => setViewing(number)} />;
       })}
