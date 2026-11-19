@@ -92,7 +92,7 @@ Metro serves source code, and its dev tools can execute code in the app. Expose 
 
 Compare the React Native build with the SwiftUI reference on the same iPhone, OS, settings and data. Check the Academy popover and independent navigation histories, conditional Scan and Announce tabs, search, keyboard and safe areas, draft and dismiss guards, native glass, gestures, Dynamic Type and VoiceOver. On Android, verify the same workflows, platform navigation and TalkBack. Use physical devices for camera and haptics.
 
-Known iPhone differences include the classic Academy tab and toolbar search on iOS 26.0, inline search on Sessions sheets, and text-only native menu actions. iOS 26.1 and later use the native detached search-role tab. Native compilation, Keychain upgrade continuity and device parity require separate verification.
+Known iPhone differences include the classic Academy tab and toolbar search on iOS 26.0, and a Sessions sheet search drawer that uses SwiftUI's automatic display mode without an immediate search submit (SDK 58 limits; see `src/platform/chrome/README.md`). iOS 26.1 and later use the native detached search-role tab. Native compilation, Keychain upgrade continuity and device parity require separate verification.
 
 ## App structure
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { Modal, Platform, StyleSheet } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { useColors } from '../../features/sessions/screens/theme.ts'
-import { SheetContext, type FeatureSheetProps } from './sheetTypes.ts'
+import { SheetBarContext, SheetContext, type FeatureSheetProps } from './sheetTypes.ts'
 
 export function useClosed({ visible, onDismiss, notifyOnClose }: FeatureSheetProps) {
   const previous = useRef(visible)
@@ -47,9 +47,12 @@ export function FullScreen(props: FeatureSheetProps) {
       {visible && (
         <SafeAreaProvider style={styles.fill}>
           <SheetContent>
-            <SafeAreaView edges={['top', 'left', 'right']} style={[styles.fill, { backgroundColor: colors.background }]}>
-              {children}
-            </SafeAreaView>
+            {/* A cover keeps its inline header even when presented from a page sheet. */}
+            <SheetBarContext.Provider value={undefined}>
+              <SafeAreaView edges={['top', 'left', 'right']} style={[styles.fill, { backgroundColor: colors.background }]}>
+                {children}
+              </SafeAreaView>
+            </SheetBarContext.Provider>
           </SheetContent>
         </SafeAreaProvider>
       )}

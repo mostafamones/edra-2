@@ -18,14 +18,25 @@ function Action({ item }: { item: BarItem }) {
   )
 }
 
-export function NavigationBar({ title, leading, trailing, search, children }: NavigationBarProps) {
-  const value = search?.text ?? ''
+/** Native search text that follows JS writes without echoing the field's own edits back into it. */
+export function useSearchText(value: string, onChange: ((text: string) => void) | undefined) {
   const query = useNativeState(value)
   const lastNativeEdit = useRef<string | undefined>(undefined)
   useEffect(() => {
     if (value !== lastNativeEdit.current) query.set(value)
     lastNativeEdit.current = undefined
   }, [query, value])
+  return {
+    query,
+    onChange(text: string) {
+      lastNativeEdit.current = text
+      onChange?.(text)
+    },
+  }
+}
+
+export function NavigationBar({ title, leading, trailing, search, children }: NavigationBarProps) {
+  const { query, onChange } = useSearchText(search?.text ?? '', search?.onChange)
 
   return (
     <Host style={styles.fill}>
@@ -36,10 +47,7 @@ export function NavigationBar({ title, leading, trailing, search, children }: Na
           ...(search ? [searchable(query, {
             placement: 'navigationBarDrawer',
             prompt: search.prompt,
-            onChange(text) {
-              lastNativeEdit.current = text
-              search.onChange(text)
-            },
+            onChange,
           })] : []),
         ]}>
           <RNHostView><View style={styles.fill}>{children}</View></RNHostView>

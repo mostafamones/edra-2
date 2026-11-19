@@ -9,7 +9,7 @@ import { GlassButton, GlassCapsule, Popup, Segmented } from './Controls'
 import { FeatureIcon } from './FeatureIcon.tsx'
 import { Header } from './InlineBar.tsx'
 import { FeatureSheet } from './Sheet'
-import { SheetContext } from './sheetTypes.ts'
+import { SheetBarContext, SheetContext, SheetHeader } from './sheetTypes.ts'
 
 export { FeatureIcon }
 
@@ -43,7 +43,9 @@ export function createFeatureChrome(options: FeatureChromeOptions): { assessment
     sessions: {
       Icon: FeatureIcon,
       Header(props) {
-        const Bar = useContext(SheetContext) ? Header : options.RouteHeader
+        const sheetBar = useContext(SheetBarContext)
+        const inSheet = useContext(SheetContext)
+        const Bar = sheetBar ? SheetHeader : inSheet ? Header : options.RouteHeader
         return <Bar {...props} />
       },
       Sheet: (props) => <FeatureSheet {...props} notifyOnClose />,

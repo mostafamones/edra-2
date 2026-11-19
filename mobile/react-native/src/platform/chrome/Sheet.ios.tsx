@@ -1,13 +1,56 @@
-import { BottomSheet, Group, Host, RNHostView } from '@expo/ui/swift-ui'
-import { interactiveDismissDisabled, presentationDetents, presentationDragIndicator } from '@expo/ui/swift-ui/modifiers'
+import { BottomSheet, Button, Group, Host, NavigationStack, ProgressView, RNHostView, Toolbar, ToolbarItem } from '@expo/ui/swift-ui'
+import {
+  accessibilityLabel, disabled, interactiveDismissDisabled, navigationBarTitleDisplayMode, navigationTitle,
+  presentationDetents, presentationDragIndicator, searchable,
+} from '@expo/ui/swift-ui/modifiers'
+import { useState, type ReactNode } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import type { BarItem, HeaderProps } from '../../features/sessions/screens/platform.ts'
 import { useColors } from '../../features/sessions/screens/theme.ts'
+import { useSearchText } from './Bars.ios.tsx'
+import { FeatureIcon } from './FeatureIcon.tsx'
 import { FullScreen, SheetContent } from './FullScreen.tsx'
-import type { FeatureSheetProps } from './sheetTypes.ts'
+import { SheetBarContext, type FeatureSheetProps } from './sheetTypes.ts'
+
+function Action({ item }: { item: BarItem }) {
+  if (item.busy) return <ProgressView modifiers={[accessibilityLabel('In progress')]} />
+  if (item.icon) {
+    return (
+      <Button onPress={item.onPress} modifiers={[accessibilityLabel(item.title), disabled(!!item.disabled)]}>
+        <RNHostView matchContents><FeatureIcon name={item.icon} size={20} /></RNHostView>
+      </Button>
+    )
+  }
+  return <Button label={item.title} onPress={item.onPress} modifiers={[disabled(!!item.disabled)]} />
+}
+
+/** The sheet's own SwiftUI navigation bar, as the Swift app's `NavigationStack` inside each sheet. */
+function SheetBar({ bar, children }: { bar?: HeaderProps; children: ReactNode }) {
+  const search = bar?.search
+  const { query, onChange } = useSearchText(search?.value ?? '', search?.onChange)
+  return (
+    <NavigationStack>
+      <Toolbar modifiers={[
+        navigationTitle(bar?.title ?? ''),
+        navigationBarTitleDisplayMode('inline'),
+        // shortcut: SDK 58 `searchable` has no `displayMode: .always` or `.onSubmit(of: .search)`; screens debounce
+        // the query instead. Add a registered custom modifier if device review needs either.
+        ...(search ? [searchable(query, { placement: 'navigationBarDrawer', prompt: search.placeholder, onChange })] : []),
+      ]}>
+        <RNHostView><View style={styles.fill}>{children}</View></RNHostView>
+        <Toolbar.Content>
+          {bar?.leading && <ToolbarItem placement="cancellationAction"><Action item={bar.leading} /></ToolbarItem>}
+          {bar?.trailing && <ToolbarItem placement="confirmationAction"><Action item={bar.trailing} /></ToolbarItem>}
+        </Toolbar.Content>
+      </Toolbar>
+    </NavigationStack>
+  )
+}
 
 function PageSheet({ visible, detent = 'large', children, onDismiss, dismissDisabled, notifyOnClose }: FeatureSheetProps) {
   const colors = useColors()
+  const [bar, setBar] = useState<HeaderProps>()
   return (
     <Host style={styles.anchor}>
       <BottomSheet
@@ -22,13 +65,15 @@ function PageSheet({ visible, detent = 'large', children, onDismiss, dismissDisa
           presentationDragIndicator(dismissDisabled ? 'hidden' : 'visible'),
           interactiveDismissDisabled(!!dismissDisabled),
         ]}>
-          <RNHostView>
+          <SheetBar bar={bar}>
             <View style={[styles.fill, { backgroundColor: colors.background }]}>
               <SafeAreaProvider>
-                <SheetContent>{visible && children}</SheetContent>
+                <SheetBarContext.Provider value={setBar}>
+                  <SheetContent>{visible && children}</SheetContent>
+                </SheetBarContext.Provider>
               </SafeAreaProvider>
             </View>
-          </RNHostView>
+          </SheetBar>
         </Group>
       </BottomSheet>
     </Host>
