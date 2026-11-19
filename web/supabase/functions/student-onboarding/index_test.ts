@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { withEntrypoint } from "../_shared/testing/entrypoint.ts";
 
 const environmentNames = [
+  "ALLOWED_ORIGINS",
   "SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
   "META_WHATSAPP_ACCESS_TOKEN",
@@ -16,16 +17,37 @@ const requiredNames = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
 
 Deno.test("student-onboarding request boundaries", async (t) => {
   await withEntrypoint(
-    () => import("./index.ts"),
+    () => {
+      Deno.env.set(
+        "ALLOWED_ORIGINS",
+        " https://app.example.test, http://localhost:3000,*,null,https://bad.example.test/path,https://user:pass@bad.example.test ",
+      );
+      return import("./index.ts");
+    },
     environmentNames,
     async ({ handle, setEnv }) => {
-      const request = (method: string, bearer = false) =>
+      const request = (
+        method: string,
+        bearer = false,
+        origin: string | null = "https://app.example.test",
+      ) =>
         new Request("https://example.test/student-onboarding", {
           method,
-          headers: bearer ? { authorization: "Bearer synthetic-token" } : {},
+          headers: {
+            ...(bearer ? { authorization: "Bearer synthetic-token" } : {}),
+            ...(origin === null ? {} : { origin }),
+          },
         });
       const assertCors = (response: Response) => {
-        assert.equal(response.headers.get("access-control-allow-origin"), "*");
+        assert.equal(response.headers.get("vary"), "Origin");
+        assert.equal(
+          response.headers.get("access-control-allow-credentials"),
+          null,
+        );
+        assert.equal(
+          response.headers.get("access-control-allow-origin"),
+          "https://app.example.test",
+        );
         assert.equal(
           response.headers.get("access-control-allow-methods"),
           "POST, OPTIONS",
@@ -61,6 +83,73 @@ Deno.test("student-onboarding request boundaries", async (t) => {
           assertCors(response);
         },
       );
+      await t.step(
+        "second configured origin receives its own preflight header",
+        async () => {
+          const response = await handle(
+            request("OPTIONS", false, "http://localhost:3000"),
+          );
+          assert.equal(response.status, 200);
+          assert.equal(
+            response.headers.get("access-control-allow-origin"),
+            "http://localhost:3000",
+          );
+          assert.equal(
+            response.headers.get("access-control-allow-credentials"),
+            null,
+          );
+          assert.equal(response.headers.get("vary"), "Origin");
+        },
+      );
+      for (
+        const origin of [
+          "https://evil.example.test",
+          "https://app.example.test.evil.test",
+          "http://app.example.test",
+          "https://app.example.test:444",
+          "null",
+          "*",
+          "https://bad.example.test",
+        ]
+      ) {
+        for (const method of ["OPTIONS", "POST"]) {
+          await t.step(`${method} rejects ${origin} before fetch`, async () => {
+            const response = await handle(request(method, true, origin));
+            assert.equal(response.status, 403);
+            assert.deepEqual(await response.json(), {
+              error: "origin_not_allowed",
+            });
+            assert.equal(
+              response.headers.get("access-control-allow-origin"),
+              null,
+            );
+            assert.equal(
+              response.headers.get("access-control-allow-credentials"),
+              null,
+            );
+            assert.equal(response.headers.get("vary"), "Origin");
+          });
+        }
+      }
+      await t.step(
+        "no Origin still requires bearer authentication",
+        async () => {
+          const response = await handle(request("POST", false, null));
+          assert.equal(response.status, 401);
+          assert.deepEqual(await response.json(), {
+            error: "not_authenticated",
+          });
+          assert.equal(
+            response.headers.get("access-control-allow-origin"),
+            null,
+          );
+          assert.equal(
+            response.headers.get("access-control-allow-credentials"),
+            null,
+          );
+          assert.equal(response.headers.get("vary"), "Origin");
+        },
+      );
       for (const missing of requiredNames) {
         await t.step(
           `missing ${missing} returns unavailable before auth/database fetch`,
@@ -81,6 +170,33 @@ Deno.test("student-onboarding request boundaries", async (t) => {
             assertCors(response);
           },
         );
+      }
+    },
+  );
+});
+
+Deno.test("missing ALLOWED_ORIGINS blocks browser requests", async () => {
+  await withEntrypoint(
+    () => import("./index.ts?missing-origins"),
+    environmentNames,
+    async ({ handle }) => {
+      for (const method of ["OPTIONS", "POST"]) {
+        const response = await handle(
+          new Request("https://example.test", {
+            method,
+            headers: {
+              origin: "https://app.example.test",
+              authorization: "Bearer synthetic-token",
+            },
+          }),
+        );
+        assert.equal(response.status, 403);
+        assert.equal(response.headers.get("access-control-allow-origin"), null);
+        assert.equal(
+          response.headers.get("access-control-allow-credentials"),
+          null,
+        );
+        assert.equal(response.headers.get("vary"), "Origin");
       }
     },
   );
