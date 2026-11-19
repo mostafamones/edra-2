@@ -1,4 +1,4 @@
-const { cpSync, readFileSync, writeFileSync } = require('node:fs');
+const { cpSync, readdirSync, readFileSync, writeFileSync } = require('node:fs');
 const { join } = require('node:path');
 const plist = require('@expo/plist').default;
 const { IOSConfig, withFinalizedMod, withInfoPlist, withXcodeProject } = require('expo/config-plugins');
@@ -47,9 +47,9 @@ module.exports = function withEdraIOS(config) {
     delete releasePlist.NSLocalNetworkUsageDescription;
     writeFileSync(infoPath, plist.build(releasePlist));
 
-    // The native AVFoundation controls load these existing icons from Bundle.main.
+    // The native camera controls and SwiftUI menu items load the Swift app's template Hugeicons from Bundle.main.
     const swiftIcons = join(projectRoot, '../EdraInstructor/Resources/Assets.xcassets/Icons');
-    for (const name of ['hugeicons-flash.imageset', 'hugeicons-flash-off.imageset']) {
+    for (const name of readdirSync(swiftIcons).filter((entry) => entry.endsWith('.imageset'))) {
       cpSync(join(swiftIcons, name), join(sourceRoot, 'Images.xcassets', name), { recursive: true });
     }
     return config;

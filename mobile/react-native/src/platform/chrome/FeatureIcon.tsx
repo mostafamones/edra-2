@@ -36,6 +36,12 @@ export function featureIconSource(name: string) {
   return sources[name.replace(/^hugeicons-/, '')] ?? sources['school-01']
 }
 
+/** The iOS asset catalog name of the same Hugeicon, for native SwiftUI images such as menu items. */
+export function featureIconAsset(name: string) {
+  const key = name.replace(/^hugeicons-/, '')
+  return `hugeicons-${key in sources ? key : 'school-01'}`
+}
+
 export function FeatureIcon({ name, size = 22, color }: { name: string; size?: number; color?: ColorValue }) {
   const colors = useColors()
   return <Image source={featureIconSource(name)} accessible={false} style={{ width: size, height: size, tintColor: color ?? colors.label }} />

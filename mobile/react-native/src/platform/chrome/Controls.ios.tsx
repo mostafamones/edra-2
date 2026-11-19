@@ -1,11 +1,11 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
-import { Button, Capsule, ContextMenu, Divider, Group, Host, Menu, RNHostView, Toggle } from '@expo/ui/swift-ui'
+import { Button, Capsule, ContextMenu, Divider, Group, Host, Image, Label, Menu, RNHostView, Toggle } from '@expo/ui/swift-ui'
 import { accessibilityLabel, background, buttonBorderShape, buttonStyle, disabled, foregroundStyle, frame, glassEffect, menuOrder, shapes, tint } from '@expo/ui/swift-ui/modifiers'
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect'
 import { StyleSheet, View, useColorScheme } from 'react-native'
 import type { SegmentedProps } from '../../features/assignments/platform.ts'
 import type { GlassButtonProps } from '../../features/sessions/screens/platform.ts'
-import { FeatureIcon } from './FeatureIcon.tsx'
+import { FeatureIcon, featureIconAsset } from './FeatureIcon.tsx'
 import type { CapsuleProps, PopupProps } from './controlsTypes.ts'
 
 const supportsGlass = isLiquidGlassAvailable()
@@ -64,10 +64,18 @@ export function Popup({ items, disabled: unavailable, accessibilityLabel: label,
   const trigger = <RNHostView matchContents={{ vertical: true, horizontal: !longPress && !!style }}><View>{children}</View></RNHostView>
   const actions = items.map((item) => {
     if ('divider' in item) return <Divider key={item.key} />
+    // UIMenu draws the template asset beside the title, as the Swift app's `Label { } icon: { Image(asset) }` did.
+    const content = item.icon ? <Label title={item.title} icon={<Image assetName={featureIconAsset(item.icon)} />} /> : undefined
     if (item.checked !== undefined) {
-      return <Toggle key={item.key} label={item.title} isOn={item.checked} onIsOnChange={item.onPress} modifiers={[disabled(!!item.disabled)]} />
+      return (
+        <Toggle key={item.key} label={content ? undefined : item.title} isOn={item.checked} onIsOnChange={item.onPress}
+          modifiers={[disabled(!!item.disabled)]}>{content}</Toggle>
+      )
     }
-    return <Button key={item.key} label={item.title} role={item.destructive ? 'destructive' : 'default'} onPress={item.onPress} modifiers={[disabled(!!item.disabled)]} />
+    return (
+      <Button key={item.key} label={content ? undefined : item.title} role={item.destructive ? 'destructive' : 'default'}
+        onPress={item.onPress} modifiers={[disabled(!!item.disabled)]}>{content}</Button>
+    )
   })
   return (
     <Host matchContents={{ vertical: true, horizontal: !longPress && !!style }} style={style}>
