@@ -145,7 +145,7 @@ function useAppActive() {
 
 const styles = StyleSheet.create({
   box: { overflow: 'hidden', backgroundColor: 'black' },
-  notice: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  notice: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', padding: 24 },
   noticeText: { color: 'white', fontSize: 17, textAlign: 'center' },
   torch: {
     position: 'absolute',
