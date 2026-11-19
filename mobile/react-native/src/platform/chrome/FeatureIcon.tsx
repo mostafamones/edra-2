@@ -32,8 +32,11 @@ const sources: Record<string, number> = {
   'users': require('./icons/users.png'),
 }
 
+export function featureIconSource(name: string) {
+  return sources[name.replace(/^hugeicons-/, '')] ?? sources['school-01']
+}
+
 export function FeatureIcon({ name, size = 22, color }: { name: string; size?: number; color?: ColorValue }) {
   const colors = useColors()
-  const source = sources[name.replace(/^hugeicons-/, '')] ?? sources['school-01']
-  return <Image source={source} accessible={false} style={{ width: size, height: size, tintColor: color ?? colors.label }} />
+  return <Image source={featureIconSource(name)} accessible={false} style={{ width: size, height: size, tintColor: color ?? colors.label }} />
 }

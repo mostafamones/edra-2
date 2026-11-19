@@ -1,10 +1,8 @@
-import type { Academy } from "../fixtures";
-
 export type AcademyMenuProps = {
   open: boolean;
   onClose: () => void;
-  academies: Academy[];
-  selectedId: string;
+  academies: readonly { id: string; name: string; icon?: string }[];
+  selectedId: string | null;
   onSelect: (id: string) => void;
   onSignOut: () => void;
 };

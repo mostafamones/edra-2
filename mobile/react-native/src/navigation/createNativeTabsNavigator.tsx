@@ -12,7 +12,7 @@ import {
   type TypedNavigator,
   useNavigationBuilder,
 } from "@react-navigation/native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { type ImageSourcePropType, Platform, PlatformColor } from "react-native";
 import { Tabs } from "react-native-screens";
 
@@ -42,9 +42,15 @@ type Props = DefaultNavigatorOptions<
   Record<string, never>,
   unknown
 > &
-  TabRouterOptions;
+  TabRouterOptions & {
+    /** When supplied, the parent owns selection. The router mirrors it for route focus. */
+    selectedRoute?: string;
+    onSelectRoute?: (name: string) => void;
+  };
 
-function NativeTabsNavigator({ id, initialRouteName, backBehavior, children, screenOptions, screenListeners, layout }: Props) {
+function NativeTabsNavigator({
+  id, initialRouteName, backBehavior, children, screenOptions, screenListeners, layout, selectedRoute, onSelectRoute,
+}: Props) {
   const { state, descriptors, navigation, NavigationContent } = useNavigationBuilder<
     TabNavigationState<ParamListBase>,
     TabRouterOptions,
@@ -55,21 +61,34 @@ function NativeTabsNavigator({ id, initialRouteName, backBehavior, children, scr
   // Last provenance native acknowledged; JS requests build on it so stale ones are rejected.
   const [provenance, setProvenance] = useState(0);
   const focused = state.routes[state.index]!;
+  const selected = state.routes.find((route) => route.name === selectedRoute) ?? focused;
+
+  useEffect(() => {
+    if (selected.key !== focused.key) {
+      navigation.dispatch({ ...TabActions.jumpTo(selected.name), target: state.key });
+    }
+  }, [focused.key, navigation, selected, state.key]);
 
   return (
     <NavigationContent>
       <Tabs.Host
-        navStateRequest={{ selectedScreenKey: focused.key, baseProvenance: provenance }}
+        navStateRequest={{ selectedScreenKey: selected.key, baseProvenance: provenance }}
         rejectStaleNavStateUpdates
         ios={Platform.OS === "ios" ? { tabBarTintColor: PlatformColor("systemBlue") } : undefined}
+        android={selectedRoute !== undefined ? { tabBarRespectsIMEInsets: true } : undefined}
         onTabSelected={({ nativeEvent }) => {
-          setProvenance(nativeEvent.provenance);
+          setProvenance((current) => Math.max(current, nativeEvent.provenance));
           const route = state.routes.find((r) => r.key === nativeEvent.selectedScreenKey);
-          if (route && route.key !== focused.key) {
+          if (!route || descriptors[route.key]?.options.action) return;
+          if (onSelectRoute) {
+            if (nativeEvent.actionOrigin !== "programmatic-js" && route.key !== selected.key) {
+              onSelectRoute(route.name);
+            }
+          } else if (route.key !== focused.key) {
             navigation.dispatch({ ...TabActions.jumpTo(route.name), target: state.key });
           }
         }}
-        onTabSelectionRejected={({ nativeEvent }) => setProvenance(nativeEvent.provenance)}
+        onTabSelectionRejected={({ nativeEvent }) => setProvenance((current) => Math.max(current, nativeEvent.provenance))}
         onTabSelectionPrevented={({ nativeEvent }) => descriptors[nativeEvent.preventedScreenKey]?.options.action?.()}
       >
         {state.routes.map((route) => {
@@ -81,6 +100,7 @@ function NativeTabsNavigator({ id, initialRouteName, backBehavior, children, scr
               screenKey={route.key}
               title={options.title ?? route.name}
               preventNativeSelection={options.action != null}
+              specialEffects={selectedRoute !== undefined ? { repeatedTabSelection: { popToRoot: false } } : undefined}
               tabBarItemAccessibilityLabel={options.accessibilityLabel}
               tabBarItemTestID={options.testID}
               ios={{

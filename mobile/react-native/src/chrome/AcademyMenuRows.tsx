@@ -1,16 +1,12 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { Academy } from "../fixtures";
+import { featureIconSource } from "../platform/chrome/FeatureIcon";
+import type { AcademyMenuProps } from "./AcademyMenu.types";
 import { colors } from "./colors";
 import { icons } from "./icons";
 
 /** Menu rows shared by the iOS popover and the Android menu: academies (current checked), Sign out. */
-export function AcademyMenuRows(props: {
-  academies: Academy[];
-  selectedId: string;
-  onSelect: (id: string) => void;
-  onSignOut: () => void;
-}) {
+export function AcademyMenuRows(props: Omit<AcademyMenuProps, "open" | "onClose">) {
   return (
     <View style={styles.list}>
       {props.academies.map((a) => {
@@ -23,7 +19,7 @@ export function AcademyMenuRows(props: {
             onPress={() => props.onSelect(a.id)}
             style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.fill }]}
           >
-            <Image source={icons.academy} style={[styles.icon, { tintColor: colors.label }]} />
+            <Image source={a.icon ? featureIconSource(a.icon) : icons.academy} style={[styles.icon, { tintColor: colors.label }]} />
             <Text numberOfLines={1} style={[styles.text, { color: colors.label }]}>
               {a.name}
             </Text>
