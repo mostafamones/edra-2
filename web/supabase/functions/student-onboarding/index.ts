@@ -8,11 +8,23 @@ import {
 } from "../_shared/whatsapp-auth.ts";
 
 const CORS_HEADERS = {
-  "access-control-allow-origin": "*",
+  "vary": "Origin",
   "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",
   "access-control-allow-methods": "POST, OPTIONS",
   "content-type": "application/json",
 };
+
+const allowedOrigins = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter((value) => {
+    try {
+      const url = new URL(value);
+      return ["http:", "https:"].includes(url.protocol) && url.origin === value;
+    } catch {
+      return false;
+    }
+  });
 
 const PHONE_PATTERN = /^\+201[0125]\d{8}$/;
 const CODE_PATTERN = /^\d{6}$/;
@@ -86,7 +98,7 @@ function config() {
   };
 }
 
-Deno.serve(async (request) => {
+async function handleRequest(request: Request) {
   if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
   if (request.method !== "POST") return respond({ error: "method_not_allowed" }, 405);
 
@@ -297,4 +309,17 @@ Deno.serve(async (request) => {
   }
 
   return respond({ error: "invalid_action" }, 400);
+}
+
+Deno.serve(async (request) => {
+  const origin = request.headers.get("origin");
+  if (origin !== null && !allowedOrigins.includes(origin)) {
+    return respond({ error: "origin_not_allowed" }, 403);
+  }
+
+  const response = await handleRequest(request);
+  if (origin !== null) {
+    response.headers.set("access-control-allow-origin", origin);
+  }
+  return response;
 });
