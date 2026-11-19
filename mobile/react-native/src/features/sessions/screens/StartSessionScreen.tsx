@@ -184,6 +184,6 @@ const styles = StyleSheet.create({
   scheduleRow: { gap: 4, paddingHorizontal: 16, paddingVertical: 11 },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pager: { padding: 24 },
-  overlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  overlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   starting: { padding: 20, borderRadius: 16, alignItems: 'center', gap: 8 },
 })

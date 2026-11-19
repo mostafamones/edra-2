@@ -75,7 +75,7 @@ export function AddAttendeeScreen({ onClose, onFinished, platform, ...props }: {
                 {model.isLoadingMore ? 'Loading…' : 'Show more'}
               </Text>
             </Pressable>
-          ) : null
+          ) : undefined
         }
       />
     )

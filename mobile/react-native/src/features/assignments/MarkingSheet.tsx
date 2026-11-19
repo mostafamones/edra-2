@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react'
 import { AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, useColorScheme } from 'react-native'
 import { choiceLetter, isWrittenWork, markFor, studentStatus, takesAnswers, takesTotal, type Question } from './api.ts'
 import { MarkingModel, MODE_TITLES, NOT_ENTERED, type Entry, type Quick } from './marking.ts'
@@ -21,7 +21,7 @@ export function MarkingSheet({ model, platform, onClose }: { model: MarkingModel
   const [focus, setFocus] = useState<string | null>(null)
   // Feedback stays out of the way until asked for, or when the student already has some.
   const [showFeedback, setShowFeedback] = useState(() => model.feedback !== '')
-  const inputs = useRef(new Map<string, TextInput>())
+  const inputs = useRef(new Map<string, ComponentRef<typeof TextInput>>())
 
   const requestSave = () => {
     if (model.needsReplaceConfirmation) {
@@ -238,7 +238,7 @@ function PartChips({ model }: { model: MarkingModel }) {
   )
 }
 
-function Questions({ model, inputs, focusProps }: { model: MarkingModel; inputs: Map<string, TextInput>; focusProps: FocusProps }) {
+function Questions({ model, inputs, focusProps }: { model: MarkingModel; inputs: Map<string, ComponentRef<typeof TextInput>>; focusProps: FocusProps }) {
   const colors = useColors()
   const written = isWrittenWork(model.part)
   return (
@@ -318,7 +318,7 @@ function ChoiceRow({ model, question }: { model: MarkingModel; question: Questio
   )
 }
 
-function WrittenRow({ model, question, inputs, focusProps }: { model: MarkingModel; question: Question; inputs: Map<string, TextInput>; focusProps: FocusProps }) {
+function WrittenRow({ model, question, inputs, focusProps }: { model: MarkingModel; question: Question; inputs: Map<string, ComponentRef<typeof TextInput>>; focusProps: FocusProps }) {
   const colors = useColors()
   const index = model.questions.findIndex((q) => q.id === question.id)
   const entry: Entry = model.entry(question.id)

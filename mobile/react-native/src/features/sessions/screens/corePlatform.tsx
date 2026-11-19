@@ -103,7 +103,9 @@ export const corePlatform: SessionsPlatform = {
         visible={visible}
         animationType="slide"
         presentationStyle={fullScreen ? 'fullScreen' : 'pageSheet'}
-        onRequestClose={() => !dismissDisabled && onDismiss()}
+        onRequestClose={() => {
+          if (!dismissDisabled) onDismiss()
+        }}
         onDismiss={onDismiss}
       >
         <View style={{ flex: 1, backgroundColor: colors.background }}>{children}</View>
