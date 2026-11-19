@@ -17,7 +17,7 @@ React Native ports of `EdraInstructor/Features/Assignments` views. The Swift vie
 - `Tabs`: the workspace's own tab bar. The screen supplies the tabs and their wording. On iOS 26, the search tab has the search role and the screen intercepts it while selecting.
 - `Sheet`: `fullScreen` for the workspace and `sheet` for marking and Announce. The sheet honours `dismissDisabled`. `onDismiss` reports user dismissal.
 - `Segmented`, `ContextMenu`, `GlassCapsule` and `Icon`. `Icon` maps `IconName` to the bundled Hugeicons assets.
-- `Camera`: the code preview with the shared torch, zoom and pinch controls. It reports all visible codes for each frame. `requestCameraPermission` is also part of this contract.
+- `Camera`: the code preview with the shared torch, zoom and pinch controls. It reports all visible codes for each frame. `requestCameraPermission` is also part of this contract. Both come from `assessmentCamera(torchIcon)` in `src/platform/camera`.
 - `confirm` (optional): a confirmation dialog. It defaults to `systemConfirm`, which uses `ActionSheetIOS` on iOS and `Alert` on Android.
 
 Core React Native supplies the remaining native pieces directly: `ActivityIndicator`, `RefreshControl`, `Switch`, `TextInput`, `Alert`, `Linking.openSettings` and `AppState`. Colours are iOS semantic colours through `PlatformColor`, including the `AccentColor` asset. Android uses their published light and dark values (`theme.ts`).
