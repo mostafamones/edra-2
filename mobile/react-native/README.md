@@ -1,6 +1,6 @@
 # Edra Instructor — React Native candidate
 
-The Expo/React Native foundation and native-chrome prototype for the approved migration (see `../AGENTS.md`). It installs beside the legacy SwiftUI app (`../EdraInstructor.xcodeproj`), which stays the comparison build until cutover. The default entry still opens the fixture prototype. The API-backed screens and their platform adapters are available for the entry and navigation integration.
+The React Native candidate opens the API-backed Edra instructor companion on iOS and Android. The default build installs beside the SwiftUI comparison app (`../EdraInstructor.xcodeproj`). See `../AGENTS.md` for the migration and acceptance requirements.
 
 ## Toolchain (pinned)
 
@@ -44,7 +44,7 @@ npm run check          # typecheck, unit tests, SDK version check, iOS+Android H
 
 ### Dev client (Metro)
 
-Build and install the dev client once per native change. iOS requires macOS with Xcode 26+ and CocoaPods; Android requires JDK 17 and the Android SDK (with NDK 27.1.12297006).
+Install the Edra development client to run the app on your phone. Expo Go does not contain Edra's native modules. Build and reinstall the client when native inputs change. iOS requires macOS with Xcode 26+ and CocoaPods. Android requires JDK 17 and the Android SDK with NDK 27.1.12297006.
 
 ```sh
 EDRA_APPLE_TEAM_ID=XXXXXXXXXX npm run ios   # connected iPhone (prompts for a device); generates ios/ on first run
@@ -76,7 +76,7 @@ unset EDRA_IOS_IDENTITY
 npm run prebuild -- --platform ios   # restore the isolated candidate project
 ```
 
-The real entry must be wired before testing whether the existing session restores. Signing accounts, TestFlight, App Store and Play distribution are separate, owner-authorized release actions.
+Verify that the upgrade restores the existing session and academy selection. Signing accounts, TestFlight, App Store and Play distribution are separate, owner-authorized release actions.
 
 ## Remote Metro: network safety
 
@@ -88,56 +88,16 @@ Metro serves source code, and its dev tools can execute code in the app. Expose 
 - **Never** port-forward 8081 on a router, bind it to a public interface, or use `expo start --tunnel`/public tunnel services. That would publish Metro to the internet.
 - iOS asks for Local Network permission the first time the dev client discovers Metro; allow it. The generated Debug plist enables `NSAllowsLocalNetworking` for Metro. Connect by IP address or `.local` name. Android debug builds allow cleartext; release builds do not.
 
-## Prototype coverage and evidence
+## Device acceptance
 
-| Behavior | Implementation | Evidence so far |
-|---|---|---|
-| Photos-like shell: Sessions + Assessments tabs, separate Academy circle | `Tabs.Host` (UITabBarController); Academy is a `role: "search"` tab (UISearchTab, iOS 26.1+) with `preventNativeSelection` | Static only |
-| Academy opens an anchored popover without selecting or dropping tab stacks | `onTabSelectionPrevented` → SwiftUI `.popover` (`@expo/ui` Popover, compact adaptation `.popover`) over the tab item; Android: menu surface | Static only |
-| Academy change resets both stacks and presentations, returning to Sessions | Root stack reset in `ShellScreen` | Static only |
-| Assessment workspace: search tab becomes "Announce selected" while selecting | Search tab keeps its role; title/icon/action change; selecting turns it into an action tab | Unit test (pane rules) + static |
-| Scan tab appears only when allowed and leaves while selecting, without state loss | Workspace state above the tab navigator; TabRouter keeps the remaining routes | Unit test + static |
-| Native sheets with keyboard | Marking is a page sheet with Save in its native bar; iOS `automaticallyAdjustKeyboardInsets`, Android `KeyboardAvoidingView`; dirty sheets block swipe/back (`usePreventRemove`) | Static only |
-| Interactive Liquid Glass control | `GlassView isInteractive` (UIGlassEffect) "Start session" button | Static only |
-| iOS 17–26.0 pre-glass behavior | Classic tab bar (Academy is a third item; the popover anchors to it); bordered-circle button; workspace search in the navigation bar, with Announce *n* in the bar while selecting | Static only |
+Compare the React Native build with the SwiftUI reference on the same iPhone, OS, settings and data. Check the Academy popover and independent navigation histories, conditional Scan and Announce tabs, search, keyboard and safe areas, draft and dismiss guards, native glass, gestures, Dynamic Type and VoiceOver. On Android, verify the same workflows, platform navigation and TalkBack. Use physical devices for camera and haptics.
 
-"Static" means TypeScript, unit tests, `expo export` Hermes bundles for both platforms, and `expo prebuild` generating both native projects (iOS target 17.0). Simulator and physical-device behavior has **not** been observed. Before treating the prototype as parity evidence, record on device: iOS 26.1+, iOS 17 or 18, and one Android phone, with TalkBack/VoiceOver and Dynamic Type.
+Known iPhone differences include the classic Academy tab and toolbar search on iOS 26.0, inline search on Sessions sheets, and text-only native menu actions. iOS 26.1 and later use the native detached search-role tab. Native compilation, Keychain upgrade continuity and device parity require separate verification.
 
-Known gaps to verify on device or decide:
-- iOS 26.0 lacks the UITab search role in react-native-screens, so it uses the classic three-item layout; the SwiftUI app shows a detached circle there.
-- Android colors are light-only until an Android theme is chosen.
-- Row selection uses long press; the SwiftUI app uses a context menu (`@expo/ui` ContextMenu is the candidate).
+## App structure
 
-## Integration contract for workflow agents
-
-Folder layout (`src/`):
-
-| Path | Owns |
-|---|---|
-| `navigation/routes.ts` | Every route name and param list (the contract). |
-| `navigation/createNativeTabsNavigator.tsx` | Route adapter: React Navigation `TabRouter` → react-native-screens native tabs. Options: `title`, `icon` (template PNG), `role: "search"` (fixed for the tab's lifetime), `activatesSearch`, `action` (prevents selection, calls back), `accessibilityLabel`, `testID`. |
-| `chrome/` | Platform chrome only: `GlassButton`, `PageHeader`, `AcademyMenu` (`.ios.tsx`/`.tsx`), `SheetStack`, header buttons, `platform.ts` gates (`hasLiquidGlass`, `hasSearchTabs`), `colors.ts`, `icons.ts`. No feature state. |
-| `features/<feature>/` | Screens and feature state (`shell`, `sessions`, `assessments`). Replace fixture reads with API-backed state here. |
-| `fixtures/` | Fixture data. Delete each import as its feature integrates the real API. |
-| `assets/icons/` | Hugeicons PNGs generated by `npm run sync:icons` (stroke 1.5, attribution file). Add icons there, not by hand. |
-
-Routes (names are stable; params are the minimum identifiers):
-
-```
-Root (native stack, id "root")
-├─ Shell                      tabs: SessionsTab | AssessmentsTab | AcademyAction (action)
-│  ├─ SessionsTab (stack)     SessionsHome → Session { sessionId }
-│  └─ AssessmentsTab (stack)  AssessmentsHome
-├─ StartSession               formSheet
-└─ Workspace { assignmentId } fullScreenModal; WorkspaceProvider owns state for its lifetime
-   ├─ WorkspaceTabs           StudentsTab | ScanTab (conditional) | SearchTab (iOS 26.1+)
-   ├─ Marking { studentId, origin: "row" | "search" | "scan" }   page sheet
-   └─ Announce { studentIds }                                     page sheet
-```
-
-Rules:
-- Screens navigate by route name; `navigate` bubbles to the owning navigator. Use `navigation.popTo("Shell", …)` to land on a shell tab from a root presentation (see `StartSessionSheet`).
-- Account and academy authority stays in one provider above navigation (`features/shell/AppSession.tsx`, now a fixture). An academy change must reset the root (`ShellScreen.select`). An account change remounts the navigation tree, so no state carries over.
-- State that must survive a tab appearing or leaving belongs above that tab navigator (see `WorkspaceState.tsx`), never in a tab screen.
-- Native-only behavior goes in a local Expo module at `modules/edra-native-chrome` (Swift/Kotlin, `expo-module.config.json`) consumed by `chrome/`. This prototype does not need one; add it only when a supported package cannot match the SwiftUI behavior. Each new native module requires a rebuild of the dev client.
-- Keep all dependencies in this folder's `package.json`, pinned exactly; use `npx expo install --check` to stay on SDK-58-compatible versions.
+- `src/App.tsx` mounts the navigation and safe-area containers and passes platform bindings into `src/app/EdraApp.tsx`.
+- `src/app/` owns the signed-in shell, the account and academy lifecycle, and the Sessions and Assessments histories.
+- `src/features/` contains the React Native screen bodies and their workflow models.
+- `src/navigation/` and `src/platform/` provide native controls, camera and runtime services.
+- `modules/` contains the local Apple modules for secure auth and camera.
