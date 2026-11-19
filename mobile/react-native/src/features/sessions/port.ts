@@ -56,18 +56,6 @@ export interface Ownership {
   onForbidden(): Promise<void> | void
 }
 
-/** Minimal change notification so screens can use `useSyncExternalStore(model.subscribe, () => model.version)`. */
-export class Model {
-  version = 0
-  private listeners = new Set<() => void>()
-  subscribe = (listener: () => void) => {
-    this.listeners.add(listener)
-    return () => void this.listeners.delete(listener)
-  }
-  protected changed() {
-    this.version += 1
-    for (const listener of this.listeners) listener()
-  }
-}
+export { Model } from '../../core/model.ts'
 
 export const NETWORK_MESSAGE = "Can't reach the server. Check your connection and try again."
