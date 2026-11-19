@@ -1,0 +1,5 @@
+[
+  { "number": 1, "mode": "text", "text": "Question 1: Find the median.\n2. Calculate the mean." },
+  { "number": 2, "mode": "text", "text": "3. Worked example: Simplify x² − x².\nSolution: The terms cancel." },
+  { "number": 3, "mode": "scan", "text": "٤. أوجد مشتقة الدالة y = x³.\nأ) x²\nب) 3x²" }
+]

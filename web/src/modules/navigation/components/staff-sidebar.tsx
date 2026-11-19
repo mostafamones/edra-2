@@ -144,6 +144,7 @@ function WorkspaceNavigation({ pathname, role, closeMobile, sidebarOpen, expandS
   expandSidebar: () => void;
 }) {
   const [savedOpen, setSavedOpen] = useSectionOpenState();
+  const questionBank = pageFor("/app/question-bank");
   return (
     <>
       <SidebarGroup>
@@ -172,6 +173,7 @@ function WorkspaceNavigation({ pathname, role, closeMobile, sidebarOpen, expandS
             })}
             <StaffLink item={pageFor("/app/content")} icon={FolderLibraryIcon} pathname={pathname} closeMobile={closeMobile} />
             <StaffLink item={pageFor("/app/assessments")} icon={AssignmentsIcon} pathname={pathname} closeMobile={closeMobile} also={ASSESSMENT_PATHS} />
+            {canViewStaffItem(questionBank, role) && <StaffLink item={questionBank} pathname={pathname} closeMobile={closeMobile} />}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

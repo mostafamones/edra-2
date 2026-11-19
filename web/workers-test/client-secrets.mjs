@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const checks = [
-  ...["SUPABASE_SERVICE_ROLE_KEY", "STAFF_INVITE_LINK_KEY", "MUX_TOKEN_SECRET", "MUX_SIGNING_PRIVATE_KEY", "MUX_WEBHOOK_SECRET", "MUX_TOKEN_ID"].map((name) => [name, new RegExp(name)]),
+  ...["SUPABASE_SERVICE_ROLE_KEY", "STAFF_INVITE_LINK_KEY", "MUX_TOKEN_SECRET", "MUX_SIGNING_PRIVATE_KEY", "MUX_WEBHOOK_SECRET", "MUX_TOKEN_ID", "GEMINI_API_KEY"].map((name) => [name, new RegExp(name)]),
   ["EDRA_DEV_ secret", /EDRA_DEV_[A-Z0-9_]+/],
   ["PEM key block", /-----BEGIN[ A-Z]*PRIVATE KEY-----\s*(?:\\n)?[A-Za-z0-9+/]{16}/],
   ["JWT-looking key", /eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}/],

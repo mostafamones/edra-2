@@ -29,13 +29,14 @@ type Props = {
   onClose: () => void;
   /** Extra tools in the advanced options, such as an import. */
   tools?: (api: { kind: string; setQuestions: (questions: EditorQuestion[]) => void }) => ReactNode;
+  questionPicker?: (api: { kind: string; full: boolean; append: (question: EditorQuestion) => boolean }) => ReactNode;
 };
 
 /** A question without stored ids: an autosave may already have deleted the original. */
 const withoutIds = (question: EditorQuestion): EditorQuestion => detachDraft(question);
 
 /** One part, edited on its own page: title, type and advanced settings, then its questions or entries. */
-export function PartEditor({ config, locked, index, stash, onSelect, onClose, tools }: Props) {
+export function PartEditor({ config, locked, index, stash, onSelect, onClose, tools, questionPicker }: Props) {
   const { control, setValue, getValues } = useFormContext<FieldValues>();
   const parts = (useWatch({ control, name: "parts" }) ?? []) as EditorPart[];
   const part = parts[index];
@@ -152,6 +153,14 @@ export function PartEditor({ config, locked, index, stash, onSelect, onClose, to
       ) : (
         <QuestionsEditor config={config} partIndex={index} kind={kind} readOnly={readOnly} onResize={resize} onSnapshot={snapshot} footer={total} />
       )}
+
+      {!locked && questionPicker?.({ kind: part.kind, full: count >= config.maxQuestions, append: question => {
+        const current = getValues(`parts.${index}`) as EditorPart | undefined;
+        if (!current || current.id !== part.id || current.kind !== part.kind || current.questions.length >= config.maxQuestions) return false;
+        setCountText(null);
+        setValue(questionsPath, [...current.questions, question], { shouldDirty: true });
+        return true;
+      } })}
 
       {(locked || pager) && total}
     </PartFrame>

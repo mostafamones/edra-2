@@ -4736,6 +4736,65 @@ export type Database = {
         }
         Relationships: []
       }
+      question_bank_questions: {
+        Row: {
+          academy_id: string
+          created_at: string
+          created_by: string
+          id: string
+          payload: Json
+          program_id: string | null
+          unit_id: string | null
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          created_by: string
+          id: string
+          payload: Json
+          program_id?: string | null
+          unit_id?: string | null
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          payload?: Json
+          program_id?: string | null
+          unit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_bank_questions_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_bank_questions_academy_id_program_id_fkey"
+            columns: ["academy_id", "program_id"]
+            isOneToOne: false
+            referencedRelation: "content_programs"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "question_bank_questions_academy_id_unit_id_fkey"
+            columns: ["academy_id", "unit_id"]
+            isOneToOne: false
+            referencedRelation: "content_units"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "question_bank_questions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_attempts: {
         Row: {
           academy_id: string
@@ -8490,6 +8549,7 @@ export type Database = {
           track_id: string
         }[]
       }
+      get_question_bank_units: { Args: { p_academy_id: string }; Returns: Json }
       get_quiz: {
         Args: { p_academy_id: string; p_quiz_id: string }
         Returns: Json
@@ -9266,6 +9326,10 @@ export type Database = {
           p_token: string
         }
         Returns: Json
+      }
+      save_question_bank_questions: {
+        Args: { p_academy_id: string; p_program_id?: string; p_questions: Json }
+        Returns: number
       }
       save_quiz_answers: {
         Args: {

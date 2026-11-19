@@ -3,6 +3,8 @@ import { useLayoutEffect, useRef, useState, type ClipboardEvent, type KeyboardEv
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
+import { hasMath } from "@/lib/math";
+import { RichText } from "./text";
 import { imageIds, imageToken, MAX_QUESTION_IMAGES, splitImages } from "./tokens";
 import { ImageBadge } from "./badge";
 import { useImages } from "./context";
@@ -223,6 +225,7 @@ export function ImageTextField({ value, onChange, onBlur, multiline = false, roo
           {placeholder}
         </span>
       )}
+      {hasMath(current) && <div aria-label="Equation preview" className="mt-2 min-w-0 rounded-md bg-muted/40 p-3"><RichText value={current} /></div>}
       <ImageViewer ids={ids} index={viewing} onIndexChange={setViewing} onRemove={readOnly ? undefined : (imageId) => { remove(imageId); if (ids.length <= 1) setViewing(null); }} />
     </div>
   );

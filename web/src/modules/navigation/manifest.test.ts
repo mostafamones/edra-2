@@ -32,7 +32,7 @@ describe("portal navigation manifest", () => {
   });
 
   it("keeps restricted staff sections out of Instructor navigation", () => {
-    for (const href of ["/app/manage/notifications", "/app/manage/integrations"]) {
+    for (const href of ["/app/manage/notifications", "/app/manage/integrations", "/app/question-bank"]) {
       const item = findStaffItem(href);
       expect(item).toBeDefined();
       expect(canViewStaffItem(item!, "instructor")).toBe(false);

@@ -1,0 +1,8 @@
+{
+  "questions": [
+    { "page": 1, "number": "1", "kind": "written", "continuationPages": [], "visuals": [{ "page": 1, "kind": "figure" }] },
+    { "page": 1, "number": "2", "kind": "written", "continuationPages": [], "visuals": [{ "page": 1, "kind": "figure" }] },
+    { "page": 3, "number": "4", "kind": "multiple-choice", "continuationPages": [], "visuals": [], "answer": { "page": 5, "choice": "B" } },
+    { "page": 3, "number": "5", "kind": "written", "continuationPages": [4], "visuals": [] }
+  ]
+}
