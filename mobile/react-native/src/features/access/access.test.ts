@@ -29,6 +29,7 @@ class FakeAuthority implements AuthAuthority {
     if (!this.hasSession) throw new AuthFailure('signedOut')
   }
   async signIn(phone: string) {
+    if (this.hold) await new Promise<void>((r) => (this.held = r))
     if (this.signInFailure) throw new SignInFailure(this.signInFailure)
     this.signedInPhone = phone
   }
@@ -132,6 +133,21 @@ describe('AuthController', () => {
     await restore
     assert.equal(model.state, 'signedOut')
     assert.equal(model.scope, null)
+  })
+
+  test('a sign-in completing after sign-out stays signed out and drops its session', async () => {
+    const { model, authority } = makeAuth()
+    await model.restore()
+    authority.hold = true
+    const signIn = model.signIn('01001234567', 'x')
+    await tick()
+    await model.signOut()
+    const before = authority.signOutCalls
+    authority.release()
+    await signIn
+    assert.equal(model.state, 'signedOut')
+    assert.equal(model.scope, null)
+    assert.equal(authority.signOutCalls, before + 1)
   })
 
   test('sign-in normalizes the phone', async () => {

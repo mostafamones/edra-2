@@ -34,6 +34,8 @@ export class AuthController extends Model {
   private readonly selection: SelectionStore
   /** Bumped by every attempt and sign-out, so a late restore result can't override something newer. */
   private attempt = 0
+  /** The `attempt` value a sign-out produced, so a late sign-in knows nothing newer owns the session. */
+  private signedOutAt = -1
   private restoringNow = false
 
   constructor(deps: { authority: AuthAuthority; selection: SelectionStore }) {
@@ -95,11 +97,13 @@ export class AuthController extends Model {
       return this.changed()
     }
 
+    const attempt = ++this.attempt
     this.state = 'signingIn'
     this.changed()
     try {
       await this.authority.signIn(normalized, password)
     } catch (error) {
+      if (attempt !== this.attempt) return
       const kind = error instanceof SignInFailure ? error.kind : 'other'
       this.state = 'signedOut'
       this.errorMessage =
@@ -107,6 +111,11 @@ export class AuthController extends Model {
         : kind === 'network' ? NETWORK_MESSAGE
         : "Couldn't sign in. Please try again."
       return this.changed()
+    }
+    if (attempt !== this.attempt) {
+      // Signed out meanwhile: drop the session this late sign-in stored unless a newer sign-in owns it.
+      if (this.attempt === this.signedOutAt) await this.authority.signOut()
+      return
     }
     this.authenticated()
   }
@@ -121,7 +130,7 @@ export class AuthController extends Model {
   async signOut(): Promise<void> {
     this.scope?.end()
     this.scope = null
-    this.attempt += 1
+    this.signedOutAt = ++this.attempt
     this.restoringNow = false
     this.changed()
     await this.authority.signOut()
