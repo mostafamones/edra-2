@@ -5,6 +5,7 @@ import { test } from 'node:test'
 import { BAR_ICON_POINTS, pointSized } from './barIcon.ts'
 
 const catalog = new URL('../platform/chrome/icons/', import.meta.url)
+const nativeCatalog = new URL('../../assets/hugeicons/', import.meta.url)
 
 test('a 96 px @1x catalog icon becomes a 24 pt bar image at 4x', () => {
   assert.deepEqual(pointSized({ uri: 'icon', width: 96, height: 96, scale: 1 }),
@@ -26,4 +27,18 @@ test('every catalog icon is square and has enough pixels for a 24 pt bar item at
     assert.equal(sized.width, BAR_ICON_POINTS, file)
     assert.ok(sized.scale >= 3, `${file}: ${width} px is too small for ${BAR_ICON_POINTS} pt at 3x`)
   }
+})
+
+test('native Hugeicons and React Native PNGs come from the same catalog', () => {
+  const nativeNames = readdirSync(nativeCatalog)
+    .filter((name) => name.startsWith('hugeicons-') && name.endsWith('.imageset'))
+    .map((name) => name.slice('hugeicons-'.length, -'.imageset'.length))
+    .sort()
+  const reactNativeNames = readdirSync(catalog)
+    .filter((name) => name.endsWith('.png'))
+    .map((name) => name.slice(0, -'.png'.length))
+    .sort()
+
+  assert.ok(nativeNames.length > 0)
+  assert.deepEqual(reactNativeNames, nativeNames)
 })
