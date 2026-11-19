@@ -1,6 +1,6 @@
 # Access: sign-in and academy selection
 
-UI-free controllers ported from the iOS `AuthModel`, `AcademiesModel`, `RootView` and `ShellView` wiring. Screens render state and call methods; they own no auth, network or selection rules. Both controllers extend `core/model.ts`, so a screen reads them with `useSyncExternalStore(c.subscribe, () => c.version)`.
+Controllers ported from the iOS `AuthModel`, `AcademiesModel`, `RootView` and `ShellView` wiring. Screens render state and call methods; they own no auth, network or selection rules. This folder also holds the screen bodies and platform auth adapters (below). Both controllers extend `core/model.ts`, so a screen reads them with `useSyncExternalStore(c.subscribe, () => c.version)`.
 
 ## Composition (once per app, then once per account scope)
 
@@ -28,6 +28,27 @@ const isCurrent = academies.isCurrent                // Sessions `isCurrent(cont
 - `AuthController`: `state` (`restoring` → spinner; `restoreFailed` → Retry calling `retryRestore()`; `signedOut`/`signingIn` → sign-in form; `authenticated` with `scope === null` → signing out), `errorMessage`, `phoneError`, `restore()` on launch, `signIn(phone, password)` (normalizes Egyptian numbers; empty/invalid input never reaches the authority), `signOut()` for the user action.
 - `AcademiesController`: `state`, `academies`, `selected`, `context`, `load()` on shell mount, `revalidate()` when the app becomes active (true → reload the live list for the unchanged context), `choose(id)` from the academy menu (`'confirm'` → show Save / Discard / Keep editing for `pendingAcademy`), `confirmPendingSwitch()` after a successful save or a discard, `dismissPendingSwitch()` on Keep editing or dismissal.
 - Rules kept from iOS: only the newest academies load commits; nothing commits after the scope ends; a still-granted selection wins, then the remembered one if the server grants it, then the first; network/server failures keep the granted list; 403 drops all academies; 401 signs out only the owning scope; reselecting keeps the context while A → B → A is a new one; a context change drops any pending switch.
+
+## Screens and adapters (this slice)
+
+- `AccessRoot` (`AccessRoot.tsx`): port of the SwiftUI `RootView`/`AuthenticatedRoot` switch. Not configured → setup screen; `restoring` → "Loading…"; `restoreFailed` → "Couldn't sign you in" + Retry; `signedOut`/`signingIn` → sign-in form; `authenticated` → `signedIn(auth, scope, access)`, remounted per account scope; scope ended → "Signing out…".
+- `AccessScreens.ios.tsx`: SwiftUI bodies through `@expo/ui` with the same layout, fonts, colors, keyboard and copy as `SignInView`, `UnavailableView` and `NotConfiguredView`. `AccessScreens.tsx`: React Native bodies for Android with the same structure and copy, Material-like styling, safe areas, TalkBack labels and live-region errors.
+- `createPlatformAccess()` (`platform.ts` Android, `platform.ios.ts` iOS; import it extensionless): call once per process. Returns `{ configured: false, issues }` or `{ configured: true, apiOrigin, authority, selection }`.
+  - iOS: the local `modules/edra-auth` Expo module wraps the SwiftUI app's own `SupabaseAuthService` and `AppConfiguration` (symlinked Swift sources, supabase-swift pinned to the app's 2.55.3) with default Keychain storage, plus the `selectedAcademyID` UserDefaults key. Rejections carry the Swift failure case as `code`; SDK error text never crosses the bridge.
+  - Android: official `@supabase/supabase-js` client (`processLock`, foreground-only auto refresh, no URL session detection). Its session is stored by `chunkedStore.ts` in `expo-secure-store` items (AES key in the Android Keystore), split into ≤ 1,800-byte chunks under a manifest, so values over the 2,048-byte item limit work and an interrupted write keeps the previous session. Sign-out uses local scope and also deletes the stored session. The remembered academy is a SecureStore item written in call order.
+  - `classify.ts` maps supabase-js and native errors by type/status/code only, matching `SupabaseAuthService.classify`.
+- `AuthController.signIn` ignores a completion that arrives after a sign-out and discards the session it stored, unless a newer sign-in owns it.
+
+## Integration (foundation-owned files, not changed here)
+
+- `package.json`/lockfile: add `@supabase/supabase-js@2.119.0`, `react-native-url-polyfill@4.0.0` (supabase-js sets `URL.protocol`, which React Native's URL lacks), and `expo-secure-store@~58.0.3` (`npx expo install expo-secure-store`). Already present: `expo`, `@expo/ui`, `react-native-safe-area-context`.
+- `app.config.ts`:
+  - `plugins`: add `"expo-secure-store"` (excludes its data from Android Auto Backup; the Keystore key is not backed up).
+  - `ios.infoPlist`: `EdraSupabaseURL`, `EdraSupabasePublishableKey`, `EdraAPIOrigin` from `process.env.EXPO_PUBLIC_EDRA_SUPABASE_URL`, `…_SUPABASE_PUBLISHABLE_KEY`, `…_API_ORIGIN` (the iOS module validates them with `AppConfiguration`). A Debug-only plain-HTTP API host also needs its `NSExceptionDomains` entry, as in `Configuration/Info-Debug.plist`.
+  - Android reads the same `EXPO_PUBLIC_EDRA_*` values at bundle time; `EXPO_PUBLIC_EDRA_DEV_HTTP_HOSTS` (comma-separated) allows plain-HTTP API hosts in development builds only.
+  - iOS session continuity requires the release identity `com.mostafamones.edra` and team `39YK2DQP92` (same Keychain access group as the SwiftUI app). The candidate `com.mostafamones.edra.rn` starts signed out.
+- Root composition: `const access = createPlatformAccess()` at module scope, then `<AccessRoot access={access} signedIn={(auth, scope, access) => …} />` around the navigation container. Build `ApiClient` with `access.apiOrigin` and `access.authority`, then use the per-scope wiring above. Replace the fixture `AppSessionProvider` sign-out with `auth.signOut()`.
+- Native risk to check on macOS: `EdraAuth.podspec` uses React Native's `spm_dependency` for supabase-swift. React Native warns that static linking may need `USE_FRAMEWORKS=dynamic`/`expo-build-properties` `ios.useFrameworks`. This has not been compiled.
 
 ## Adapter requirements
 
