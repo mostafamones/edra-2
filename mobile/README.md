@@ -43,6 +43,10 @@ The source includes staff sign-in, a bearer HTTP adapter, academy selection, liv
 
 This description was checked against source on 2026-10-18. It does not establish that every workflow is complete or verified on a device. Build, device, secure-session-storage and deployed-API behavior require their own verification; use the setup and run instructions above for the intended target.
 
+## React Native candidate
+
+The Expo/React Native migration candidate lives in [`react-native/`](react-native/README.md) with its own dependencies, dev-client/release commands and integration contract. It installs beside this app, which remains the comparison build until cutover.
+
 ## Documentation
 
 See the [native index](docs/README.md) for product scope, engineering and current API integration. Shared rules have one source under docs/engineering/ at the repository root.
