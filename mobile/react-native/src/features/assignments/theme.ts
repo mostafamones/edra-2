@@ -19,16 +19,20 @@ const NAMES = {
 /** Edra green. Not `PlatformColor('AccentColor')`: the generated Expo catalog has no AccentColor, which draws nothing. */
 const ACCENT = { light: '#008236', dark: '#026630' }
 
-export type Colors = Readonly<Record<keyof typeof NAMES | 'white' | 'accent', ColorValue>>
+const ACCENT_TEXT = { light: ACCENT.light, dark: '#30D158' }
+
+export type Colors = Readonly<Record<keyof typeof NAMES | 'white' | 'accent' | 'accentText', ColorValue>>
 
 const ios: Colors = {
   ...(Object.fromEntries(Object.entries(NAMES).map(([key, [name]]) => [key, PlatformColor(name)])) as Record<keyof typeof NAMES, ColorValue>),
   accent: Platform.OS === 'ios' ? DynamicColorIOS(ACCENT) : ACCENT.light,
+  accentText: Platform.OS === 'ios' ? DynamicColorIOS(ACCENT_TEXT) : ACCENT_TEXT.light,
   white: '#FFFFFF',
 }
 const android = (dark: boolean): Colors => ({
   ...(Object.fromEntries(Object.entries(NAMES).map(([key, [, light, night]]) => [key, dark ? night : light])) as Record<keyof typeof NAMES, ColorValue>),
   accent: dark ? ACCENT.dark : ACCENT.light,
+  accentText: dark ? ACCENT_TEXT.dark : ACCENT_TEXT.light,
   white: '#FFFFFF',
 })
 const LIGHT = Platform.OS === 'ios' ? ios : android(false)

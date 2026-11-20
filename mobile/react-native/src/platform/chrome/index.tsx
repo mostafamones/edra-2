@@ -28,6 +28,7 @@ export function createFeatureChrome(options: FeatureChromeOptions): { assessment
   const camera = assessmentCamera((on) => <FeatureIcon name={on ? 'flash' : 'flash-off'} color="#FFFFFF" />)
   return {
     assessments: {
+      Menu: Popup,
       Icon: FeatureIcon,
       NavigationBar,
       Tabs: options.Tabs,

@@ -70,7 +70,7 @@ export function BorderedButton(props: { title: string; onPress: () => void; disa
       onPress={props.onPress}
       style={({ pressed }) => [props.small ? styles.borderedSmall : styles.bordered, { backgroundColor: colors.tertiaryFill, opacity: props.disabled ? 0.4 : pressed ? 0.7 : 1 }]}
     >
-      <Text style={[props.small ? font.subheadline : font.bodyMedium, { color: colors.accent }]}>{props.title}</Text>
+      <Text style={[props.small ? font.subheadline : font.bodyMedium, { color: colors.accentText }]}>{props.title}</Text>
     </Pressable>
   )
 }
@@ -80,7 +80,7 @@ export function TextButton(props: { title: string; onPress: () => void; disabled
   const colors = useColors()
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!props.disabled }} disabled={props.disabled} onPress={props.onPress} hitSlop={8}>
-      {({ pressed }) => <Text style={[font.body, props.style, { color: colors.accent, opacity: props.disabled ? 0.4 : pressed ? 0.5 : 1 }]}>{props.title}</Text>}
+      {({ pressed }) => <Text style={[font.body, props.style, { color: colors.accentText, opacity: props.disabled ? 0.4 : pressed ? 0.5 : 1 }]}>{props.title}</Text>}
     </Pressable>
   )
 }

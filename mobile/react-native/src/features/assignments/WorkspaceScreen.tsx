@@ -195,7 +195,7 @@ function StudentRow({ model, platform, student }: { model: WorkspaceModel; platf
     >
       {model.isSelecting && (
         <View style={{ opacity: blocked ? 0.3 : 1 }}>
-          <platform.Icon name={selected ? 'checkmark-circle-02' : 'circle'} size={20} color={colors.accent} />
+          <platform.Icon name={selected ? 'checkmark-circle-02' : 'circle'} size={20} color={colors.accentText} />
         </View>
       )}
       <View style={styles.grow}>
