@@ -30,7 +30,7 @@ Measured non-uniform CMYK and resampling differences remain within the existing 
 
 Objects are immutable at `<user_id>/<uuid>.webp`. `uploadAvatar` uploads a new object, then `set_my_avatar(path, expected)` switches the profile only if the avatar is still the one the client saw; the superseded object is deleted through the Storage API. A losing or failed switch deletes its own upload; an unknown outcome keeps it. Each avatar action first reconciles the caller's folder, deleting objects that are neither current nor uploaded in the last ten minutes, and refuses a new upload while three recent unfinished uploads exist. Storage itself is the retry record, so a failed deletion is retried by the next action.
 
-Pictures are read through owner-only signed URLs (one hour, refreshed before expiry) and are never stored. Staff student views do not read them.
+Pictures are read through owner-only signed URLs (one hour, refreshed before expiry) and are never stored. Native clients read the same name and URL through `GET /api/v1/me` (`readOwnProfile` in `server.ts`, as the bearer, with a failed signing returning the name without a picture). Staff student views do not read them.
 
 ## Password change
 
@@ -57,4 +57,4 @@ The trigger also refuses Auth's own phone change API (`updateUser({ phone })` wi
 
 ## Not implemented
 
-Native settings, a support path for unreachable old numbers, avatar originals or re-cropping without re-selecting the source, and Auth-wide enforcement of the code: a signed-in session can still call Auth's own password update directly, as before this feature.
+Native profile editing, a support path for unreachable old numbers, avatar originals or re-cropping without re-selecting the source, and Auth-wide enforcement of the code: a signed-in session can still call Auth's own password update directly, as before this feature.

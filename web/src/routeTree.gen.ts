@@ -40,6 +40,7 @@ import { Route as ApiSessionsHistoryRouteImport } from './routes/api/sessions/hi
 import { Route as ApiStudentsIdRouteImport } from './routes/api/students/$id'
 import { Route as ApiStudentsImportsRouteImport } from './routes/api/students/imports'
 import { Route as ApiV1AcademiesRouteImport } from './routes/api/v1/academies'
+import { Route as ApiV1MeRouteImport } from './routes/api/v1/me'
 import { Route as ApiWebhooksMuxRouteImport } from './routes/api/webhooks/mux'
 import { Route as AppAcademySlugIndexRouteImport } from './routes/app/$academySlug/index'
 import { Route as AppAcademySlugSplatRouteImport } from './routes/app/$academySlug/$'
@@ -283,6 +284,11 @@ const ApiStudentsImportsRoute = ApiStudentsImportsRouteImport.update({
 const ApiV1AcademiesRoute = ApiV1AcademiesRouteImport.update({
   id: '/api/v1/academies',
   path: '/api/v1/academies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1MeRoute = ApiV1MeRouteImport.update({
+  id: '/api/v1/me',
+  path: '/api/v1/me',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWebhooksMuxRoute = ApiWebhooksMuxRouteImport.update({
@@ -830,6 +836,7 @@ export interface FileRoutesByFullPath {
   '/api/students/$id': typeof ApiStudentsIdRoute
   '/api/students/imports': typeof ApiStudentsImportsRouteWithChildren
   '/api/v1/academies': typeof ApiV1AcademiesRouteWithChildren
+  '/api/v1/me': typeof ApiV1MeRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/app/$academySlug/$': typeof AppAcademySlugSplatRoute
   '/auth/recover/verify': typeof AuthRecoverVerifyRoute
@@ -949,6 +956,7 @@ export interface FileRoutesByTo {
   '/api/students/$id': typeof ApiStudentsIdRoute
   '/api/students/imports': typeof ApiStudentsImportsRouteWithChildren
   '/api/v1/academies': typeof ApiV1AcademiesRouteWithChildren
+  '/api/v1/me': typeof ApiV1MeRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/app/$academySlug/$': typeof AppAcademySlugSplatRoute
   '/auth/recover/verify': typeof AuthRecoverVerifyRoute
@@ -1071,6 +1079,7 @@ export interface FileRoutesById {
   '/api/students/$id': typeof ApiStudentsIdRoute
   '/api/students/imports': typeof ApiStudentsImportsRouteWithChildren
   '/api/v1/academies': typeof ApiV1AcademiesRouteWithChildren
+  '/api/v1/me': typeof ApiV1MeRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/app/$academySlug/$': typeof AppAcademySlugSplatRoute
   '/auth/recover/verify': typeof AuthRecoverVerifyRoute
@@ -1195,6 +1204,7 @@ export interface FileRouteTypes {
     | '/api/students/$id'
     | '/api/students/imports'
     | '/api/v1/academies'
+    | '/api/v1/me'
     | '/api/webhooks/mux'
     | '/app/$academySlug/$'
     | '/auth/recover/verify'
@@ -1314,6 +1324,7 @@ export interface FileRouteTypes {
     | '/api/students/$id'
     | '/api/students/imports'
     | '/api/v1/academies'
+    | '/api/v1/me'
     | '/api/webhooks/mux'
     | '/app/$academySlug/$'
     | '/auth/recover/verify'
@@ -1435,6 +1446,7 @@ export interface FileRouteTypes {
     | '/api/students/$id'
     | '/api/students/imports'
     | '/api/v1/academies'
+    | '/api/v1/me'
     | '/api/webhooks/mux'
     | '/app/$academySlug/$'
     | '/auth/recover/verify'
@@ -1542,6 +1554,7 @@ export interface RootRouteChildren {
   ApiDevelopmentStatusRoute: typeof ApiDevelopmentStatusRoute
   ApiDevelopmentSwitchRoute: typeof ApiDevelopmentSwitchRoute
   ApiV1AcademiesRoute: typeof ApiV1AcademiesRouteWithChildren
+  ApiV1MeRoute: typeof ApiV1MeRoute
   ApiWebhooksMuxRoute: typeof ApiWebhooksMuxRoute
   InviteStaffTokenRoute: typeof InviteStaffTokenRoute
   InviteStudentTokenRoute: typeof InviteStudentTokenRoute
@@ -1775,6 +1788,13 @@ declare module '@tanstack/react-router' {
       path: '/api/v1/academies'
       fullPath: '/api/v1/academies'
       preLoaderRoute: typeof ApiV1AcademiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/me': {
+      id: '/api/v1/me'
+      path: '/api/v1/me'
+      fullPath: '/api/v1/me'
+      preLoaderRoute: typeof ApiV1MeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/webhooks/mux': {
@@ -2804,6 +2824,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDevelopmentStatusRoute: ApiDevelopmentStatusRoute,
   ApiDevelopmentSwitchRoute: ApiDevelopmentSwitchRoute,
   ApiV1AcademiesRoute: ApiV1AcademiesRouteWithChildren,
+  ApiV1MeRoute: ApiV1MeRoute,
   ApiWebhooksMuxRoute: ApiWebhooksMuxRoute,
   InviteStaffTokenRoute: InviteStaffTokenRoute,
   InviteStudentTokenRoute: InviteStudentTokenRoute,

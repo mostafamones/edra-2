@@ -75,10 +75,33 @@ servers:
 security:
   - staffToken: []
 tags:
+  - name: Account
   - name: Academies
   - name: Sessions
   - name: Attendance
 paths:
+  /api/v1/me:
+    get:
+      tags: [Account]
+      summary: The signed-in account's own name and picture
+      description: |
+        Reads only the bearer token's own profile; there is no user id parameter. Any signed-in
+        account may call it (no academy membership is needed). `avatar_url` is a short-lived signed
+        URL to the private picture, valid until `avatar_expires_at` (one hour); read this endpoint
+        again to refresh it, and never store it. The storage path is not exposed.
+      operationId: getMe
+      responses:
+        "200":
+          description: The caller's profile. Fields are null when absent.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+              example:
+                { user_id: 2b4c8f0e-3c1a-4d7e-9a51-6f0d2e9b7c13, name: Mona Adel, avatar_url: "https://project.supabase.co/storage/v1/object/sign/avatars/…?token=…", avatar_expires_at: "2026-11-20T13:00:00.000Z" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
   /api/v1/academies:
     get:
       tags: [Academies]
@@ -742,6 +765,14 @@ components:
             details: { description: Code-specific data (current rows for conflicts). }
       example:
         error: { code: NOT_ON_ROSTER, message: This student is not on the session's roster. A staff member must review it., request_id: 6d0c1e9b-3a1f-4a8c-9a8e-1b2c3d4e5f60 }
+    Me:
+      type: object
+      required: [user_id, name, avatar_url, avatar_expires_at]
+      properties:
+        user_id: { type: string, format: uuid, description: The token holder; clients can check a response belongs to the current account. }
+        name: { type: [string, "null"], description: Display name, else full name; null when neither is set. }
+        avatar_url: { type: [string, "null"], format: uri, description: "Signed picture URL; null when there is no picture or it could not be signed right now (the name is still returned)." }
+        avatar_expires_at: { type: [string, "null"], format: date-time, description: When `avatar_url` stops working; null with `avatar_url`. }
     Academy:
       type: object
       required: [id, name, slug, icon, role]
