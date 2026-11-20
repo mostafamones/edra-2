@@ -1,6 +1,6 @@
 # Native engineering
 
-Follow the [shared boundaries](../../docs/engineering/application-boundaries.md) and [brand](../../docs/engineering/brand.md). iOS uses Swift/SwiftUI; Android direction is native Kotlin. Each platform owns its build and release process.
+Follow the [shared boundaries](../../docs/engineering/application-boundaries.md) and [brand](../../docs/engineering/brand.md). The instructor companion uses React Native screens and shared TypeScript workflows on iOS and Android, with UIKit and SwiftUI components for native iOS behavior. Each platform owns its build and release process.
 
 ## Features and integration
 
@@ -12,7 +12,7 @@ Use current credentials per request, controlled refresh and secure platform stor
 
 ## UI and dependencies
 
-Use native accessibility, safe areas, keyboard handling and text sizing. Ordinary app icons are bundled Tabler assets with [attribution](../EdraInstructor/Resources/Assets.xcassets/Icons/ATTRIBUTION.md). Brand logos use official assets and brand colors unless a different variant is explicitly specified. Browser primitives do not define native components. Keep necessary native dependencies and committed resolution files; avoid speculative frameworks.
+Use native accessibility, safe areas, keyboard handling and text sizing. Ordinary app icons follow the shared Hugeicons rule. The app bundles [Hugeicons assets](../react-native/assets/hugeicons/ATTRIBUTION.md) at stroke width 1.5, with a heavier iOS Bold Text variant. Brand logos use official assets and brand colors unless a different variant is explicitly specified. Browser primitives do not define native components. Keep necessary native dependencies and committed resolution files.
 
 ## Checks
 
@@ -20,4 +20,4 @@ Follow [the current iPhone build/run setup](../README.md). Verify affected auth 
 
 Use authorized cloud/API targets, not a default local database. Routine backend migrations follow the web policy; destructive/hard-to-reverse changes need approval. Signing-account changes and App Store/TestFlight distribution remain separately authorized release actions. Master threads remain planning-only.
 
-Android-specific toolchain/UI/storage choices are made in its implementation planning. The confirmed direction does not claim an Android project already exists.
+Keep the Expo and React Native toolchain scoped to `mobile/`. Verify the supported iOS range, build identity and secure session continuity before distribution. Expo prebuild generates both native projects.

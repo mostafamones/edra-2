@@ -1,0 +1,106 @@
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import type { AssignmentSummary } from './api.ts'
+import type { AssignmentsFilter, AssignmentsModel } from './assignments.ts'
+import type { AssessmentPlatform } from './platform.ts'
+import { font, useColors } from './theme.ts'
+import { LoadMoreRow, MenuPill, Row, Section, Spinner, Unavailable, useModel, useRefresh, type PillOption } from './ui.tsx'
+import { isOverdue } from './views.ts'
+import { WorkspaceScreen } from './WorkspaceScreen.tsx'
+
+/**
+ * Assessments root (AssignmentsView.swift): assignments in the chosen state (Active by default), including overdue ones.
+ * The shell owns the "Assessments" page chrome, `model.load(context)` on every context change, the
+ * academy-switch guard (`model.switchNeedsConfirmation`) and the open workspace (`open`), which it
+ * closes on every academy change and Overview can request.
+ */
+export function AssignmentsScreen({ model, platform, open, onOpen }: {
+  model: AssignmentsModel
+  platform: AssessmentPlatform
+  /** The open workspace. It has its own tab bar (Students, Scan, search), so it covers the app's. */
+  open: AssignmentSummary | null
+  onOpen: (assignment: AssignmentSummary | null) => void
+}) {
+  useModel(model)
+  const context = model.context
+
+  return (
+    <>
+      <View style={styles.filters}>
+        <MenuPill platform={platform} label="Status" value={model.filter} options={FILTERS} onSelect={(f) => void model.setFilter(f)} />
+      </View>
+      <Content model={model} platform={platform} onOpen={onOpen} />
+      <platform.Sheet visible={open !== null && context !== null} presentation="fullScreen" onDismiss={() => onOpen(null)}>
+        {open && context && <WorkspaceScreen key={open.id} summary={open} context={context} parent={model} platform={platform} onClose={() => onOpen(null)} />}
+      </platform.Sheet>
+    </>
+  )
+}
+
+function Content({ model, platform, onOpen }: { model: AssignmentsModel; platform: AssessmentPlatform; onOpen: (a: AssignmentSummary) => void }) {
+  const colors = useColors()
+  const [refreshing, onRefresh] = useRefresh(() => model.load(model.context))
+  const { state, assignments } = model
+  const empty = assignments.length === 0
+  if (state.status === 'idle' || (state.status === 'loading' && empty)) return <Spinner />
+  if (state.status === 'failed' && empty) {
+    return <Unavailable platform={platform} title="Couldn't load assignments" message={state.message} action="Retry" onAction={() => void model.load(model.context)} />
+  }
+  if (empty) return <Unavailable platform={platform} title={EMPTY[model.filter]} icon="file-edit" />
+  // shortcut: not virtualized; pages are 50 rows behind "Load more". Use a SectionList if lists grow past a few hundred.
+  return (
+    <ScrollView
+      style={{ backgroundColor: colors.groupedBackground }}
+      contentContainerStyle={styles.content}
+      contentInsetAdjustmentBehavior="automatic"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
+      <Section>
+        {assignments.map((a) => (
+          <AssignmentRow key={a.id} assignment={a} onPress={() => onOpen(a)} />
+        ))}
+        {model.hasMore && (
+          <LoadMoreRow isLoading={model.isLoadingMore} failed={model.loadMoreError !== null} shown={assignments.length} total={model.total} onPress={() => void model.loadMore()} />
+        )}
+        {model.hasMore && model.loadMoreError !== null && (
+          <Row>
+            <Text style={[font.footnote, { color: colors.red }]}>{model.loadMoreError}</Text>
+          </Row>
+        )}
+      </Section>
+    </ScrollView>
+  )
+}
+
+const FILTERS: readonly PillOption<AssignmentsFilter>[] = [
+  { value: 'active', title: 'Active' },
+  { value: 'closed', title: 'Closed' },
+  { value: 'all', title: 'All' },
+]
+const EMPTY: Record<AssignmentsFilter, string> = { active: 'No active assignments', closed: 'No closed assignments', all: 'No assignments' }
+
+const dueFormat = (iso: string) => new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+
+function AssignmentRow({ assignment, onPress }: { assignment: AssignmentSummary; onPress: () => void }) {
+  const colors = useColors()
+  const closed = assignment.state === 'closed'
+  const due = assignment.dueAt
+  return (
+    <Row onPress={onPress} style={styles.row}>
+      <Text style={[font.headline, { color: colors.label }]}>{assignment.title}</Text>
+      <View style={styles.meta}>
+        {closed && <Text style={[font.subheadline, { color: colors.orange }]}>Closed</Text>}
+        {due !== null && (
+          <Text style={[font.subheadline, { color: isOverdue(due, assignment.state, Date.now()) ? colors.red : colors.secondaryLabel }]}>{`Due ${dueFormat(due)}`}</Text>
+        )}
+        <Text style={[font.subheadline, { color: colors.secondaryLabel }]}>{`${assignment.recipientCount} students`}</Text>
+      </View>
+    </Row>
+  )
+}
+
+const styles = StyleSheet.create({
+  filters: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  content: { paddingTop: 8 },
+  row: { gap: 4, paddingVertical: 13 },
+  meta: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 8 },
+})

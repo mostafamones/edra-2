@@ -1,0 +1,23 @@
+# Feature chrome
+
+Call `createFeatureChrome` once with stable foundation components and hooks. Pass the returned `sessions` and `assessments` directly to `EdraApp`. Import from `src/platform/chrome` without a file extension so Metro resolves the iOS adapters. The default files target Android.
+
+- `Tabs` is the foundation's assessment workspace tab component. Enable `hasSearchTab` only when the injected tabs implement the native search role, search editing, and the selection-mode confirmation action. With the flag off, the workspace uses the Students bar for search and the toolbar for confirmation.
+- `RouteHeader` owns the pushed Sessions header and back navigation. Render it under the foundation's stack. The adapter renders the sheet's inline header itself.
+- Supply an actual route focus hook and a route bottom-inset hook that includes tab clearance where applicable. Both hooks must also be callable in sheet content under the same navigation context. The sheet uses its own safe-area inset.
+- Use the Expo SDK 58 development build with `@expo/ui`, `expo-glass-effect`, `react-native-safe-area-context`, `expo-camera`, and the existing Apple `EdraCamera` module. No extra native module is needed for the adapters here.
+- Assessments receives user dismissals. Sessions also receives controlled dismissals. Full-screen covers close via toolbar actions, or Android Back when allowed. Page sheets use SwiftUI detents and interactive dismissal or a Compose modal sheet with a half-height or near-full-height body and native back, scrim, and gesture guards.
+
+The iOS assessment page uses an Expo SwiftUI stack with inline title, toolbar, and native search drawer. iOS page sheets wrap their content in their own SwiftUI `NavigationStack`, as the Swift app did: the content's `Header` hands its title, cancellation/confirmation items and search to the sheet through `SheetBarContext` and renders nothing in place. Search uses `.searchable` in the navigation bar drawer. SDK 58 exposes neither `displayMode: .always` nor `.onSubmit(of: .search)`, so the drawer uses SwiftUI's automatic display mode and screens rely on their debounced query rather than an immediate submit; a custom modifier registered with `ViewModifierRegistry` would be needed for either. Full-screen covers keep the inline React Native header, also when presented from a page sheet. Android keeps the inline header and search field.
+
+Native iOS menu and context-menu items with an icon render `Label` with an asset-catalog `Image`. `plugins/with-edra-ios.cjs` copies every template Hugeicons imageset from `assets/hugeicons` into the generated Expo catalog, so `featureIconAsset(name)` resolves the same glyph that `FeatureIcon` draws. Android popups render the supplied Hugeicons.
+
+The template icons are rasterized from `assets/hugeicons/`, the React Native copy of Edra's Hugeicons Free v4.3.5 SVGs (MIT, stroke width 1.5). Run `npm run sync:icons` from the Expo app to regenerate the PNGs with the pinned Resvg dependency. Expo prebuild copies the same catalog into the iOS app for native menus and camera controls.
+
+Accessibility exception (owner-approved): while iOS Bold Text is on, icons use the same Hugeicons geometry at stroke width 2 instead of 1.5. `icons/stroke.cjs` is the single transform; `sync:icons` writes `icons/bold/*.png` and prebuild writes a `hugeicons-<name>-bold` imageset beside each template imageset. `useBoldText()` (`AccessibilityInfo.isBoldTextEnabled` and `boldTextChanged`, one app-wide subscription) selects them in `FeatureIcon`, native menu items, tab items and header bar items. The default stroke stays 1.5. Android: React Native reports Bold Text as always off and has no change event; Android 12+'s font-weight adjustment is not exposed, so Android always draws stroke 1.5.
+
+`PlatformColor('AccentColor')` needs the colour set in the app's asset catalog. Expo's template catalog has none, so the colour resolved to nothing and accent labels and ticks did not draw. Prebuild now copies `assets/AccentColor.colorset` (carried over from the historical iOS app) and sets `ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME`, as the Swift project does. Feature call sites need no change.
+
+The assessment full-screen cover passes `background` (grouped) so the status-bar strip above the workspace's native bar matches its grouped page. Other covers keep the plain page background.
+
+Device acceptance remains open. Check nested sheets and full-screen covers, dismissal during draft saves and publication, focus restoration, keyboard and bottom insets, menu and row gestures, VoiceOver and TalkBack, glass and material appearance on the supported iOS versions, and camera permission and scan behavior on physical iOS and Android devices.

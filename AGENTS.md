@@ -4,7 +4,7 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 
 ## Repository and application boundaries
 
-- Edra supports two applications in one repository: `web/` is the TanStack Start web application and trusted API; `mobile/` contains the native Swift/SwiftUI instructor companion; future Android support is native Kotlin under its approved milestone. Each application has its own dependencies, build, verification, and release process.
+- Edra supports two applications in one repository: `web/` is the TanStack Start web application and trusted API; `mobile/` contains the instructor companion. The instructor companion uses React Native on iOS and Android, with native iOS components for platform behavior. Each application has its own dependencies, build, verification, and release process.
 - The backend remains a modular monolith in `web/` with cloud Supabase. The mobile application consumes the documented authenticated API and Supabase Auth; it must not duplicate attendance rules, import web server internals, or introduce a second backend.
 - Do not add root workspace orchestration, shared packages, or migrate the existing web toolchain merely because both applications share a repository. Add shared contracts/tooling only when a concrete need justifies them.
 - The owner has authorized mobile setup planning and repository guidance for the instructor companion scope. This clarification supersedes older product-document exclusions of native mobile for that scope only. It does not authorize implementing an app in a Master thread or expanding it into the full staff/student product.
@@ -78,7 +78,7 @@ These rules apply to the entire repository. Also follow `web/AGENTS.md` for the 
 
 ## Icons
 
-- Use Hugeicons for every application UI icon, including navigation, actions, status indicators and loading indicators. Use a stroke width of `1.5` for application icons. Web uses `@hugeicons/react` with `@hugeicons/core-free-icons`; the SwiftUI iOS app uses bundled native-compatible assets derived from Hugeicons, with source/version/license attribution. Do not use the React DOM icon package in native code.
+- Use Hugeicons for every application UI icon, including navigation, actions, status indicators and loading indicators. Use a stroke width of `1.5` for application icons. Web uses `@hugeicons/react` with `@hugeicons/core-free-icons`; the mobile app uses bundled native-compatible assets derived from Hugeicons, with source/version/license attribution. Do not use the React DOM icon package in native code.
 - Brand logos are an exception to the Hugeicons requirement. Use official brand assets and their brand colors by default, such as the multicolor Google logo for Google sign-in. Use a monochrome, filled or other variant only when explicitly specified. Brand assets do not need to fit a Hugeicons icon contract.
 - Do not introduce or retain Tabler, Lucide or other general UI icon libraries in application source. Use Hugeicons-compatible types for ordinary UI icon contracts.
 - Preserve the web shadcn rules in `web/AGENTS.md` and the native UI boundaries in `mobile/AGENTS.md`; the icon requirement does not authorize manual edits to protected primitives or design-system configuration.
