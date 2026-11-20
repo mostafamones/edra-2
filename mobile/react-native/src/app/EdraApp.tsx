@@ -89,8 +89,11 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
       ],
     })
 
-  /** A destination's root: its content only while an academy is selected, never a stale one. */
-  const page = (title: string, content: ReactNode, trailing?: (diameter: number) => ReactNode, alwaysHeader = false) => {
+  /**
+   * A destination's root: its content only while an academy is selected, never a stale one. Overview always shows
+   * its greeting and names the academy in its own picker instead of the subtitle.
+   */
+  const page = (title: string, content: ReactNode, trailing?: (diameter: number) => ReactNode, overview = false) => {
     const { state } = academies
     let body: ReactNode
     if (state.kind === 'loading' && !academies.academies.length) body = <Loading label="Loading academies…" />
@@ -99,7 +102,7 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
     else body = <Unavailable title="No staff access" message="Your account doesn't have active staff access to an academy." />
     return (
       <View style={{ flex: 1 }}>
-        {(selected || alwaysHeader) && <chrome.PageHeader title={title} subtitle={selected?.name} trailing={trailing} />}
+        {(selected || overview) && <chrome.PageHeader title={title} subtitle={overview ? undefined : selected?.name} trailing={trailing} />}
         {body}
       </View>
     )
@@ -133,6 +136,7 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
       onShowSessions={() => shell.selectTab('sessions')}
       onShowAssessments={() => shell.selectTab('assessments')}
       onRefresh={() => Promise.all([shell.foreground(), shell.assignments.load(academies.context)])}
+      platform={sessionsPlatform}
     />,
     avatar,
     true,

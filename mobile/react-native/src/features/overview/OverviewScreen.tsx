@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Fragment, type ReactNode } from 'react'
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native'
 import { FeatureIcon } from '../../platform/chrome/FeatureIcon.tsx'
 import type { Academy } from '../access/academies.ts'
 import type { AssignmentSummary } from '../assignments/api.ts'
@@ -9,7 +9,7 @@ import type { LiveSession } from '../sessions/contract.ts'
 import type { LiveSessionsModel } from '../sessions/live.ts'
 import { sessionDetails, shortTime } from '../sessions/screens/format.ts'
 import { useModel } from '../sessions/screens/hooks.ts'
-import { Section, styles as parts } from '../sessions/screens/parts.tsx'
+import type { SessionsPlatform } from '../sessions/screens/platform.ts'
 import { useRefresh } from '../sessions/screens/SessionsHomeScreen.tsx'
 import { type, useColors } from '../sessions/screens/theme.ts'
 import { overviewAssignments, overviewSessions, roleLabel } from './recap.ts'
@@ -26,86 +26,86 @@ export type OverviewProps = Readonly<{
   onShowSessions: () => void
   onShowAssessments: () => void
   onRefresh: () => Promise<unknown>
+  platform: Pick<SessionsPlatform, 'Menu' | 'useBottomInset'>
 }>
 
 /**
- * Overview root: every granted academy (name, role, current one checked; choosing another switches through the
- * shell's guard) and the current academy's live sessions and active assignments from the lists the shell already
- * loads. No counts: those lists are first pages. Other academies show no recap until a bounded per-academy read exists.
+ * Overview root: a compact native menu for the selected academy (choosing another switches through the shell's
+ * guard) and the current academy's live sessions and active assignments from the lists the shell already loads.
+ * No counts: those lists are first pages.
  */
 export function OverviewScreen(props: OverviewProps) {
   const colors = useColors()
   const refresh = useRefresh(props.onRefresh)
+  const bottom = props.platform.useBottomInset()
   return (
     <ScrollView
       style={{ backgroundColor: colors.grouped }}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: bottom + 24 }]}
       contentInsetAdjustmentBehavior="automatic"
       refreshControl={<RefreshControl {...refresh} />}
     >
-      <Section header="Academies">
-        {props.academies.map((academy) => (
-          <AcademyRow
-            key={academy.id}
-            academy={academy}
-            icon={props.icon(academy)}
-            current={academy.id === props.selectedId}
-            onPress={() => props.onChoose(academy.id)}
-          />
-        ))}
-      </Section>
+      <AcademyPicker {...props} />
       <LiveNow {...props} />
       <Assessments {...props} />
     </ScrollView>
   )
 }
 
-function AcademyRow({ academy, icon, current, onPress }: { academy: Academy; icon: string; current: boolean; onPress: () => void }) {
+/**
+ * Edra green for links. Shared `colors.accent` resolves the iOS `AccentColor` asset, which the generated app may
+ * lack (it then draws nothing), so Overview uses the brand values directly; dark is lightened for text contrast.
+ */
+function useLink() {
+  return useColorScheme() === 'dark' ? '#2E9F5B' : '#008236'
+}
+
+function AcademyPicker({ academies, selectedId, icon, onChoose, platform: { Menu } }: OverviewProps) {
   const colors = useColors()
-  const role = roleLabel(academy.role)
+  const current = academies.find((a) => a.id === selectedId)
+  if (!current) return null
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${academy.name}, ${role}`}
-      accessibilityState={{ selected: current }}
-      // Reselecting the current academy changes nothing (the controller ignores it).
-      onPress={onPress}
-      style={({ pressed }) => [parts.row, pressed && { backgroundColor: colors.fill }]}
+    <Menu
+      accessibilityLabel={`Academy, ${current.name}, ${roleLabel(current.role)}`}
+      style={styles.picker}
+      items={academies.map((a) => ({
+        key: a.id,
+        title: a.name,
+        icon: icon(a),
+        checked: a.id === selectedId,
+        // Reselecting the current academy changes nothing (the controller ignores it).
+        onPress: () => onChoose(a.id),
+      }))}
     >
-      <FeatureIcon name={icon} size={24} color={current ? colors.accent : colors.label} />
-      <View style={styles.text}>
-        <Text style={[type.headline, { color: colors.label }]}>{academy.name}</Text>
-        <Text style={[type.subheadline, { color: colors.secondary }]}>{role}</Text>
+      <View style={[styles.pill, { backgroundColor: colors.fill }]}>
+        <FeatureIcon name={icon(current)} size={18} color={colors.label} />
+        <Text numberOfLines={1} style={[type.subheadline, styles.pillText, { color: colors.label }]}>{current.name}</Text>
+        <View style={styles.down}>
+          <FeatureIcon name="chevron-right" size={12} color={colors.secondary} />
+        </View>
       </View>
-      {current && <FeatureIcon name="tick-02" size={20} color={colors.accent} />}
-    </Pressable>
+    </Menu>
   )
 }
 
 function LiveNow({ sessions: model, onOpenSession, onShowSessions }: OverviewProps) {
   const { state, sessions } = useModel(model)
-  const { shown, more } = overviewSessions(sessions)
-  return (
-    <Section header="Live now">
-      {state.kind === 'failed' && !sessions.length ? (
-        <RetryRow title="Couldn't load live sessions" onPress={() => void model.load(model.context)} />
-      ) : !sessions.length ? (
-        state.kind === 'loaded' ? <Note text="No live sessions" /> : <Pending label="Loading live sessions" />
-      ) : (
-        [
-          ...shown.map((s) => (
-            <LinkRow
-              key={s.id}
-              title={s.schedule_title}
-              detail={[sessionDetails(s), `Started ${shortTime(s.started_at)}`].filter(Boolean).join(' · ')}
-              onPress={() => onOpenSession(s)}
-            />
-          )),
-          more && <LinkRow key="all" title="All live sessions" onPress={onShowSessions} accent />,
-        ]
-      )}
-    </Section>
-  )
+  const { shown } = overviewSessions(sessions)
+  let rows: ReactNode
+  if (state.kind === 'failed' && !sessions.length) rows = <RetryRow title="Couldn't load live sessions" onPress={() => void model.load(model.context)} />
+  else if (!sessions.length) rows = state.kind === 'loaded' ? <Note text="No live sessions" /> : <Pending label="Loading live sessions" />
+  else {
+    rows = shown.map((s) => (
+      <LinkRow
+        key={s.id}
+        live
+        title={s.schedule_title}
+        detail={[sessionDetails(s), `Started ${shortTime(s.started_at)}`].filter(Boolean).join(' · ')}
+        onPress={() => onOpenSession(s)}
+      />
+    ))
+  }
+  return <Recap title="Live now" onViewAll={onShowSessions} viewAllLabel="View all sessions">{rows}</Recap>
 }
 
 function Assessments({ assignments: model, onOpenAssignment, onShowAssessments }: OverviewProps) {
@@ -115,44 +115,68 @@ function Assessments({ assignments: model, onOpenAssignment, onShowAssessments }
   let rows: ReactNode
   if (state.status === 'failed' && !assignments.length) rows = <RetryRow title="Couldn't load assignments" onPress={() => void model.load(model.context)} />
   else if (state.status !== 'loaded' && !assignments.length) rows = <Pending label="Loading assignments" />
+  // A later page may still hold active work, so "none" is only claimed for a complete list.
+  else if (!shown.length) rows = more ? null : <Note text="No active assignments" />
   else {
-    rows = [
-      // A later page may still hold active work, so "none" is only claimed for a complete list.
-      ...(shown.length ? shown.map((a) => (
-        <LinkRow key={a.id} title={a.title} detail={a.dueAt ? `Due ${dueDate(a.dueAt)}` : undefined} onPress={() => onOpenAssignment(a)} />
-      )) : more ? [] : [<Note key="none" text="No active assignments" />]),
-      more && <LinkRow key="all" title="All assignments" onPress={onShowAssessments} accent />,
-    ]
+    rows = shown.map((a) => (
+      <LinkRow key={a.id} title={a.title} detail={a.dueAt ? `Due ${dueDate(a.dueAt)}` : undefined} onPress={() => onOpenAssignment(a)} />
+    ))
   }
-  return <Section header="Assessments">{rows}</Section>
+  return <Recap title="Assessments" onViewAll={onShowAssessments} viewAllLabel="View all assessments">{rows}</Recap>
 }
 
 const dueDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 
-function LinkRow({ title, detail, onPress, accent }: { title: string; detail?: string; onPress: () => void; accent?: boolean }) {
+/** A flat recap: header with a "View all" link to the tab, then hairline-separated rows on the page background. */
+function Recap({ title, onViewAll, viewAllLabel, children }: { title: string; onViewAll: () => void; viewAllLabel: string; children: ReactNode }) {
+  const colors = useColors()
+  const link = useLink()
+  const rows = (Array.isArray(children) ? children : [children]).filter(Boolean)
+  return (
+    <View style={styles.recap}>
+      <View style={styles.recapHeader}>
+        <Text accessibilityRole="header" style={[type.title3, styles.flex, { color: colors.label }]}>{title}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={viewAllLabel} hitSlop={8} onPress={onViewAll}
+          style={({ pressed }) => [styles.viewAll, pressed && { opacity: 0.5 }]}>
+          <Text style={[type.subheadline, styles.semibold, { color: link }]}>View all</Text>
+        </Pressable>
+      </View>
+      {rows.map((row, i) => (
+        <Fragment key={i}>
+          {i > 0 && <View style={[styles.hairline, { backgroundColor: colors.separator }]} />}
+          {row}
+        </Fragment>
+      ))}
+    </View>
+  )
+}
+
+function LinkRow({ title, detail, onPress, live }: { title: string; detail?: string; onPress: () => void; live?: boolean }) {
   const colors = useColors()
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={[title, detail].filter(Boolean).join(', ')}
       onPress={onPress}
-      style={({ pressed }) => [parts.row, pressed && { backgroundColor: colors.fill }]}
+      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.fill }]}
     >
+      {live && <View style={[styles.dot, { backgroundColor: colors.green }]} />}
       <View style={styles.text}>
-        <Text style={[type.body, { color: accent ? colors.accent : colors.label }]}>{title}</Text>
+        <Text style={[type.body, styles.medium, { color: colors.label }]}>{title}</Text>
         {!!detail && <Text style={[type.subheadline, { color: colors.secondary }]}>{detail}</Text>}
       </View>
-      <FeatureIcon name="chevron-right" size={16} color={colors.secondary} />
+      <FeatureIcon name="chevron-right" size={14} color={colors.secondary} />
     </Pressable>
   )
 }
 
 function RetryRow({ title, onPress }: { title: string; onPress: () => void }) {
   const colors = useColors()
+  const link = useLink()
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${title}, Retry`} onPress={onPress} style={parts.row}>
-      <Text style={[type.body, styles.text, { color: colors.secondary }]}>{title}</Text>
-      <Text style={[type.body, { color: colors.accent }]}>Retry</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${title}, Retry`} onPress={onPress} style={styles.row}>
+      <Text style={[type.body, styles.flex, { color: colors.secondary }]}>{title}</Text>
+      <Text style={[type.body, styles.semibold, { color: link }]}>Retry</Text>
     </Pressable>
   )
 }
@@ -160,7 +184,7 @@ function RetryRow({ title, onPress }: { title: string; onPress: () => void }) {
 function Note({ text }: { text: string }) {
   const colors = useColors()
   return (
-    <View style={parts.row}>
+    <View style={styles.row}>
       <Text style={[type.body, { color: colors.secondary }]}>{text}</Text>
     </View>
   )
@@ -168,13 +192,26 @@ function Note({ text }: { text: string }) {
 
 function Pending({ label }: { label: string }) {
   return (
-    <View style={parts.row} accessible accessibilityLabel={label}>
+    <View style={styles.row} accessible accessibilityLabel={label}>
       <ActivityIndicator />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 24 },
+  content: { gap: 28 },
+  picker: { alignSelf: 'flex-start', marginHorizontal: 20, marginTop: -6 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 36, paddingLeft: 12, paddingRight: 14, paddingVertical: 6, borderRadius: 999 },
+  pillText: { fontWeight: '600', flexShrink: 1 },
+  down: { transform: [{ rotate: '90deg' }] },
+  recap: { gap: 2 },
+  recapHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 6 },
+  viewAll: { minHeight: 44, justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', minHeight: 52, paddingHorizontal: 20, paddingVertical: 10, gap: 12 },
+  hairline: { height: StyleSheet.hairlineWidth, marginLeft: 20 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
   text: { flex: 1, gap: 2 },
+  flex: { flex: 1 },
+  medium: { fontWeight: '500' },
+  semibold: { fontWeight: '600' },
 })
