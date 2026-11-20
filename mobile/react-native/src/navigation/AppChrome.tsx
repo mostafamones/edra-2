@@ -5,7 +5,6 @@ import { Image, Platform, StyleSheet } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SafeAreaView } from 'react-native-screens/experimental'
 import type { AppChrome, StackProps, TabsProps } from '../app/contract.ts'
-import { AcademyMenu } from '../chrome/AcademyMenu'
 import { PageHeader } from '../chrome/PageHeader'
 import { featureIconSource } from '../platform/chrome/FeatureIcon.tsx'
 import { pointSized } from './barIcon.ts'
@@ -14,14 +13,15 @@ import type { ShellTabsParamList } from './routes.ts'
 
 const ShellTabs = createNativeTabsNavigator<ShellTabsParamList>()
 const NativeStack = createNativeStackNavigator()
-const SHELL_ROUTES = { sessions: 'SessionsTab', assessments: 'AssessmentsTab' } as const
+const SHELL_ROUTES = {
+  overview: 'OverviewTab', sessions: 'SessionsTab', assessments: 'AssessmentsTab', students: 'StudentsTab', concerns: 'ConcernsTab',
+} as const
 const ROOT = 'Root'
-const empty = () => null
 
 /** A catalog icon declared at the native bar item's point size. */
 export const barIconSource = (name: string) => pointSized(Image.resolveAssetSource(featureIconSource(name))!)
 
-function Tabs({ selected, onSelect, tabs, academy }: TabsProps) {
+function Tabs({ selected, onSelect, tabs }: TabsProps) {
   return (
     <ShellTabs.Navigator
       initialRouteName={SHELL_ROUTES[selected]}
@@ -33,22 +33,10 @@ function Tabs({ selected, onSelect, tabs, academy }: TabsProps) {
       backBehavior="none"
     >
       {tabs.map(({ key, title, icon, content }) => (
-        <ShellTabs.Screen key={key} name={SHELL_ROUTES[key]} options={{ title, icon: barIconSource(icon) }}>
+        <ShellTabs.Screen key={key} name={SHELL_ROUTES[key]} options={{ title, icon: barIconSource(icon), testID: `${key}-tab` }}>
           {() => Platform.OS === 'android' ? <TabBottomArea>{content}</TabBottomArea> : content}
         </ShellTabs.Screen>
       ))}
-      <ShellTabs.Screen
-        name="AcademyAction"
-        component={empty}
-        options={{
-          title: academy.title,
-          icon: barIconSource(academy.icon),
-          accessibilityLabel: academy.accessibilityLabel,
-          role: 'search',
-          action: academy.onPress,
-          testID: 'academy-tab',
-        }}
-      />
     </ShellTabs.Navigator>
   )
 }
@@ -128,6 +116,6 @@ function StackState({ state, navigation, routes, onPop, children }: Pick<StackPr
   return children
 }
 
-export const appChrome: AppChrome = { Tabs, Stack, PageHeader, AcademyMenu }
+export const appChrome: AppChrome = { Tabs, Stack, PageHeader }
 
 const styles = StyleSheet.create({ fill: { flex: 1 } })

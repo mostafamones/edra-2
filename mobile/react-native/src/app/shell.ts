@@ -3,6 +3,7 @@ import { Model } from '../core/model.ts'
 import type { AcademyContext, AccountScope } from '../core/ownership.ts'
 import { AcademiesController, type Academy } from '../features/access/academies.ts'
 import type { AuthController, SelectionStore } from '../features/access/auth.ts'
+import type { AssignmentSummary } from '../features/assignments/api.ts'
 import { AssignmentsModel } from '../features/assignments/assignments.ts'
 import type { MarkingModel } from '../features/assignments/marking.ts'
 import { bindRequestPort } from '../features/sessions/binding.ts'
@@ -35,13 +36,16 @@ export type SessionRoute = Readonly<{ key: string; session: LiveSession }>
 
 /**
  * One account scope's signed-in shell (port of SwiftUI `SignedInRoot` + `ShellView` state): its models, the
- * selected tab, the Sessions history and the academy menu. Built when the scope mounts; nothing carries over.
+ * selected tab and each tab's history. Built when the scope mounts; nothing carries over.
  */
 export class Shell extends Model {
-  tab: ShellTab = 'sessions'
+  tab: ShellTab = 'overview'
   /** Session screens belong to the selected academy; they close when the selection changes. */
   sessionsPath: readonly SessionRoute[] = []
-  menuOpen = false
+  /** The open assessment workspace; it belongs to the selected academy too. */
+  assignment: AssignmentSummary | null = null
+  /** Overview's history: Settings (account-level, so an academy change keeps it). */
+  settingsOpen = false
 
   readonly academies: AcademiesController
   readonly sessions: LiveSessionsModel
@@ -92,9 +96,7 @@ export class Shell extends Model {
       const destination = this.start.destination
       if (!destination) return
       this.start.destination = null
-      this.tab = 'sessions'
-      this.sessionsPath = [this.route(destination)]
-      this.changed()
+      this.showSession(destination)
     })
   }
 
@@ -109,6 +111,32 @@ export class Shell extends Model {
     this.changed()
   }
 
+  /** From Overview: the Sessions tab with only this session open. */
+  showSession = (session: LiveSession) => {
+    this.tab = 'sessions'
+    this.sessionsPath = [this.route(session)]
+    this.changed()
+  }
+
+  /** Opens (or, with null, closes) an assessment workspace; from Overview it also selects Assessments. */
+  openAssignment = (assignment: AssignmentSummary | null) => {
+    if (assignment) this.tab = 'assessments'
+    this.assignment = assignment
+    this.changed()
+  }
+
+  openSettings = () => {
+    this.settingsOpen = true
+    this.changed()
+  }
+
+  /** A user pop of the Overview stack (Settings is its only route). */
+  popOverview = (length: number) => {
+    if (length > 0 || !this.settingsOpen) return
+    this.settingsOpen = false
+    this.changed()
+  }
+
   /** A user pop. Back at the root, the session may have ended or been archived meanwhile: refresh the live list. */
   popSessions = (length: number) => {
     if (length >= this.sessionsPath.length) return
@@ -117,20 +145,8 @@ export class Shell extends Model {
     if (!this.sessionsPath.length) void this.sessions.load(this.academies.context)
   }
 
-  openMenu = () => {
-    this.menuOpen = true
-    this.changed()
-  }
-
-  closeMenu = () => {
-    if (!this.menuOpen) return
-    this.menuOpen = false
-    this.changed()
-  }
-
-  /** Menu choice. Returns a guard to present when the switch would lose unsaved marks; reselecting changes nothing. */
+  /** Overview academy choice. Returns a guard to present when the switch would lose unsaved marks; reselecting changes nothing. */
   chooseAcademy = (academyId: string): SwitchGuard | null => {
-    this.closeMenu()
     if (this.academies.choose(academyId) !== 'confirm') return null
     const academy = this.academies.pendingAcademy
     const marking = this.assignments.activeMarking
@@ -154,8 +170,8 @@ export class Shell extends Model {
     }
   }
 
+  /** Settings' Sign out; also reachable with zero academies. */
   signOut = () => {
-    this.closeMenu()
     void this.deps.auth.signOut()
   }
 
@@ -177,12 +193,14 @@ export class Shell extends Model {
   }
 
   /**
-   * Switching or losing an academy (suspension, removal) leaves its screens, which cancels their work and drops
-   * pending edits, scan confirmations and any unacknowledged start, then loads the new academy's lists.
+   * Switching or losing an academy (suspension, removal) returns to Overview and leaves its screens, which cancels
+   * their work and drops pending edits, scan confirmations and any unacknowledged start, then loads the new
+   * academy's lists.
    */
   private contextChanged(context: AcademyContext | null) {
-    this.tab = 'sessions'
+    this.tab = 'overview'
     this.sessionsPath = []
+    this.assignment = null
     this.start.reset()
     void this.sessions.load(context)
     // Prefetch the start picker's schedules so it opens already populated.

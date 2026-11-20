@@ -7,16 +7,14 @@ import type { LateAfterStore } from '../features/sessions/detail.ts'
 import type { SessionsPlatform } from '../features/sessions/screens/platform.ts'
 
 // What the foundation injects into `EdraApp`. The composition owns every piece of state (selected tab, each
-// tab's history, the academy menu, resets); these components only draw native chrome for it.
+// tab's history, resets); these components only draw native chrome for it.
 
-export type ShellTab = 'sessions' | 'assessments'
+export type ShellTab = 'overview' | 'sessions' | 'assessments' | 'students' | 'concerns'
 
 export type TabsProps = Readonly<{
   tabs: readonly Readonly<{ key: ShellTab; title: string; icon: string; content: ReactNode }>[]
   selected: ShellTab
   onSelect: (tab: ShellTab) => void
-  /** The Academy circle (iOS 26 search-role tab, a third item earlier): never selected, opens the academy menu. */
-  academy: Readonly<{ title: string; icon: string; accessibilityLabel: string; onPress: () => void }>
 }>
 
 /**
@@ -30,23 +28,12 @@ export type StackProps = Readonly<{
 }>
 
 /** Photos-style large title with the academy name beneath; `trailing` builds the title-row button for a diameter. */
-export type PageHeaderProps = Readonly<{ title: string; subtitle: string; trailing?: (diameter: number) => ReactNode }>
-
-/** Popover anchored on the Academy tab (iOS), a menu surface on Android: academies (current checked), Sign out. */
-export type AcademyMenuProps = Readonly<{
-  open: boolean
-  onClose: () => void
-  academies: readonly Readonly<{ id: string; name: string; icon: string }>[]
-  selectedId: string | null
-  onSelect: (id: string) => void
-  onSignOut: () => void
-}>
+export type PageHeaderProps = Readonly<{ title: string; subtitle?: string; trailing?: (diameter: number) => ReactNode }>
 
 export type AppChrome = Readonly<{
   Tabs: ComponentType<TabsProps>
   Stack: ComponentType<StackProps>
   PageHeader: ComponentType<PageHeaderProps>
-  AcademyMenu: ComponentType<AcademyMenuProps>
 }>
 
 export type AppServices = Readonly<{

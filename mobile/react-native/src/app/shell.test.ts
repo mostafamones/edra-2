@@ -20,6 +20,8 @@ const live = (id: string, academyId = 'a'): LiveSession => ({
   auto_end_at: '2026-11-19T10:00:00Z', roster_count: 0,
 })
 
+const summary = (id: string, state = 'active') => ({ id, title: id, dueAt: null, state, maxScore: '10', recipientCount: 1 })
+
 function setup(options: { remembered?: string | null } = {}) {
   const requests: string[] = []
   const server = {
@@ -73,23 +75,33 @@ test('mount selects the remembered granted academy and loads every academy-scope
   assert.equal(shell.assignments.state.status, 'loaded')
 })
 
-test('an academy change returns to Sessions, clears both histories and the start flow; reselection keeps them', async () => {
+test('the shell opens on Overview', async () => {
+  const { shell } = setup()
+  assert.equal(shell.tab, 'overview')
+  await shell.academies.load()
+  await tick()
+  assert.equal(shell.tab, 'overview')
+})
+
+test('an academy change returns to Overview, clears academy histories and the start flow; reselection keeps them', async () => {
   const { shell, requests } = setup()
   await shell.academies.load()
   await tick()
   shell.openSession(live('s1'))
-  shell.selectTab('assessments')
+  shell.openAssignment(summary('as1'))
   shell.start.presentPicker()
 
   assert.equal(shell.chooseAcademy('a'), null)
   assert.equal(shell.sessionsPath.length, 1)
+  assert.equal(shell.assignment?.id, 'as1')
   assert.equal(shell.tab, 'assessments')
 
-  shell.openMenu()
+  shell.openSettings()
   assert.equal(shell.chooseAcademy('b'), null)
-  assert.equal(shell.menuOpen, false)
-  assert.equal(shell.tab, 'sessions')
+  assert.equal(shell.tab, 'overview')
   assert.deepEqual(shell.sessionsPath, [])
+  assert.equal(shell.assignment, null)
+  assert.equal(shell.settingsOpen, true, 'Settings is account-level and stays open')
   assert.equal(shell.start.isPickerPresented, false)
   await tick()
   assert.ok(requests.includes('GET api/v1/academies/b/sessions'))
@@ -245,12 +257,40 @@ test('a session screen stops being current when the academy changes or the scope
   assert.equal(next(), false)
 })
 
-test('menu sign-out uses the user sign-out', () => {
-  const { shell, signOuts } = setup()
-  shell.openMenu()
+test('Settings opens from Overview, a user pop closes it, and Sign out works with zero academies', async () => {
+  const { shell, server, signOuts } = setup()
+  server.academies = []
+  await shell.academies.load()
+  await tick()
+  assert.equal(shell.academies.selected, null)
+  shell.openSettings()
+  assert.equal(shell.settingsOpen, true)
+  shell.popOverview(1)
+  assert.equal(shell.settingsOpen, true)
+  shell.popOverview(0)
+  assert.equal(shell.settingsOpen, false)
+  shell.openSettings()
   shell.signOut()
-  assert.equal(shell.menuOpen, false)
   assert.deepEqual(signOuts, ['user'])
+})
+
+test('Overview opens a session on Sessions with only that session, and an assignment on Assessments', async () => {
+  const { shell } = setup()
+  await shell.academies.load()
+  await tick()
+  shell.openSession(live('s1'))
+  shell.openSession(live('s2'))
+  shell.showSession(live('s3'))
+  assert.equal(shell.tab, 'sessions')
+  assert.deepEqual(shell.sessionsPath.map((r) => r.session.id), ['s3'])
+
+  shell.selectTab('overview')
+  shell.openAssignment(summary('as1'))
+  assert.equal(shell.tab, 'assessments')
+  assert.equal(shell.assignment?.id, 'as1')
+  shell.openAssignment(null)
+  assert.equal(shell.assignment, null)
+  assert.equal(shell.tab, 'assessments')
 })
 
 test('academy icons map like the SwiftUI app', () => {

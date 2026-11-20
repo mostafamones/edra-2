@@ -1,8 +1,9 @@
 export type ShellTabsParamList = {
+  OverviewTab: undefined;
   SessionsTab: undefined;
   AssessmentsTab: undefined;
-  /** Action tab: never selected; opens the academy popover. */
-  AcademyAction: undefined;
+  StudentsTab: undefined;
+  ConcernsTab: undefined;
 };
 
 export type WorkspaceTabsParamList = {

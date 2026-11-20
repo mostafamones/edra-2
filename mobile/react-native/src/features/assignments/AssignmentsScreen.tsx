@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { AssignmentSummary } from './api.ts'
 import type { AssignmentsModel } from './assignments.ts'
@@ -10,23 +9,25 @@ import { WorkspaceScreen } from './WorkspaceScreen.tsx'
 
 /**
  * Assessments root (AssignmentsView.swift): active and closed assignments, including overdue ones.
- * The shell owns the "Assessments" page chrome, `model.load(context)` on every context change and the
- * academy-switch guard (`model.switchNeedsConfirmation`).
+ * The shell owns the "Assessments" page chrome, `model.load(context)` on every context change, the
+ * academy-switch guard (`model.switchNeedsConfirmation`) and the open workspace (`open`), which it
+ * closes on every academy change and Overview can request.
  */
-export function AssignmentsScreen({ model, platform }: { model: AssignmentsModel; platform: AssessmentPlatform }) {
+export function AssignmentsScreen({ model, platform, open, onOpen }: {
+  model: AssignmentsModel
+  platform: AssessmentPlatform
+  /** The open workspace. It has its own tab bar (Students, Scan, search), so it covers the app's. */
+  open: AssignmentSummary | null
+  onOpen: (assignment: AssignmentSummary | null) => void
+}) {
   useModel(model)
-  // The open workspace. It has its own tab bar (Students, Scan, search), so it covers the app's.
-  const [open, setOpen] = useState<AssignmentSummary | null>(null)
   const context = model.context
-  // A different academy (or lost access) closes the workspace and drops its drafts.
-  const contextKey = context && `${context.academyId}:${context.epoch}`
-  useEffect(() => setOpen(null), [contextKey])
 
   return (
     <>
-      <Content model={model} platform={platform} onOpen={setOpen} />
-      <platform.Sheet visible={open !== null && context !== null} presentation="fullScreen" onDismiss={() => setOpen(null)}>
-        {open && context && <WorkspaceScreen key={open.id} summary={open} context={context} parent={model} platform={platform} onClose={() => setOpen(null)} />}
+      <Content model={model} platform={platform} onOpen={onOpen} />
+      <platform.Sheet visible={open !== null && context !== null} presentation="fullScreen" onDismiss={() => onOpen(null)}>
+        {open && context && <WorkspaceScreen key={open.id} summary={open} context={context} parent={model} platform={platform} onClose={() => onOpen(null)} />}
       </platform.Sheet>
     </>
   )

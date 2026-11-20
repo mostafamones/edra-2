@@ -25,7 +25,7 @@ Core React Native supplies the remaining native pieces directly: `ActivityIndica
 ## Shell composition
 
 ```tsx
-<AssignmentsScreen model={assignments} platform={assessmentPlatform} />
+<AssignmentsScreen model={assignments} platform={assessmentPlatform} open={openAssignment} onOpen={setOpenAssignment} />
 ```
 
 The shell keeps the current Swift responsibilities: the "Assessments" page chrome, `assignments.load(context)` on each context change, and the academy-switch guard (`assignments.switchNeedsConfirmation` / `activeMarking.save()` / `discardActiveMarking()`).

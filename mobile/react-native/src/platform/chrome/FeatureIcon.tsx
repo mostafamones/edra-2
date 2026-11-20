@@ -3,6 +3,7 @@ import { useColors } from '../../features/sessions/screens/theme.ts'
 
 const sources: Record<string, number> = {
   'add-01': require('./icons/add-01.png'),
+  'bubble-chat': require('./icons/bubble-chat.png'),
   'book-open-01': require('./icons/book-open-01.png'),
   'calendar-clock': require('./icons/calendar-clock.png'),
   'cancel-01': require('./icons/cancel-01.png'),
@@ -16,6 +17,7 @@ const sources: Record<string, number> = {
   'flash-off': require('./icons/flash-off.png'),
   'flash': require('./icons/flash.png'),
   'globe-02': require('./icons/globe-02.png'),
+  'home-01': require('./icons/home-01.png'),
   'graduation-cap': require('./icons/graduation-cap.png'),
   'logout-01': require('./icons/logout-01.png'),
   'microscope': require('./icons/microscope.png'),
@@ -28,6 +30,7 @@ const sources: Record<string, number> = {
   'tick-02': require('./icons/tick-02.png'),
   'trophy': require('./icons/trophy.png'),
   'user-add-01': require('./icons/user-add-01.png'),
+  'user-circle': require('./icons/user-circle.png'),
   'user-x': require('./icons/user-x.png'),
   'users': require('./icons/users.png'),
 }
