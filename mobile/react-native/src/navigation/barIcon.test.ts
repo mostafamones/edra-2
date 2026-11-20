@@ -42,3 +42,9 @@ test('native Hugeicons and React Native PNGs come from the same catalog', () => 
   assert.ok(nativeNames.length > 0)
   assert.deepEqual(reactNativeNames, nativeNames)
 })
+
+test('the bundled AccentColor matches the Swift app asset', () => {
+  const read = (path: string) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'))
+  assert.deepEqual(read('../../assets/AccentColor.colorset/Contents.json'),
+    read('../../../EdraInstructor/Resources/Assets.xcassets/AccentColor.colorset/Contents.json'))
+})
