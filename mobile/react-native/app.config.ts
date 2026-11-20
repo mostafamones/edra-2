@@ -17,6 +17,7 @@ const config: ExpoConfig = {
   version: "0.1.0",
   orientation: "portrait",
   ios: {
+    icon: "./assets/Edra.icon",
     userInterfaceStyle: "automatic",
     bundleIdentifier: upgradeVerification ? releaseId : candidateId,
     supportsTablet: false,

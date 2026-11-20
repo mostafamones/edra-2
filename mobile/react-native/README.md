@@ -15,6 +15,8 @@ The React Native candidate opens the API-backed Edra instructor companion on iOS
 
 The default iOS bundle ID and Android application ID are `com.mostafamones.edra.rn`. The candidate appears as “Edra RN” and uses the `edra-rn` scheme.
 
+The iOS Home Screen icon uses the SwiftUI app’s original Icon Composer asset in `assets/Edra.icon`. Install a fresh native build after updating it.
+
 `ios/` and `android/` are generated (Continuous Native Generation) and git-ignored. Change native settings in `app.config.ts` or a config plugin, never in the generated projects.
 
 ## App configuration
