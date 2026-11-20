@@ -91,7 +91,7 @@ export function Pill({ title, accessibilityLabel, items, icon }: PillMenuProps) 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   pillHost: { alignSelf: 'flex-start', maxWidth: '100%' },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingRight: 12, borderRadius: 999 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 32, paddingRight: 12, borderRadius: 999 },
   pillText: { fontWeight: '600', flexShrink: 1 },
   down: { transform: [{ rotate: '90deg' }] },
 })

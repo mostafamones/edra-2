@@ -1,8 +1,8 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
 import { Button, Capsule, ContextMenu, Divider, Group, HStack, Host, Image, Label, Menu, RNHostView, Text, Toggle } from '@expo/ui/swift-ui'
 import {
-  accessibilityLabel, background, buttonBorderShape, buttonStyle, disabled, font, foregroundStyle, frame, glassEffect, lineLimit, menuIndicator, menuOrder,
-  padding, resizable, rotationEffect, shapes, tint, truncationMode,
+  accessibilityLabel, background, buttonBorderShape, buttonStyle, controlSize, disabled, font, foregroundStyle, frame, glassEffect, lineLimit, menuIndicator, menuOrder,
+  resizable, shapes, tint, truncationMode,
 } from '@expo/ui/swift-ui/modifiers'
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect'
 import { StyleSheet, View, useColorScheme, useWindowDimensions } from 'react-native'
@@ -115,16 +115,16 @@ export function Pill({ title, accessibilityLabel: label, items, icon }: PillMenu
     <Host matchContents style={styles.pill}>
       <Menu
         label={
-          <HStack spacing={6} modifiers={[padding({ vertical: 5 }), foregroundStyle({ type: 'hierarchical', style: 'primary' })]}>
+          <HStack spacing={6} modifiers={[foregroundStyle({ type: 'hierarchical', style: 'primary' })]}>
             {icon !== undefined && glyph(icon, 18)}
             <Text modifiers={[font({ textStyle: 'subheadline', weight: 'semibold' }), lineLimit(1), truncationMode('tail')]}>{title}</Text>
-            {/* No chevron-down asset is bundled; the right chevron turned down is the same Hugeicon stroke. */}
-            <Group modifiers={[rotationEffect(90), foregroundStyle({ type: 'hierarchical', style: 'secondary' })]}>{glyph('chevron-right', 12)}</Group>
           </HStack>
         }
         modifiers={[
           menuOrder('fixed'),
-          menuIndicator('hidden'),
+          // iOS flattens a menu label to its text and first image, so a custom chevron never draws; the system one does.
+          menuIndicator('visible'),
+          controlSize('small'),
           buttonStyle(supportsGlass ? 'glass' : 'bordered'),
           buttonBorderShape('capsule'),
           ...(supportsGlass ? [] : [tint('#8E8E93')]),
