@@ -15,9 +15,9 @@ React Native ports of `EdraInstructor/Features/Assignments` views. The Swift vie
 
 - `NavigationBar`: an inline title, leading cancel/back and trailing confirm items (`BarItem`), and an optional search field (used only when `hasSearchTab` is false).
 - `Tabs`: the workspace's own tab bar. The screen supplies the tabs and their wording. On iOS 26, the search tab has the search role and the screen intercepts it while selecting.
-- `Sheet`: `fullScreen` for the workspace and `sheet` for marking and Announce. The sheet honours `dismissDisabled`. `onDismiss` reports user dismissal.
+- `Sheet`: `fullScreen` for the workspace and `sheet` for marking and Announce. The sheet honours `dismissDisabled`. `onDismiss` reports user dismissal. All three use the grouped background as the whole presentation surface (iOS `presentationBackground`, Android `containerColor`), so bar, body and bottom inset match; Sessions sheets keep their default.
 - `Menu` (optional): a tap-to-open menu with a selection tick for the Status and Sort pills. Wire it to the shared `Popup` (`Menu: Popup` in `createFeatureChrome`); until then the pills fall back to `confirm`/`systemConfirm`, which has no tick.
-- `Segmented`, `ContextMenu`, `GlassCapsule` and `Icon`. Student rows no longer use `ContextMenu`: they are plain rows whose long press (and VoiceOver's long-press action) offers Announce result / Select through `confirm`, so a tap always opens marking. `Icon` maps `IconName` to the bundled Hugeicons assets.
+- `Segmented`, `ContextMenu`, `GlassCapsule` and `Icon`. Student rows no longer use `ContextMenu`: they are plain rows whose long press (and the accessibility long-press action, labelled Select) starts selection with that student when eligible, so a tap always opens marking. Announcing one selected student sends at once; several open the Announce review. `Icon` maps `IconName` to the bundled Hugeicons assets.
 - `Camera`: the code preview with the shared torch, zoom and pinch controls. It reports all visible codes for each frame. `requestCameraPermission` is also part of this contract. Both come from `assessmentCamera(torchIcon)` in `src/platform/camera`.
 - `confirm` (optional): a confirmation dialog. It defaults to `systemConfirm`, which uses `ActionSheetIOS` on iOS and `Alert` on Android.
 
