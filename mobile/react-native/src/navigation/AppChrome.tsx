@@ -33,7 +33,7 @@ function Tabs({ selected, onSelect, tabs }: TabsProps) {
       backBehavior="none"
     >
       {tabs.map(({ key, title, icon, content }) => (
-        <ShellTabs.Screen key={key} name={SHELL_ROUTES[key]} options={{ title, icon: barIconSource(icon), testID: `${key}-tab` }}>
+        <ShellTabs.Screen key={key} name={SHELL_ROUTES[key]} options={{ title, iconOnly: true, icon: barIconSource(icon), testID: `${key}-tab` }}>
           {() => Platform.OS === 'android' ? <TabBottomArea>{content}</TabBottomArea> : content}
         </ShellTabs.Screen>
       ))}
