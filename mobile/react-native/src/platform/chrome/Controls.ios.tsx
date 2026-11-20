@@ -1,11 +1,15 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
-import { Button, Capsule, ContextMenu, Divider, Group, HStack, Host, Image, Label, Menu, RNHostView, Text, Toggle } from '@expo/ui/swift-ui'
+import { Button, Capsule, ContextMenu, Divider, Group, Host, Image, Label, Menu, RNHostView, Toggle } from '@expo/ui/swift-ui'
 import {
-  accessibilityLabel, background, buttonBorderShape, buttonStyle, controlSize, disabled, font, foregroundStyle, frame, glassEffect, lineLimit, menuIndicator, menuOrder,
-  resizable, shapes, tint, truncationMode,
+  accessibilityLabel, background, buttonBorderShape, buttonStyle, disabled, foregroundStyle, frame, glassEffect, menuOrder, shapes, tint,
 } from '@expo/ui/swift-ui/modifiers'
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect'
-import { StyleSheet, View, useColorScheme, useWindowDimensions } from 'react-native'
+import { useEffect, useRef, useState, type ComponentRef } from 'react'
+import {
+  AccessibilityInfo, Modal, Pressable, ScrollView, StyleSheet, Text, View, useColorScheme, useWindowDimensions,
+} from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { type, useColors } from '../../features/sessions/screens/theme.ts'
 import type { SegmentedProps } from '../../features/assignments/platform.ts'
 import type { GlassButtonProps, MenuItem, PillMenuProps } from '../../features/sessions/screens/platform.ts'
 import { useBoldText } from './boldText.ts'
@@ -62,7 +66,22 @@ export function GlassCapsule({ interactive, children, style }: CapsuleProps) {
   )
 }
 
-const styles = StyleSheet.create({ capsule: { borderRadius: 999 }, pill: { alignSelf: 'flex-start' } })
+const styles = StyleSheet.create({
+  capsule: { borderRadius: 999 },
+  pill: { alignSelf: 'flex-start', maxWidth: '100%' },
+  pressed: { opacity: 0.7 },
+  pillFace: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 32, paddingHorizontal: 12, borderRadius: 999, overflow: 'hidden' },
+  pillText: { fontWeight: '600', flexShrink: 1 },
+  down: { transform: [{ rotate: '90deg' }] },
+  menu: { position: 'absolute', borderRadius: 20, overflow: 'hidden' },
+  menuFace: { borderRadius: 20 },
+  scroll: { flexShrink: 1 },
+  menuList: { paddingVertical: 6 },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, paddingHorizontal: 16, paddingVertical: 8 },
+  itemText: { flex: 1 },
+  dimmed: { opacity: 0.4 },
+  divider: { height: StyleSheet.hairlineWidth, marginVertical: 6 },
+})
 
 function menuActions(items: MenuItem[], bold: boolean) {
   return items.map((item) => {
@@ -103,40 +122,81 @@ export function Popup({ items, disabled: unavailable, accessibilityLabel: label,
 }
 
 /**
- * The selection pill is a SwiftUI menu button whose label SwiftUI sizes itself, so a new title resizes the capsule
- * and the host follows it. iOS 26 draws the system's interactive glass button; earlier iOS a gray bordered capsule.
+ * The selection pill draws its trigger in React Native (Hugeicons bitmaps beside the title) on genuine glass, and
+ * opens an anchored popup below it. SwiftUI's menu flattened the label and dropped both glyphs on device.
  */
 export function Pill({ title, accessibilityLabel: label, items, icon }: PillMenuProps) {
-  // Long names truncate inside the screen's content width instead of overflowing it.
-  const maxWidth = useWindowDimensions().width - 40
-  const bold = useBoldText()
-  const glyph = (name: string, size: number) => <Image assetName={featureIconAsset(name, bold)} modifiers={[resizable(), frame({ width: size, height: size })]} />
+  const colors = useColors()
+  const trigger = useRef<ComponentRef<typeof View>>(null)
+  const [anchor, setAnchor] = useState<Anchor>()
+  const open = () => trigger.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y, width, height }))
   return (
-    <Host matchContents style={styles.pill}>
-      <Menu
-        label={
-          <HStack spacing={6} modifiers={[foregroundStyle({ type: 'hierarchical', style: 'primary' })]}>
-            {icon !== undefined && glyph(icon, 18)}
-            <Text modifiers={[font({ textStyle: 'subheadline', weight: 'semibold' }), lineLimit(1), truncationMode('tail')]}>{title}</Text>
-          </HStack>
-        }
-        modifiers={[
-          menuOrder('fixed'),
-          // iOS flattens a menu label to its text and first image, so a custom chevron never draws; the system one does.
-          menuIndicator('visible'),
-          controlSize('small'),
-          buttonStyle(supportsGlass ? 'glass' : 'bordered'),
-          buttonBorderShape('capsule'),
-          ...(supportsGlass ? [] : [tint('#8E8E93')]),
-          frame({ maxWidth, alignment: 'leading' }),
-          accessibilityLabel(label),
-        ]}
-      >
-        {menuActions(items, bold)}
-      </Menu>
-    </Host>
+    <>
+      <Pressable ref={trigger} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ expanded: !!anchor }}
+        hitSlop={4} onPress={open} style={({ pressed }) => [styles.pill, pressed && styles.pressed]}>
+        <GlassCapsule style={styles.pillFace}>
+          {icon !== undefined && <FeatureIcon name={icon} size={18} />}
+          <Text numberOfLines={1} style={[type.subheadline, styles.pillText, { color: colors.label }]}>{title}</Text>
+          <View style={styles.down}><FeatureIcon name="chevron-right" size={12} color={colors.secondary} /></View>
+        </GlassCapsule>
+      </Pressable>
+      {anchor && <AnchoredMenu anchor={anchor} items={items} label={label} onClose={() => setAnchor(undefined)} />}
+    </>
   )
 }
+
+type Anchor = { x: number; y: number; width: number; height: number }
+type Action = Extract<MenuItem, { title: string }>
+
+function AnchoredMenu({ anchor, items, label, onClose }: { anchor: Anchor; items: MenuItem[]; label: string; onClose(): void }) {
+  const colors = useColors()
+  const window = useWindowDimensions()
+  const insets = useSafeAreaInsets()
+  const selected = useRef<ComponentRef<typeof View>>(null)
+  // A rotation or resize moves the trigger, so the stored anchor is stale: close instead of pointing elsewhere.
+  const size = useRef(window)
+  useEffect(() => {
+    if (size.current.width !== window.width || size.current.height !== window.height) onClose()
+  }, [window, onClose])
+  const below = window.height - insets.bottom - (anchor.y + anchor.height) - 2 * GAP
+  const above = anchor.y - insets.top - 2 * GAP
+  const down = below >= Math.min(above, 240)
+  const width = Math.min(Math.max(anchor.width, 220), window.width - 2 * GAP)
+  const left = Math.min(Math.max(anchor.x, GAP), window.width - GAP - width)
+  const place = down ? { top: anchor.y + anchor.height + GAP } : { bottom: window.height - anchor.y + GAP }
+  const choose = (item: Action) => { onClose(); item.onPress() }
+  return (
+    <Modal transparent visible animationType="fade" onRequestClose={onClose}
+      onShow={() => { if (selected.current) AccessibilityInfo.sendAccessibilityEvent(selected.current, 'focus') }}>
+      <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={onClose} />
+      <View accessibilityViewIsModal accessibilityLabel={label} onAccessibilityEscape={onClose}
+        style={[styles.menu, place, { left, width, maxHeight: Math.max(down ? below : above, 120) }]}>
+        {supportsGlass
+          ? <GlassView glassEffectStyle="regular" style={[StyleSheet.absoluteFill, styles.menuFace]} />
+          : <View style={[StyleSheet.absoluteFill, styles.menuFace, { backgroundColor: colors.tile, borderColor: colors.separator, borderWidth: StyleSheet.hairlineWidth }]} />}
+        <ScrollView bounces={false} style={styles.scroll} contentContainerStyle={styles.menuList}>
+          {items.map((item) => {
+            if ('divider' in item) return <View key={item.key} style={[styles.divider, { backgroundColor: colors.separator }]} />
+            const tint = item.destructive ? colors.red : colors.label
+            return (
+              <Pressable key={item.key} ref={item.checked ? selected : undefined} accessibilityRole="menuitem"
+                accessibilityLabel={item.title} accessibilityState={{ selected: !!item.checked, disabled: !!item.disabled }}
+                disabled={item.disabled} onPress={() => choose(item)}
+                style={({ pressed }) => [styles.item, pressed && { backgroundColor: colors.fill }, item.disabled && styles.dimmed]}>
+                {item.icon && <FeatureIcon name={item.icon} size={20} color={tint} />}
+                <Text numberOfLines={2} style={[type.body, styles.itemText, { color: tint }]}>{item.title}</Text>
+                {item.checked && <FeatureIcon name="tick-02" size={18} color={colors.label} />}
+              </Pressable>
+            )
+          })}
+        </ScrollView>
+      </View>
+    </Modal>
+  )
+}
+
+// Space between trigger and popup, and the popup's minimum margin from the screen edges.
+const GAP = 8
 
 export function Segmented({ values, selectedIndex, onChange, accessibilityLabel }: SegmentedProps) {
   return <SegmentedControl values={[...values]} selectedIndex={selectedIndex} accessibilityLabel={accessibilityLabel}

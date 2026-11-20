@@ -94,8 +94,8 @@ export interface MenuProps {
 }
 
 /**
- * Selection pill: the current choice and a down chevron opening a menu that ticks it. iOS 26: interactive glass
- * capsule menu button; earlier iOS: bordered capsule; Android: filled capsule with a popup.
+ * Selection pill: the current choice and a down chevron opening a menu that ticks it. iOS: glass capsule (material
+ * before iOS 26) with an anchored popup; Android: filled capsule with a popup.
  */
 export interface PillMenuProps {
   title: string
