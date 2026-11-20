@@ -23,7 +23,8 @@ export type TabsProps = Readonly<{
  */
 export type StackProps = Readonly<{
   root: ReactNode
-  routes: readonly Readonly<{ key: string; element: ReactNode }>[]
+  /** `modal`: presented full screen over the tabs (only where `AppChrome.modalRoutes`); it draws its own bars. */
+  routes: readonly Readonly<{ key: string; element: ReactNode; modal?: boolean }>[]
   onPop: (length: number) => void
 }>
 
@@ -34,6 +35,8 @@ export type AppChrome = Readonly<{
   Tabs: ComponentType<TabsProps>
   Stack: ComponentType<StackProps>
   PageHeader: ComponentType<PageHeaderProps>
+  /** iOS: the assignment workspace is a native full-screen modal route, not a React Native Modal. */
+  modalRoutes: boolean
 }>
 
 export type AppServices = Readonly<{

@@ -10,7 +10,7 @@ import { useBoldText } from '../platform/chrome/boldText.ts'
 import { featureIconSource } from '../platform/chrome/FeatureIcon.tsx'
 import { pointSized } from './barIcon.ts'
 import { createNativeTabsNavigator } from './createNativeTabsNavigator.tsx'
-import type { ShellTabsParamList } from './routes.ts'
+import { modalRouteOptions, type ShellTabsParamList } from './routes.ts'
 
 const ShellTabs = createNativeTabsNavigator<ShellTabsParamList>()
 const NativeStack = createNativeStackNavigator()
@@ -84,8 +84,8 @@ function Stack({ root, routes, onPop }: StackProps) {
       )}
     >
       <NativeStack.Screen name={ROOT} options={{ headerShown: false }}>{() => root}</NativeStack.Screen>
-      {routes.map(({ key, element }) => (
-        <NativeStack.Screen key={key} name={`Route:${key}`} options={{ title: '' }}>
+      {routes.map(({ key, element, modal }) => (
+        <NativeStack.Screen key={key} name={`Route:${key}`} options={modal && Platform.OS === 'ios' ? modalRouteOptions : { title: '' }}>
           {() => <RouteContent>{element}</RouteContent>}
         </NativeStack.Screen>
       ))}
@@ -133,6 +133,6 @@ function StackState({ state, navigation, routes, onPop, children }: Pick<StackPr
   return children
 }
 
-export const appChrome: AppChrome = { Tabs, Stack, PageHeader }
+export const appChrome: AppChrome = { Tabs, Stack, PageHeader, modalRoutes: Platform.OS === 'ios' }
 
 const styles = StyleSheet.create({ fill: { flex: 1 } })

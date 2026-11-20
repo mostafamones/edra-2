@@ -1,13 +1,13 @@
 import { NavigationContainer, NavigationIndependentTree, useIsFocused, useTheme } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import { createContext, useContext, useLayoutEffect, type ReactNode } from 'react'
+import { createContext, useContext, useLayoutEffect } from 'react'
 import { Platform } from 'react-native'
-import type { AssessmentPlatform, BarItem, NavigationBarProps, TabsProps } from '../features/assignments/platform.ts'
+import type { BarItem, NavigationBarProps, TabsProps } from '../features/assignments/platform.ts'
 import type { BarItem as HeaderItem, SearchBar } from '../features/sessions/screens/platform.ts'
 import { hasSearchTabs } from '../chrome/platform'
 import { NavigationBar as SheetBar } from '../platform/chrome/Bars'
 import { useBoldText } from '../platform/chrome/boldText.ts'
-import { FullScreen } from '../platform/chrome/FullScreen.tsx'
+import { SheetBarContext, SheetHeader } from '../platform/chrome/sheetTypes.ts'
 import { barIconSource, pageBackground, TabBottomArea } from './AppChrome.tsx'
 import { createNativeTabsNavigator } from './createNativeTabsNavigator.tsx'
 import { NativeHeader } from './NativeHeader.tsx'
@@ -16,8 +16,10 @@ import type { WorkspaceTabsParamList } from './routes.ts'
 const Tabs = createNativeTabsNavigator<WorkspaceTabsParamList>()
 const Stack = createNativeStackNavigator()
 const ROUTES = { students: 'StudentsTab', scan: 'ScanTab', search: 'SearchTab' } as const
-const WorkspaceHeader = createContext<{ search?: SearchBar } | null>(null)
+/** `underBars`: iOS lists scroll under the glass tab bar and inset themselves; other content stops above it. */
+const WorkspaceHeader = createContext<{ search?: SearchBar; underBars?: boolean } | null>(null)
 const defaultHeader = {}
+const listHeader = { underBars: true }
 // Every workspace pane (Students, Scan) is a grouped page.
 const paneOptions = { title: '', headerBackVisible: false, ...pageBackground('systemGroupedBackground') }
 
@@ -30,7 +32,17 @@ function asHeaderItem(item?: BarItem | null): HeaderItem | undefined {
 
 export function AssessmentNavigationBar(props: NavigationBarProps) {
   const workspace = useContext(WorkspaceHeader)
-  if (!workspace) return <SheetBar {...props} />
+  const sheetBar = useContext(SheetBarContext)
+  if (!workspace) {
+    // iOS marking/announce page sheets: the sheet's own SwiftUI bar, as Sessions sheets (`SheetHeader`).
+    if (!sheetBar) return <SheetBar {...props} />
+    return (
+      <>
+        <SheetHeader title={props.title} leading={asHeaderItem(props.leading)} trailing={asHeaderItem(props.trailing)} />
+        {props.children}
+      </>
+    )
+  }
 
   const { title, leading, trailing, search, children } = props
   const field = workspace.search ?? (search ? {
@@ -39,7 +51,7 @@ export function AssessmentNavigationBar(props: NavigationBarProps) {
   return (
     <>
       <NativeHeader title={title} leading={asHeaderItem(leading)} trailing={asHeaderItem(trailing)} search={field} />
-      <TabBottomArea>{children}</TabBottomArea>
+      {Platform.OS === 'ios' && workspace.underBars ? children : <TabBottomArea>{children}</TabBottomArea>}
     </>
   )
 }
@@ -73,8 +85,8 @@ export function WorkspaceTabs({ tabs, selected, onSelect, searchText, onSearchTe
             const { pane, icon, title, search } = tab
             const announce = tab === actionTab
             const header = search && !announce
-              ? { search: { value: searchText, onChange: onSearchText, placeholder: searchPrompt } }
-              : defaultHeader
+              ? { search: { value: searchText, onChange: onSearchText, placeholder: searchPrompt }, underBars: true }
+              : pane === 'scan' ? defaultHeader : listHeader
             return (
               <Tabs.Screen key={pane} name={ROUTES[pane]} options={{
                 title,
@@ -104,35 +116,3 @@ export function WorkspaceTabs({ tabs, selected, onSelect, searchText, onSearchTe
 }
 
 export const hasWorkspaceSearchTab = hasSearchTabs
-
-/**
- * iOS marking and announce sheets open over the workspace's full-screen Modal. There, the SwiftUI `BottomSheet`
- * page sheet (zero-sized Host) opened nothing on a physical iPhone, so these use React Native's own page-sheet
- * Modal, as the workspace cover does, with a native stack header. Covers and Android keep `Sheet`.
- */
-export function workspaceSheet(Sheet: AssessmentPlatform['Sheet']): AssessmentPlatform['Sheet'] {
-  if (Platform.OS !== 'ios') return Sheet
-  return function WorkspaceSheet({ presentation, ...props }) {
-    if (presentation !== 'sheet') return <Sheet presentation={presentation} {...props} />
-    return (
-      <FullScreen visible={props.visible} onDismiss={props.onDismiss} dismissDisabled={props.dismissDisabled} pageSheet>
-        <SheetStack>{props.children}</SheetStack>
-      </FullScreen>
-    )
-  }
-}
-
-function SheetStack({ children }: { children: ReactNode }) {
-  const theme = useTheme()
-  return (
-    <NavigationIndependentTree>
-      <NavigationContainer theme={theme}>
-        <Stack.Navigator screenOptions={paneOptions}>
-          <Stack.Screen name="SheetPage">
-            {() => <WorkspaceHeader.Provider value={defaultHeader}>{children}</WorkspaceHeader.Provider>}
-          </Stack.Screen>
-        </Stack.Navigator>
-      </NavigationContainer>
-    </NavigationIndependentTree>
-  )
-}

@@ -152,6 +152,8 @@ function Students({ model, platform }: { model: WorkspaceModel; platform: Assess
   return (
     <ScrollView
       style={styles.page}
+      // iOS: the list runs under the glass tab bar; UIKit insets content and indicator by the bar so the last row clears it.
+      contentInsetAdjustmentBehavior="automatic"
       automaticallyAdjustKeyboardInsets
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"

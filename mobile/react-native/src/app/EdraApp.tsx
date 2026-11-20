@@ -9,6 +9,7 @@ import { createPlatformAccess } from '../features/access/platform'
 import type { PlatformAccess } from '../features/access/platformTypes.ts'
 import { AssignmentsScreen } from '../features/assignments/AssignmentsScreen.tsx'
 import { systemConfirm, type AssessmentPlatform } from '../features/assignments/platform.ts'
+import { WorkspaceScreen } from '../features/assignments/WorkspaceScreen.tsx'
 import { Avatar } from '../features/overview/Avatar.tsx'
 import { OverviewScreen } from '../features/overview/OverviewScreen.tsx'
 import { SettingsScreen } from '../features/overview/SettingsScreen.tsx'
@@ -142,6 +143,8 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
     true,
   )
 
+  const closeAssignment = () => shell.openAssignment(null)
+
   const comingSoon = (title: string) => (
     <chrome.Stack root={page(title, <Unavailable title="Coming soon" />)} routes={NO_ROUTES} onPop={noop} />
   )
@@ -185,9 +188,13 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
             icon: 'hugeicons-file-edit',
             content: (
               <chrome.Stack
-                root={page('Assessments', <AssignmentsScreen model={shell.assignments} platform={assessmentPlatform} open={shell.assignment} onOpen={shell.openAssignment} />)}
-                routes={NO_ROUTES}
-                onPop={noop}
+                root={page('Assessments', <AssignmentsScreen model={shell.assignments} platform={assessmentPlatform} open={chrome.modalRoutes ? null : shell.assignment} onOpen={shell.openAssignment} />)}
+                routes={chrome.modalRoutes && shell.assignment && context ? [{
+                  key: `assignment:${shell.assignment.id}`,
+                  modal: true,
+                  element: <WorkspaceScreen key={shell.assignment.id} summary={shell.assignment} context={context} parent={shell.assignments} platform={assessmentPlatform} onClose={closeAssignment} />,
+                }] : NO_ROUTES}
+                onPop={closeAssignment}
               />
             ),
           },
