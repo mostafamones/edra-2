@@ -133,9 +133,9 @@ export function Pill({ title, accessibilityLabel: label, items, icon }: PillMenu
   const reduceMotion = useReduceMotion()
   const trigger = useRef<ComponentRef<typeof View>>(null)
   const opened = useRef(0)
-  const [menu, setMenu] = useState<{ id: number; anchor: Rect; covered: boolean }>()
+  const [menu, setMenu] = useState<{ id: number; anchor: Rect; covered: boolean; morph: boolean }>()
   const open = () => trigger.current?.measureInWindow((x, y, width, height) =>
-    setMenu({ id: ++opened.current, anchor: { x, y, width, height }, covered: false }))
+    setMenu({ id: ++opened.current, anchor: { x, y, width, height }, covered: false, morph: supportsGlass && !reduceMotion }))
   // Late callbacks from an earlier popup carry its id, so they cannot hide or close a newer one.
   const settle = (id: number, covered?: true) =>
     setMenu((current) => current?.id !== id ? current : covered ? { ...current, covered } : undefined)
@@ -148,8 +148,12 @@ export function Pill({ title, accessibilityLabel: label, items, icon }: PillMenu
       </Pressable>
       {menu && (
         <AnchoredMenu key={menu.id} anchor={menu.anchor} items={items} label={label}
-          face={supportsGlass && !reduceMotion ? face : undefined}
-          onCover={() => settle(menu.id, true)} onClosed={() => settle(menu.id)} />
+          face={menu.morph ? face : undefined}
+          onCover={() => settle(menu.id, true)} onClosed={(action) => {
+            if (menu.id !== opened.current) return
+            settle(menu.id)
+            action?.()
+          }} />
       )}
     </>
   )
@@ -167,7 +171,6 @@ function PillFace({ icon, title }: Pick<PillMenuProps, 'icon' | 'title'>) {
 }
 
 type Rect = { x: number; y: number; width: number; height: number }
-type Action = Extract<MenuItem, { title: string }>
 type AnchoredMenuProps = {
   anchor: Rect
   items: MenuItem[]
@@ -175,7 +178,7 @@ type AnchoredMenuProps = {
   /** Present when the glass morphs: the popup redraws the pill here while the hidden trigger is covered. */
   face?: ReactNode
   onCover(): void
-  onClosed(): void
+  onClosed(action?: () => void): void
 }
 
 function AnchoredMenu({ anchor, items, label, face, onCover, onClosed }: AnchoredMenuProps) {
@@ -187,23 +190,25 @@ function AnchoredMenu({ anchor, items, label, face, onCover, onClosed }: Anchore
   const [shown, setShown] = useState(false)
   const [rect, setRect] = useState<Rect>()
   const [closing, setClosing] = useState(false)
+  const [visible, setVisible] = useState(true)
   const done = useRef(false)
+  const pendingAction = useRef<() => void>(undefined)
   const progress = useRef(new Animated.Value(morph ? 0 : 1)).current
   const expanded = morph && shown && rect !== undefined && !closing
-  const dismiss = () => {
-    if (done.current) return false
+  const dismiss = (action?: () => void) => {
+    if (done.current) return
     done.current = true
+    pendingAction.current = action
     if (morph && shown) setClosing(true)
-    else onClosed()
-    return true
+    else setVisible(false)
   }
   useEffect(() => {
     if (!morph || (!expanded && !closing)) return
     // The SwiftUI spring below runs on its own; this native-driven fade only swaps the pill and menu contents.
     Animated.timing(progress, { toValue: expanded ? 1 : 0, duration: MORPH_MS, useNativeDriver: true })
-      .start(({ finished }) => { if (finished && closing) onClosed() })
+      .start(({ finished }) => { if (finished && closing) setVisible(false) })
     return () => progress.stopAnimation()
-  }, [morph, expanded, closing, progress]) // onClosed is bound to this popup's id, so a stale copy is harmless.
+  }, [morph, expanded, closing, progress])
   // A rotation or resize moves the trigger, so the stored anchor is stale: close instead of pointing elsewhere.
   const size = useRef(window)
   useEffect(() => {
@@ -217,16 +222,21 @@ function AnchoredMenu({ anchor, items, label, face, onCover, onClosed }: Anchore
   const width = Math.min(Math.max(anchor.width, 220), window.width - 2 * GAP)
   const left = Math.min(Math.max(anchor.x, GAP), window.width - GAP - width)
   const place = down ? { top: anchor.y + anchor.height + GAP } : { bottom: window.height - anchor.y + GAP }
-  const choose = (item: Action) => { if (dismiss()) item.onPress() }
   const glass = expanded ? rect : anchor
   return (
-    <Modal transparent visible animationType={morph ? 'none' : 'fade'} onRequestClose={() => { dismiss() }}
+    <Modal transparent visible={visible} animationType={morph ? 'none' : 'fade'} onRequestClose={() => dismiss()}
+      onDismiss={() => {
+        const action = pendingAction.current
+        pendingAction.current = undefined
+        // Academy selection can present a confirmation alert. Wait until UIKit has dismissed this modal.
+        onClosed(action)
+      }}
       onShow={() => {
         setShown(true)
         if (morph) onCover()
         if (selected.current) AccessibilityInfo.sendAccessibilityEvent(selected.current, 'focus')
       }}>
-      <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={dismiss} />
+      <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={() => dismiss()} />
       {morph && (
         <Host pointerEvents="none" ignoreSafeArea="all" style={StyleSheet.absoluteFill}>
           <Rectangle modifiers={[
@@ -246,7 +256,7 @@ function AnchoredMenu({ anchor, items, label, face, onCover, onClosed }: Anchore
             opacity: progress.interpolate({ inputRange: [0, 0.4], outputRange: [1, 0], extrapolate: 'clamp' }),
           }]}>{face}</Animated.View>
       )}
-      <Animated.View accessibilityViewIsModal accessibilityLabel={label} onAccessibilityEscape={dismiss}
+      <Animated.View accessibilityViewIsModal accessibilityLabel={label} onAccessibilityEscape={() => dismiss()}
         onLayout={morph ? (event) => setRect(event.nativeEvent.layout) : undefined}
         style={[styles.menu, place, { left, width, maxHeight: Math.max(down ? below : above, 120) },
           morph && { opacity: progress.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' }) }]}>
@@ -260,7 +270,7 @@ function AnchoredMenu({ anchor, items, label, face, onCover, onClosed }: Anchore
             return (
               <Pressable key={item.key} ref={item.checked ? selected : undefined} accessibilityRole="menuitem"
                 accessibilityLabel={item.title} accessibilityState={{ selected: !!item.checked, disabled: !!item.disabled }}
-                disabled={item.disabled} onPress={() => choose(item)}
+                disabled={item.disabled} onPress={() => dismiss(item.onPress)}
                 style={({ pressed }) => [styles.item, pressed && { backgroundColor: colors.fill }, item.disabled && styles.dimmed]}>
                 {item.icon && <FeatureIcon name={item.icon} size={20} color={tint} />}
                 <Text numberOfLines={2} style={[type.body, styles.itemText, { color: tint }]}>{item.title}</Text>
