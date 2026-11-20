@@ -1,4 +1,4 @@
-import { Platform, PlatformColor, useColorScheme, type ColorValue, type TextStyle } from 'react-native'
+import { DynamicColorIOS, Platform, PlatformColor, useColorScheme, type ColorValue, type TextStyle } from 'react-native'
 
 /** The SwiftUI colours the Swift views use: iOS semantic colours on iOS, their published light/dark values on Android. */
 const NAMES = {
@@ -14,18 +14,21 @@ const NAMES = {
   orange: ['systemOrange', '#FF9500', '#FF9F0A'],
   green: ['systemGreen', '#34C759', '#30D158'],
   gray: ['systemGray', '#8E8E93', '#8E8E93'],
-  // The app's AccentColor asset (Resources/Assets.xcassets).
-  accent: ['AccentColor', '#008236', '#026630'],
 } as const
 
-export type Colors = Readonly<Record<keyof typeof NAMES | 'white', ColorValue>>
+/** Edra green. Not `PlatformColor('AccentColor')`: the generated Expo catalog has no AccentColor, which draws nothing. */
+const ACCENT = { light: '#008236', dark: '#026630' }
+
+export type Colors = Readonly<Record<keyof typeof NAMES | 'white' | 'accent', ColorValue>>
 
 const ios: Colors = {
   ...(Object.fromEntries(Object.entries(NAMES).map(([key, [name]]) => [key, PlatformColor(name)])) as Record<keyof typeof NAMES, ColorValue>),
+  accent: Platform.OS === 'ios' ? DynamicColorIOS(ACCENT) : ACCENT.light,
   white: '#FFFFFF',
 }
 const android = (dark: boolean): Colors => ({
   ...(Object.fromEntries(Object.entries(NAMES).map(([key, [, light, night]]) => [key, dark ? night : light])) as Record<keyof typeof NAMES, ColorValue>),
+  accent: dark ? ACCENT.dark : ACCENT.light,
   white: '#FFFFFF',
 })
 const LIGHT = Platform.OS === 'ios' ? ios : android(false)
