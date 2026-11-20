@@ -26,7 +26,9 @@ function headerItem(item: BarItem, bold: boolean): NativeStackHeaderItem[] {
     type: 'button',
     label: item.title,
     accessibilityLabel: item.title,
-    icon: item.icon ? { type: 'image', source: barIconSource(item.icon, bold) } : undefined,
+    // Back is the system glyph (owner-approved, standard system UI): it follows Bold Text and right-to-left itself.
+    icon: item.icon === 'chevron-left' ? { type: 'sfSymbol', name: 'chevron.backward' }
+      : item.icon ? { type: 'image', source: barIconSource(item.icon, bold) } : undefined,
     onPress: item.onPress,
     disabled: item.disabled,
     variant: item.role === 'confirm' ? 'done' : 'plain',
