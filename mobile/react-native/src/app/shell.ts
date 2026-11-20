@@ -10,6 +10,7 @@ import { bindRequestPort } from '../features/sessions/binding.ts'
 import type { LiveSession } from '../features/sessions/contract.ts'
 import { SessionDetailModel } from '../features/sessions/detail.ts'
 import { LiveSessionsModel } from '../features/sessions/live.ts'
+import { ProfileModel } from '../features/overview/profile.ts'
 import { SchedulesModel } from '../features/sessions/schedules.ts'
 import { StartSessionModel } from '../features/sessions/start.ts'
 import type { AppServices, ShellTab } from './contract.ts'
@@ -48,6 +49,8 @@ export class Shell extends Model {
   settingsOpen = false
 
   readonly academies: AcademiesController
+  /** The account's own name and picture; account-level, so academy changes keep it. */
+  readonly profile: ProfileModel
   readonly sessions: LiveSessionsModel
   readonly schedules: SchedulesModel
   readonly start: StartSessionModel
@@ -71,6 +74,7 @@ export class Shell extends Model {
       hasUnsavedChanges: () => this.assignments.switchNeedsConfirmation,
       onContextChange: (context) => this.contextChanged(context),
     })
+    this.profile = new ProfileModel({ api: client, scope, onUnauthenticated })
     this.api = bindRequestPort(client, scope)
     const isCurrent = this.academies.isCurrent
     const owner = this.academies.ownership
@@ -175,8 +179,12 @@ export class Shell extends Model {
     void this.deps.auth.signOut()
   }
 
-  /** The app became active: revalidate access (missed changes surface here or as a 403), then refresh live sessions. */
+  /**
+   * The app became active: revalidate access (missed changes surface here or as a 403), then refresh live sessions.
+   * The profile reloads alongside, which also renews its one-hour picture URL.
+   */
   foreground = async () => {
+    void this.profile.load()
     if (await this.academies.revalidate()) await this.sessions.load(this.academies.context)
   }
 

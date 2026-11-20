@@ -23,11 +23,12 @@
 
 The owner directed a five-tab shell for the React Native app: Overview (initial), Sessions, Assessments, Students and Concerns. The SwiftUI app keeps its Academy tab as the reference.
 
-- Overview: "Hello" with the neutral account avatar, which opens Settings in Overview's stack. Every granted academy with its role; the current one is checked and choosing another goes through `chooseAcademy` and the switch guard. For the current academy only, its first three live sessions and active assignments from the lists the shell already loads, with links to the full tabs. No counts are shown: those lists are first pages.
+- Overview: "Hello, <name>" and the account picture from `GET /api/v1/me` (`ProfileModel`, one per account scope, reloaded on foreground to renew the one-hour picture URL). Without a name it reads "Hello"; without a valid picture, or if it fails to load, the neutral profile icon shows. A 404 marks an older server without the endpoint (`unsupported`); a failed refresh keeps the last name. The avatar opens Settings in Overview's stack. Every granted academy with its role; the current one is checked and choosing another goes through `chooseAcademy` and the switch guard. For the current academy only, its first three live sessions and active assignments from the lists the shell already loads, with links to the full tabs. No counts are shown: those lists are first pages.
 - A session opened from Overview selects Sessions with only that session open. An assignment opens its workspace on Assessments (`Shell.assignment`).
-- Settings has Sign out and is reachable with zero academies.
+- Settings shows the same name and picture (read-only) and Sign out, and is reachable with zero academies.
 - Students and Concerns show "Coming soon".
-- Missing contracts: the v1 API has no self-profile endpoint, so no display name or photo, and no bounded per-academy recap read, so other academies show only name and role. Add both through an approved API plan.
+- The five main tabs are icon-only; each keeps its title as the accessibility name. The workspace tabs keep their labels.
+- Missing contract: no bounded per-academy recap read, so other academies show only name and role. Add it through an approved API plan.
 
 ## Foundation integration (not changed here)
 

@@ -9,6 +9,7 @@ import { createPlatformAccess } from '../features/access/platform'
 import type { PlatformAccess } from '../features/access/platformTypes.ts'
 import { AssignmentsScreen } from '../features/assignments/AssignmentsScreen.tsx'
 import { systemConfirm, type AssessmentPlatform } from '../features/assignments/platform.ts'
+import { Avatar } from '../features/overview/Avatar.tsx'
 import { OverviewScreen } from '../features/overview/OverviewScreen.tsx'
 import { SettingsScreen } from '../features/overview/SettingsScreen.tsx'
 import { Loading, Unavailable } from '../features/sessions/screens/parts.tsx'
@@ -16,7 +17,6 @@ import type { SessionsPlatform } from '../features/sessions/screens/platform.ts'
 import { SessionScreen } from '../features/sessions/screens/SessionScreen.tsx'
 import { SessionsHomeScreen } from '../features/sessions/screens/SessionsHomeScreen.tsx'
 import { StartSessionSheet } from '../features/sessions/screens/StartSessionScreen.tsx'
-import { FeatureIcon } from '../platform/chrome/FeatureIcon.tsx'
 import type { AppChrome, AppServices, EdraAppProps } from './contract.ts'
 import { academyIcon, Shell, type SwitchGuard } from './shell.ts'
 
@@ -58,11 +58,13 @@ type ShellProps = {
 /** Mounted once per account scope (`AccessRoot` keys it), so every model and history starts fresh. */
 function SignedInShell({ auth, scope, client, selection, services, chrome, sessions: sessionsPlatform, assessments: assessmentPlatform }: ShellProps) {
   const [shell] = useState(() => new Shell({ auth, scope, client, selection, services }))
-  const { academies } = shell
+  const { academies, profile } = shell
   useSyncExternalStore(shell.subscribe, () => shell.version)
   useSyncExternalStore(academies.subscribe, () => academies.version)
+  useSyncExternalStore(profile.subscribe, () => profile.version)
 
   useEffect(() => void academies.load(), [academies])
+  useEffect(() => void profile.load(), [profile])
   // Revalidate access whenever the app becomes active again (SwiftUI scenePhase `.active`).
   useEffect(() => {
     let last = AppState.currentState
@@ -107,16 +109,15 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
     <sessionsPlatform.GlassButton icon="hugeicons-add-01" accessibilityLabel="Start session" diameter={diameter} onPress={() => shell.start.presentPicker()} />
   )
 
-  // shortcut: no self-profile endpoint in the v1 API, so no name or photo: "Hello" and the neutral avatar. Add the
-  // greeting name and photo when an approved account contract exists.
+  // Without a name (none set, loading, failed, or a server without /api/v1/me) the greeting is just "Hello".
   const avatar = (diameter: number) => (
     <Pressable accessibilityRole="button" accessibilityLabel="Settings" hitSlop={8} onPress={shell.openSettings}>
-      <FeatureIcon name="hugeicons-user-circle" size={diameter * 0.85} />
+      <Avatar uri={profile.avatarUrl} size={diameter * 0.85} />
     </Pressable>
   )
 
   const overview = page(
-    'Hello',
+    profile.name ? `Hello, ${profile.name}` : 'Hello',
     <OverviewScreen
       academies={academies.academies}
       selectedId={context?.academyId ?? ''}
@@ -154,7 +155,7 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
             content: (
               <chrome.Stack
                 root={overview}
-                routes={shell.settingsOpen ? [{ key: 'settings', element: <SettingsScreen platform={sessionsPlatform} onSignOut={shell.signOut} /> }] : NO_ROUTES}
+                routes={shell.settingsOpen ? [{ key: 'settings', element: <SettingsScreen platform={sessionsPlatform} name={profile.name} avatarUrl={profile.avatarUrl} onSignOut={shell.signOut} /> }] : NO_ROUTES}
                 onPop={shell.popOverview}
               />
             ),

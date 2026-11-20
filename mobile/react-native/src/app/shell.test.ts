@@ -171,9 +171,11 @@ test('foreground revalidates access and refreshes live sessions only for an unch
   await shell.academies.load()
   await tick()
   const sessionsA = count('GET api/v1/academies/a/sessions')
+  const profiles = count('GET api/v1/me')
   await shell.foreground()
   await tick()
   assert.equal(count('GET api/v1/academies/a/sessions'), sessionsA + 1)
+  assert.equal(count('GET api/v1/me'), profiles + 1)
 
   server.academies = [academy('b')]
   await shell.foreground()
