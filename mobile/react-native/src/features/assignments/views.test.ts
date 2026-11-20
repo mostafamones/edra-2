@@ -38,8 +38,6 @@ test('row wording', () => {
   assert.equal(v.studentsEmptyTitle('', 'all'), 'No students')
   assert.equal(v.studentsEmptyTitle('am', 'all'), 'No matching students')
   assert.equal(v.studentsEmptyTitle('', 'marked'), 'No matching students')
-  assert.equal(v.studentDetails(decodeStudent(student())), '0001 · Nine A')
-  assert.equal(v.studentDetails({ ...decodeStudent(student()), studentCode: null }), 'Nine A')
   assert.equal(v.countLabel(1), '1 student')
   assert.equal(v.countLabel(3), '3 students')
 })

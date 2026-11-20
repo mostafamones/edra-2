@@ -26,8 +26,6 @@ export function statusTone(status: string): Tone {
 export const studentsEmptyTitle = (search: string, filter: Filter): string =>
   search === '' && filter === 'all' ? 'No students' : 'No matching students'
 
-export const studentDetails = (s: StudentWork): string => [s.studentCode, s.groupName].filter((v) => v !== null).join(' · ')
-
 /** A workspace row read as one element: name, code when shown, score and status (the row shows no group). */
 export const studentRowLabel = (s: StudentWork, max: string | null | undefined, status: string): string =>
   [s.fullName, s.studentCode, `${displayScore(s.total)} of ${displayScore(max)}`, status].filter((v) => v !== null).join(', ')
