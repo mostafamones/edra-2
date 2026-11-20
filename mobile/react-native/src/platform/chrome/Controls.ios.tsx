@@ -1,18 +1,19 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
-import { Button, Capsule, ContextMenu, Divider, Group, Host, Image, Label, Menu, RNHostView, Toggle } from '@expo/ui/swift-ui'
+import { Button, Capsule, ContextMenu, Divider, Group, Host, Image, Label, Menu, Rectangle, RNHostView, Toggle } from '@expo/ui/swift-ui'
 import {
-  accessibilityLabel, background, buttonBorderShape, buttonStyle, disabled, foregroundStyle, frame, glassEffect, menuOrder, shapes, tint,
+  accessibilityLabel, animation, Animation, background, buttonBorderShape, buttonStyle, disabled, foregroundStyle, frame, glassEffect, menuOrder,
+  offset, shapes, tint,
 } from '@expo/ui/swift-ui/modifiers'
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect'
-import { useEffect, useRef, useState, type ComponentRef } from 'react'
+import { useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react'
 import {
-  AccessibilityInfo, Modal, Pressable, ScrollView, StyleSheet, Text, View, useColorScheme, useWindowDimensions,
+  AccessibilityInfo, Animated, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, View, useColorScheme, useWindowDimensions,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { type, useColors } from '../../features/sessions/screens/theme.ts'
 import type { SegmentedProps } from '../../features/assignments/platform.ts'
 import type { GlassButtonProps, MenuItem, PillMenuProps } from '../../features/sessions/screens/platform.ts'
-import { useBoldText } from './boldText.ts'
+import { useBoldText, useReduceMotion } from './boldText.ts'
 import { FeatureIcon, featureIconAsset } from './FeatureIcon.tsx'
 import type { CapsuleProps, PopupProps } from './controlsTypes.ts'
 
@@ -70,11 +71,13 @@ const styles = StyleSheet.create({
   capsule: { borderRadius: 999 },
   pill: { alignSelf: 'flex-start', maxWidth: '100%' },
   pressed: { opacity: 0.7 },
+  hidden: { opacity: 0 },
   pillFace: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 32, paddingHorizontal: 12, borderRadius: 999, overflow: 'hidden' },
   pillText: { fontWeight: '600', flexShrink: 1 },
   down: { transform: [{ rotate: '90deg' }] },
   menu: { position: 'absolute', borderRadius: 20, overflow: 'hidden' },
   menuFace: { borderRadius: 20 },
+  replica: { position: 'absolute' },
   scroll: { flexShrink: 1 },
   menuList: { paddingVertical: 6 },
   item: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, paddingHorizontal: 16, paddingVertical: 8 },
@@ -124,56 +127,132 @@ export function Popup({ items, disabled: unavailable, accessibilityLabel: label,
 /**
  * The selection pill draws its trigger in React Native (Hugeicons bitmaps beside the title) on genuine glass, and
  * opens an anchored popup below it. SwiftUI's menu flattened the label and dropped both glyphs on device.
+ * On iOS 26 one SwiftUI glass shape grows from the pill into the popup and back, standing in for the system menu morph.
  */
 export function Pill({ title, accessibilityLabel: label, items, icon }: PillMenuProps) {
-  const colors = useColors()
+  const reduceMotion = useReduceMotion()
   const trigger = useRef<ComponentRef<typeof View>>(null)
-  const [anchor, setAnchor] = useState<Anchor>()
-  const open = () => trigger.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y, width, height }))
+  const opened = useRef(0)
+  const [menu, setMenu] = useState<{ id: number; anchor: Rect; covered: boolean }>()
+  const open = () => trigger.current?.measureInWindow((x, y, width, height) =>
+    setMenu({ id: ++opened.current, anchor: { x, y, width, height }, covered: false }))
+  // Late callbacks from an earlier popup carry its id, so they cannot hide or close a newer one.
+  const settle = (id: number, covered?: true) =>
+    setMenu((current) => current?.id !== id ? current : covered ? { ...current, covered } : undefined)
+  const face = <PillFace icon={icon} title={title} />
   return (
     <>
-      <Pressable ref={trigger} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ expanded: !!anchor }}
-        hitSlop={4} onPress={open} style={({ pressed }) => [styles.pill, pressed && styles.pressed]}>
-        <GlassCapsule style={styles.pillFace}>
-          {icon !== undefined && <FeatureIcon name={icon} size={18} />}
-          <Text numberOfLines={1} style={[type.subheadline, styles.pillText, { color: colors.label }]}>{title}</Text>
-          <View style={styles.down}><FeatureIcon name="chevron-right" size={12} color={colors.secondary} /></View>
-        </GlassCapsule>
+      <Pressable ref={trigger} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ expanded: !!menu }}
+        hitSlop={4} onPress={open} style={({ pressed }) => [styles.pill, pressed && styles.pressed, menu?.covered && styles.hidden]}>
+        <GlassCapsule style={styles.pillFace}>{face}</GlassCapsule>
       </Pressable>
-      {anchor && <AnchoredMenu anchor={anchor} items={items} label={label} onClose={() => setAnchor(undefined)} />}
+      {menu && (
+        <AnchoredMenu key={menu.id} anchor={menu.anchor} items={items} label={label}
+          face={supportsGlass && !reduceMotion ? face : undefined}
+          onCover={() => settle(menu.id, true)} onClosed={() => settle(menu.id)} />
+      )}
     </>
   )
 }
 
-type Anchor = { x: number; y: number; width: number; height: number }
-type Action = Extract<MenuItem, { title: string }>
+function PillFace({ icon, title }: Pick<PillMenuProps, 'icon' | 'title'>) {
+  const colors = useColors()
+  return (
+    <>
+      {icon !== undefined && <FeatureIcon name={icon} size={18} />}
+      <Text numberOfLines={1} style={[type.subheadline, styles.pillText, { color: colors.label }]}>{title}</Text>
+      <View style={styles.down}><FeatureIcon name="chevron-right" size={12} color={colors.secondary} /></View>
+    </>
+  )
+}
 
-function AnchoredMenu({ anchor, items, label, onClose }: { anchor: Anchor; items: MenuItem[]; label: string; onClose(): void }) {
+type Rect = { x: number; y: number; width: number; height: number }
+type Action = Extract<MenuItem, { title: string }>
+type AnchoredMenuProps = {
+  anchor: Rect
+  items: MenuItem[]
+  label: string
+  /** Present when the glass morphs: the popup redraws the pill here while the hidden trigger is covered. */
+  face?: ReactNode
+  onCover(): void
+  onClosed(): void
+}
+
+function AnchoredMenu({ anchor, items, label, face, onCover, onClosed }: AnchoredMenuProps) {
+  const morph = face !== undefined
   const colors = useColors()
   const window = useWindowDimensions()
   const insets = useSafeAreaInsets()
   const selected = useRef<ComponentRef<typeof View>>(null)
+  const [shown, setShown] = useState(false)
+  const [rect, setRect] = useState<Rect>()
+  const [closing, setClosing] = useState(false)
+  const done = useRef(false)
+  const progress = useRef(new Animated.Value(morph ? 0 : 1)).current
+  const expanded = morph && shown && rect !== undefined && !closing
+  const dismiss = () => {
+    if (done.current) return false
+    done.current = true
+    if (morph && shown) setClosing(true)
+    else onClosed()
+    return true
+  }
+  useEffect(() => {
+    if (!morph || (!expanded && !closing)) return
+    // The SwiftUI spring below runs on its own; this native-driven fade only swaps the pill and menu contents.
+    Animated.timing(progress, { toValue: expanded ? 1 : 0, duration: MORPH_MS, useNativeDriver: true })
+      .start(({ finished }) => { if (finished && closing) onClosed() })
+    return () => progress.stopAnimation()
+  }, [morph, expanded, closing, progress]) // onClosed is bound to this popup's id, so a stale copy is harmless.
   // A rotation or resize moves the trigger, so the stored anchor is stale: close instead of pointing elsewhere.
   const size = useRef(window)
   useEffect(() => {
-    if (size.current.width !== window.width || size.current.height !== window.height) onClose()
-  }, [window, onClose])
-  const below = window.height - insets.bottom - (anchor.y + anchor.height) - 2 * GAP
+    if (size.current.width !== window.width || size.current.height !== window.height) dismiss()
+  }, [window]) // Only a size change matters; dismiss is idempotent.
+  const keyboard = Keyboard.isVisible() ? Keyboard.metrics() : undefined
+  const floor = Math.min(window.height - insets.bottom, keyboard?.screenY ?? Infinity)
+  const below = floor - (anchor.y + anchor.height) - 2 * GAP
   const above = anchor.y - insets.top - 2 * GAP
   const down = below >= Math.min(above, 240)
   const width = Math.min(Math.max(anchor.width, 220), window.width - 2 * GAP)
   const left = Math.min(Math.max(anchor.x, GAP), window.width - GAP - width)
   const place = down ? { top: anchor.y + anchor.height + GAP } : { bottom: window.height - anchor.y + GAP }
-  const choose = (item: Action) => { onClose(); item.onPress() }
+  const choose = (item: Action) => { if (dismiss()) item.onPress() }
+  const glass = expanded ? rect : anchor
   return (
-    <Modal transparent visible animationType="fade" onRequestClose={onClose}
-      onShow={() => { if (selected.current) AccessibilityInfo.sendAccessibilityEvent(selected.current, 'focus') }}>
-      <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={onClose} />
-      <View accessibilityViewIsModal accessibilityLabel={label} onAccessibilityEscape={onClose}
-        style={[styles.menu, place, { left, width, maxHeight: Math.max(down ? below : above, 120) }]}>
-        {supportsGlass
+    <Modal transparent visible animationType={morph ? 'none' : 'fade'} onRequestClose={() => { dismiss() }}
+      onShow={() => {
+        setShown(true)
+        if (morph) onCover()
+        if (selected.current) AccessibilityInfo.sendAccessibilityEvent(selected.current, 'focus')
+      }}>
+      <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={dismiss} />
+      {morph && (
+        <Host pointerEvents="none" ignoreSafeArea="all" style={StyleSheet.absoluteFill}>
+          <Rectangle modifiers={[
+            foregroundStyle('transparent'),
+            frame({ width: glass.width, height: glass.height }),
+            glassEffect({ glass: { variant: 'regular' }, shape: 'roundedRectangle', cornerRadius: expanded ? RADIUS : anchor.height / 2 }),
+            offset({ x: glass.x, y: glass.y }),
+            frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'topLeading' }),
+            animation(Animation.snappy({ duration: MORPH_MS / 1000 }), expanded),
+          ]} />
+        </Host>
+      )}
+      {morph && (
+        <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+          style={[styles.pillFace, styles.replica, {
+            left: anchor.x, top: anchor.y, width: anchor.width, height: anchor.height,
+            opacity: progress.interpolate({ inputRange: [0, 0.4], outputRange: [1, 0], extrapolate: 'clamp' }),
+          }]}>{face}</Animated.View>
+      )}
+      <Animated.View accessibilityViewIsModal accessibilityLabel={label} onAccessibilityEscape={dismiss}
+        onLayout={morph ? (event) => setRect(event.nativeEvent.layout) : undefined}
+        style={[styles.menu, place, { left, width, maxHeight: Math.max(down ? below : above, 120) },
+          morph && { opacity: progress.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' }) }]}>
+        {!morph && (supportsGlass
           ? <GlassView glassEffectStyle="regular" style={[StyleSheet.absoluteFill, styles.menuFace]} />
-          : <View style={[StyleSheet.absoluteFill, styles.menuFace, { backgroundColor: colors.tile, borderColor: colors.separator, borderWidth: StyleSheet.hairlineWidth }]} />}
+          : <View style={[StyleSheet.absoluteFill, styles.menuFace, { backgroundColor: colors.tile, borderColor: colors.separator, borderWidth: StyleSheet.hairlineWidth }]} />)}
         <ScrollView bounces={false} style={styles.scroll} contentContainerStyle={styles.menuList}>
           {items.map((item) => {
             if ('divider' in item) return <View key={item.key} style={[styles.divider, { backgroundColor: colors.separator }]} />
@@ -190,11 +269,13 @@ function AnchoredMenu({ anchor, items, label, onClose }: { anchor: Anchor; items
             )
           })}
         </ScrollView>
-      </View>
+      </Animated.View>
     </Modal>
   )
 }
 
+const MORPH_MS = 350
+const RADIUS = 20
 // Space between trigger and popup, and the popup's minimum margin from the screen edges.
 const GAP = 8
 
