@@ -17,7 +17,7 @@ import {
   countLabel,
   rejection,
   statusTone,
-  studentDetails,
+  studentRowLabel,
   studentsEmptyTitle,
   tabAction,
   workspaceTabs,
@@ -175,7 +175,6 @@ function StudentRow({ model, platform, student }: { model: WorkspaceModel; platf
   const blocked = model.announceBlocker(student) !== null
   const status = studentStatus(student)
   const tone = statusTone(status)
-  const details = studentDetails(student)
   // A long press on the plain row, not the native context-menu wrapper, so a tap always reaches `onPress`.
   const actions =
     model.actions.announce && !model.isSelecting
@@ -194,6 +193,7 @@ function StudentRow({ model, platform, student }: { model: WorkspaceModel; platf
       selected={model.isSelecting ? selected : undefined}
       onPress={() => (model.isSelecting ? model.toggleSelected(student) : model.open(student, 'row'))}
       onLongPress={actions}
+      accessibilityLabel={studentRowLabel(student, model.detail?.maxScore, status)}
       style={styles.studentRow}
     >
       {model.isSelecting && (
@@ -203,7 +203,7 @@ function StudentRow({ model, platform, student }: { model: WorkspaceModel; platf
       )}
       <View style={styles.grow}>
         <Text style={[font.bodyMedium, { color: colors.label }]}>{student.fullName}</Text>
-        <Text style={[font.footnote, { color: colors.secondaryLabel }]}>{details}</Text>
+        {student.studentCode !== null && <Text style={[font.footnote, { color: colors.secondaryLabel }]}>{student.studentCode}</Text>}
       </View>
       <View style={styles.trailing}>
         <ScoreText total={student.total} max={model.detail?.maxScore} style={font.subheadline} />
