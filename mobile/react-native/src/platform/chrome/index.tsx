@@ -35,10 +35,9 @@ export function createFeatureChrome(options: FeatureChromeOptions): { assessment
       Tabs: options.Tabs,
       hasSearchTab: options.hasSearchTab,
       Sheet: function AssessmentSheet({ presentation, ...props }) {
-        // The assignment workspace cover is a grouped page under its native bar.
+        // Workspace cover, marking and Announce are grouped pages: one grouped surface under the native bar.
         const { groupedBackground } = useAssessmentColors()
-        const fullScreen = presentation === 'fullScreen'
-        return <FeatureSheet {...props} fullScreen={fullScreen} background={fullScreen ? groupedBackground : undefined} />
+        return <FeatureSheet {...props} fullScreen={presentation === 'fullScreen'} background={groupedBackground} />
       },
       Segmented,
       ContextMenu: ({ children, actions }) => actions.length ? (

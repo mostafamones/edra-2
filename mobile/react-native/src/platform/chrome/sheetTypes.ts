@@ -5,7 +5,7 @@ import type { HeaderProps, SheetProps } from '../../features/sessions/screens/pl
 export type FeatureSheetProps = SheetProps & {
   /** Assessments only reports user dismissals; Sessions also reports controlled dismissal. */
   notifyOnClose?: boolean
-  /** Full-screen cover fill behind the status bar and header; defaults to the plain page background. */
+  /** The whole presentation's fill (cover: behind status bar and header; page sheet: bar, body and bottom inset); defaults to the plain page background. */
   background?: ColorValue
 }
 
