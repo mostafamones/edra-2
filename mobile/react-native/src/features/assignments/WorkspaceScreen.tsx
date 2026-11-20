@@ -157,7 +157,7 @@ function Students({ model, platform }: { model: WorkspaceModel; platform: Assess
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Section header={model.isSelecting ? `${model.selection.size} selected` : `${model.total} students`}>
+      <Section header={model.isSelecting ? `${model.selection.size} selected` : undefined}>
         {students.map((s) => (
           <StudentRow key={s.id} model={model} platform={platform} student={s} />
         ))}
