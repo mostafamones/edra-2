@@ -152,6 +152,7 @@ function Students({ model, platform }: { model: WorkspaceModel; platform: Assess
   return (
     <ScrollView
       style={styles.page}
+      automaticallyAdjustKeyboardInsets
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

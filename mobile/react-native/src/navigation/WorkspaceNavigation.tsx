@@ -1,8 +1,6 @@
 import { NavigationContainer, NavigationIndependentTree, useIsFocused, useTheme } from '@react-navigation/native'
-import { useHeaderHeight } from '@react-navigation/elements'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import { createContext, useContext, useLayoutEffect, type ReactNode } from 'react'
-import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native'
+import { createContext, useContext, useLayoutEffect } from 'react'
 import type { BarItem, NavigationBarProps, TabsProps } from '../features/assignments/platform.ts'
 import type { BarItem as HeaderItem, SearchBar } from '../features/sessions/screens/platform.ts'
 import { hasSearchTabs } from '../chrome/platform'
@@ -39,16 +37,9 @@ export function AssessmentNavigationBar(props: NavigationBarProps) {
   return (
     <>
       <NativeHeader title={title} leading={asHeaderItem(leading)} trailing={asHeaderItem(trailing)} search={field} />
-      <TabBottomArea>
-        {field && Platform.OS === 'ios' ? <SearchContent>{children}</SearchContent> : children}
-      </TabBottomArea>
+      <TabBottomArea>{children}</TabBottomArea>
     </>
   )
-}
-
-function SearchContent({ children }: { children: ReactNode }) {
-  const headerHeight = useHeaderHeight()
-  return <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerHeight} style={styles.fill}>{children}</KeyboardAvoidingView>
 }
 
 function ScanContent({ render }: Pick<TabsProps, 'render'>) {
@@ -111,5 +102,3 @@ export function WorkspaceTabs({ tabs, selected, onSelect, searchText, onSearchTe
 }
 
 export const hasWorkspaceSearchTab = hasSearchTabs
-
-const styles = StyleSheet.create({ fill: { flex: 1 } })
