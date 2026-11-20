@@ -21,3 +21,7 @@ test('stays above the keyboard and inside the screen edges', () => {
 test('clamps a pill partly under the status bar below the safe area', () => {
   assert.deepEqual(placeMenu(pill(40), screen, 59, 810), { left: 16, width: 220, maxHeight: 735, top: 67 })
 })
+
+test('fits a short visible area without forcing a minimum menu height', () => {
+  assert.deepEqual(placeMenu(pill(107), screen, 59, 178), { left: 16, width: 220, maxHeight: 72, bottom: 705 })
+})
