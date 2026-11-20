@@ -4,11 +4,11 @@ import type { AcademyContext } from '../../core/ownership.ts'
 import { studentStatus, type AssignmentSummary, type StudentWork } from './api.ts'
 import type { AssignmentsModel } from './assignments.ts'
 import { MarkingSheet } from './MarkingSheet.tsx'
-import { systemAlert, type AssessmentPlatform, type BarItem, type Pane } from './platform.ts'
+import { systemAlert, systemConfirm, type AssessmentPlatform, type BarItem, type Pane } from './platform.ts'
 import { ScanPane } from './ScanPane.tsx'
 import { displayScore } from './score.ts'
 import { digits, font, useColors } from './theme.ts'
-import { FilterChip, LoadMoreRow, Row, ScoreText, Section, Spinner, Unavailable, useModel, useRefresh } from './ui.tsx'
+import { LoadMoreRow, MenuPill, Row, ScoreText, Section, Spinner, Unavailable, useModel, useRefresh } from './ui.tsx'
 import {
   SEARCH_PROMPT,
   accessStatus,
@@ -22,7 +22,7 @@ import {
   tabAction,
   workspaceTabs,
 } from './views.ts'
-import { FILTERS, WorkspaceModel } from './workspace.ts'
+import { FILTERS, SORTS, WorkspaceModel } from './workspace.ts'
 
 type Props = { summary: AssignmentSummary; context: AcademyContext; parent: AssignmentsModel; platform: AssessmentPlatform; onClose: () => void }
 
@@ -100,7 +100,7 @@ export function WorkspaceScreen({ summary, context, parent, platform, onClose }:
           onSearchText={setSearchText}
           searchPrompt={SEARCH_PROMPT}
           render={(p) =>
-            p === 'scan' ? page(<ScanPane model={model} platform={platform} />) : page(<StudentsPage model={model} platform={platform} />, p === 'students' && !platform.hasSearchTab)
+            p === 'scan' && model.scanAvailable ? page(<ScanPane model={model} platform={platform} />) : page(<StudentsPage model={model} platform={platform} />, p === 'students' && !platform.hasSearchTab)
           }
         />
       )}
@@ -124,11 +124,16 @@ function StudentsPage({ model, platform }: { model: WorkspaceModel; platform: As
   const status = accessStatus(model.actions, model.detail?.state)
   return (
     <View style={[styles.page, { backgroundColor: colors.groupedBackground }]}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersBar} contentContainerStyle={styles.filters}>
-        {FILTERS.map((f) => (
-          <FilterChip key={f.value} title={f.title} selected={model.filter === f.value} onPress={() => void model.setFilter(f.value)} />
-        ))}
-      </ScrollView>
+      <View style={styles.filters}>
+        <MenuPill platform={platform} label="Status" value={model.filter} options={FILTERS} onSelect={(f) => void model.setFilter(f)} />
+        <MenuPill
+          platform={platform}
+          label="Sort"
+          value={model.sort}
+          options={SORTS.map((o) => ({ ...o, disabled: o.value !== 'name' && !model.canSortFully }))}
+          onSelect={(s) => void model.setSort(s)}
+        />
+      </View>
       {status !== null && <Text style={[font.subheadlineMedium, styles.access, { color: colors.secondaryLabel }]}>{status}</Text>}
       <Students model={model} platform={platform} />
     </View>
@@ -151,7 +156,7 @@ function Students({ model, platform }: { model: WorkspaceModel; platform: Assess
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Section header={`${model.total} students`}>
+      <Section header={model.isSelecting ? `${model.selection.size} selected` : `${model.total} students`}>
         {students.map((s) => (
           <StudentRow key={s.id} model={model} platform={platform} student={s} />
         ))}
@@ -168,31 +173,40 @@ function StudentRow({ model, platform, student }: { model: WorkspaceModel; platf
   const status = studentStatus(student)
   const tone = statusTone(status)
   const details = studentDetails(student)
-  const menu =
+  // A long press on the plain row, not the native context-menu wrapper, so a tap always reaches `onPress`.
+  const actions =
     model.actions.announce && !model.isSelecting
-      ? [
-          { title: 'Announce result', disabled: blocked, onPress: () => model.reviewAnnouncement([student]) },
-          { title: 'Select', onPress: () => model.startSelecting(student) },
-        ]
-      : []
+      ? () =>
+          (platform.confirm ?? systemConfirm)({
+            title: student.fullName,
+            actions: [
+              { title: 'Announce result', disabled: blocked, onPress: () => model.reviewAnnouncement([student]) },
+              { title: 'Select', onPress: () => model.startSelecting(student) },
+              { title: 'Cancel', role: 'cancel' },
+            ],
+          })
+      : undefined
   return (
-    <platform.ContextMenu actions={menu}>
-      <Row selected={model.isSelecting ? selected : undefined} onPress={() => (model.isSelecting ? model.toggleSelected(student) : model.open(student, 'row'))} style={styles.studentRow}>
-        {model.isSelecting && (
-          <View style={{ opacity: blocked ? 0.3 : 1 }}>
-            <platform.Icon name={selected ? 'checkmark-circle-02' : 'circle'} size={20} color={colors.accent} />
-          </View>
-        )}
-        <View style={styles.grow}>
-          <Text style={[font.bodyMedium, { color: colors.label }]}>{student.fullName}</Text>
-          <Text style={[font.footnote, { color: colors.secondaryLabel }]}>{details}</Text>
+    <Row
+      selected={model.isSelecting ? selected : undefined}
+      onPress={() => (model.isSelecting ? model.toggleSelected(student) : model.open(student, 'row'))}
+      onLongPress={actions}
+      style={styles.studentRow}
+    >
+      {model.isSelecting && (
+        <View style={{ opacity: blocked ? 0.3 : 1 }}>
+          <platform.Icon name={selected ? 'checkmark-circle-02' : 'circle'} size={20} color={colors.accent} />
         </View>
-        <View style={styles.trailing}>
-          <ScoreText total={student.total} max={model.detail?.maxScore} style={font.subheadline} />
-          <Text style={[font.footnote, { color: tone === 'green' ? colors.green : tone === 'orange' ? colors.orange : colors.secondaryLabel }]}>{status}</Text>
-        </View>
-      </Row>
-    </platform.ContextMenu>
+      )}
+      <View style={styles.grow}>
+        <Text style={[font.bodyMedium, { color: colors.label }]}>{student.fullName}</Text>
+        <Text style={[font.footnote, { color: colors.secondaryLabel }]}>{details}</Text>
+      </View>
+      <View style={styles.trailing}>
+        <ScoreText total={student.total} max={model.detail?.maxScore} style={font.subheadline} />
+        <Text style={[font.footnote, { color: tone === 'green' ? colors.green : tone === 'orange' ? colors.orange : colors.secondaryLabel }]}>{status}</Text>
+      </View>
+    </Row>
   )
 }
 
@@ -255,8 +269,7 @@ function AnnounceSheet({ model, platform }: { model: WorkspaceModel; platform: A
 const styles = StyleSheet.create({
   page: { flex: 1 },
   grow: { flex: 1, gap: 2 },
-  filtersBar: { flexGrow: 0 },
-  filters: { gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
+  filters: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
   access: { paddingHorizontal: 20, paddingBottom: 6 },
   studentRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   trailing: { alignItems: 'flex-end', gap: 2, marginLeft: 8 },

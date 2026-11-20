@@ -30,6 +30,23 @@ export const FILTERS: ReadonlyArray<Readonly<{ value: Filter; title: string }>> 
   { value: 'unpublished', title: 'Unannounced' },
 ]
 
+/**
+ * Row order. The server pages by name; any other order needs the whole list, so it is fetched in one
+ * request (the server's 1000-row page) and offered only when the cohort fits in it.
+ */
+export type Sort = 'name' | 'group'
+export const SORTS: ReadonlyArray<Readonly<{ value: Sort; title: string }>> = [
+  { value: 'name', title: 'Name' },
+  { value: 'group', title: 'Group' },
+]
+const FULL_LIST_LIMIT = 1000
+
+/** Group order (no group last), keeping the server's name order within a group. */
+export function byGroup(students: readonly StudentWork[]): StudentWork[] {
+  const key = (s: StudentWork) => s.groupName ?? '\uffff'
+  return [...students].sort((a, b) => key(a).localeCompare(key(b)))
+}
+
 export type ListState = Readonly<{ status: 'loading' } | { status: 'loaded' } | { status: 'failed'; message: string }>
 
 /** Where the marking sheet was opened from, which decides what follows an acknowledged save. */
@@ -90,6 +107,7 @@ export class WorkspaceModel extends Observable {
   private _isLoadingMore = false
   private _loadMoreError: string | null = null
   private _filter: Filter = 'all'
+  private _sort: Sort = 'name'
   private _search = ''
   private _isSelecting = false
   private _selection: ReadonlySet<string> = new Set()
@@ -124,12 +142,15 @@ export class WorkspaceModel extends Observable {
 
   get detail(): AssignmentDetail | null { return this._detail }
   get state(): ListState { return this._state }
-  get students(): readonly StudentWork[] { return this._students }
+  get students(): readonly StudentWork[] { return this._sort === 'group' ? byGroup(this._students) : this._students }
   get total(): number { return this._total }
   get listState(): ListState { return this._listState }
   get isLoadingMore(): boolean { return this._isLoadingMore }
   get loadMoreError(): string | null { return this._loadMoreError }
   get filter(): Filter { return this._filter }
+  get sort(): Sort { return this._sort }
+  /** Orders other than name need the whole list in one page. */
+  get canSortFully(): boolean { return this._total <= FULL_LIST_LIMIT }
   get search(): string { return this._search }
   get isSelecting(): boolean { return this._isSelecting }
   get selection(): ReadonlySet<string> { return this._selection }
@@ -200,6 +221,13 @@ export class WorkspaceModel extends Observable {
     await this.fetchFirstPage()
   }
 
+  /** Chips were cached for the old order's paging, so they are dropped. */
+  async setSort(sort: Sort): Promise<void> {
+    if (sort === this._sort || (sort !== 'name' && !this.canSortFully)) return
+    this._sort = sort
+    await this.reloadStudents()
+  }
+
   /** Server search across the cohort; resets paging and selection. The screen debounces typing. */
   async setSearch(text: string): Promise<void> {
     const trimmed = text.trim()
@@ -232,6 +260,8 @@ export class WorkspaceModel extends Observable {
     if ('page' in result) {
       this._students = result.page.students
       this._total = result.page.total
+      // A larger list than one page can't be ordered honestly; the rows stay in the server's name order.
+      if (!this.canSortFully) this._sort = 'name'
       this._listState = { status: 'loaded' }
     } else {
       await this.fail(result.error, (message) => (this._listState = { status: 'failed', message }))
@@ -260,7 +290,7 @@ export class WorkspaceModel extends Observable {
   }
 
   private async fetchPage(offset: number, signal: AbortSignal): Promise<{ page: StudentsPage } | { error: unknown }> {
-    let path = `api/v1/assignments/${encodeURIComponent(this.summary.id)}/marks?filter=${this._filter}&limit=${WorkspaceModel.pageSize}&offset=${offset}`
+    let path = `api/v1/assignments/${encodeURIComponent(this.summary.id)}/marks?filter=${this._filter}&limit=${this._sort === 'name' ? WorkspaceModel.pageSize : FULL_LIST_LIMIT}&offset=${offset}`
     if (this._search !== '') path += `&search=${queryValue(prefix(this._search, 100))}`
     try {
       return { page: await this.env.api.get(path, { signal, structuredErrors: true, decode: decodeStudentsPage }) }
@@ -428,7 +458,7 @@ export class WorkspaceModel extends Observable {
   }
 
   reviewSelection(): void {
-    this.reviewAnnouncement(this._students.filter((s) => this._selection.has(s.id)))
+    this.reviewAnnouncement(this.students.filter((s) => this._selection.has(s.id)))
   }
 
   closeAnnouncement(): void {

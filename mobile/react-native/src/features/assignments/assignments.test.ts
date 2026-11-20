@@ -486,6 +486,48 @@ describe('workspace', () => {
     assert.deepEqual(model.students.map((s) => s.id), ['s1'])
   })
 
+  test('group sort loads the whole cohort in one page and keeps name order within each group', async () => {
+    const one = (id: string, name: string, group: string | null) => ({ ...student(id, { name }), group_name: group })
+    const { h, model } = await loadedWorkspace([one('s1', 'Amal', 'Nine B'), one('s2', 'Badr', null), one('s3', 'Dina', 'Nine A')], 3)
+    assert.equal(h.path(1).searchParams.get('limit'), '50')
+    const sort = model.setSort('group')
+    await h.fetch.waitFor(3)
+    assert.equal(h.path(2).searchParams.get('limit'), '1000')
+    assert.equal(h.path(2).searchParams.get('offset'), '0')
+    h.fetch.respond(2, 200, page([one('s1', 'Amal', 'Nine B'), one('s4', 'Cyra', 'Nine A'), one('s2', 'Badr', null), one('s3', 'Dina', 'Nine A')], 4))
+    await sort
+    assert.deepEqual(model.students.map((s) => s.id), ['s4', 's3', 's1', 's2'])
+    assert.equal(model.hasMore, false)
+  })
+
+  test('a cohort larger than one full page keeps the server name order', async () => {
+    const { h, model } = await loadedWorkspace([student('s1')], 1001)
+    assert.equal(model.canSortFully, false)
+    await model.setSort('group')
+    assert.equal(model.sort, 'name')
+    assert.equal(h.fetch.calls.length, 2)
+  })
+
+  test('a row tap opens the marking workflow, read-only too', async () => {
+    const { model } = await loadedWorkspace([student('s1')])
+    model.open(model.students[0]!, 'row')
+    assert.equal(model.marking?.student.id, 's1')
+    assert.equal(model.marking?.canEdit, true)
+    model.closeMarking()
+
+    const h = new Harness()
+    const readOnly = new WorkspaceModel(summary, h.context, new AssignmentsModel(h.env))
+    const load = readOnly.load()
+    await h.fetch.waitFor(1)
+    h.fetch.respond(0, 200, JSON.stringify({ ...JSON.parse(DETAIL), state: 'archived', actions: { mark: false, record_work: false, announce: false } }))
+    await h.fetch.waitFor(2)
+    h.fetch.respond(1, 200, page([student('s1')]))
+    await load
+    readOnly.open(readOnly.students[0]!, 'row')
+    assert.equal(readOnly.marking?.student.id, 's1')
+    assert.equal(readOnly.marking?.canEdit, false)
+  })
+
   test('incomplete or announced work cannot be selected', async () => {
     const { model } = await loadedWorkspace([student('s1', { marking: 'partial' }), student('s2', { marking: 'complete', publication: 'published' })])
     assert.equal(model.announceBlocker(model.students[0]!), 'Not fully marked')
