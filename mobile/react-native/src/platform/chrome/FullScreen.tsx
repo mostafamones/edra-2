@@ -49,7 +49,7 @@ export function FullScreen(props: FeatureSheetProps) {
           <SheetContent>
             {/* A cover keeps its inline header even when presented from a page sheet. */}
             <SheetBarContext.Provider value={undefined}>
-              <SafeAreaView edges={['top', 'left', 'right']} style={[styles.fill, { backgroundColor: colors.background }]}>
+              <SafeAreaView edges={['top', 'left', 'right']} style={[styles.fill, { backgroundColor: props.background ?? colors.background }]}>
                 {children}
               </SafeAreaView>
             </SheetBarContext.Provider>

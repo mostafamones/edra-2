@@ -3,6 +3,7 @@ import { ActionSheetIOS, Alert, Linking, Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { AssessmentPlatform } from '../../features/assignments/platform.ts'
 import type { Dialog, SessionsPlatform } from '../../features/sessions/screens/platform.ts'
+import { useColors as useAssessmentColors } from '../../features/assignments/theme.ts'
 import { assessmentCamera } from '../camera/index.tsx'
 import { NavigationBar } from './Bars'
 import { GlassButton, GlassCapsule, Popup, Segmented } from './Controls'
@@ -33,7 +34,12 @@ export function createFeatureChrome(options: FeatureChromeOptions): { assessment
       NavigationBar,
       Tabs: options.Tabs,
       hasSearchTab: options.hasSearchTab,
-      Sheet: ({ presentation, ...props }) => <FeatureSheet {...props} fullScreen={presentation === 'fullScreen'} />,
+      Sheet: function AssessmentSheet({ presentation, ...props }) {
+        // The assignment workspace cover is a grouped page under its native bar.
+        const { groupedBackground } = useAssessmentColors()
+        const fullScreen = presentation === 'fullScreen'
+        return <FeatureSheet {...props} fullScreen={fullScreen} background={fullScreen ? groupedBackground : undefined} />
+      },
       Segmented,
       ContextMenu: ({ children, actions }) => actions.length ? (
         <Popup longPress items={actions.map((action, index) => ({ ...action, key: String(index) }))}>{children}</Popup>

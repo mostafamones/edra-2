@@ -1,7 +1,7 @@
 import { CommonActions, type NavigationHelpers, type ParamListBase, type StackNavigationState } from '@react-navigation/native'
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import { createNativeStackNavigator, type NativeStackNavigationOptions } from '@react-navigation/native-stack'
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Image, Platform, StyleSheet } from 'react-native'
+import { Image, Platform, PlatformColor, StyleSheet } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SafeAreaView } from 'react-native-screens/experimental'
 import type { AppChrome, StackProps, TabsProps } from '../app/contract.ts'
@@ -41,6 +41,21 @@ function Tabs({ selected, onSelect, tabs }: TabsProps) {
   )
 }
 
+/**
+ * iOS: the navigation bar and the screen behind it take the page's own semantic background. Otherwise native-stack
+ * paints the React Navigation theme's `card` (dark `rgb(18,18,18)`) as an opaque bar with a hairline, a grey slab
+ * above the page. The bar stays native: system back, glass bar buttons and safe-area layout are unchanged.
+ */
+export function pageBackground(name: 'systemBackground' | 'systemGroupedBackground'): NativeStackNavigationOptions {
+  if (Platform.OS !== 'ios') return {}
+  const backgroundColor = PlatformColor(name)
+  // native-stack types the header colour as a string; it forwards it to react-native-screens' `ColorValue` prop.
+  return { headerStyle: { backgroundColor: backgroundColor as unknown as string }, headerShadowVisible: false, contentStyle: { backgroundColor } }
+}
+
+// Pushed Sessions routes (attendance) draw on `systemBackground`.
+const routeOptions = { headerBackButtonDisplayMode: 'minimal', ...pageBackground('systemBackground') } as const
+
 /** Native insets include the tab interface on Android and the controller's safe area on iOS. */
 export function TabBottomArea({ children }: { children: ReactNode }) {
   return <SafeAreaView style={styles.fill} edges={{ bottom: true }}>{children}</SafeAreaView>
@@ -59,7 +74,7 @@ export function useRouteBottomInset() {
 function Stack({ root, routes, onPop }: StackProps) {
   return (
     <NativeStack.Navigator
-      screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}
+      screenOptions={routeOptions}
       layout={({ state, navigation, children }) => (
         <StackState state={state} navigation={navigation} routes={routes} onPop={onPop}>
           {children}

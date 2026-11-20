@@ -7,7 +7,7 @@ import type { BarItem, NavigationBarProps, TabsProps } from '../features/assignm
 import type { BarItem as HeaderItem, SearchBar } from '../features/sessions/screens/platform.ts'
 import { hasSearchTabs } from '../chrome/platform'
 import { NavigationBar as SheetBar } from '../platform/chrome/Bars'
-import { barIconSource, TabBottomArea } from './AppChrome.tsx'
+import { barIconSource, pageBackground, TabBottomArea } from './AppChrome.tsx'
 import { createNativeTabsNavigator } from './createNativeTabsNavigator.tsx'
 import { NativeHeader } from './NativeHeader.tsx'
 import type { WorkspaceTabsParamList } from './routes.ts'
@@ -17,6 +17,8 @@ const Stack = createNativeStackNavigator()
 const ROUTES = { students: 'StudentsTab', scan: 'ScanTab', search: 'SearchTab' } as const
 const WorkspaceHeader = createContext<{ search?: SearchBar } | null>(null)
 const defaultHeader = {}
+// Every workspace pane (Students, Scan) is a grouped page.
+const paneOptions = { title: '', headerBackVisible: false, ...pageBackground('systemGroupedBackground') }
 
 function asHeaderItem(item?: BarItem | null): HeaderItem | undefined {
   if (!item) return undefined
@@ -87,7 +89,7 @@ export function WorkspaceTabs({ tabs, selected, onSelect, searchText, onSearchTe
                 action: announce ? () => onSelect(pane) : undefined,
               }}>
                 {() => (
-                  <Stack.Navigator screenOptions={{ title: '', headerBackVisible: false }}>
+                  <Stack.Navigator screenOptions={paneOptions}>
                     <Stack.Screen name="WorkspacePane">
                       {() => (
                         <WorkspaceHeader.Provider value={header}>
