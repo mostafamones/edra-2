@@ -57,7 +57,7 @@ function BarButton({ item }: { item?: BarItem }) {
       style={styles.barSlot}
     >
       <Text
-        style={[type.body, item.role === 'confirm' && { fontWeight: '600' }, { color: item.disabled ? colors.secondary : colors.accent }]}
+        style={[type.body, item.role === 'confirm' && { fontWeight: '600' }, { color: item.disabled ? colors.secondary : colors.accentText }]}
         numberOfLines={1}
       >
         {item.title}

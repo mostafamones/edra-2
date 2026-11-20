@@ -71,7 +71,7 @@ export function AddAttendeeScreen({ onClose, onFinished, platform, ...props }: {
               onPress={() => void model.loadMore()}
               style={styles.row}
             >
-              <Text style={[type.body, { color: model.isLoadingMore ? colors.secondary : colors.accent }]}>
+              <Text style={[type.body, { color: model.isLoadingMore ? colors.secondary : colors.accentText }]}>
                 {model.isLoadingMore ? 'Loading…' : 'Show more'}
               </Text>
             </Pressable>
@@ -146,7 +146,7 @@ function CandidateRow({ candidate, chosen, disabled, onPress, platform }: {
           {candidate.student_code}
         </Text>
       )}
-      {chosen && <platform.Icon name="hugeicons-tick-02" size={20} color={colors.accent as string} />}
+      {chosen && <platform.Icon name="hugeicons-tick-02" size={20} color={colors.accentText as string} />}
     </Pressable>
   )
 }
