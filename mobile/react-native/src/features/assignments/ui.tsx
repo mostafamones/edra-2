@@ -2,7 +2,7 @@
 import { useCallback, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native'
 import type { Observable } from './environment.ts'
-import type { AssessmentPlatform, IconName } from './platform.ts'
+import { systemConfirm, type AssessmentPlatform, type IconName } from './platform.ts'
 import { displayScore } from './score.ts'
 import { digits, font, useColors } from './theme.ts'
 
@@ -70,7 +70,7 @@ export function BorderedButton(props: { title: string; onPress: () => void; disa
       onPress={props.onPress}
       style={({ pressed }) => [props.small ? styles.borderedSmall : styles.bordered, { backgroundColor: colors.tertiaryFill, opacity: props.disabled ? 0.4 : pressed ? 0.7 : 1 }]}
     >
-      <Text style={[props.small ? font.subheadline : font.bodyMedium, { color: colors.accent }]}>{props.title}</Text>
+      <Text style={[props.small ? font.subheadline : font.bodyMedium, { color: colors.accentText }]}>{props.title}</Text>
     </Pressable>
   )
 }
@@ -80,7 +80,7 @@ export function TextButton(props: { title: string; onPress: () => void; disabled
   const colors = useColors()
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!props.disabled }} disabled={props.disabled} onPress={props.onPress} hitSlop={8}>
-      {({ pressed }) => <Text style={[font.body, props.style, { color: colors.accent, opacity: props.disabled ? 0.4 : pressed ? 0.5 : 1 }]}>{props.title}</Text>}
+      {({ pressed }) => <Text style={[font.body, props.style, { color: colors.accentText, opacity: props.disabled ? 0.4 : pressed ? 0.5 : 1 }]}>{props.title}</Text>}
     </Pressable>
   )
 }
@@ -96,17 +96,30 @@ export function ScoreText(props: { total: string | null | undefined; max: string
   )
 }
 
-/** A capsule filter chip: accent when selected, secondary fill otherwise. */
-export function FilterChip(props: { title: string; selected: boolean; onPress: () => void }) {
+export type PillOption<T extends string> = Readonly<{ value: T; title: string; disabled?: boolean }>
+
+/** A compact selection pill: the current choice and a chevron; tapping opens a menu that ticks the current choice. */
+export function MenuPill<T extends string>(props: { platform: AssessmentPlatform; label: string; value: T; options: readonly PillOption<T>[]; onSelect: (value: T) => void }) {
   const colors = useColors()
+  const { platform, label, value, options, onSelect } = props
+  const title = options.find((o) => o.value === value)?.title ?? ''
+  if (platform.PillMenu) {
+    const items = options.map((o) => ({ key: o.value, title: o.title, checked: o.value === value, disabled: o.disabled, onPress: () => onSelect(o.value) }))
+    return <platform.PillMenu title={title} items={items} accessibilityLabel={`${label}, ${title}`} />
+  }
+  const open = () =>
+    (platform.confirm ?? systemConfirm)({
+      title: label,
+      actions: [...options.map((o) => ({ title: o.title, disabled: o.disabled, onPress: () => onSelect(o.value) })), { title: 'Cancel', role: 'cancel' as const }],
+    })
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: props.selected }}
-      onPress={props.onPress}
-      style={[styles.filterChip, { backgroundColor: props.selected ? colors.accent : colors.secondaryFill }]}
-    >
-      <Text style={[font.subheadlineMedium, { color: props.selected ? colors.white : colors.label }]}>{props.title}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${label}, ${title}`} onPress={open}
+      style={({ pressed }) => [styles.pill, { backgroundColor: colors.secondaryFill, opacity: pressed ? 0.7 : 1 }]}>
+      <Text numberOfLines={1} style={[font.subheadlineMedium, styles.pillText, { color: colors.label }]}>{title}</Text>
+      {/* No chevron-down asset is bundled; the right chevron turned down is the same glyph. */}
+      <View style={styles.chevron}>
+        <platform.Icon name="chevron-right" size={14} color={colors.secondaryLabel} />
+      </View>
     </Pressable>
   )
 }
@@ -131,7 +144,7 @@ export function Section(props: { header?: string; children: ReactNode[] | ReactN
 }
 
 /** One List row: 44 pt minimum, 16 pt insets, highlight while pressed. */
-export function Row(props: { onPress?: () => void; children: ReactNode; style?: StyleProp<ViewStyle>; accessibilityLabel?: string; selected?: boolean }) {
+export function Row(props: { onPress?: () => void; onLongPress?: () => void; longPressLabel?: string; children: ReactNode; style?: StyleProp<ViewStyle>; accessibilityLabel?: string; selected?: boolean }) {
   const colors = useColors()
   if (!props.onPress) return <View style={[styles.row, props.style]}>{props.children}</View>
   return (
@@ -140,6 +153,9 @@ export function Row(props: { onPress?: () => void; children: ReactNode; style?: 
       accessibilityLabel={props.accessibilityLabel}
       accessibilityState={props.selected === undefined ? undefined : { selected: props.selected }}
       onPress={props.onPress}
+      onLongPress={props.onLongPress}
+      accessibilityActions={props.onLongPress ? [{ name: 'longpress', label: props.longPressLabel }] : undefined}
+      onAccessibilityAction={(e) => e.nativeEvent.actionName === 'longpress' && props.onLongPress?.()}
       style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.tertiaryFill }, props.style]}
     >
       {props.children}
@@ -167,7 +183,9 @@ export const styles = StyleSheet.create({
   prominent: { minHeight: 34, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   bordered: { minHeight: 34, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   borderedSmall: { minHeight: 28, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999 },
+  pill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', maxWidth: '100%', gap: 4, minHeight: 40, paddingLeft: 14, paddingRight: 10, borderRadius: 999 },
+  pillText: { flexShrink: 1 },
+  chevron: { transform: [{ rotate: '90deg' }] },
   section: { marginHorizontal: 16, marginBottom: 20 },
   sectionHeader: { paddingHorizontal: 16, paddingBottom: 6 },
   card: { borderRadius: 10, overflow: 'hidden' },

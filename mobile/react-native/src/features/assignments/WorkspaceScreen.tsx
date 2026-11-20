@@ -8,7 +8,7 @@ import { systemAlert, type AssessmentPlatform, type BarItem, type Pane } from '.
 import { ScanPane } from './ScanPane.tsx'
 import { displayScore } from './score.ts'
 import { digits, font, useColors } from './theme.ts'
-import { FilterChip, LoadMoreRow, Row, ScoreText, Section, Spinner, Unavailable, useModel, useRefresh } from './ui.tsx'
+import { LoadMoreRow, MenuPill, Row, ScoreText, Section, Spinner, Unavailable, useModel, useRefresh } from './ui.tsx'
 import {
   SEARCH_PROMPT,
   accessStatus,
@@ -16,13 +16,14 @@ import {
   announceStatus,
   countLabel,
   rejection,
+  showsAnnounceSheet,
   statusTone,
-  studentDetails,
+  studentRowLabel,
   studentsEmptyTitle,
   tabAction,
   workspaceTabs,
 } from './views.ts'
-import { FILTERS, WorkspaceModel } from './workspace.ts'
+import { FILTERS, SORTS, WorkspaceModel } from './workspace.ts'
 
 type Props = { summary: AssignmentSummary; context: AcademyContext; parent: AssignmentsModel; platform: AssessmentPlatform; onClose: () => void }
 
@@ -60,22 +61,25 @@ export function WorkspaceScreen({ summary, context, parent, platform, onClose }:
   }, [model, notice])
 
   const select = (next: Pane) => {
-    if (tabAction(next, model.isSelecting) === 'review') return model.reviewSelection()
+    if (tabAction(next, model.isSelecting) === 'review') return void model.reviewSelection()
     // Leaving search shows every student again.
     if (next !== 'search') setSearchText('')
     setPane(next)
   }
 
+  const sending = model.announcement?.state.status === 'sending'
   const title = model.detail?.title ?? model.summary.title
   // No action bar while selecting; a close button replaces Back so the mode can be left.
   const leading: BarItem = model.isSelecting
-    ? { kind: 'icon', icon: 'cancel-01', label: 'Cancel selection', onPress: () => model.setSelecting(false) }
+    ? { kind: 'icon', icon: 'cancel-01', label: 'Cancel selection', disabled: sending, onPress: () => model.setSelecting(false) }
     : { kind: 'icon', icon: 'chevron-left', label: 'Back', onPress: onClose }
   // Without a search tab there is nothing to turn into the confirm button.
   const trailing: BarItem | null =
-    model.isSelecting && !platform.hasSearchTab
-      ? { kind: 'text', title: `Announce ${model.selection.size}`, onPress: () => model.reviewSelection(), disabled: model.selection.size === 0 }
-      : null
+    !model.isSelecting || platform.hasSearchTab
+      ? null
+      : sending
+        ? { kind: 'progress' }
+        : { kind: 'text', title: `Announce ${model.selection.size}`, onPress: () => void model.reviewSelection(), disabled: model.selection.size === 0 }
   const page = (content: ReactNode, search = false) => (
     <platform.NavigationBar title={title} leading={leading} trailing={trailing} search={search ? { text: searchText, onChange: setSearchText, prompt: SEARCH_PROMPT } : null}>
       {content}
@@ -100,7 +104,7 @@ export function WorkspaceScreen({ summary, context, parent, platform, onClose }:
           onSearchText={setSearchText}
           searchPrompt={SEARCH_PROMPT}
           render={(p) =>
-            p === 'scan' ? page(<ScanPane model={model} platform={platform} />) : page(<StudentsPage model={model} platform={platform} />, p === 'students' && !platform.hasSearchTab)
+            p === 'scan' && model.scanAvailable ? page(<ScanPane model={model} platform={platform} />) : page(<StudentsPage model={model} platform={platform} />, p === 'students' && !platform.hasSearchTab)
           }
         />
       )}
@@ -108,7 +112,7 @@ export function WorkspaceScreen({ summary, context, parent, platform, onClose }:
         {marking && <MarkingSheet key={marking.student.id} model={marking} platform={platform} onClose={() => model.closeMarking()} />}
       </platform.Sheet>
       <platform.Sheet
-        visible={announcement !== null}
+        visible={showsAnnounceSheet(announcement)}
         presentation="sheet"
         dismissDisabled={announcement?.state.status === 'sending'}
         onDismiss={() => model.closeAnnouncement()}
@@ -124,11 +128,16 @@ function StudentsPage({ model, platform }: { model: WorkspaceModel; platform: As
   const status = accessStatus(model.actions, model.detail?.state)
   return (
     <View style={[styles.page, { backgroundColor: colors.groupedBackground }]}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersBar} contentContainerStyle={styles.filters}>
-        {FILTERS.map((f) => (
-          <FilterChip key={f.value} title={f.title} selected={model.filter === f.value} onPress={() => void model.setFilter(f.value)} />
-        ))}
-      </ScrollView>
+      <View style={styles.filters}>
+        <MenuPill platform={platform} label="Status" value={model.filter} options={FILTERS} onSelect={(f) => void model.setFilter(f)} />
+        <MenuPill
+          platform={platform}
+          label="Sort"
+          value={model.sort}
+          options={SORTS.map((o) => ({ ...o, disabled: o.value !== 'name' && !model.canSortFully }))}
+          onSelect={(s) => void model.setSort(s)}
+        />
+      </View>
       {status !== null && <Text style={[font.subheadlineMedium, styles.access, { color: colors.secondaryLabel }]}>{status}</Text>}
       <Students model={model} platform={platform} />
     </View>
@@ -147,11 +156,14 @@ function Students({ model, platform }: { model: WorkspaceModel; platform: Assess
   return (
     <ScrollView
       style={styles.page}
+      // iOS: the list runs under the glass tab bar; UIKit insets content and indicator by the bar so the last row clears it.
+      contentInsetAdjustmentBehavior="automatic"
+      automaticallyAdjustKeyboardInsets
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Section header={`${model.total} students`}>
+      <Section header={!model.isSelecting ? undefined : model.announcement?.state.status === 'sending' ? 'Announcing…' : `${model.selection.size} selected`}>
         {students.map((s) => (
           <StudentRow key={s.id} model={model} platform={platform} student={s} />
         ))}
@@ -167,32 +179,32 @@ function StudentRow({ model, platform, student }: { model: WorkspaceModel; platf
   const blocked = model.announceBlocker(student) !== null
   const status = studentStatus(student)
   const tone = statusTone(status)
-  const details = studentDetails(student)
-  const menu =
-    model.actions.announce && !model.isSelecting
-      ? [
-          { title: 'Announce result', disabled: blocked, onPress: () => model.reviewAnnouncement([student]) },
-          { title: 'Select', onPress: () => model.startSelecting(student) },
-        ]
-      : []
+  // A long press on the plain row, not the native context-menu wrapper, so a tap always reaches `onPress`.
+  // It only starts selecting (with this row when it can be announced); announcing stays an explicit action.
+  const select = model.actions.announce && !model.isSelecting ? () => model.startSelecting(student) : undefined
   return (
-    <platform.ContextMenu actions={menu}>
-      <Row selected={model.isSelecting ? selected : undefined} onPress={() => (model.isSelecting ? model.toggleSelected(student) : model.open(student, 'row'))} style={styles.studentRow}>
-        {model.isSelecting && (
-          <View style={{ opacity: blocked ? 0.3 : 1 }}>
-            <platform.Icon name={selected ? 'checkmark-circle-02' : 'circle'} size={20} color={colors.accent} />
-          </View>
-        )}
-        <View style={styles.grow}>
-          <Text style={[font.bodyMedium, { color: colors.label }]}>{student.fullName}</Text>
-          <Text style={[font.footnote, { color: colors.secondaryLabel }]}>{details}</Text>
+    <Row
+      selected={model.isSelecting ? selected : undefined}
+      onPress={() => (model.isSelecting ? model.toggleSelected(student) : model.open(student, 'row'))}
+      onLongPress={select}
+      longPressLabel="Select"
+      accessibilityLabel={studentRowLabel(student, model.detail?.maxScore, status)}
+      style={styles.studentRow}
+    >
+      {model.isSelecting && (
+        <View style={{ opacity: blocked ? 0.3 : 1 }}>
+          <platform.Icon name={selected ? 'checkmark-circle-02' : 'circle'} size={20} color={colors.accentText} />
         </View>
-        <View style={styles.trailing}>
-          <ScoreText total={student.total} max={model.detail?.maxScore} style={font.subheadline} />
-          <Text style={[font.footnote, { color: tone === 'green' ? colors.green : tone === 'orange' ? colors.orange : colors.secondaryLabel }]}>{status}</Text>
-        </View>
-      </Row>
-    </platform.ContextMenu>
+      )}
+      <View style={styles.grow}>
+        <Text style={[font.bodyMedium, { color: colors.label }]}>{student.fullName}</Text>
+        {student.studentCode !== null && <Text style={[font.footnote, { color: colors.secondaryLabel }]}>{student.studentCode}</Text>}
+      </View>
+      <View style={styles.trailing}>
+        <ScoreText total={student.total} max={model.detail?.maxScore} style={font.subheadline} />
+        <Text style={[font.footnote, { color: tone === 'green' ? colors.green : tone === 'orange' ? colors.orange : colors.secondaryLabel }]}>{status}</Text>
+      </View>
+    </Row>
   )
 }
 
@@ -203,21 +215,18 @@ function AnnounceSheet({ model, platform }: { model: WorkspaceModel; platform: A
   const { state } = announcement
   const done = announceDone(state)
   const message = announceStatus(state)
+  const blocked = announcement.students.some((s) => model.announceBlocker(s) !== null)
   const trailing: BarItem | null =
     state.status === 'sending'
       ? { kind: 'progress' }
       : done
         ? null
-        : {
-            kind: 'text',
-            title: state.status === 'uncertain' ? 'Retry' : 'Announce',
-            prominent: true,
-            disabled: announcement.students.some((s) => model.announceBlocker(s) !== null),
-            onPress: () => void model.announce(),
-          }
+        : state.status === 'uncertain'
+          ? { kind: 'text', title: 'Retry', prominent: true, disabled: blocked, onPress: () => void model.announce() }
+          : { kind: 'icon', icon: 'tick-02', label: 'Announce results', disabled: blocked, onPress: () => void model.announce() }
   return (
     <platform.NavigationBar
-      title="Announce?"
+      title="Announce"
       leading={{ kind: 'icon', icon: 'cancel-01', label: done ? 'Close' : 'Cancel', disabled: state.status === 'sending', onPress: () => model.closeAnnouncement() }}
       trailing={trailing}
     >
@@ -255,8 +264,7 @@ function AnnounceSheet({ model, platform }: { model: WorkspaceModel; platform: A
 const styles = StyleSheet.create({
   page: { flex: 1 },
   grow: { flex: 1, gap: 2 },
-  filtersBar: { flexGrow: 0 },
-  filters: { gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
+  filters: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
   access: { paddingHorizontal: 20, paddingBottom: 6 },
   studentRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   trailing: { alignItems: 'flex-end', gap: 2, marginLeft: 8 },

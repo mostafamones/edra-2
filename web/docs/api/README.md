@@ -7,6 +7,8 @@
 
 Contracts were checked against current route handlers, v1 builders, shared HTTP authority/errors and relevant domain types. This is source verification, not deployment or cloud verification. Bearer authentication is separate from cookie web actions; mixed cookie/bearer requests are rejected. Native clients do not need CORS; browser callers use configured origins.
 
+`GET /api/v1/me` returns the bearer's own name (display name, else full name) and a one-hour signed picture URL, both nullable; it takes no user id and needs no academy membership. A server without it answers 404, so clients must treat 404 as unsupported, not as an empty profile.
+
 Sessions v1 includes starting a session from a schedule (`POST /api/v1/academies/{academyId}/sessions`, idempotent by start key) and listing startable schedules (`GET /api/v1/academies/{academyId}/schedules`, offset-paged). Ending, archiving and restoring sessions remain web actions.
 
 Attendance v1 check-ins record Late atomically with the check-in and its receipt for both identifiers (`late_after_minutes`); explicit bulk changes stay capped at 500 rows, all or nothing; `POST /api/v1/sessions/{sessionId}/attendance/unrecorded-absences` marks every remaining expected Unknown student of a mandatory session Absent against a reviewed revision (`409 ATTENDANCE_REVIEW_STALE`); and `GET`/`POST /api/v1/sessions/{sessionId}/attendance/attendees` search for and explicitly append unexpected attendees (`origin: unexpected`). These require migrations `20261019100000` and `20261019100100` on the target database; source support is not deployment.

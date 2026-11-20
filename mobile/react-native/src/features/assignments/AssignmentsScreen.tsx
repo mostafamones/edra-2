@@ -1,32 +1,36 @@
-import { useEffect, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { AssignmentSummary } from './api.ts'
-import type { AssignmentsModel } from './assignments.ts'
+import type { AssignmentsFilter, AssignmentsModel } from './assignments.ts'
 import type { AssessmentPlatform } from './platform.ts'
 import { font, useColors } from './theme.ts'
-import { LoadMoreRow, Row, Section, Spinner, Unavailable, useModel, useRefresh } from './ui.tsx'
+import { LoadMoreRow, MenuPill, Row, Section, Spinner, Unavailable, useModel, useRefresh, type PillOption } from './ui.tsx'
 import { isOverdue } from './views.ts'
 import { WorkspaceScreen } from './WorkspaceScreen.tsx'
 
 /**
- * Assessments root (AssignmentsView.swift): active and closed assignments, including overdue ones.
- * The shell owns the "Assessments" page chrome, `model.load(context)` on every context change and the
- * academy-switch guard (`model.switchNeedsConfirmation`).
+ * Assessments root (AssignmentsView.swift): assignments in the chosen state (Active by default), including overdue ones.
+ * The shell owns the "Assessments" page chrome, `model.load(context)` on every context change, the
+ * academy-switch guard (`model.switchNeedsConfirmation`) and the open workspace (`open`), which it
+ * closes on every academy change and Overview can request.
  */
-export function AssignmentsScreen({ model, platform }: { model: AssignmentsModel; platform: AssessmentPlatform }) {
+export function AssignmentsScreen({ model, platform, open, onOpen }: {
+  model: AssignmentsModel
+  platform: AssessmentPlatform
+  /** The open workspace. It has its own tab bar (Students, Scan, search), so it covers the app's. */
+  open: AssignmentSummary | null
+  onOpen: (assignment: AssignmentSummary | null) => void
+}) {
   useModel(model)
-  // The open workspace. It has its own tab bar (Students, Scan, search), so it covers the app's.
-  const [open, setOpen] = useState<AssignmentSummary | null>(null)
   const context = model.context
-  // A different academy (or lost access) closes the workspace and drops its drafts.
-  const contextKey = context && `${context.academyId}:${context.epoch}`
-  useEffect(() => setOpen(null), [contextKey])
 
   return (
     <>
-      <Content model={model} platform={platform} onOpen={setOpen} />
-      <platform.Sheet visible={open !== null && context !== null} presentation="fullScreen" onDismiss={() => setOpen(null)}>
-        {open && context && <WorkspaceScreen key={open.id} summary={open} context={context} parent={model} platform={platform} onClose={() => setOpen(null)} />}
+      <View style={styles.filters}>
+        <MenuPill platform={platform} label="Status" value={model.filter} options={FILTERS} onSelect={(f) => void model.setFilter(f)} />
+      </View>
+      <Content model={model} platform={platform} onOpen={onOpen} />
+      <platform.Sheet visible={open !== null && context !== null} presentation="fullScreen" onDismiss={() => onOpen(null)}>
+        {open && context && <WorkspaceScreen key={open.id} summary={open} context={context} parent={model} platform={platform} onClose={() => onOpen(null)} />}
       </platform.Sheet>
     </>
   )
@@ -41,7 +45,7 @@ function Content({ model, platform, onOpen }: { model: AssignmentsModel; platfor
   if (state.status === 'failed' && empty) {
     return <Unavailable platform={platform} title="Couldn't load assignments" message={state.message} action="Retry" onAction={() => void model.load(model.context)} />
   }
-  if (empty) return <Unavailable platform={platform} title="No assignments" icon="file-edit" />
+  if (empty) return <Unavailable platform={platform} title={EMPTY[model.filter]} icon="file-edit" />
   // shortcut: not virtualized; pages are 50 rows behind "Load more". Use a SectionList if lists grow past a few hundred.
   return (
     <ScrollView
@@ -67,6 +71,13 @@ function Content({ model, platform, onOpen }: { model: AssignmentsModel; platfor
   )
 }
 
+const FILTERS: readonly PillOption<AssignmentsFilter>[] = [
+  { value: 'active', title: 'Active' },
+  { value: 'closed', title: 'Closed' },
+  { value: 'all', title: 'All' },
+]
+const EMPTY: Record<AssignmentsFilter, string> = { active: 'No active assignments', closed: 'No closed assignments', all: 'No assignments' }
+
 const dueFormat = (iso: string) => new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 
 function AssignmentRow({ assignment, onPress }: { assignment: AssignmentSummary; onPress: () => void }) {
@@ -88,7 +99,8 @@ function AssignmentRow({ assignment, onPress }: { assignment: AssignmentSummary;
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: 16 },
+  filters: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  content: { paddingTop: 8 },
   row: { gap: 4, paddingVertical: 13 },
   meta: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 8 },
 })

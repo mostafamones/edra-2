@@ -21,6 +21,11 @@ import { hasSearchTabs } from "../chrome/platform";
 /** Route adapter onto react-native-screens' native tabs (UITabBarController / Material bottom navigation). */
 export type NativeTabsOptions = {
   title?: string;
+  /**
+   * Icon-only tab item; `title` stays the accessibility name. Android uses Material's `unlabeled` mode. iOS has
+   * no hide-label option, so the item has no title (UIKit then draws only the image).
+   */
+  iconOnly?: boolean;
   /** Template image; tinted by the system. */
   icon?: ImageSourcePropType;
   /** iOS 26.1+: UISearchTab (detached trailing circle). Fixed for the tab's lifetime. */
@@ -98,17 +103,17 @@ function NativeTabsNavigator({
             <Tabs.Screen
               key={route.key}
               screenKey={route.key}
-              title={options.title ?? route.name}
+              title={options.iconOnly && Platform.OS === "ios" ? undefined : (options.title ?? route.name)}
               preventNativeSelection={options.action != null}
               specialEffects={selectedRoute !== undefined ? { repeatedTabSelection: { popToRoot: false } } : undefined}
-              tabBarItemAccessibilityLabel={options.accessibilityLabel}
+              tabBarItemAccessibilityLabel={options.accessibilityLabel ?? (options.iconOnly ? options.title : undefined)}
               tabBarItemTestID={options.testID}
               ios={{
                 role: hasSearchTabs ? options.role : undefined,
                 automaticallyActivatesSearch: options.activatesSearch,
                 icon: icon && { ...icon, renderingMode: "template" },
               }}
-              android={{ icon }}
+              android={{ icon, standardAppearance: options.iconOnly ? { tabBarItemLabelVisibilityMode: "unlabeled" } : undefined }}
             >
               {render()}
             </Tabs.Screen>

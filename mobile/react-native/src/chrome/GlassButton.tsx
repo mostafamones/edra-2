@@ -1,7 +1,7 @@
 import { GlassView } from "expo-glass-effect";
 import { Image, type ImageSourcePropType, Platform, Pressable, StyleSheet, View } from "react-native";
 
-import { colors } from "./colors";
+import { useChromeColors } from "./colors";
 import { hasLiquidGlass } from "./platform";
 
 type Props = { icon: ImageSourcePropType; label: string; onPress: () => void; diameter?: number };
@@ -11,6 +11,7 @@ type Props = { icon: ImageSourcePropType; label: string; onPress: () => void; di
  * Earlier iOS: the bordered-circle fallback (system fill). Android: tonal Material circle.
  */
 export function GlassButton({ icon, label, onPress, diameter = 43 }: Props) {
+  const colors = useChromeColors();
   const size = { width: diameter, height: diameter, borderRadius: diameter / 2 };
   const content = (
     <Pressable

@@ -1,27 +1,29 @@
 import { CommonActions, type NavigationHelpers, type ParamListBase, type StackNavigationState } from '@react-navigation/native'
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import { createNativeStackNavigator, type NativeStackNavigationOptions } from '@react-navigation/native-stack'
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Image, Platform, StyleSheet } from 'react-native'
+import { Image, Platform, PlatformColor, StyleSheet } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SafeAreaView } from 'react-native-screens/experimental'
 import type { AppChrome, StackProps, TabsProps } from '../app/contract.ts'
-import { AcademyMenu } from '../chrome/AcademyMenu'
 import { PageHeader } from '../chrome/PageHeader'
+import { useBoldText } from '../platform/chrome/boldText.ts'
 import { featureIconSource } from '../platform/chrome/FeatureIcon.tsx'
 import { pointSized } from './barIcon.ts'
 import { createNativeTabsNavigator } from './createNativeTabsNavigator.tsx'
-import type { ShellTabsParamList } from './routes.ts'
+import { modalRouteOptions, type ShellTabsParamList } from './routes.ts'
 
 const ShellTabs = createNativeTabsNavigator<ShellTabsParamList>()
 const NativeStack = createNativeStackNavigator()
-const SHELL_ROUTES = { sessions: 'SessionsTab', assessments: 'AssessmentsTab' } as const
+const SHELL_ROUTES = {
+  overview: 'OverviewTab', sessions: 'SessionsTab', assessments: 'AssessmentsTab', students: 'StudentsTab', concerns: 'ConcernsTab',
+} as const
 const ROOT = 'Root'
-const empty = () => null
 
 /** A catalog icon declared at the native bar item's point size. */
-export const barIconSource = (name: string) => pointSized(Image.resolveAssetSource(featureIconSource(name))!)
+export const barIconSource = (name: string, bold = false) => pointSized(Image.resolveAssetSource(featureIconSource(name, bold))!)
 
-function Tabs({ selected, onSelect, tabs, academy }: TabsProps) {
+function Tabs({ selected, onSelect, tabs }: TabsProps) {
+  const bold = useBoldText()
   return (
     <ShellTabs.Navigator
       initialRouteName={SHELL_ROUTES[selected]}
@@ -33,25 +35,28 @@ function Tabs({ selected, onSelect, tabs, academy }: TabsProps) {
       backBehavior="none"
     >
       {tabs.map(({ key, title, icon, content }) => (
-        <ShellTabs.Screen key={key} name={SHELL_ROUTES[key]} options={{ title, icon: barIconSource(icon) }}>
+        <ShellTabs.Screen key={key} name={SHELL_ROUTES[key]} options={{ title, iconOnly: true, icon: barIconSource(icon, bold), testID: `${key}-tab` }}>
           {() => Platform.OS === 'android' ? <TabBottomArea>{content}</TabBottomArea> : content}
         </ShellTabs.Screen>
       ))}
-      <ShellTabs.Screen
-        name="AcademyAction"
-        component={empty}
-        options={{
-          title: academy.title,
-          icon: barIconSource(academy.icon),
-          accessibilityLabel: academy.accessibilityLabel,
-          role: 'search',
-          action: academy.onPress,
-          testID: 'academy-tab',
-        }}
-      />
     </ShellTabs.Navigator>
   )
 }
+
+/**
+ * iOS: the navigation bar and the screen behind it take the page's own semantic background. Otherwise native-stack
+ * paints the React Navigation theme's `card` (dark `rgb(18,18,18)`) as an opaque bar with a hairline, a grey slab
+ * above the page. The bar stays native: system back, glass bar buttons and safe-area layout are unchanged.
+ */
+export function pageBackground(name: 'systemBackground' | 'systemGroupedBackground'): NativeStackNavigationOptions {
+  if (Platform.OS !== 'ios') return {}
+  const backgroundColor = PlatformColor(name)
+  // native-stack types the header colour as a string; it forwards it to react-native-screens' `ColorValue` prop.
+  return { headerStyle: { backgroundColor: backgroundColor as unknown as string }, headerShadowVisible: false, contentStyle: { backgroundColor } }
+}
+
+// Pushed Sessions routes (attendance) draw on `systemBackground`.
+const routeOptions = { headerBackButtonDisplayMode: 'minimal', ...pageBackground('systemBackground') } as const
 
 /** Native insets include the tab interface on Android and the controller's safe area on iOS. */
 export function TabBottomArea({ children }: { children: ReactNode }) {
@@ -71,7 +76,7 @@ export function useRouteBottomInset() {
 function Stack({ root, routes, onPop }: StackProps) {
   return (
     <NativeStack.Navigator
-      screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}
+      screenOptions={routeOptions}
       layout={({ state, navigation, children }) => (
         <StackState state={state} navigation={navigation} routes={routes} onPop={onPop}>
           {children}
@@ -79,8 +84,8 @@ function Stack({ root, routes, onPop }: StackProps) {
       )}
     >
       <NativeStack.Screen name={ROOT} options={{ headerShown: false }}>{() => root}</NativeStack.Screen>
-      {routes.map(({ key, element }) => (
-        <NativeStack.Screen key={key} name={`Route:${key}`} options={{ title: '' }}>
+      {routes.map(({ key, element, modal }) => (
+        <NativeStack.Screen key={key} name={`Route:${key}`} options={modal && Platform.OS === 'ios' ? modalRouteOptions : { title: '' }}>
           {() => <RouteContent>{element}</RouteContent>}
         </NativeStack.Screen>
       ))}
@@ -128,6 +133,6 @@ function StackState({ state, navigation, routes, onPop, children }: Pick<StackPr
   return children
 }
 
-export const appChrome: AppChrome = { Tabs, Stack, PageHeader, AcademyMenu }
+export const appChrome: AppChrome = { Tabs, Stack, PageHeader, modalRoutes: Platform.OS === 'ios' }
 
 const styles = StyleSheet.create({ fill: { flex: 1 } })

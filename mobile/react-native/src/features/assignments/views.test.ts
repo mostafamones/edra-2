@@ -38,8 +38,6 @@ test('row wording', () => {
   assert.equal(v.studentsEmptyTitle('', 'all'), 'No students')
   assert.equal(v.studentsEmptyTitle('am', 'all'), 'No matching students')
   assert.equal(v.studentsEmptyTitle('', 'marked'), 'No matching students')
-  assert.equal(v.studentDetails(decodeStudent(student())), '0001 · Nine A')
-  assert.equal(v.studentDetails({ ...decodeStudent(student()), studentCode: null }), 'Nine A')
   assert.equal(v.countLabel(1), '1 student')
   assert.equal(v.countLabel(3), '3 students')
 })
@@ -47,12 +45,25 @@ test('row wording', () => {
 test('announce states', () => {
   const s = decodeStudent(student())
   const command = { key: 'k', body: { items: [] } } as never
-  const rejected = { id: 'k', students: [s], command, state: { status: 'rejected', message: 'Nothing', reasons: { s1: 'Not fully marked' } } } as const
+  const rejected = { id: 'k', students: [s], command, direct: false, state: { status: 'rejected', message: 'Nothing', reasons: { s1: 'Not fully marked' } } } as const
   assert.equal(v.rejection(rejected, s), 'Not fully marked')
   assert.equal(v.announceDone(rejected.state), true)
   assert.equal(v.announceStatus(rejected.state), 'Nothing')
   assert.equal(v.announceStatus({ status: 'sending' }), null)
   assert.equal(v.announceDone({ status: 'uncertain', message: 'x' }), false)
+})
+
+test('a direct announcement shows the sheet only for an outcome; a batch is always reviewed', () => {
+  const s = decodeStudent(student())
+  const command = { key: 'k', body: { items: [] } } as never
+  const at = (direct: boolean, state: Parameters<typeof v.announceStatus>[0]) => v.showsAnnounceSheet({ id: 'k', students: [s], command, direct, state })
+  assert.equal(v.showsAnnounceSheet(null), false)
+  assert.equal(at(true, { status: 'reviewing' }), false)
+  assert.equal(at(true, { status: 'sending' }), false)
+  assert.equal(at(true, { status: 'uncertain', message: 'x' }), true)
+  assert.equal(at(true, { status: 'failed', message: 'x' }), true)
+  assert.equal(at(false, { status: 'reviewing' }), true)
+  assert.equal(at(false, { status: 'sending' }), true)
 })
 
 test('marking wording and quick bar', () => {
@@ -65,4 +76,13 @@ test('marking wording and quick bar', () => {
   assert.equal(v.showsQuickBar(false, 'fast', part(null)), false)
   assert.equal(v.leaveTitle('Amal'), 'Save changes for Amal?')
   assert.equal(v.replaceMessage(['Written', 'Legacy']), 'Saving replaces the saved Written, Legacy marks entered the other way.')
+})
+
+test('workspace row label: name, code, score and status; never the group', () => {
+  const s = decodeStudent(student())
+  const label = v.studentRowLabel(s, '10', 'Marked')
+  assert.ok(label.startsWith(`${s.fullName}, 0001, `), label)
+  assert.ok(label.endsWith(' of 10, Marked'), label)
+  assert.ok(!label.includes('Nine A'), label)
+  assert.equal(v.studentRowLabel({ ...s, studentCode: null }, '10', 'Marked').split(', ').length, 3)
 })

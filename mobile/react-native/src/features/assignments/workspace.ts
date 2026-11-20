@@ -30,6 +30,23 @@ export const FILTERS: ReadonlyArray<Readonly<{ value: Filter; title: string }>> 
   { value: 'unpublished', title: 'Unannounced' },
 ]
 
+/**
+ * Row order. The server pages by name; any other order needs the whole list, so it is fetched in one
+ * request (the server's 1000-row page) and offered only when the cohort fits in it.
+ */
+export type Sort = 'name' | 'group'
+export const SORTS: ReadonlyArray<Readonly<{ value: Sort; title: string }>> = [
+  { value: 'name', title: 'Name' },
+  { value: 'group', title: 'Group' },
+]
+const FULL_LIST_LIMIT = 1000
+
+/** Group order (no group last), keeping the server's name order within a group. */
+export function byGroup(students: readonly StudentWork[]): StudentWork[] {
+  const key = (s: StudentWork) => s.groupName ?? '\uffff'
+  return [...students].sort((a, b) => key(a).localeCompare(key(b)))
+}
+
 export type ListState = Readonly<{ status: 'loading' } | { status: 'loaded' } | { status: 'failed'; message: string }>
 
 /** Where the marking sheet was opened from, which decides what follows an acknowledged save. */
@@ -43,11 +60,13 @@ export type AnnounceState =
   | Readonly<{ status: 'rejected'; message: string; reasons: Readonly<Record<string, string>> }>
   | Readonly<{ status: 'failed'; message: string }>
 
-/** One confirmation. Its key and reviewed versions are fixed and reused on every retry. */
+/** One announcement command. Its key and reviewed versions are fixed and reused on every retry. */
 export type Announcement = Readonly<{
   id: string
   students: readonly StudentWork[]
   state: AnnounceState
+  /** One selected student sent without a review; the sheet appears only for an outcome to act on. */
+  direct: boolean
   command: WriteCommand<ReturnType<typeof announceBody>>
 }>
 
@@ -90,6 +109,7 @@ export class WorkspaceModel extends Observable {
   private _isLoadingMore = false
   private _loadMoreError: string | null = null
   private _filter: Filter = 'all'
+  private _sort: Sort = 'name'
   private _search = ''
   private _isSelecting = false
   private _selection: ReadonlySet<string> = new Set()
@@ -124,12 +144,15 @@ export class WorkspaceModel extends Observable {
 
   get detail(): AssignmentDetail | null { return this._detail }
   get state(): ListState { return this._state }
-  get students(): readonly StudentWork[] { return this._students }
+  get students(): readonly StudentWork[] { return this._sort === 'group' ? byGroup(this._students) : this._students }
   get total(): number { return this._total }
   get listState(): ListState { return this._listState }
   get isLoadingMore(): boolean { return this._isLoadingMore }
   get loadMoreError(): string | null { return this._loadMoreError }
   get filter(): Filter { return this._filter }
+  get sort(): Sort { return this._sort }
+  /** Orders other than name need the whole list in one page. */
+  get canSortFully(): boolean { return this._total <= FULL_LIST_LIMIT }
   get search(): string { return this._search }
   get isSelecting(): boolean { return this._isSelecting }
   get selection(): ReadonlySet<string> { return this._selection }
@@ -200,6 +223,13 @@ export class WorkspaceModel extends Observable {
     await this.fetchFirstPage()
   }
 
+  /** Chips were cached for the old order's paging, so they are dropped. */
+  async setSort(sort: Sort): Promise<void> {
+    if (sort === this._sort || (sort !== 'name' && !this.canSortFully)) return
+    this._sort = sort
+    await this.reloadStudents()
+  }
+
   /** Server search across the cohort; resets paging and selection. The screen debounces typing. */
   async setSearch(text: string): Promise<void> {
     const trimmed = text.trim()
@@ -232,6 +262,8 @@ export class WorkspaceModel extends Observable {
     if ('page' in result) {
       this._students = result.page.students
       this._total = result.page.total
+      // A larger list than one page can't be ordered honestly; the rows stay in the server's name order.
+      if (!this.canSortFully) this._sort = 'name'
       this._listState = { status: 'loaded' }
     } else {
       await this.fail(result.error, (message) => (this._listState = { status: 'failed', message }))
@@ -260,7 +292,7 @@ export class WorkspaceModel extends Observable {
   }
 
   private async fetchPage(offset: number, signal: AbortSignal): Promise<{ page: StudentsPage } | { error: unknown }> {
-    let path = `api/v1/assignments/${encodeURIComponent(this.summary.id)}/marks?filter=${this._filter}&limit=${WorkspaceModel.pageSize}&offset=${offset}`
+    let path = `api/v1/assignments/${encodeURIComponent(this.summary.id)}/marks?filter=${this._filter}&limit=${this._sort === 'name' ? WorkspaceModel.pageSize : FULL_LIST_LIMIT}&offset=${offset}`
     if (this._search !== '') path += `&search=${queryValue(prefix(this._search, 100))}`
     try {
       return { page: await this.env.api.get(path, { signal, structuredErrors: true, decode: decodeStudentsPage }) }
@@ -293,14 +325,16 @@ export class WorkspaceModel extends Observable {
   // MARK: - Selection
 
   setSelecting(on: boolean): void {
+    if (this._announcement?.state.status === 'sending') return
     this.set(() => {
       this._isSelecting = on
       if (!on) this._selection = new Set()
     })
   }
 
-  /** Tapping a row while selecting: deselect, or select only an announceable row. */
+  /** Tapping a row while selecting: deselect, or select only an announceable row. Fixed while announcing. */
   toggleSelected(student: StudentWork): void {
+    if (this._announcement?.state.status === 'sending') return
     const next = new Set(this._selection)
     if (next.has(student.id)) next.delete(student.id)
     else if (this.announceBlocker(student) === null) next.add(student.id)
@@ -308,7 +342,7 @@ export class WorkspaceModel extends Observable {
     this.set(() => (this._selection = next))
   }
 
-  /** "Select" from a row: start selecting with that row when it can be announced. */
+  /** A long press on a row: start selecting with that row when it can be announced. Never announces. */
   startSelecting(student: StudentWork): void {
     this.set(() => {
       this._isSelecting = true
@@ -420,15 +454,24 @@ export class WorkspaceModel extends Observable {
     return null
   }
 
-  /** Opens the review for one row or a set of rows; announcing still needs `announce()`. */
-  reviewAnnouncement(students: readonly StudentWork[]): void {
+  /** Opens the review for a set of rows; announcing still needs `announce()`. */
+  reviewAnnouncement(students: readonly StudentWork[], direct = false): void {
     if (students.length === 0) return
     const command = createCommand(announceBody(students), this.env.newKey)
-    this.set(() => (this._announcement = { id: command.key, students, state: { status: 'reviewing' }, command }))
+    this.set(() => (this._announcement = { id: command.key, students, state: { status: 'reviewing' }, command, direct }))
   }
 
-  reviewSelection(): void {
-    this.reviewAnnouncement(this._students.filter((s) => this._selection.has(s.id)))
+  /**
+   * The explicit announce action. One eligible student is sent at once; several are reviewed first.
+   * While a command is open (sending, or its outcome shown) repeat taps start nothing new.
+   */
+  async reviewSelection(): Promise<void> {
+    if (this._announcement !== null) return
+    const students = this.students.filter((s) => this._selection.has(s.id))
+    const only = students.length === 1 ? students[0]! : null
+    if (only === null || this.announceBlocker(only) !== null) return this.reviewAnnouncement(students)
+    this.reviewAnnouncement(students, true)
+    await this.announce()
   }
 
   closeAnnouncement(): void {

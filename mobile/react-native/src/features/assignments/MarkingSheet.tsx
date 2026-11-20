@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react'
-import { AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, useColorScheme } from 'react-native'
+import { useEffect, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from 'react'
+import { AppState, Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native'
 import { choiceLetter, isWrittenWork, markFor, studentStatus, takesAnswers, takesTotal, type Question } from './api.ts'
 import { MarkingModel, MODE_TITLES, NOT_ENTERED, type Entry, type Quick } from './marking.ts'
 import { systemConfirm, type AssessmentPlatform, type BarItem, type IconName } from './platform.ts'
 import { displayScore } from './score.ts'
 import { digits, font, useColors } from './theme.ts'
 import { BorderedButton, ProminentButton, TextButton, useModel } from './ui.tsx'
-import { enteredText, leaveTitle, questionRange, replaceMessage, showsQuickBar, studentDetails } from './views.ts'
+import { enteredText, leaveTitle, questionRange, replaceMessage, showsQuickBar } from './views.ts'
 
 const FAST_FIELD = 'fast'
 
@@ -22,6 +22,8 @@ export function MarkingSheet({ model, platform, onClose }: { model: MarkingModel
   // Feedback stays out of the way until asked for, or when the student already has some.
   const [showFeedback, setShowFeedback] = useState(() => model.feedback !== '')
   const inputs = useRef(new Map<string, ComponentRef<typeof TextInput>>())
+  const body = useRef<ComponentRef<typeof View>>(null)
+  const keyboard = useKeyboardInset(body)
 
   const requestSave = () => {
     if (model.needsReplaceConfirmation) {
@@ -82,12 +84,11 @@ export function MarkingSheet({ model, platform, onClose }: { model: MarkingModel
   const part = model.part
   const quickBar = showsQuickBar(focus !== null, model.mode, part)
   return (
-    <platform.NavigationBar title={model.assignment.title} leading={leading} trailing={trailing}>
-      <KeyboardAvoidingView style={[styles.fill, { backgroundColor: colors.groupedBackground }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <platform.NavigationBar title={model.student.fullName} leading={leading} trailing={trailing}>
+      <View ref={body} style={[styles.fill, { backgroundColor: colors.groupedBackground, paddingBottom: keyboard }]}>
         <ScrollView style={styles.fill} contentContainerStyle={[styles.content, quickBar && styles.underQuickBar]} keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} keyboardShouldPersistTaps="handled">
           <Header model={model} />
           {model.saveState.status === 'conflict' && <Conflict model={model} />}
-          {model.assignment.parts.length > 1 && <PartChips model={model} />}
           {model.modes.length > 1 && (
             <platform.Segmented
               accessibilityLabel="Entry"
@@ -142,9 +143,31 @@ export function MarkingSheet({ model, platform, onClose }: { model: MarkingModel
           <Status model={model} />
         </ScrollView>
         {quickBar && <QuickBar model={model} platform={platform} />}
-      </KeyboardAvoidingView>
+      </View>
     </platform.NavigationBar>
   )
+}
+
+/**
+ * iOS: how much of `view` the keyboard covers. Measured in the window when the keyboard moves, so the sheet's
+ * offset and header count (KeyboardAvoidingView only knows its parent-relative frame). Android resizes the window.
+ */
+function useKeyboardInset(view: RefObject<ComponentRef<typeof View> | null>): number {
+  const [inset, setInset] = useState(0)
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return
+    const move = (screenY: number | null, duration: number) =>
+      view.current?.measureInWindow((_x, y, _width, height) => {
+        if (duration > 0) LayoutAnimation.configureNext({ duration, update: { type: 'keyboard', duration } })
+        setInset(screenY === null ? 0 : Math.max(y + height - screenY, 0))
+      })
+    const subs = [
+      Keyboard.addListener('keyboardWillChangeFrame', (e) => move(e.endCoordinates.screenY, e.duration)),
+      Keyboard.addListener('keyboardWillHide', (e) => move(null, e.duration)),
+    ]
+    return () => subs.forEach((s) => s.remove())
+  }, [view])
+  return inset
 }
 
 type FocusProps = (id: string) => { onFocus: () => void; onBlur: () => void }
@@ -159,22 +182,23 @@ function Card({ title, children }: { title?: string; children: ReactNode }) {
   )
 }
 
+/** The student is the sheet title. Here: the code (to tell same-named students apart), then the overall score beside the part cards. */
 function Header({ model }: { model: MarkingModel }) {
   const colors = useColors()
-  const { student, assignment } = model
-  const details = studentDetails(student)
+  const { student } = model
   return (
     <View style={styles.header}>
-      <Text style={[font.title2Bold, { color: colors.label }]} accessibilityRole="header">
-        {student.fullName}
-      </Text>
-      {details !== '' && <Text style={[font.subheadline, { color: colors.secondaryLabel }]}>{details}</Text>}
-      <View style={styles.between}>
-        <View style={styles.badge}>
-          <View style={[StyleSheet.absoluteFill, styles.badgeTint, { backgroundColor: colors.accent }]} />
-          <Text style={[font.captionSemibold, { color: colors.label }]}>{studentStatus(student)}</Text>
+      {student.studentCode !== null && <Text style={[font.subheadline, { color: colors.secondaryLabel }]}>{student.studentCode}</Text>}
+      <View style={styles.scores}>
+        <View
+          style={[styles.partChip, styles.overall, { backgroundColor: colors.secondaryGroupedBackground }]}
+          accessible
+          accessibilityLabel={`Total, ${displayScore(student.total)} of ${displayScore(model.assignment.maxScore)}`}
+        >
+          <Text style={[font.subheadlineSemibold, { color: colors.label }]}>Total</Text>
+          <Text style={[font.caption, digits, styles.dim, { color: colors.label }]}>{`${displayScore(student.total)} / ${displayScore(model.assignment.maxScore)}`}</Text>
         </View>
-        <Text style={[font.title3Semibold, digits, { color: colors.label }]}>{`${displayScore(student.total)} / ${displayScore(assignment.maxScore)}`}</Text>
+        {model.assignment.parts.length > 1 && <PartChips model={model} />}
       </View>
       {student.publication !== null && student.publicationState === 'pending_correction' && (
         <Text style={[font.footnote, { color: colors.orange }]}>{`Official result ${displayScore(student.publication.total)} until the correction is announced`}</Text>
@@ -214,7 +238,8 @@ function Conflict({ model }: { model: MarkingModel }) {
 function PartChips({ model }: { model: MarkingModel }) {
   const colors = useColors()
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+    // Scrolls beside the fixed total; the cards stretch to one height when large text wraps a title.
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.partScroller} contentContainerStyle={styles.chips}>
       {model.assignment.parts.map((p) => {
         const selected = p.id === model.partId
         const mark = markFor(model.student, p.id)
@@ -370,27 +395,8 @@ function FastMark({ model, focusProps }: { model: MarkingModel; focusProps: Focu
         />
         <Text style={[font.body, digits, { color: colors.secondaryLabel }]}>{`/ ${displayScore(model.part?.maxScore)}`}</Text>
       </View>
-      <View style={styles.between}>
-        <Text style={[font.body, { color: colors.label, opacity: model.canEdit ? 1 : 0.4 }]}>Excused</Text>
-        <Switch
-          accessibilityLabel="Excused"
-          value={total.excused}
-          disabled={!model.canEdit}
-          onValueChange={(excused) => model.setTotal({ ...model.total, excused })}
-        />
-      </View>
-      {total.excused && (
-        <TextInput
-          style={[font.body, field, styles.fastInput]}
-          placeholder="Reason"
-          placeholderTextColor={colors.secondaryLabel}
-          value={total.reason}
-          onChangeText={(reason) => model.setTotal({ ...model.total, reason })}
-          editable={model.canEdit}
-          multiline
-          accessibilityLabel="Reason"
-        />
-      )}
+      {/* Excusing is no longer entered here; an earlier excused mark is shown read-only and kept as saved. */}
+      {total.excused && <Text style={[font.footnote, { color: colors.secondaryLabel }]}>{total.reason === '' ? 'Excused' : `Excused · ${total.reason}`}</Text>}
     </Card>
   )
 }
@@ -453,12 +459,13 @@ const styles = StyleSheet.create({
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   leading: { alignItems: 'flex-start' },
   card: { padding: 14, borderRadius: 14, gap: 8 },
-  header: { gap: 6 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, overflow: 'hidden' },
-  badgeTint: { opacity: 0.15 },
+  header: { gap: 8 },
+  scores: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
+  overall: { flexShrink: 1, maxWidth: '50%' },
+  partScroller: { flex: 1 },
   conflictButtons: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  chips: { gap: 8 },
-  partChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, alignItems: 'center', gap: 1 },
+  chips: { gap: 8, alignItems: 'stretch' },
+  partChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 1 },
   dim: { opacity: 0.8 },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: 4 },
   choiceRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },

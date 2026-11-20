@@ -39,10 +39,14 @@ export async function failureMessage(
   }
 }
 
-/** The Assessments root: the academy's active and closed assignments, newest first, in offset pages. */
+/** `all` sends no `state`, which the API reads as active and closed (archived stays omitted). */
+export type AssignmentsFilter = 'active' | 'closed' | 'all'
+
+/** An academy's assignments in one state filter (default active), newest first, in offset pages. */
 export class AssignmentsModel extends Observable {
   static readonly pageSize = 50
 
+  private _filter: AssignmentsFilter = 'active'
   private _state: LoadState = { status: 'idle' }
   private _assignments: readonly AssignmentSummary[] = []
   private _total = 0
@@ -60,6 +64,7 @@ export class AssignmentsModel extends Observable {
     this.env = env
   }
 
+  get filter(): AssignmentsFilter { return this._filter }
   get state(): LoadState { return this._state }
   get assignments(): readonly AssignmentSummary[] { return this._assignments }
   get total(): number { return this._total }
@@ -110,6 +115,15 @@ export class AssignmentsModel extends Observable {
     this.changed()
   }
 
+  /** Shows another state from its first page; any in-flight page of the previous filter is discarded. */
+  setFilter(filter: AssignmentsFilter): Promise<void> {
+    if (filter === this._filter) return Promise.resolve()
+    this._filter = filter
+    this._assignments = []
+    this._total = 0
+    return this.load(this._context)
+  }
+
   /** Appends the next page; a partial list is never presented as the whole academy. */
   async loadMore(): Promise<void> {
     const context = this._context
@@ -137,7 +151,8 @@ export class AssignmentsModel extends Observable {
   }
 
   private async fetch(context: AcademyContext, offset: number, signal: AbortSignal): Promise<{ page: AssignmentsPage } | { error: unknown }> {
-    const path = `api/v1/academies/${encodeURIComponent(context.academyId)}/assignments?limit=${AssignmentsModel.pageSize}&offset=${offset}`
+    const state = this._filter === 'all' ? '' : `state=${this._filter}&`
+    const path = `api/v1/academies/${encodeURIComponent(context.academyId)}/assignments?${state}limit=${AssignmentsModel.pageSize}&offset=${offset}`
     try {
       return { page: await this.env.api.get(path, { signal, decode: decodeAssignmentsPage }) }
     } catch (error) {

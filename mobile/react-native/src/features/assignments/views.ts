@@ -26,7 +26,9 @@ export function statusTone(status: string): Tone {
 export const studentsEmptyTitle = (search: string, filter: Filter): string =>
   search === '' && filter === 'all' ? 'No students' : 'No matching students'
 
-export const studentDetails = (s: StudentWork): string => [s.studentCode, s.groupName].filter((v) => v !== null).join(' · ')
+/** A workspace row read as one element: name, code when shown, score and status (the row shows no group). */
+export const studentRowLabel = (s: StudentWork, max: string | null | undefined, status: string): string =>
+  [s.fullName, s.studentCode, `${displayScore(s.total)} of ${displayScore(max)}`, status].filter((v) => v !== null).join(', ')
 
 /** Students, Scan (codes usable, not selecting), then the search tab, which is the confirm button while selecting. */
 export function workspaceTabs(scanAvailable: boolean, selecting: boolean, hasSearchTab: boolean): Tab[] {
@@ -48,6 +50,10 @@ export const countLabel = (count: number): string => (count === 1 ? '1 student' 
 export function announceStatus(state: AnnounceState): string | null {
   return state.status === 'reviewing' || state.status === 'sending' ? null : state.message
 }
+
+/** A direct (single-student) announcement shows the sheet only once there is an outcome to act on. */
+export const showsAnnounceSheet = (announcement: Announcement | null): boolean =>
+  announcement !== null && (!announcement.direct || announceStatus(announcement.state) !== null)
 
 /** Nothing more to send: only Close remains. */
 export const announceDone = (state: AnnounceState): boolean => state.status === 'rejected' || state.status === 'failed'

@@ -57,7 +57,7 @@ function BarButton({ item }: { item?: BarItem }) {
       style={styles.barSlot}
     >
       <Text
-        style={[type.body, item.role === 'confirm' && { fontWeight: '600' }, { color: item.disabled ? colors.secondary : colors.accent }]}
+        style={[type.body, item.role === 'confirm' && { fontWeight: '600' }, { color: item.disabled ? colors.secondary : colors.accentText }]}
         numberOfLines={1}
       >
         {item.title}
@@ -134,6 +134,13 @@ export const corePlatform: SessionsPlatform = {
       >
         {children}
       </Pressable>
+    )
+  },
+  PillMenu({ title, accessibilityLabel, items }) {
+    return (
+      <corePlatform.Menu items={items} accessibilityLabel={accessibilityLabel} style={{ alignSelf: 'flex-start' }}>
+        <Text style={[type.subheadline, { fontWeight: '600', paddingVertical: 10 }]}>{`${title} ▾`}</Text>
+      </corePlatform.Menu>
     )
   },
   GlassButton({ icon, accessibilityLabel, onPress, prominent, diameter }) {

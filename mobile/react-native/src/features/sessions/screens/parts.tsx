@@ -73,7 +73,7 @@ export function Button({
       {busy ? (
         <ActivityIndicator color={prominent ? (colors.onAccent as string) : undefined} />
       ) : (
-        children ?? <Text style={[type.headline, { color: prominent ? colors.onAccent : tint }]}>{title}</Text>
+        children ?? <Text style={[type.headline, { color: prominent ? colors.onAccent : destructive ? colors.red : colors.accentText }]}>{title}</Text>
       )}
     </Pressable>
   )

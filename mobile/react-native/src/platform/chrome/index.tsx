@@ -3,9 +3,10 @@ import { ActionSheetIOS, Alert, Linking, Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { AssessmentPlatform } from '../../features/assignments/platform.ts'
 import type { Dialog, SessionsPlatform } from '../../features/sessions/screens/platform.ts'
+import { useColors as useAssessmentColors } from '../../features/assignments/theme.ts'
 import { assessmentCamera } from '../camera/index.tsx'
 import { NavigationBar } from './Bars'
-import { GlassButton, GlassCapsule, Popup, Segmented } from './Controls'
+import { GlassButton, GlassCapsule, Pill, Popup, Segmented } from './Controls'
 import { FeatureIcon } from './FeatureIcon.tsx'
 import { Header } from './InlineBar.tsx'
 import { FeatureSheet } from './Sheet'
@@ -28,11 +29,16 @@ export function createFeatureChrome(options: FeatureChromeOptions): { assessment
   const camera = assessmentCamera((on) => <FeatureIcon name={on ? 'flash' : 'flash-off'} color="#FFFFFF" />)
   return {
     assessments: {
+      PillMenu: Pill,
       Icon: FeatureIcon,
       NavigationBar,
       Tabs: options.Tabs,
       hasSearchTab: options.hasSearchTab,
-      Sheet: ({ presentation, ...props }) => <FeatureSheet {...props} fullScreen={presentation === 'fullScreen'} />,
+      Sheet: function AssessmentSheet({ presentation, ...props }) {
+        // Workspace cover, marking and Announce are grouped pages: one grouped surface under the native bar.
+        const { groupedBackground } = useAssessmentColors()
+        return <FeatureSheet {...props} fullScreen={presentation === 'fullScreen'} background={groupedBackground} />
+      },
       Segmented,
       ContextMenu: ({ children, actions }) => actions.length ? (
         <Popup longPress items={actions.map((action, index) => ({ ...action, key: String(index) }))}>{children}</Popup>
@@ -50,6 +56,7 @@ export function createFeatureChrome(options: FeatureChromeOptions): { assessment
       },
       Sheet: (props) => <FeatureSheet {...props} notifyOnClose />,
       Menu: Popup,
+      PillMenu: Pill,
       GlassButton,
       Camera: camera.Camera,
       requestCameraAccess: camera.requestCameraPermission,

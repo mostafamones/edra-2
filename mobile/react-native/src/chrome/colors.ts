@@ -1,16 +1,17 @@
-import { Platform, PlatformColor } from "react-native";
+import { Platform, PlatformColor, useColorScheme } from "react-native";
 
-// iOS semantic system colors; Material-like fixed values on Android until a theme is chosen.
-const pick = (ios: string, android: string) => (Platform.OS === "ios" ? PlatformColor(ios) : android);
-
-export const colors = {
-  label: pick("label", "#1c1b1f"),
-  secondaryLabel: pick("secondaryLabel", "#49454f"),
-  background: pick("systemGroupedBackground", "#fef7ff"),
-  card: pick("secondarySystemGroupedBackground", "#ffffff"),
-  fill: pick("secondarySystemFill", "#e8def8"),
-  separator: pick("separator", "#cac4d0"),
-  accent: pick("systemBlue", "#6750a4"),
-  destructive: pick("systemRed", "#b3261e"),
-  onAccent: "#ffffff",
+// iOS semantic system colors (light/dark handled natively); Material-like light/dark pairs on Android.
+const ios = {
+  label: PlatformColor("label"),
+  secondaryLabel: PlatformColor("secondaryLabel"),
+  fill: PlatformColor("secondarySystemFill"),
+  separator: PlatformColor("separator"),
+  accent: PlatformColor("systemBlue"),
 };
+const androidLight = { label: "#1c1b1f", secondaryLabel: "#49454f", fill: "#e8def8", separator: "#cac4d0", accent: "#6750a4" };
+const androidDark = { label: "#e6e1e5", secondaryLabel: "#cac4d0", fill: "#4a4458", separator: "#49454f", accent: "#d0bcff" };
+
+export function useChromeColors() {
+  const dark = useColorScheme() === "dark";
+  return Platform.OS === "ios" ? ios : dark ? androidDark : androidLight;
+}

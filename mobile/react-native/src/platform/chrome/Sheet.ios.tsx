@@ -1,7 +1,7 @@
 import { BottomSheet, Button, Group, Host, NavigationStack, ProgressView, RNHostView, Toolbar, ToolbarItem } from '@expo/ui/swift-ui'
 import {
   accessibilityLabel, disabled, interactiveDismissDisabled, navigationBarTitleDisplayMode, navigationTitle,
-  presentationDetents, presentationDragIndicator, searchable,
+  presentationBackground, presentationDetents, presentationDragIndicator, searchable,
 } from '@expo/ui/swift-ui/modifiers'
 import { useState, type ReactNode } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -48,7 +48,7 @@ function SheetBar({ bar, children }: { bar?: HeaderProps; children: ReactNode })
   )
 }
 
-function PageSheet({ visible, detent = 'large', children, onDismiss, dismissDisabled, notifyOnClose }: FeatureSheetProps) {
+function PageSheet({ visible, detent = 'large', children, onDismiss, dismissDisabled, notifyOnClose, background }: FeatureSheetProps) {
   const colors = useColors()
   const [bar, setBar] = useState<HeaderProps>()
   return (
@@ -64,9 +64,11 @@ function PageSheet({ visible, detent = 'large', children, onDismiss, dismissDisa
           presentationDetents([detent]),
           presentationDragIndicator(dismissDisabled ? 'hidden' : 'visible'),
           interactiveDismissDisabled(!!dismissDisabled),
+          // One surface behind the bar, the body and the home-indicator inset, instead of the default sheet material around an opaque body.
+          ...(background ? [presentationBackground(background)] : []),
         ]}>
           <SheetBar bar={bar}>
-            <View style={[styles.fill, { backgroundColor: colors.background }]}>
+            <View style={[styles.fill, { backgroundColor: background ?? colors.background }]}>
               <SafeAreaProvider>
                 <SheetBarContext.Provider value={setBar}>
                   <SheetContent>{visible && children}</SheetContent>

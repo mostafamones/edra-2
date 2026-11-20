@@ -93,7 +93,7 @@ export function StartSessionScreen({ academy, context, platform, ...models }: St
             <ActivityIndicator style={styles.pager} />
           ) : schedules.loadMoreError ? (
             <Pressable accessibilityRole="button" accessibilityHint={schedules.loadMoreError} onPress={() => void schedules.loadMore()} style={styles.row}>
-              <Text style={[type.body, { color: colors.accent }]}>Couldn't load more. Retry</Text>
+              <Text style={[type.body, { color: colors.accentText }]}>Couldn't load more. Retry</Text>
             </Pressable>
           ) : null}
         </Section>
@@ -127,13 +127,13 @@ export function StartSessionScreen({ academy, context, platform, ...models }: St
       >
         <Section>
           <View style={styles.row} accessible accessibilityLabel={`Academy: ${academy.name}`}>
-            <platform.Icon name={academy.icon} size={22} color={colors.accent as string} />
+            <platform.Icon name={academy.icon} size={22} color={colors.accentText as string} />
             <Text style={[type.body, { color: colors.label, flex: 1 }]}>{academy.name}</Text>
           </View>
           {notice && <Text style={[type.subheadline, styles.row, { color: colors.red }]} accessibilityLiveRegion="polite">{notice}</Text>}
           {notice && retry && (
             <Pressable accessibilityRole="button" onPress={() => begin(retry)} style={styles.row}>
-              <Text style={[type.body, { color: colors.accent }]}>Retry starting “{retry.title}”</Text>
+              <Text style={[type.body, { color: colors.accentText }]}>Retry starting “{retry.title}”</Text>
             </Pressable>
           )}
         </Section>
@@ -168,7 +168,7 @@ function ScheduleRow({ schedule, onPress }: { schedule: StartableSchedule; onPre
     >
       <View style={styles.titleLine}>
         <Text style={[type.headline, { color: colors.label, flex: 1 }]}>{schedule.title}</Text>
-        {live && <Badge text="Live" tint={colors.accent} />}
+        {live && <Badge text="Live" tint={colors.accentText} />}
       </View>
       {!!details && <Text style={[type.subheadline, { color: colors.secondary }]}>{details}</Text>}
       {lines.map((line, i) => (

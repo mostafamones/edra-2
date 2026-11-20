@@ -7,7 +7,7 @@ import { FullScreen, SheetContent, useClosed } from './FullScreen.tsx'
 import type { FeatureSheetProps } from './sheetTypes.ts'
 
 function PageSheet(props: FeatureSheetProps) {
-  const { visible, detent, children, onDismiss, dismissDisabled } = props
+  const { visible, detent, children, onDismiss, dismissDisabled, background } = props
   const { height } = useWindowDimensions()
   const colors = useColors()
   const requested = useRef(false)
@@ -21,7 +21,7 @@ function PageSheet(props: FeatureSheetProps) {
     <Host style={styles.anchor}>
       <ModalBottomSheet
         skipPartiallyExpanded
-        containerColor={colors.background}
+        containerColor={background ?? colors.background}
         sheetGesturesEnabled={!dismissDisabled}
         showDragHandle={!dismissDisabled}
         properties={{ shouldDismissOnBackPress: !dismissDisabled, shouldDismissOnClickOutside: !dismissDisabled }}

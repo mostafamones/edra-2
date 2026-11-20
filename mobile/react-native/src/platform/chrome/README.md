@@ -14,4 +14,10 @@ Native iOS menu and context-menu items with an icon render `Label` with an asset
 
 The template icons are rasterized from `assets/hugeicons/`, the React Native copy of Edra's Hugeicons Free v4.3.5 SVGs (MIT, stroke width 1.5). Run `npm run sync:icons` from the Expo app to regenerate the PNGs with the pinned Resvg dependency. Expo prebuild copies the same catalog into the iOS app for native menus and camera controls.
 
+Accessibility exception (owner-approved): while iOS Bold Text is on, icons use the same Hugeicons geometry at stroke width 2 instead of 1.5. `icons/stroke.cjs` is the single transform; `sync:icons` writes `icons/bold/*.png` and prebuild writes a `hugeicons-<name>-bold` imageset beside each template imageset. `useBoldText()` (`AccessibilityInfo.isBoldTextEnabled` and `boldTextChanged`, one app-wide subscription) selects them in `FeatureIcon`, native menu items, tab items and header bar items. The default stroke stays 1.5. Android: React Native reports Bold Text as always off and has no change event; Android 12+'s font-weight adjustment is not exposed, so Android always draws stroke 1.5.
+
+`PlatformColor('AccentColor')` needs the colour set in the app's asset catalog. Expo's template catalog has none, so the colour resolved to nothing and accent labels and ticks did not draw. Prebuild now copies `assets/AccentColor.colorset` (the Swift app's asset, checked by `barIcon.test.ts`) and sets `ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME`, as the Swift project does. Feature call sites need no change.
+
+The assessment full-screen cover passes `background` (grouped) so the status-bar strip above the workspace's native bar matches its grouped page. Other covers keep the plain page background.
+
 Device acceptance remains open. Check nested sheets and full-screen covers, dismissal during draft saves and publication, focus restoration, keyboard and bottom insets, menu and row gestures, VoiceOver and TalkBack, glass and material appearance on the supported iOS versions, and camera permission and scan behavior on physical iOS and Android devices.

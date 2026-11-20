@@ -398,7 +398,7 @@ describe('assignment list', () => {
     const item = (id: string) => ({ id, title: id, due_at: null, state: 'closed', max_score: '10', recipient_count: 2, version: 1 })
     const load = model.load(h.context)
     await h.fetch.waitFor(1)
-    assert.equal(h.path(0).search, '?limit=50&offset=0')
+    assert.equal(h.path(0).search, '?state=active&limit=50&offset=0')
     h.fetch.respond(0, 200, JSON.stringify({ total: 3, assignments: [item('a1'), item('a2')] }))
     await load
     assert.equal(model.hasMore, true)
@@ -435,6 +435,38 @@ describe('assignment list', () => {
     h.fetch.respond(2, 403, errorJSON('FORBIDDEN'))
     await again
     assert.deepEqual([model.assignments, model.state, h.forbidden.length], [[], { status: 'idle' }, 1])
+  })
+
+  test('a status filter restarts from the first page and keeps its state across pages', async () => {
+    const h = new Harness()
+    const model = new AssignmentsModel(h.env)
+    const item = (id: string, state: string) => ({ id, title: id, due_at: null, state, max_score: '1', recipient_count: 0 })
+    const load = model.load(h.context)
+    await h.fetch.waitFor(1)
+    h.fetch.respond(0, 200, JSON.stringify({ total: 2, assignments: [item('a1', 'active')] }))
+    await load
+    const late = model.loadMore()
+    await h.fetch.waitFor(2)
+    const closed = model.setFilter('closed')
+    assert.deepEqual([model.filter, model.assignments], ['closed', []])
+    await h.fetch.waitFor(3)
+    assert.equal(h.path(2).search, '?state=closed&limit=50&offset=0')
+    h.fetch.respond(1, 200, JSON.stringify({ total: 2, assignments: [item('a2', 'active')] })) // late page of the old filter
+    await late
+    h.fetch.respond(2, 200, JSON.stringify({ total: 2, assignments: [item('c1', 'closed')] }))
+    await closed
+    assert.deepEqual(model.assignments.map((a) => a.id), ['c1'])
+    const more = model.loadMore()
+    await h.fetch.waitFor(4)
+    assert.equal(h.path(3).search, '?state=closed&limit=50&offset=1')
+    h.fetch.respond(3, 200, JSON.stringify({ total: 2, assignments: [item('c2', 'closed')] }))
+    await more
+    const all = model.setFilter('all')
+    await h.fetch.waitFor(5)
+    assert.equal(h.path(4).search, '?limit=50&offset=0')
+    h.fetch.respond(4, 200, '{"total":0,"assignments":[]}')
+    await all
+    assert.deepEqual([model.assignments, model.state], [[], { status: 'loaded' }])
   })
 
   test('notifies subscribers on every committed change', async () => {
@@ -484,6 +516,48 @@ describe('workspace', () => {
     await model.setFilter('all')
     assert.equal(h.fetch.calls.length, 3)
     assert.deepEqual(model.students.map((s) => s.id), ['s1'])
+  })
+
+  test('group sort loads the whole cohort in one page and keeps name order within each group', async () => {
+    const one = (id: string, name: string, group: string | null) => ({ ...student(id, { name }), group_name: group })
+    const { h, model } = await loadedWorkspace([one('s1', 'Amal', 'Nine B'), one('s2', 'Badr', null), one('s3', 'Dina', 'Nine A')], 3)
+    assert.equal(h.path(1).searchParams.get('limit'), '50')
+    const sort = model.setSort('group')
+    await h.fetch.waitFor(3)
+    assert.equal(h.path(2).searchParams.get('limit'), '1000')
+    assert.equal(h.path(2).searchParams.get('offset'), '0')
+    h.fetch.respond(2, 200, page([one('s1', 'Amal', 'Nine B'), one('s4', 'Cyra', 'Nine A'), one('s2', 'Badr', null), one('s3', 'Dina', 'Nine A')], 4))
+    await sort
+    assert.deepEqual(model.students.map((s) => s.id), ['s4', 's3', 's1', 's2'])
+    assert.equal(model.hasMore, false)
+  })
+
+  test('a cohort larger than one full page keeps the server name order', async () => {
+    const { h, model } = await loadedWorkspace([student('s1')], 1001)
+    assert.equal(model.canSortFully, false)
+    await model.setSort('group')
+    assert.equal(model.sort, 'name')
+    assert.equal(h.fetch.calls.length, 2)
+  })
+
+  test('a row tap opens the marking workflow, read-only too', async () => {
+    const { model } = await loadedWorkspace([student('s1')])
+    model.open(model.students[0]!, 'row')
+    assert.equal(model.marking?.student.id, 's1')
+    assert.equal(model.marking?.canEdit, true)
+    model.closeMarking()
+
+    const h = new Harness()
+    const readOnly = new WorkspaceModel(summary, h.context, new AssignmentsModel(h.env))
+    const load = readOnly.load()
+    await h.fetch.waitFor(1)
+    h.fetch.respond(0, 200, JSON.stringify({ ...JSON.parse(DETAIL), state: 'archived', actions: { mark: false, record_work: false, announce: false } }))
+    await h.fetch.waitFor(2)
+    h.fetch.respond(1, 200, page([student('s1')]))
+    await load
+    readOnly.open(readOnly.students[0]!, 'row')
+    assert.equal(readOnly.marking?.student.id, 's1')
+    assert.equal(readOnly.marking?.canEdit, false)
   })
 
   test('incomplete or announced work cannot be selected', async () => {
@@ -548,15 +622,27 @@ describe('workspace', () => {
     })
   })
 
-  test('an uncertain announcement retries with the same key and versions', async () => {
-    const { h, model } = await loadedWorkspace([student('s1', { marking: 'complete', total: '20' })])
+  test('one selected student is announced at once; an uncertain send retries with the same key and versions', async () => {
+    const { h, model } = await loadedWorkspace([student('s1', { marking: 'complete', total: '20' }), student('s2', { marking: 'partial' })])
     model.startSelecting(model.students[0]!)
-    model.reviewSelection()
-    const first = model.announce()
+    const first = model.reviewSelection()
+    assert.equal(model.announcement?.direct, true)
+    assert.equal(model.announcement?.state.status, 'sending') // no review: the request is already out
     await h.fetch.waitFor(3)
+    assert.deepEqual(h.body(2), { items: [{ annual_student_record_id: 's1', expected_version: 1 }] })
+    model.toggleSelected(model.students[0]!) // the selection is fixed while sending
+    model.setSelecting(false)
+    assert.equal(model.isSelecting, true)
+    assert.equal(model.selection.size, 1)
+    await model.reviewSelection() // a repeat tap starts nothing new
+    await model.announce()
+    assert.equal(h.fetch.calls.length, 3)
     h.fetch.fail(2)
     await first
     assert.equal(model.announcement?.state.status, 'uncertain')
+    assert.equal(model.notice, null)
+    await model.reviewSelection() // still one command: the shown outcome owns the retry
+    assert.equal(h.fetch.calls.length, 3)
     const retry = model.announce()
     await h.fetch.waitFor(4)
     assert.equal(h.key(3), h.key(2))
@@ -569,6 +655,37 @@ describe('workspace', () => {
     assert.equal(model.announcement, null)
     assert.equal(model.isSelecting, false)
     assert.equal(model.notice, 'Result announced.')
+  })
+
+  test('several selected students are reviewed before anything is sent', async () => {
+    const { h, model } = await loadedWorkspace([student('s1', { marking: 'complete', total: '20' }), student('s2', { marking: 'complete', total: '18' })])
+    model.startSelecting(model.students[0]!)
+    model.toggleSelected(model.students[1]!)
+    await model.reviewSelection()
+    assert.equal(model.announcement?.direct, false)
+    assert.equal(model.announcement?.state.status, 'reviewing')
+    assert.equal(h.fetch.calls.length, 2) // detail and list only
+    await model.reviewSelection()
+    const key = model.announcement?.id
+    const send = model.announce()
+    void model.announce() // a double tap on the confirmation sends once
+    await h.fetch.waitFor(3)
+    assert.equal(h.key(2), key)
+    h.fetch.respond(2, 200, '{"outcome":"published","replayed":false,"results":[]}')
+    await h.fetch.waitFor(4)
+    h.fetch.respond(3, 200, page([]))
+    await send
+    assert.equal(h.fetch.calls.length, 4)
+    assert.equal(model.notice, '2 results announced.')
+  })
+
+  test('a long press on an ineligible student selects nothing and never announces', async () => {
+    const { h, model } = await loadedWorkspace([student('s1', { marking: 'partial' })])
+    model.startSelecting(model.students[0]!)
+    assert.equal(model.isSelecting, true)
+    assert.equal(model.selection.size, 0)
+    assert.equal(model.announcement, null)
+    assert.equal(h.fetch.calls.length, 2)
   })
 
   test('a code lookup is read-only and opens the same sheet', async () => {

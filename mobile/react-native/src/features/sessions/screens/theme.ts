@@ -1,4 +1,4 @@
-import { Platform, PlatformColor, StyleSheet, useColorScheme, type ColorValue } from 'react-native'
+import { DynamicColorIOS, Platform, PlatformColor, StyleSheet, useColorScheme, type ColorValue } from 'react-native'
 import type { AttendanceStatus } from '../contract.ts'
 
 export interface Colors {
@@ -15,6 +15,8 @@ export interface Colors {
   material: ColorValue
   separator: ColorValue
   accent: ColorValue
+  /** Accent for text and glyphs on plain backgrounds; the dark AccentColor is too dim for that. */
+  accentText: ColorValue
   onAccent: ColorValue
   red: ColorValue
   orange: ColorValue
@@ -34,6 +36,8 @@ const ios: Colors = {
   material: PlatformColor('secondarySystemBackground'),
   separator: PlatformColor('separator'),
   accent: PlatformColor('AccentColor'),
+  // DynamicColorIOS throws off iOS; this object is built on every platform.
+  accentText: Platform.OS === 'ios' ? DynamicColorIOS({ light: '#008236', dark: '#30D158' }) : '#008236',
   onAccent: '#FFFFFF',
   red: PlatformColor('systemRed'),
   orange: PlatformColor('systemOrange'),
@@ -52,6 +56,7 @@ const androidLight: Colors = {
   material: '#F1F2F4',
   separator: '#DADCE0',
   accent: '#008236',
+  accentText: '#008236',
   onAccent: '#FFFFFF',
   red: '#D93025',
   orange: '#E37400',
@@ -71,6 +76,7 @@ const androidDark: Colors = {
   material: '#24262A',
   separator: '#3C4043',
   accent: '#2E9F5B',
+  accentText: '#81C995',
   red: '#F28B82',
   orange: '#FDB863',
   green: '#81C995',
@@ -94,7 +100,7 @@ export function statusTint(status: AttendanceStatus, colors: Colors): ColorValue
     case 'excused':
       return colors.blue
     case 'present':
-      return colors.accent
+      return colors.accentText
     default:
       return colors.secondary
   }

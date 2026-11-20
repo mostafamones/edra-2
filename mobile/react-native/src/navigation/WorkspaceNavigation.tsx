@@ -1,13 +1,14 @@
 import { NavigationContainer, NavigationIndependentTree, useIsFocused, useTheme } from '@react-navigation/native'
-import { useHeaderHeight } from '@react-navigation/elements'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import { createContext, useContext, useLayoutEffect, type ReactNode } from 'react'
-import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native'
+import { createContext, useContext, useLayoutEffect } from 'react'
+import { Platform } from 'react-native'
 import type { BarItem, NavigationBarProps, TabsProps } from '../features/assignments/platform.ts'
 import type { BarItem as HeaderItem, SearchBar } from '../features/sessions/screens/platform.ts'
 import { hasSearchTabs } from '../chrome/platform'
 import { NavigationBar as SheetBar } from '../platform/chrome/Bars'
-import { barIconSource, TabBottomArea } from './AppChrome.tsx'
+import { useBoldText } from '../platform/chrome/boldText.ts'
+import { SheetBarContext, SheetHeader } from '../platform/chrome/sheetTypes.ts'
+import { barIconSource, pageBackground, TabBottomArea } from './AppChrome.tsx'
 import { createNativeTabsNavigator } from './createNativeTabsNavigator.tsx'
 import { NativeHeader } from './NativeHeader.tsx'
 import type { WorkspaceTabsParamList } from './routes.ts'
@@ -15,8 +16,12 @@ import type { WorkspaceTabsParamList } from './routes.ts'
 const Tabs = createNativeTabsNavigator<WorkspaceTabsParamList>()
 const Stack = createNativeStackNavigator()
 const ROUTES = { students: 'StudentsTab', scan: 'ScanTab', search: 'SearchTab' } as const
-const WorkspaceHeader = createContext<{ search?: SearchBar } | null>(null)
+/** `underBars`: iOS lists scroll under the glass tab bar and inset themselves; other content stops above it. */
+const WorkspaceHeader = createContext<{ search?: SearchBar; underBars?: boolean } | null>(null)
 const defaultHeader = {}
+const listHeader = { underBars: true }
+// Every workspace pane (Students, Scan) is a grouped page.
+const paneOptions = { title: '', headerBackVisible: false, ...pageBackground('systemGroupedBackground') }
 
 function asHeaderItem(item?: BarItem | null): HeaderItem | undefined {
   if (!item) return undefined
@@ -27,7 +32,17 @@ function asHeaderItem(item?: BarItem | null): HeaderItem | undefined {
 
 export function AssessmentNavigationBar(props: NavigationBarProps) {
   const workspace = useContext(WorkspaceHeader)
-  if (!workspace) return <SheetBar {...props} />
+  const sheetBar = useContext(SheetBarContext)
+  if (!workspace) {
+    // iOS marking/announce page sheets: the sheet's own SwiftUI bar, as Sessions sheets (`SheetHeader`).
+    if (!sheetBar) return <SheetBar {...props} />
+    return (
+      <>
+        <SheetHeader title={props.title} leading={asHeaderItem(props.leading)} trailing={asHeaderItem(props.trailing)} />
+        {props.children}
+      </>
+    )
+  }
 
   const { title, leading, trailing, search, children } = props
   const field = workspace.search ?? (search ? {
@@ -36,16 +51,9 @@ export function AssessmentNavigationBar(props: NavigationBarProps) {
   return (
     <>
       <NativeHeader title={title} leading={asHeaderItem(leading)} trailing={asHeaderItem(trailing)} search={field} />
-      <TabBottomArea>
-        {field && Platform.OS === 'ios' ? <SearchContent>{children}</SearchContent> : children}
-      </TabBottomArea>
+      {Platform.OS === 'ios' && workspace.underBars ? children : <TabBottomArea>{children}</TabBottomArea>}
     </>
   )
-}
-
-function SearchContent({ children }: { children: ReactNode }) {
-  const headerHeight = useHeaderHeight()
-  return <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerHeight} style={styles.fill}>{children}</KeyboardAvoidingView>
 }
 
 function ScanContent({ render }: Pick<TabsProps, 'render'>) {
@@ -54,6 +62,7 @@ function ScanContent({ render }: Pick<TabsProps, 'render'>) {
 
 export function WorkspaceTabs({ tabs, selected, onSelect, searchText, onSearchText, searchPrompt, render }: TabsProps) {
   const theme = useTheme()
+  const bold = useBoldText()
   // The feature contract identifies confirmation by its checkmark on the search-role item.
   const actionTab = tabs.find((tab) => tab.search && tab.icon === 'tick-02')
   const hasSelected = tabs.some((tab) => tab.pane === selected)
@@ -76,18 +85,18 @@ export function WorkspaceTabs({ tabs, selected, onSelect, searchText, onSearchTe
             const { pane, icon, title, search } = tab
             const announce = tab === actionTab
             const header = search && !announce
-              ? { search: { value: searchText, onChange: onSearchText, placeholder: searchPrompt } }
-              : defaultHeader
+              ? { search: { value: searchText, onChange: onSearchText, placeholder: searchPrompt }, underBars: true }
+              : pane === 'scan' ? defaultHeader : listHeader
             return (
               <Tabs.Screen key={pane} name={ROUTES[pane]} options={{
                 title,
-                icon: barIconSource(icon),
+                icon: barIconSource(icon, bold),
                 role: search ? 'search' : undefined,
                 activatesSearch: search && !announce,
                 action: announce ? () => onSelect(pane) : undefined,
               }}>
                 {() => (
-                  <Stack.Navigator screenOptions={{ title: '', headerBackVisible: false }}>
+                  <Stack.Navigator screenOptions={paneOptions}>
                     <Stack.Screen name="WorkspacePane">
                       {() => (
                         <WorkspaceHeader.Provider value={header}>
@@ -107,5 +116,3 @@ export function WorkspaceTabs({ tabs, selected, onSelect, searchText, onSearchTe
 }
 
 export const hasWorkspaceSearchTab = hasSearchTabs
-
-const styles = StyleSheet.create({ fill: { flex: 1 } })

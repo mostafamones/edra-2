@@ -2,6 +2,7 @@ const { cpSync, readdirSync, readFileSync, writeFileSync } = require('node:fs');
 const { join } = require('node:path');
 const plist = require('@expo/plist').default;
 const { IOSConfig, withFinalizedMod, withInfoPlist, withXcodeProject } = require('expo/config-plugins');
+const { boldSvg } = require('../src/platform/chrome/icons/stroke.cjs');
 
 // The SwiftUI app's Debug exception (mones.ddns.net). AppConfiguration allows HTTP only to these exact hosts.
 const debugExceptionDomains = {
@@ -31,6 +32,8 @@ module.exports = function withEdraIOS(config, { keepSigningTeam = false } = {}) 
       // the team itself (preferring ios.appleTeamId). A prebuilt team skips that, so a first device build of a
       // new bundle ID fails with "No profiles for ... were found".
       if (!keepSigningTeam) delete configuration.buildSettings.DEVELOPMENT_TEAM;
+      // The Swift app's global tint; `PlatformColor('AccentColor')` resolves the same colour set by name.
+      configuration.buildSettings.ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = 'AccentColor';
     }
     if (!keepSigningTeam) {
       for (const [, item] of Object.entries(IOSConfig.XcodeUtils.getProjectSection(project))) {
@@ -59,11 +62,20 @@ module.exports = function withEdraIOS(config, { keepSigningTeam = false } = {}) 
     delete releasePlist.NSLocalNetworkUsageDescription;
     writeFileSync(infoPath, plist.build(releasePlist));
 
-    // Native menus and camera controls load these template icons from Bundle.main.
+    // Native menus and camera controls load these template icons from Bundle.main, plus a `-bold` copy at the
+    // heavier stroke for iOS Bold Text.
+    const catalog = join(sourceRoot, 'Images.xcassets');
     const icons = join(projectRoot, 'assets/hugeicons');
     for (const name of readdirSync(icons).filter((entry) => entry.endsWith('.imageset'))) {
-      cpSync(join(icons, name), join(sourceRoot, 'Images.xcassets', name), { recursive: true });
+      cpSync(join(icons, name), join(catalog, name), { recursive: true });
+      const bold = join(catalog, name.replace(/\.imageset$/, '-bold.imageset'));
+      cpSync(join(icons, name), bold, { recursive: true });
+      for (const svg of readdirSync(bold).filter((entry) => entry.endsWith('.svg'))) {
+        writeFileSync(join(bold, svg), boldSvg(readFileSync(join(bold, svg))));
+      }
     }
+    // Expo's template catalog has no AccentColor, so PlatformColor('AccentColor') would resolve to no colour.
+    cpSync(join(projectRoot, 'assets/AccentColor.colorset'), join(catalog, 'AccentColor.colorset'), { recursive: true });
     return config;
   }]);
 };

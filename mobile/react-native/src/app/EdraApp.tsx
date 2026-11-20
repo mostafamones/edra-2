@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { AppState, View } from 'react-native'
+import { AppState, Pressable, View } from 'react-native'
 import { ApiClient } from '../core/api.ts'
 import type { AccountScope } from '../core/ownership.ts'
 import { AccessRoot } from '../features/access/AccessRoot.tsx'
@@ -9,6 +9,10 @@ import { createPlatformAccess } from '../features/access/platform'
 import type { PlatformAccess } from '../features/access/platformTypes.ts'
 import { AssignmentsScreen } from '../features/assignments/AssignmentsScreen.tsx'
 import { systemConfirm, type AssessmentPlatform } from '../features/assignments/platform.ts'
+import { WorkspaceScreen } from '../features/assignments/WorkspaceScreen.tsx'
+import { Avatar } from '../features/overview/Avatar.tsx'
+import { OverviewScreen } from '../features/overview/OverviewScreen.tsx'
+import { SettingsScreen } from '../features/overview/SettingsScreen.tsx'
 import { Loading, Unavailable } from '../features/sessions/screens/parts.tsx'
 import type { SessionsPlatform } from '../features/sessions/screens/platform.ts'
 import { SessionScreen } from '../features/sessions/screens/SessionScreen.tsx'
@@ -55,11 +59,13 @@ type ShellProps = {
 /** Mounted once per account scope (`AccessRoot` keys it), so every model and history starts fresh. */
 function SignedInShell({ auth, scope, client, selection, services, chrome, sessions: sessionsPlatform, assessments: assessmentPlatform }: ShellProps) {
   const [shell] = useState(() => new Shell({ auth, scope, client, selection, services }))
-  const { academies } = shell
+  const { academies, profile } = shell
   useSyncExternalStore(shell.subscribe, () => shell.version)
   useSyncExternalStore(academies.subscribe, () => academies.version)
+  useSyncExternalStore(profile.subscribe, () => profile.version)
 
   useEffect(() => void academies.load(), [academies])
+  useEffect(() => void profile.load(), [profile])
   // Revalidate access whenever the app becomes active again (SwiftUI scenePhase `.active`).
   useEffect(() => {
     let last = AppState.currentState
@@ -84,8 +90,11 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
       ],
     })
 
-  /** A destination's root: its content only while an academy is selected, never a stale one. */
-  const page = (title: string, content: ReactNode, trailing?: (diameter: number) => ReactNode) => {
+  /**
+   * A destination's root: its content only while an academy is selected, never a stale one. Overview always shows
+   * its greeting and names the academy in its own picker instead of the subtitle.
+   */
+  const page = (title: string, content: ReactNode, trailing?: (diameter: number) => ReactNode, overview = false) => {
     const { state } = academies
     let body: ReactNode
     if (state.kind === 'loading' && !academies.academies.length) body = <Loading label="Loading academies…" />
@@ -94,7 +103,7 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
     else body = <Unavailable title="No staff access" message="Your account doesn't have active staff access to an academy." />
     return (
       <View style={{ flex: 1 }}>
-        {selected && <chrome.PageHeader title={title} subtitle={selected.name} trailing={trailing} />}
+        {(selected || overview) && <chrome.PageHeader title={title} subtitle={overview ? undefined : selected?.name} trailing={trailing} />}
         {body}
       </View>
     )
@@ -104,18 +113,60 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
     <sessionsPlatform.GlassButton icon="hugeicons-add-01" accessibilityLabel="Start session" diameter={diameter} onPress={() => shell.start.presentPicker()} />
   )
 
+  // Without a name (none set, loading, failed, or a server without /api/v1/me) the greeting is just "Hello".
+  const avatar = (diameter: number) => (
+    <Pressable accessibilityRole="button" accessibilityLabel="Settings" hitSlop={8} onPress={shell.openSettings}>
+      <Avatar uri={profile.avatarUrl} size={diameter * 0.85} />
+    </Pressable>
+  )
+
+  const overview = page(
+    profile.name ? `Hello, ${profile.name}` : 'Hello',
+    <OverviewScreen
+      academies={academies.academies}
+      selectedId={context?.academyId ?? ''}
+      icon={(a) => academyIcon(a.icon)}
+      onChoose={(id) => {
+        const guard = shell.chooseAcademy(id)
+        if (guard) presentGuard(guard)
+      }}
+      sessions={shell.sessions}
+      assignments={shell.activeAssignments}
+      onOpenSession={shell.showSession}
+      onOpenAssignment={shell.openAssignment}
+      onShowSessions={() => shell.selectTab('sessions')}
+      onShowAssessments={() => shell.selectTab('assessments')}
+      onRefresh={() => Promise.all([shell.foreground(), shell.activeAssignments.load(academies.context)])}
+      platform={sessionsPlatform}
+    />,
+    avatar,
+    true,
+  )
+
+  const closeAssignment = () => shell.openAssignment(null)
+
+  const comingSoon = (title: string) => (
+    <chrome.Stack root={page(title, <Unavailable title="Coming soon" />)} routes={NO_ROUTES} onPop={noop} />
+  )
+
   return (
     <>
       <chrome.Tabs
         selected={shell.tab}
         onSelect={shell.selectTab}
-        academy={{
-          title: 'Academy',
-          icon: selected ? academyIcon(selected.icon) : 'hugeicons-school-01',
-          accessibilityLabel: selected ? `Switch academy, current: ${selected.name}` : 'Switch academy',
-          onPress: shell.openMenu,
-        }}
         tabs={[
+          {
+            key: 'overview',
+            title: 'Overview',
+            icon: 'hugeicons-home-01',
+            content: (
+              <chrome.Stack
+                root={overview}
+                routes={shell.settingsOpen ? [{ key: 'settings', element: <SettingsScreen platform={sessionsPlatform} name={profile.name} avatarUrl={profile.avatarUrl} onSignOut={shell.signOut} /> }] : NO_ROUTES}
+                onPop={shell.popOverview}
+              />
+            ),
+          },
           {
             key: 'sessions',
             title: 'Sessions',
@@ -135,20 +186,21 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
             key: 'assessments',
             title: 'Assessments',
             icon: 'hugeicons-file-edit',
-            content: <chrome.Stack root={page('Assessments', <AssignmentsScreen model={shell.assignments} platform={assessmentPlatform} />)} routes={NO_ROUTES} onPop={noop} />,
+            content: (
+              <chrome.Stack
+                root={page('Assessments', <AssignmentsScreen model={shell.assignments} platform={assessmentPlatform} open={chrome.modalRoutes ? null : shell.assignment} onOpen={shell.openAssignment} />)}
+                routes={chrome.modalRoutes && shell.assignment && context ? [{
+                  key: `assignment:${shell.assignment.id}`,
+                  modal: true,
+                  element: <WorkspaceScreen key={shell.assignment.id} summary={shell.assignment} context={context} parent={shell.assignments} platform={assessmentPlatform} onClose={closeAssignment} />,
+                }] : NO_ROUTES}
+                onPop={closeAssignment}
+              />
+            ),
           },
+          { key: 'students', title: 'Students', icon: 'hugeicons-users', content: comingSoon('Students') },
+          { key: 'concerns', title: 'Concerns', icon: 'hugeicons-bubble-chat', content: comingSoon('Concerns') },
         ]}
-      />
-      <chrome.AcademyMenu
-        open={shell.menuOpen}
-        onClose={shell.closeMenu}
-        academies={academies.academies.map((a) => ({ id: a.id, name: a.name, icon: academyIcon(a.icon) }))}
-        selectedId={context?.academyId ?? null}
-        onSelect={(id) => {
-          const guard = shell.chooseAcademy(id)
-          if (guard) presentGuard(guard)
-        }}
-        onSignOut={shell.signOut}
       />
       {selected && context && (
         <StartSessionSheet
