@@ -67,16 +67,17 @@ export function WorkspaceScreen({ summary, context, parent, platform, onClose }:
     setPane(next)
   }
 
+  const sending = model.announcement?.state.status === 'sending'
   const title = model.detail?.title ?? model.summary.title
   // No action bar while selecting; a close button replaces Back so the mode can be left.
   const leading: BarItem = model.isSelecting
-    ? { kind: 'icon', icon: 'cancel-01', label: 'Cancel selection', onPress: () => model.setSelecting(false) }
+    ? { kind: 'icon', icon: 'cancel-01', label: 'Cancel selection', disabled: sending, onPress: () => model.setSelecting(false) }
     : { kind: 'icon', icon: 'chevron-left', label: 'Back', onPress: onClose }
   // Without a search tab there is nothing to turn into the confirm button.
   const trailing: BarItem | null =
     !model.isSelecting || platform.hasSearchTab
       ? null
-      : model.announcement?.state.status === 'sending'
+      : sending
         ? { kind: 'progress' }
         : { kind: 'text', title: `Announce ${model.selection.size}`, onPress: () => void model.reviewSelection(), disabled: model.selection.size === 0 }
   const page = (content: ReactNode, search = false) => (

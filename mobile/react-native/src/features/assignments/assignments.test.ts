@@ -631,6 +631,8 @@ describe('workspace', () => {
     await h.fetch.waitFor(3)
     assert.deepEqual(h.body(2), { items: [{ annual_student_record_id: 's1', expected_version: 1 }] })
     model.toggleSelected(model.students[0]!) // the selection is fixed while sending
+    model.setSelecting(false)
+    assert.equal(model.isSelecting, true)
     assert.equal(model.selection.size, 1)
     await model.reviewSelection() // a repeat tap starts nothing new
     await model.announce()

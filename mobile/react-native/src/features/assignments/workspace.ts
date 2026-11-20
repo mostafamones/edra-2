@@ -325,6 +325,7 @@ export class WorkspaceModel extends Observable {
   // MARK: - Selection
 
   setSelecting(on: boolean): void {
+    if (this._announcement?.state.status === 'sending') return
     this.set(() => {
       this._isSelecting = on
       if (!on) this._selection = new Set()
