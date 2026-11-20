@@ -61,9 +61,3 @@ test('Bold Text icons are the same catalog at the heavier stroke', async () => {
     assert.equal(heavier.split(`stroke-width="${BOLD_STROKE}"`).length, svg.split(`stroke-width="${STROKE}"`).length, folder)
   }
 })
-
-test('the bundled AccentColor matches the Swift app asset', () => {
-  const read = (path: string) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'))
-  assert.deepEqual(read('../../assets/AccentColor.colorset/Contents.json'),
-    read('../../../EdraInstructor/Resources/Assets.xcassets/AccentColor.colorset/Contents.json'))
-})

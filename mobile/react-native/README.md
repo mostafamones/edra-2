@@ -1,6 +1,6 @@
-# Edra Instructor — React Native candidate
+# Edra Instructor — React Native
 
-The React Native candidate opens the API-backed Edra instructor companion on iOS and Android. The default build installs beside the SwiftUI comparison app (`../EdraInstructor.xcodeproj`). See `../AGENTS.md` for the migration and acceptance requirements.
+Edra Instructor runs on iOS and Android. The default development build has a separate bundle ID. The [historical SwiftUI build](../README.md) remains available for upgrade verification.
 
 ## Toolchain (pinned)
 
@@ -33,7 +33,7 @@ Use the configured Edra development project and an API origin reachable from the
 
 Supabase always uses HTTPS. The iOS Debug plist has the same exact `mones.ddns.net` ATS exception as the Swift app. Set `EXPO_PUBLIC_EDRA_DEV_HTTP_HOSTS=mones.ddns.net` to use that same HTTP API host on Android Debug. Both Release builds require an HTTPS API origin. iOS configuration changes require prebuild and a fresh native install. Android public environment changes require a Metro restart or a new embedded bundle.
 
-Expo autolinks the Apple auth and camera modules. `modules/edra-auth/ios/Shared/` holds the only copy of `AuthService.swift` and `AppConfiguration.swift`; the SwiftUI comparison app compiles the same files, so both builds share one auth implementation. The config plugin installs the camera's flash icons from `modules/edra-camera/ios/Icons/` and writes the Debug ATS exception itself, so prebuild reads nothing from the SwiftUI project. The camera plugin enables camera access, with microphone and external storage permissions excluded on Android and no microphone usage description on iOS. The Android scanner builds `expo-camera` from source so ML Kit barcode scanning is included. Android sessions use SecureStore, whose backup rules exclude encrypted session storage.
+Expo autolinks the Apple auth and camera modules. `modules/edra-auth/ios/Shared/` holds the only copy of `AuthService.swift` and `AppConfiguration.swift`; these sources preserve the previous Keychain format. The config plugin installs the camera's flash icons from `modules/edra-camera/ios/Icons/` and writes the Debug ATS exception itself, so prebuild reads nothing from the SwiftUI project. The camera plugin enables camera access, with microphone and external storage permissions excluded on Android and no microphone usage description on iOS. The Android scanner builds `expo-camera` from source so ML Kit barcode scanning is included. Android sessions use SecureStore, whose backup rules exclude encrypted session storage.
 
 ## Commands
 
@@ -72,7 +72,7 @@ npm run android:release        # signed with the debug keystore: local testing o
 
 ### iOS upgrade verification
 
-Use a test iPhone with the signed-in Swift app installed and public configuration pointing to the same Supabase project. The upgrade build uses `com.mostafamones.edra` and team `39YK2DQP92` to match the Swift app's Keychain identity. Installing it replaces the Swift app on that device. This build keeps team `39YK2DQP92` in the generated project, so Expo CLI does not pass provisioning flags. If Xcode reports no matching profile, build the Swift app once with `../run.sh` on this Mac (it passes `-allowProvisioningUpdates`), then retry. Run these commands only for that upgrade test:
+Use a test iPhone with the signed-in Swift app installed and public configuration pointing to the same Supabase project. The upgrade build uses `com.mostafamones.edra` and team `39YK2DQP92` to match the Swift app's Keychain identity. Installing it replaces the Swift app on that device. This build keeps team `39YK2DQP92` in the generated project, so Expo CLI does not pass provisioning flags. If Xcode reports no matching profile, provision it by running the [historical SwiftUI reference](../README.md) on that Mac, then retry. Run these commands only for that upgrade test:
 
 ```sh
 export EDRA_IOS_IDENTITY=upgrade EDRA_APPLE_TEAM_ID=39YK2DQP92
@@ -96,9 +96,9 @@ Metro serves source code, and its dev tools can execute code in the app. Expose 
 
 ## Device acceptance
 
-Compare the React Native build with the SwiftUI reference on the same iPhone, OS, settings and data. Check the Academy popover and independent navigation histories, conditional Scan and Announce tabs, search, keyboard and safe areas, draft and dismiss guards, native glass, gestures, Dynamic Type and VoiceOver. On Android, verify the same workflows, platform navigation and TalkBack. Use physical devices for camera and haptics.
+Compare the React Native build with the SwiftUI reference on the same iPhone, OS, settings and data. Check the Overview academy picker and independent navigation histories, conditional Scan and Announce tabs, search, keyboard and safe areas, draft and dismiss guards, native glass, gestures, Dynamic Type and VoiceOver. On Android, verify the same workflows, platform navigation and TalkBack. Use physical devices for camera and haptics.
 
-Known iPhone differences include the classic Academy tab and toolbar search on iOS 26.0, and a Sessions sheet search drawer that uses SwiftUI's automatic display mode without an immediate search submit (SDK 58 limits; see `src/platform/chrome/README.md`). iOS 26.1 and later use the native detached search-role tab. Native compilation, Keychain upgrade continuity and device parity require separate verification.
+Known iPhone differences include toolbar search on iOS 26.0, and a Sessions sheet search drawer that uses SwiftUI's automatic display mode without an immediate search submit (SDK 58 limits; see `src/platform/chrome/README.md`). iOS 26.1 and later use the native detached search-role tab. Native compilation, Keychain upgrade continuity and device parity require separate verification.
 
 ## App structure
 

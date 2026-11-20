@@ -1,6 +1,6 @@
 # Assessments screens (React Native)
 
-React Native ports of `EdraInstructor/Features/Assignments` views. The Swift views remain the reference for layout, wording and interaction. Domain state is in `assignments.ts`, `workspace.ts` and `marking.ts`; the screens only compose it.
+React Native assignment list, workspace, marking and announcement screens. Domain state is in `assignments.ts`, `workspace.ts` and `marking.ts`; the screens only compose it.
 
 | Screen | Swift reference |
 | --- | --- |

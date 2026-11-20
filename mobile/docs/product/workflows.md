@@ -12,15 +12,11 @@ Students can be selected manually or identified through supported student-code s
 
 ## App shell and navigation — EDRA-124
 
-Confirmed by the owner, 2026-10-18. Follow the supplied iPhone Photos navigation reference. A floating bottom pill on the left contains Sessions and Assessments, each with an icon and label. A separate circular academy button on the right replaces Photos' search button and displays the selected academy's icon. Keep the two controls visually separate. Use native glass on supported systems and a native material fallback on earlier supported iOS versions. Complete and review the separate Hugeicons update before freezing the iPhone baseline for the React Native migration.
+The companion opens on Overview and has five icon-only tabs for Overview, Sessions, Assessments, Students and Concerns. Overview shows recap rows for the selected academy, the academy picker, and the account avatar. The avatar opens Settings with sign-out. Students and Concerns remain placeholders.
 
-The academy button opens the academy menu with academy names, the current selection and sign-out. Do not move the switcher to the top or retain the old wide bottom academy card. Keep the selected academy's name readable in the page context and available to accessibility; the icon alone may be shared by several academies.
+Tab changes preserve separate Sessions and Assessments histories within the academy. A voluntary academy change follows the unsaved-marks guard, resets academy histories and returns to Overview. Account changes or lost membership invalidate affected work and stale responses. Starting a session opens it in Sessions.
 
-Sessions is the initial destination. Each destination has its own navigation history within the current academy. Tab changes preserve that history; academy changes reset both histories and pending presentations, returning to Sessions. Account changes or lost membership invalidate affected work and stale responses under the existing account/academy authority rules. Existing session start, attendance and scanner behavior remains intact; scanning is a contextual action rather than a third tab.
-
-React Native shell (owner direction, 2026-11-20): the React Native app replaces the academy button and initial Sessions with five tabs (Overview, Sessions, Assessments, Students, Concerns) and Overview as the initial destination. Overview lists the granted academies with the current one marked and switches academy there, with the same unsaved-marks decision; its account avatar opens Settings with sign-out. Academy changes reset academy histories and return to Overview; a successful start still opens Sessions. Students and Concerns are placeholders until their workflows are planned. The SwiftUI shell above remains the iPhone reference.
-
-EDRA-124 supplies the shell and integrates the existing session workflows. Assessments has an honest placeholder until EDRA-79 supplies its assignment screens; no assignment API work is required for the shell. The bottom controls remain available during ordinary navigation, while presented sheets and the full-screen scanner own their presentation and return to the originating context. Respect keyboard and safe areas, preserve accessible targets, and keep the attendance action button and final scroll rows clear of the dock. Future dirty-edit guards remain owned by their feature integration, including EDRA-79.
+Use native glass on supported iOS versions and the platform fallback elsewhere. Scanning remains a contextual action where student codes are enabled. Keep keyboard and safe areas clear, including the last scroll row and floating attendance actions.
 
 ## Physical marking
 
