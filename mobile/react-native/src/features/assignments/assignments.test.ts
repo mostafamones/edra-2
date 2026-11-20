@@ -398,7 +398,7 @@ describe('assignment list', () => {
     const item = (id: string) => ({ id, title: id, due_at: null, state: 'closed', max_score: '10', recipient_count: 2, version: 1 })
     const load = model.load(h.context)
     await h.fetch.waitFor(1)
-    assert.equal(h.path(0).search, '?limit=50&offset=0')
+    assert.equal(h.path(0).search, '?state=active&limit=50&offset=0')
     h.fetch.respond(0, 200, JSON.stringify({ total: 3, assignments: [item('a1'), item('a2')] }))
     await load
     assert.equal(model.hasMore, true)
@@ -435,6 +435,38 @@ describe('assignment list', () => {
     h.fetch.respond(2, 403, errorJSON('FORBIDDEN'))
     await again
     assert.deepEqual([model.assignments, model.state, h.forbidden.length], [[], { status: 'idle' }, 1])
+  })
+
+  test('a status filter restarts from the first page and keeps its state across pages', async () => {
+    const h = new Harness()
+    const model = new AssignmentsModel(h.env)
+    const item = (id: string, state: string) => ({ id, title: id, due_at: null, state, max_score: '1', recipient_count: 0 })
+    const load = model.load(h.context)
+    await h.fetch.waitFor(1)
+    h.fetch.respond(0, 200, JSON.stringify({ total: 2, assignments: [item('a1', 'active')] }))
+    await load
+    const late = model.loadMore()
+    await h.fetch.waitFor(2)
+    const closed = model.setFilter('closed')
+    assert.deepEqual([model.filter, model.assignments], ['closed', []])
+    await h.fetch.waitFor(3)
+    assert.equal(h.path(2).search, '?state=closed&limit=50&offset=0')
+    h.fetch.respond(1, 200, JSON.stringify({ total: 2, assignments: [item('a2', 'active')] })) // late page of the old filter
+    await late
+    h.fetch.respond(2, 200, JSON.stringify({ total: 2, assignments: [item('c1', 'closed')] }))
+    await closed
+    assert.deepEqual(model.assignments.map((a) => a.id), ['c1'])
+    const more = model.loadMore()
+    await h.fetch.waitFor(4)
+    assert.equal(h.path(3).search, '?state=closed&limit=50&offset=1')
+    h.fetch.respond(3, 200, JSON.stringify({ total: 2, assignments: [item('c2', 'closed')] }))
+    await more
+    const all = model.setFilter('all')
+    await h.fetch.waitFor(5)
+    assert.equal(h.path(4).search, '?limit=50&offset=0')
+    h.fetch.respond(4, 200, '{"total":0,"assignments":[]}')
+    await all
+    assert.deepEqual([model.assignments, model.state], [[], { status: 'loaded' }])
   })
 
   test('notifies subscribers on every committed change', async () => {

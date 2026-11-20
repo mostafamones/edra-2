@@ -55,6 +55,8 @@ export class Shell extends Model {
   readonly schedules: SchedulesModel
   readonly start: StartSessionModel
   readonly assignments: AssignmentsModel
+  /** Overview's own active list, so the Assessments tab's status filter never changes the recap. */
+  readonly activeAssignments: AssignmentsModel
 
   private readonly deps: ShellDeps
   private readonly api: ReturnType<typeof bindRequestPort>
@@ -87,14 +89,16 @@ export class Shell extends Model {
       onStarted: (context) => this.sessions.load(context),
       newKey: services.newId,
     })
-    this.assignments = new AssignmentsModel({
+    const assignmentsEnv = {
       api: client,
       isCurrent,
       onUnauthenticated,
       onForbidden: owner.onForbidden,
       newKey: services.newId,
       feedback: services.feedback,
-    })
+    }
+    this.assignments = new AssignmentsModel(assignmentsEnv)
+    this.activeAssignments = new AssignmentsModel(assignmentsEnv)
     // A started (or opened) session: its identity comes from the server acknowledgment.
     this.start.subscribe(() => {
       const destination = this.start.destination
@@ -214,6 +218,7 @@ export class Shell extends Model {
     // Prefetch the start picker's schedules so it opens already populated.
     if (context) void this.schedules.load(context)
     void this.assignments.load(context)
+    void this.activeAssignments.load(context)
     this.changed()
   }
 

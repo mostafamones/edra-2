@@ -130,12 +130,12 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
         if (guard) presentGuard(guard)
       }}
       sessions={shell.sessions}
-      assignments={shell.assignments}
+      assignments={shell.activeAssignments}
       onOpenSession={shell.showSession}
       onOpenAssignment={shell.openAssignment}
       onShowSessions={() => shell.selectTab('sessions')}
       onShowAssessments={() => shell.selectTab('assessments')}
-      onRefresh={() => Promise.all([shell.foreground(), shell.assignments.load(academies.context)])}
+      onRefresh={() => Promise.all([shell.foreground(), shell.activeAssignments.load(academies.context)])}
       platform={sessionsPlatform}
     />,
     avatar,

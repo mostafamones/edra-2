@@ -73,6 +73,16 @@ test('mount selects the remembered granted academy and loads every academy-scope
   assert.ok(requests.some((r) => r.startsWith('GET api/v1/academies/b/assignments')))
   assert.equal(shell.sessions.state.kind, 'loaded')
   assert.equal(shell.assignments.state.status, 'loaded')
+  assert.equal(shell.activeAssignments.state.status, 'loaded')
+})
+
+test("the Assessments tab's status filter leaves Overview's active recap alone", async () => {
+  const { shell } = setup({ remembered: 'b' })
+  await shell.academies.load()
+  await tick()
+  await shell.assignments.setFilter('closed')
+  assert.deepEqual([shell.assignments.filter, shell.activeAssignments.filter], ['closed', 'active'])
+  assert.equal(shell.activeAssignments.state.status, 'loaded')
 })
 
 test('the shell opens on Overview', async () => {
