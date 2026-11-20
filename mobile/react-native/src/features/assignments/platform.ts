@@ -21,10 +21,10 @@ export type AssessmentPlatform = Readonly<{
   /** UISegmentedControl / segmented buttons. */
   Segmented: ComponentType<SegmentedProps>
   /**
-   * Tap-to-open menu around `children` (SwiftUI `Menu` on iOS, a popup on Android); `checked` draws the
-   * selection tick. Optional: without it the screens fall back to `confirm`/`systemConfirm`.
+   * Selection pill showing `title` that opens a native menu (SwiftUI glass menu button on iOS 26, a popup on
+   * Android); `checked` draws the selection tick. Optional: without it the screens fall back to `confirm`/`systemConfirm`.
    */
-  Menu?: ComponentType<PickerMenuProps>
+  PillMenu?: ComponentType<PillMenuProps>
   /** Long-press menu (UIContextMenuInteraction on iOS). With no actions, renders children only. */
   ContextMenu: ComponentType<ContextMenuProps>
   /** Glass capsule on iOS 26 (`interactive` = glassEffect(.regular.interactive())), ultraThinMaterial before, a plain surface on Android. */
@@ -98,11 +98,10 @@ export type SheetProps = Readonly<{
 
 export type SegmentedProps = Readonly<{ values: readonly string[]; selectedIndex: number; onChange: (index: number) => void; accessibilityLabel: string }>
 
-export type PickerMenuProps = Readonly<{
+export type PillMenuProps = Readonly<{
+  title: string
   items: Array<{ key: string; title: string; checked?: boolean; disabled?: boolean; onPress: () => void }>
   accessibilityLabel: string
-  style?: StyleProp<ViewStyle>
-  children: ReactNode
 }>
 
 export type MenuAction = Readonly<{ title: string; disabled?: boolean; onPress: () => void }>

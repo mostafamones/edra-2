@@ -6,7 +6,7 @@ import type { Dialog, SessionsPlatform } from '../../features/sessions/screens/p
 import { useColors as useAssessmentColors } from '../../features/assignments/theme.ts'
 import { assessmentCamera } from '../camera/index.tsx'
 import { NavigationBar } from './Bars'
-import { GlassButton, GlassCapsule, Popup, Segmented } from './Controls'
+import { GlassButton, GlassCapsule, Pill, Popup, Segmented } from './Controls'
 import { FeatureIcon } from './FeatureIcon.tsx'
 import { Header } from './InlineBar.tsx'
 import { FeatureSheet } from './Sheet'
@@ -29,7 +29,7 @@ export function createFeatureChrome(options: FeatureChromeOptions): { assessment
   const camera = assessmentCamera((on) => <FeatureIcon name={on ? 'flash' : 'flash-off'} color="#FFFFFF" />)
   return {
     assessments: {
-      Menu: Popup,
+      PillMenu: Pill,
       Icon: FeatureIcon,
       NavigationBar,
       Tabs: options.Tabs,
@@ -57,6 +57,7 @@ export function createFeatureChrome(options: FeatureChromeOptions): { assessment
       },
       Sheet: (props) => <FeatureSheet {...props} notifyOnClose />,
       Menu: Popup,
+      PillMenu: Pill,
       GlassButton,
       Camera: camera.Camera,
       requestCameraAccess: camera.requestCameraPermission,

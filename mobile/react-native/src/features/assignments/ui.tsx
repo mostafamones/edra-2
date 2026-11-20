@@ -103,22 +103,9 @@ export function MenuPill<T extends string>(props: { platform: AssessmentPlatform
   const colors = useColors()
   const { platform, label, value, options, onSelect } = props
   const title = options.find((o) => o.value === value)?.title ?? ''
-  const pill = (pressed = false) => (
-    <View style={[styles.pill, { backgroundColor: colors.secondaryFill, opacity: pressed ? 0.7 : 1 }]}>
-      <Text style={[font.subheadlineMedium, { color: colors.label }]}>{title}</Text>
-      {/* No chevron-down asset is bundled; the right chevron turned down is the same glyph. */}
-      <View style={styles.chevron}>
-        <platform.Icon name="chevron-right" size={14} color={colors.secondaryLabel} />
-      </View>
-    </View>
-  )
-  if (platform.Menu) {
+  if (platform.PillMenu) {
     const items = options.map((o) => ({ key: o.value, title: o.title, checked: o.value === value, disabled: o.disabled, onPress: () => onSelect(o.value) }))
-    return (
-      <platform.Menu items={items} accessibilityLabel={`${label}, ${title}`} style={styles.pillHost}>
-        {pill()}
-      </platform.Menu>
-    )
+    return <platform.PillMenu title={title} items={items} accessibilityLabel={`${label}, ${title}`} />
   }
   const open = () =>
     (platform.confirm ?? systemConfirm)({
@@ -126,8 +113,13 @@ export function MenuPill<T extends string>(props: { platform: AssessmentPlatform
       actions: [...options.map((o) => ({ title: o.title, disabled: o.disabled, onPress: () => onSelect(o.value) })), { title: 'Cancel', role: 'cancel' as const }],
     })
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${label}, ${title}`} onPress={open}>
-      {({ pressed }) => pill(pressed)}
+    <Pressable accessibilityRole="button" accessibilityLabel={`${label}, ${title}`} onPress={open}
+      style={({ pressed }) => [styles.pill, { backgroundColor: colors.secondaryFill, opacity: pressed ? 0.7 : 1 }]}>
+      <Text numberOfLines={1} style={[font.subheadlineMedium, styles.pillText, { color: colors.label }]}>{title}</Text>
+      {/* No chevron-down asset is bundled; the right chevron turned down is the same glyph. */}
+      <View style={styles.chevron}>
+        <platform.Icon name="chevron-right" size={14} color={colors.secondaryLabel} />
+      </View>
     </Pressable>
   )
 }
@@ -191,8 +183,8 @@ export const styles = StyleSheet.create({
   prominent: { minHeight: 34, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   bordered: { minHeight: 34, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   borderedSmall: { minHeight: 28, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32, paddingLeft: 14, paddingRight: 10, borderRadius: 999 },
-  pillHost: { alignSelf: 'flex-start' },
+  pill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', maxWidth: '100%', gap: 4, minHeight: 40, paddingLeft: 14, paddingRight: 10, borderRadius: 999 },
+  pillText: { flexShrink: 1 },
   chevron: { transform: [{ rotate: '90deg' }] },
   section: { marginHorizontal: 16, marginBottom: 20 },
   sectionHeader: { paddingHorizontal: 16, paddingBottom: 6 },

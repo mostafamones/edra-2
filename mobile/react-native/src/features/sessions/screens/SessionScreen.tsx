@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View, type ColorValue } from 'react-native'
+import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import type { AddAttendeeModel } from '../attendees.ts'
 import type { AttendanceEntry, AttendanceSheet, AttendanceStatus, LiveSession } from '../contract.ts'
 import type { RosterFilter, RosterSort, SessionDetailModel } from '../detail.ts'
 import type { ScannerModel } from '../scanner.ts'
 import { AddAttendeeScreen } from './AddAttendeeScreen.tsx'
 import { FinalizeReviewSheet } from './FinalizeReviewSheet.tsx'
-import { officialLabel, shortTime, statusLabel } from './format.ts'
+import { shortTime, statusLabel } from './format.ts'
 import { useMessageDialog, useModel } from './hooks.ts'
 import { LateDeadlineSheet } from './LateDeadlineSheet.tsx'
 import { Banner, Button, describeStudent, Loading, StudentCard, Unavailable } from './parts.tsx'
@@ -187,22 +187,18 @@ function Loaded({ model, sheet, platform, bottom }: { model: SessionDetailModel;
           action={<Button title="Retry" onPress={() => void model.load()} />}
         />
       )}
-      <Stats sheet={sheet} />
-      <Text style={[type.footnote, styles.inset, { color: colors.secondary, marginTop: 8 }]}>Draft counts · {officialLabel(model.official ?? 'notFinalized')}</Text>
       <View style={styles.pills}>
-        <Pill
-          name="Show"
-          value={FILTERS[model.filter]}
-          platform={platform}
+        <platform.PillMenu
+          title={FILTERS[model.filter]}
+          accessibilityLabel={`Show, ${FILTERS[model.filter]}`}
           items={(Object.keys(FILTERS) as RosterFilter[]).flatMap((filter) => [
             ...(filter === 'present' ? [{ key: 'divider', divider: true as const }] : []),
             { key: filter, title: FILTERS[filter], checked: model.filter === filter, onPress: () => model.setFilter(filter) },
           ])}
         />
-        <Pill
-          name="Sort"
-          value={SORTS[model.sort]}
-          platform={platform}
+        <platform.PillMenu
+          title={SORTS[model.sort]}
+          accessibilityLabel={`Sort, ${SORTS[model.sort]}`}
           items={(Object.keys(SORTS) as RosterSort[]).map((sort) => ({
             key: sort,
             title: SORTS[sort],
@@ -240,22 +236,6 @@ function emptyMessage(filter: RosterFilter, rosterSize: number) {
   return `No students marked ${FILTERS[filter]}`
 }
 
-/** Compact menu pill showing the current choice; the menu marks it with a checkmark. */
-function Pill({ name, value, items, platform }: { name: string; value: string; items: MenuItem[]; platform: SessionsPlatform }) {
-  const colors = useColors()
-  return (
-    <platform.Menu items={items} accessibilityLabel={`${name}, ${value}`} style={styles.pillMenu}>
-      <View style={[styles.pill, { backgroundColor: colors.fill }]}>
-        <Text numberOfLines={1} style={[type.subheadline, { color: colors.label, fontWeight: '600' }]}>{value}</Text>
-        {/* No chevron-down asset is bundled yet; the right chevron turned down is the same Hugeicon stroke. */}
-        <View style={styles.chevron}>
-          <platform.Icon name="hugeicons-chevron-right" size={14} color={colors.secondary as string} />
-        </View>
-      </View>
-    </platform.Menu>
-  )
-}
-
 function EntryRow({ model, entry, platform }: { model: SessionDetailModel; entry: AttendanceEntry; platform: SessionsPlatform }) {
   const saving = model.savingEntries.has(entry.annual_student_record_id)
   return (
@@ -274,49 +254,8 @@ function EntryRow({ model, entry, platform }: { model: SessionDetailModel; entry
   )
 }
 
-/** Compact tiles: three fit the screen width, the rest scroll sideways with view-aligned snapping. */
-function Stats({ sheet }: { sheet: AttendanceSheet }) {
-  const colors = useColors()
-  const width = (useWindowDimensions().width - 32 - 20) / 3
-  const { counts } = sheet
-  const tiles: [string, number, ColorValue?][] = [
-    ['Students', counts.total],
-    ['Present', counts.present, colors.green],
-    ['Late', counts.late, colors.orange],
-    ['Absent', counts.absent, colors.red],
-    ['Excused', counts.excused, colors.cyan],
-  ]
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      snapToInterval={width + 10}
-      decelerationRate="fast"
-      contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
-      style={{ marginTop: 24, flexGrow: 0 }}
-    >
-      {tiles.map(([label, count, dot]) => (
-        <View key={label} style={[styles.tile, { width, backgroundColor: colors.tile }]} accessible accessibilityLabel={`${label}, ${count}`}>
-          <View style={styles.tileLabel}>
-            {dot && <View style={[styles.dot, { backgroundColor: dot }]} />}
-            <Text numberOfLines={1} style={[type.footnote, { color: colors.secondary, flexShrink: 1 }]}>{label}</Text>
-          </View>
-          <Text style={[type.title, { color: colors.label }]}>{count}</Text>
-        </View>
-      ))}
-    </ScrollView>
-  )
-}
-
 const styles = StyleSheet.create({
-  inset: { paddingHorizontal: 16 },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, marginTop: 24, marginBottom: 12 },
-  pillMenu: { alignSelf: 'flex-start' },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36, paddingLeft: 14, paddingRight: 10, borderRadius: 18 },
-  chevron: { transform: [{ rotate: '90deg' }] },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   fab: { position: 'absolute', right: 20 },
-  tile: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 14, gap: 4 },
-  tileLabel: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
 })

@@ -136,6 +136,13 @@ export const corePlatform: SessionsPlatform = {
       </Pressable>
     )
   },
+  PillMenu({ title, accessibilityLabel, items }) {
+    return (
+      <corePlatform.Menu items={items} accessibilityLabel={accessibilityLabel} style={{ alignSelf: 'flex-start' }}>
+        <Text style={[type.subheadline, { fontWeight: '600', paddingVertical: 10 }]}>{`${title} ▾`}</Text>
+      </corePlatform.Menu>
+    )
+  },
   GlassButton({ icon, accessibilityLabel, onPress, prominent, diameter }) {
     const colors = useColors()
     return (

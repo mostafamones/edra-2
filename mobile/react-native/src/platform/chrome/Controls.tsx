@@ -1,10 +1,10 @@
 import { HorizontalDivider, DropdownMenu, DropdownMenuItem, Host, RNHostView, SegmentedButton, SingleChoiceSegmentedButtonRow, Text } from '@expo/ui/jetpack-compose'
 import { cloneElement, isValidElement, useState } from 'react'
 import { semantics } from '@expo/ui/jetpack-compose/modifiers'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native'
 import type { SegmentedProps } from '../../features/assignments/platform.ts'
-import type { GlassButtonProps } from '../../features/sessions/screens/platform.ts'
-import { useColors } from '../../features/sessions/screens/theme.ts'
+import type { GlassButtonProps, PillMenuProps } from '../../features/sessions/screens/platform.ts'
+import { type, useColors } from '../../features/sessions/screens/theme.ts'
 import { FeatureIcon } from './FeatureIcon.tsx'
 import type { CapsuleProps, PopupProps } from './controlsTypes.ts'
 
@@ -72,7 +72,29 @@ export function Popup({ items, accessibilityLabel, disabled, longPress, children
   )
 }
 
-const styles = StyleSheet.create({ center: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' } })
+/** A filled capsule with the current choice and a down chevron opening the popup, which ticks the choice. */
+export function Pill({ title, accessibilityLabel, items, icon }: PillMenuProps) {
+  const colors = useColors()
+  return (
+    <Popup items={items} accessibilityLabel={accessibilityLabel} style={styles.pillHost}>
+      <View style={[styles.pill, { backgroundColor: colors.fill, paddingLeft: icon ? 12 : 14 }]}>
+        {icon !== undefined && <FeatureIcon name={icon} size={18} color={colors.label} />}
+        <RNText numberOfLines={1} style={[type.subheadline, styles.pillText, { color: colors.label }]}>{title}</RNText>
+        <View style={styles.down}>
+          <FeatureIcon name="chevron-right" size={12} color={colors.secondary} />
+        </View>
+      </View>
+    </Popup>
+  )
+}
+
+const styles = StyleSheet.create({
+  center: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  pillHost: { alignSelf: 'flex-start', maxWidth: '100%' },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingRight: 12, borderRadius: 999 },
+  pillText: { fontWeight: '600', flexShrink: 1 },
+  down: { transform: [{ rotate: '90deg' }] },
+})
 
 export function Segmented({ values, selectedIndex, onChange, accessibilityLabel }: SegmentedProps) {
   return (

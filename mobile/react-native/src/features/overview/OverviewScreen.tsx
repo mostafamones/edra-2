@@ -26,7 +26,7 @@ export type OverviewProps = Readonly<{
   onShowSessions: () => void
   onShowAssessments: () => void
   onRefresh: () => Promise<unknown>
-  platform: Pick<SessionsPlatform, 'Menu' | 'useBottomInset'>
+  platform: Pick<SessionsPlatform, 'PillMenu' | 'useBottomInset'>
 }>
 
 /**
@@ -60,31 +60,25 @@ function useLink() {
   return useColorScheme() === 'dark' ? '#2E9F5B' : '#008236'
 }
 
-function AcademyPicker({ academies, selectedId, icon, onChoose, platform: { Menu } }: OverviewProps) {
-  const colors = useColors()
+function AcademyPicker({ academies, selectedId, icon, onChoose, platform: { PillMenu } }: OverviewProps) {
   const current = academies.find((a) => a.id === selectedId)
   if (!current) return null
   return (
-    <Menu
-      accessibilityLabel={`Academy, ${current.name}, ${roleLabel(current.role)}`}
-      style={styles.picker}
-      items={academies.map((a) => ({
-        key: a.id,
-        title: a.name,
-        icon: icon(a),
-        checked: a.id === selectedId,
-        // Reselecting the current academy changes nothing (the controller ignores it).
-        onPress: () => onChoose(a.id),
-      }))}
-    >
-      <View style={[styles.pill, { backgroundColor: colors.fill }]}>
-        <FeatureIcon name={icon(current)} size={18} color={colors.label} />
-        <Text numberOfLines={1} style={[type.subheadline, styles.pillText, { color: colors.label }]}>{current.name}</Text>
-        <View style={styles.down}>
-          <FeatureIcon name="chevron-right" size={12} color={colors.secondary} />
-        </View>
-      </View>
-    </Menu>
+    <View style={styles.picker}>
+      <PillMenu
+        title={current.name}
+        icon={icon(current)}
+        accessibilityLabel={`Academy, ${current.name}, ${roleLabel(current.role)}`}
+        items={academies.map((a) => ({
+          key: a.id,
+          title: a.name,
+          icon: icon(a),
+          checked: a.id === selectedId,
+          // Reselecting the current academy changes nothing (the controller ignores it).
+          onPress: () => onChoose(a.id),
+        }))}
+      />
+    </View>
   )
 }
 
@@ -200,10 +194,7 @@ function Pending({ label }: { label: string }) {
 
 const styles = StyleSheet.create({
   content: { gap: 28 },
-  picker: { alignSelf: 'flex-start', marginHorizontal: 20, marginTop: -6 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 36, paddingLeft: 12, paddingRight: 14, paddingVertical: 6, borderRadius: 999 },
-  pillText: { fontWeight: '600', flexShrink: 1 },
-  down: { transform: [{ rotate: '90deg' }] },
+  picker: { paddingHorizontal: 20 },
   recap: { gap: 2 },
   recapHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 6 },
   viewAll: { minHeight: 44, justifyContent: 'center' },

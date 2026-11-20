@@ -93,6 +93,18 @@ export interface MenuProps {
   style?: StyleProp<ViewStyle>
 }
 
+/**
+ * Selection pill: the current choice and a down chevron opening a menu that ticks it. iOS 26: interactive glass
+ * capsule menu button; earlier iOS: bordered capsule; Android: filled capsule with a popup.
+ */
+export interface PillMenuProps {
+  title: string
+  accessibilityLabel: string
+  items: MenuItem[]
+  /** Leading bundled Hugeicon, such as the academy's. */
+  icon?: IconName
+}
+
 /** Circle button. iOS 26: `.glass`/`.glassProminent`; earlier iOS: bordered(Prominent) circle; Android: no glass. */
 export interface GlassButtonProps {
   icon: IconName
@@ -131,6 +143,7 @@ export interface SessionsPlatform {
   Header: ComponentType<HeaderProps>
   Sheet: ComponentType<SheetProps>
   Menu: ComponentType<MenuProps>
+  PillMenu: ComponentType<PillMenuProps>
   GlassButton: ComponentType<GlassButtonProps>
   /** Live preview with native torch/zoom controls (`CameraControls`) and pinch zoom over it. */
   Camera: ComponentType<CameraProps>
