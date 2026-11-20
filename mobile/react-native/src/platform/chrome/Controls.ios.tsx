@@ -1,7 +1,7 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
 import { Button, Capsule, ContextMenu, Divider, Group, HStack, Host, Image, Label, Menu, RNHostView, Text, Toggle } from '@expo/ui/swift-ui'
 import {
-  accessibilityLabel, background, buttonBorderShape, buttonStyle, disabled, font, foregroundStyle, frame, glassEffect, lineLimit, menuOrder,
+  accessibilityLabel, background, buttonBorderShape, buttonStyle, disabled, font, foregroundStyle, frame, glassEffect, lineLimit, menuIndicator, menuOrder,
   padding, resizable, rotationEffect, shapes, tint, truncationMode,
 } from '@expo/ui/swift-ui/modifiers'
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect'
@@ -84,7 +84,8 @@ function menuActions(items: MenuItem[], bold: boolean) {
 
 export function Popup({ items, disabled: unavailable, accessibilityLabel: label, longPress, style, children }: PopupProps) {
   const trigger = <RNHostView matchContents={{ vertical: true, horizontal: !longPress && !!style }}><View>{children}</View></RNHostView>
-  const actions = menuActions(items, useBoldText())
+  const bold = useBoldText()
+  const actions = menuActions(items, bold)
   return (
     <Host matchContents={{ vertical: true, horizontal: !longPress && !!style }} style={style}>
       {longPress ? (
@@ -123,6 +124,7 @@ export function Pill({ title, accessibilityLabel: label, items, icon }: PillMenu
         }
         modifiers={[
           menuOrder('fixed'),
+          menuIndicator('hidden'),
           buttonStyle(supportsGlass ? 'glass' : 'bordered'),
           buttonBorderShape('capsule'),
           ...(supportsGlass ? [] : [tint('#8E8E93')]),
