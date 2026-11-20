@@ -51,6 +51,10 @@ export function announceStatus(state: AnnounceState): string | null {
   return state.status === 'reviewing' || state.status === 'sending' ? null : state.message
 }
 
+/** A direct (single-student) announcement shows the sheet only once there is an outcome to act on. */
+export const showsAnnounceSheet = (announcement: Announcement | null): boolean =>
+  announcement !== null && (!announcement.direct || announceStatus(announcement.state) !== null)
+
 /** Nothing more to send: only Close remains. */
 export const announceDone = (state: AnnounceState): boolean => state.status === 'rejected' || state.status === 'failed'
 

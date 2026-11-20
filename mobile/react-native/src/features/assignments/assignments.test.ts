@@ -622,15 +622,25 @@ describe('workspace', () => {
     })
   })
 
-  test('an uncertain announcement retries with the same key and versions', async () => {
-    const { h, model } = await loadedWorkspace([student('s1', { marking: 'complete', total: '20' })])
+  test('one selected student is announced at once; an uncertain send retries with the same key and versions', async () => {
+    const { h, model } = await loadedWorkspace([student('s1', { marking: 'complete', total: '20' }), student('s2', { marking: 'partial' })])
     model.startSelecting(model.students[0]!)
-    model.reviewSelection()
-    const first = model.announce()
+    const first = model.reviewSelection()
+    assert.equal(model.announcement?.direct, true)
+    assert.equal(model.announcement?.state.status, 'sending') // no review: the request is already out
     await h.fetch.waitFor(3)
+    assert.deepEqual(h.body(2), { items: [{ annual_student_record_id: 's1', expected_version: 1 }] })
+    model.toggleSelected(model.students[0]!) // the selection is fixed while sending
+    assert.equal(model.selection.size, 1)
+    await model.reviewSelection() // a repeat tap starts nothing new
+    await model.announce()
+    assert.equal(h.fetch.calls.length, 3)
     h.fetch.fail(2)
     await first
     assert.equal(model.announcement?.state.status, 'uncertain')
+    assert.equal(model.notice, null)
+    await model.reviewSelection() // still one command: the shown outcome owns the retry
+    assert.equal(h.fetch.calls.length, 3)
     const retry = model.announce()
     await h.fetch.waitFor(4)
     assert.equal(h.key(3), h.key(2))
@@ -643,6 +653,37 @@ describe('workspace', () => {
     assert.equal(model.announcement, null)
     assert.equal(model.isSelecting, false)
     assert.equal(model.notice, 'Result announced.')
+  })
+
+  test('several selected students are reviewed before anything is sent', async () => {
+    const { h, model } = await loadedWorkspace([student('s1', { marking: 'complete', total: '20' }), student('s2', { marking: 'complete', total: '18' })])
+    model.startSelecting(model.students[0]!)
+    model.toggleSelected(model.students[1]!)
+    await model.reviewSelection()
+    assert.equal(model.announcement?.direct, false)
+    assert.equal(model.announcement?.state.status, 'reviewing')
+    assert.equal(h.fetch.calls.length, 2) // detail and list only
+    await model.reviewSelection()
+    const key = model.announcement?.id
+    const send = model.announce()
+    void model.announce() // a double tap on the confirmation sends once
+    await h.fetch.waitFor(3)
+    assert.equal(h.key(2), key)
+    h.fetch.respond(2, 200, '{"outcome":"published","replayed":false,"results":[]}')
+    await h.fetch.waitFor(4)
+    h.fetch.respond(3, 200, page([]))
+    await send
+    assert.equal(h.fetch.calls.length, 4)
+    assert.equal(model.notice, '2 results announced.')
+  })
+
+  test('a long press on an ineligible student selects nothing and never announces', async () => {
+    const { h, model } = await loadedWorkspace([student('s1', { marking: 'partial' })])
+    model.startSelecting(model.students[0]!)
+    assert.equal(model.isSelecting, true)
+    assert.equal(model.selection.size, 0)
+    assert.equal(model.announcement, null)
+    assert.equal(h.fetch.calls.length, 2)
   })
 
   test('a code lookup is read-only and opens the same sheet', async () => {

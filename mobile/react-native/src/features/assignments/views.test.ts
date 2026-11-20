@@ -45,12 +45,25 @@ test('row wording', () => {
 test('announce states', () => {
   const s = decodeStudent(student())
   const command = { key: 'k', body: { items: [] } } as never
-  const rejected = { id: 'k', students: [s], command, state: { status: 'rejected', message: 'Nothing', reasons: { s1: 'Not fully marked' } } } as const
+  const rejected = { id: 'k', students: [s], command, direct: false, state: { status: 'rejected', message: 'Nothing', reasons: { s1: 'Not fully marked' } } } as const
   assert.equal(v.rejection(rejected, s), 'Not fully marked')
   assert.equal(v.announceDone(rejected.state), true)
   assert.equal(v.announceStatus(rejected.state), 'Nothing')
   assert.equal(v.announceStatus({ status: 'sending' }), null)
   assert.equal(v.announceDone({ status: 'uncertain', message: 'x' }), false)
+})
+
+test('a direct announcement shows the sheet only for an outcome; a batch is always reviewed', () => {
+  const s = decodeStudent(student())
+  const command = { key: 'k', body: { items: [] } } as never
+  const at = (direct: boolean, state: Parameters<typeof v.announceStatus>[0]) => v.showsAnnounceSheet({ id: 'k', students: [s], command, direct, state })
+  assert.equal(v.showsAnnounceSheet(null), false)
+  assert.equal(at(true, { status: 'reviewing' }), false)
+  assert.equal(at(true, { status: 'sending' }), false)
+  assert.equal(at(true, { status: 'uncertain', message: 'x' }), true)
+  assert.equal(at(true, { status: 'failed', message: 'x' }), true)
+  assert.equal(at(false, { status: 'reviewing' }), true)
+  assert.equal(at(false, { status: 'sending' }), true)
 })
 
 test('marking wording and quick bar', () => {

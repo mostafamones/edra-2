@@ -60,11 +60,13 @@ export type AnnounceState =
   | Readonly<{ status: 'rejected'; message: string; reasons: Readonly<Record<string, string>> }>
   | Readonly<{ status: 'failed'; message: string }>
 
-/** One confirmation. Its key and reviewed versions are fixed and reused on every retry. */
+/** One announcement command. Its key and reviewed versions are fixed and reused on every retry. */
 export type Announcement = Readonly<{
   id: string
   students: readonly StudentWork[]
   state: AnnounceState
+  /** One selected student sent without a review; the sheet appears only for an outcome to act on. */
+  direct: boolean
   command: WriteCommand<ReturnType<typeof announceBody>>
 }>
 
@@ -329,8 +331,9 @@ export class WorkspaceModel extends Observable {
     })
   }
 
-  /** Tapping a row while selecting: deselect, or select only an announceable row. */
+  /** Tapping a row while selecting: deselect, or select only an announceable row. Fixed while announcing. */
   toggleSelected(student: StudentWork): void {
+    if (this._announcement?.state.status === 'sending') return
     const next = new Set(this._selection)
     if (next.has(student.id)) next.delete(student.id)
     else if (this.announceBlocker(student) === null) next.add(student.id)
@@ -338,7 +341,7 @@ export class WorkspaceModel extends Observable {
     this.set(() => (this._selection = next))
   }
 
-  /** "Select" from a row: start selecting with that row when it can be announced. */
+  /** A long press on a row: start selecting with that row when it can be announced. Never announces. */
   startSelecting(student: StudentWork): void {
     this.set(() => {
       this._isSelecting = true
@@ -450,15 +453,24 @@ export class WorkspaceModel extends Observable {
     return null
   }
 
-  /** Opens the review for one row or a set of rows; announcing still needs `announce()`. */
-  reviewAnnouncement(students: readonly StudentWork[]): void {
+  /** Opens the review for a set of rows; announcing still needs `announce()`. */
+  reviewAnnouncement(students: readonly StudentWork[], direct = false): void {
     if (students.length === 0) return
     const command = createCommand(announceBody(students), this.env.newKey)
-    this.set(() => (this._announcement = { id: command.key, students, state: { status: 'reviewing' }, command }))
+    this.set(() => (this._announcement = { id: command.key, students, state: { status: 'reviewing' }, command, direct }))
   }
 
-  reviewSelection(): void {
-    this.reviewAnnouncement(this.students.filter((s) => this._selection.has(s.id)))
+  /**
+   * The explicit announce action. One eligible student is sent at once; several are reviewed first.
+   * While a command is open (sending, or its outcome shown) repeat taps start nothing new.
+   */
+  async reviewSelection(): Promise<void> {
+    if (this._announcement !== null) return
+    const students = this.students.filter((s) => this._selection.has(s.id))
+    const only = students.length === 1 ? students[0]! : null
+    if (only === null || this.announceBlocker(only) !== null) return this.reviewAnnouncement(students)
+    this.reviewAnnouncement(students, true)
+    await this.announce()
   }
 
   closeAnnouncement(): void {

@@ -144,7 +144,7 @@ export function Section(props: { header?: string; children: ReactNode[] | ReactN
 }
 
 /** One List row: 44 pt minimum, 16 pt insets, highlight while pressed. */
-export function Row(props: { onPress?: () => void; onLongPress?: () => void; children: ReactNode; style?: StyleProp<ViewStyle>; accessibilityLabel?: string; selected?: boolean }) {
+export function Row(props: { onPress?: () => void; onLongPress?: () => void; longPressLabel?: string; children: ReactNode; style?: StyleProp<ViewStyle>; accessibilityLabel?: string; selected?: boolean }) {
   const colors = useColors()
   if (!props.onPress) return <View style={[styles.row, props.style]}>{props.children}</View>
   return (
@@ -154,7 +154,7 @@ export function Row(props: { onPress?: () => void; onLongPress?: () => void; chi
       accessibilityState={props.selected === undefined ? undefined : { selected: props.selected }}
       onPress={props.onPress}
       onLongPress={props.onLongPress}
-      accessibilityActions={props.onLongPress ? [{ name: 'longpress' }] : undefined}
+      accessibilityActions={props.onLongPress ? [{ name: 'longpress', label: props.longPressLabel }] : undefined}
       onAccessibilityAction={(e) => e.nativeEvent.actionName === 'longpress' && props.onLongPress?.()}
       style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.tertiaryFill }, props.style]}
     >

@@ -4,7 +4,7 @@ import type { AcademyContext } from '../../core/ownership.ts'
 import { studentStatus, type AssignmentSummary, type StudentWork } from './api.ts'
 import type { AssignmentsModel } from './assignments.ts'
 import { MarkingSheet } from './MarkingSheet.tsx'
-import { systemAlert, systemConfirm, type AssessmentPlatform, type BarItem, type Pane } from './platform.ts'
+import { systemAlert, type AssessmentPlatform, type BarItem, type Pane } from './platform.ts'
 import { ScanPane } from './ScanPane.tsx'
 import { displayScore } from './score.ts'
 import { digits, font, useColors } from './theme.ts'
@@ -16,6 +16,7 @@ import {
   announceStatus,
   countLabel,
   rejection,
+  showsAnnounceSheet,
   statusTone,
   studentRowLabel,
   studentsEmptyTitle,
@@ -60,7 +61,7 @@ export function WorkspaceScreen({ summary, context, parent, platform, onClose }:
   }, [model, notice])
 
   const select = (next: Pane) => {
-    if (tabAction(next, model.isSelecting) === 'review') return model.reviewSelection()
+    if (tabAction(next, model.isSelecting) === 'review') return void model.reviewSelection()
     // Leaving search shows every student again.
     if (next !== 'search') setSearchText('')
     setPane(next)
@@ -73,9 +74,11 @@ export function WorkspaceScreen({ summary, context, parent, platform, onClose }:
     : { kind: 'icon', icon: 'chevron-left', label: 'Back', onPress: onClose }
   // Without a search tab there is nothing to turn into the confirm button.
   const trailing: BarItem | null =
-    model.isSelecting && !platform.hasSearchTab
-      ? { kind: 'text', title: `Announce ${model.selection.size}`, onPress: () => model.reviewSelection(), disabled: model.selection.size === 0 }
-      : null
+    !model.isSelecting || platform.hasSearchTab
+      ? null
+      : model.announcement?.state.status === 'sending'
+        ? { kind: 'progress' }
+        : { kind: 'text', title: `Announce ${model.selection.size}`, onPress: () => void model.reviewSelection(), disabled: model.selection.size === 0 }
   const page = (content: ReactNode, search = false) => (
     <platform.NavigationBar title={title} leading={leading} trailing={trailing} search={search ? { text: searchText, onChange: setSearchText, prompt: SEARCH_PROMPT } : null}>
       {content}
@@ -108,7 +111,7 @@ export function WorkspaceScreen({ summary, context, parent, platform, onClose }:
         {marking && <MarkingSheet key={marking.student.id} model={marking} platform={platform} onClose={() => model.closeMarking()} />}
       </platform.Sheet>
       <platform.Sheet
-        visible={announcement !== null}
+        visible={showsAnnounceSheet(announcement)}
         presentation="sheet"
         dismissDisabled={announcement?.state.status === 'sending'}
         onDismiss={() => model.closeAnnouncement()}
@@ -159,7 +162,7 @@ function Students({ model, platform }: { model: WorkspaceModel; platform: Assess
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Section header={model.isSelecting ? `${model.selection.size} selected` : undefined}>
+      <Section header={!model.isSelecting ? undefined : model.announcement?.state.status === 'sending' ? 'Announcing…' : `${model.selection.size} selected`}>
         {students.map((s) => (
           <StudentRow key={s.id} model={model} platform={platform} student={s} />
         ))}
@@ -176,23 +179,14 @@ function StudentRow({ model, platform, student }: { model: WorkspaceModel; platf
   const status = studentStatus(student)
   const tone = statusTone(status)
   // A long press on the plain row, not the native context-menu wrapper, so a tap always reaches `onPress`.
-  const actions =
-    model.actions.announce && !model.isSelecting
-      ? () =>
-          (platform.confirm ?? systemConfirm)({
-            title: student.fullName,
-            actions: [
-              { title: 'Announce result', disabled: blocked, onPress: () => model.reviewAnnouncement([student]) },
-              { title: 'Select', onPress: () => model.startSelecting(student) },
-              { title: 'Cancel', role: 'cancel' },
-            ],
-          })
-      : undefined
+  // It only starts selecting (with this row when it can be announced); announcing stays an explicit action.
+  const select = model.actions.announce && !model.isSelecting ? () => model.startSelecting(student) : undefined
   return (
     <Row
       selected={model.isSelecting ? selected : undefined}
       onPress={() => (model.isSelecting ? model.toggleSelected(student) : model.open(student, 'row'))}
-      onLongPress={actions}
+      onLongPress={select}
+      longPressLabel="Select"
       accessibilityLabel={studentRowLabel(student, model.detail?.maxScore, status)}
       style={styles.studentRow}
     >
@@ -220,21 +214,18 @@ function AnnounceSheet({ model, platform }: { model: WorkspaceModel; platform: A
   const { state } = announcement
   const done = announceDone(state)
   const message = announceStatus(state)
+  const blocked = announcement.students.some((s) => model.announceBlocker(s) !== null)
   const trailing: BarItem | null =
     state.status === 'sending'
       ? { kind: 'progress' }
       : done
         ? null
-        : {
-            kind: 'text',
-            title: state.status === 'uncertain' ? 'Retry' : 'Announce',
-            prominent: true,
-            disabled: announcement.students.some((s) => model.announceBlocker(s) !== null),
-            onPress: () => void model.announce(),
-          }
+        : state.status === 'uncertain'
+          ? { kind: 'text', title: 'Retry', prominent: true, disabled: blocked, onPress: () => void model.announce() }
+          : { kind: 'icon', icon: 'tick-02', label: 'Announce results', disabled: blocked, onPress: () => void model.announce() }
   return (
     <platform.NavigationBar
-      title="Announce?"
+      title="Announce"
       leading={{ kind: 'icon', icon: 'cancel-01', label: done ? 'Close' : 'Cancel', disabled: state.status === 'sending', onPress: () => model.closeAnnouncement() }}
       trailing={trailing}
     >
