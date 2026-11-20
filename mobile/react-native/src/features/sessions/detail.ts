@@ -27,6 +27,10 @@ export interface ReviewedCommand {
   key: string
 }
 
+/** Roster filter: checked in (Present or Late), everyone, or one draft status. */
+export type RosterFilter = 'checkedIn' | 'all' | AttendanceStatus
+export type RosterSort = 'recent' | 'name'
+
 export type SheetState = { kind: 'loading' } | { kind: 'loaded' } | { kind: 'failed'; message: string }
 export type Official = 'notFinalized' | 'finalized' | 'correctionsPending'
 
@@ -81,8 +85,8 @@ export class SessionDetailModel extends Model {
   lastRefreshed: Date | null = null
   /** A background refresh failed: the shown sheet may be out of date. */
   refreshProblem: string | null = null
-  /** Show every roster student instead of only those checked in. */
-  showAll = false
+  filter: RosterFilter = 'checkedIn'
+  sort: RosterSort = 'recent'
   lateAfterMinutes: number
 
   // Finalization
@@ -135,12 +139,16 @@ export class SessionDetailModel extends Model {
   get checkedIn() {
     return (this.sheet?.entries ?? []).filter(isCheckedIn).sort((a, b) => time(b.checked_in_at) - time(a.checked_in_at))
   }
+  /** The loaded roster filtered and sorted locally; `recent` = checked in first, newest check-in first, then by name. */
   get visibleEntries() {
-    if (!this.showAll) return this.checkedIn
-    const rest = (this.sheet?.entries ?? [])
-      .filter((e) => !isCheckedIn(e))
-      .sort((a, b) => a.full_name.localeCompare(b.full_name, undefined, { sensitivity: 'base' }))
-    return [...this.checkedIn, ...rest]
+    const { filter } = this
+    return (this.sheet?.entries ?? [])
+      .filter((e) => filter === 'all' || (filter === 'checkedIn' ? isCheckedIn(e) : e.status === filter))
+      .sort((a, b) =>
+        this.sort === 'name'
+          ? byName(a, b)
+          : Number(isCheckedIn(b)) - Number(isCheckedIn(a)) || time(b.checked_in_at) - time(a.checked_in_at) || byName(a, b),
+      )
   }
   /** Expected students still Unknown in a mandatory session (never eligible or added students). */
   get unrecordedCount() {
@@ -154,8 +162,13 @@ export class SessionDetailModel extends Model {
     return [...this.statusCommands.values()].find((c) => !this.savingEntries.has(c.entryId)) ?? null
   }
 
-  setShowAll(value: boolean) {
-    this.showAll = value
+  setFilter(filter: RosterFilter) {
+    this.filter = filter
+    this.changed()
+  }
+
+  setSort(sort: RosterSort) {
+    this.sort = sort
     this.changed()
   }
 
@@ -461,4 +474,5 @@ export class SessionDetailModel extends Model {
   }
 }
 
+const byName = (a: AttendanceEntry, b: AttendanceEntry) => a.full_name.localeCompare(b.full_name, undefined, { sensitivity: 'base' })
 const time = (iso: string | null | undefined) => (iso ? Date.parse(iso) : 0)

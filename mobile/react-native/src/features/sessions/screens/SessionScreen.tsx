@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View, type ColorValue } from 'react-native'
 import type { AddAttendeeModel } from '../attendees.ts'
 import type { AttendanceEntry, AttendanceSheet, AttendanceStatus, LiveSession } from '../contract.ts'
-import type { SessionDetailModel } from '../detail.ts'
+import type { RosterFilter, RosterSort, SessionDetailModel } from '../detail.ts'
 import type { ScannerModel } from '../scanner.ts'
 import { AddAttendeeScreen } from './AddAttendeeScreen.tsx'
 import { FinalizeReviewSheet } from './FinalizeReviewSheet.tsx'
@@ -16,6 +16,17 @@ import { useRefresh } from './SessionsHomeScreen.tsx'
 import { type, useColors } from './theme.ts'
 
 const STATUSES: AttendanceStatus[] = ['unknown', 'present', 'late', 'absent', 'excused']
+
+const FILTERS: Record<RosterFilter, string> = {
+  checkedIn: 'Checked in',
+  all: 'All students',
+  present: 'Present',
+  late: 'Late',
+  absent: 'Absent',
+  excused: 'Excused',
+  unknown: 'Not recorded',
+}
+const SORTS: Record<RosterSort, string> = { recent: 'Newest first', name: 'Name A–Z' }
 
 type Presented =
   | { kind: 'finalize' }
@@ -93,14 +104,16 @@ export function SessionScreen({ session, makeModel, platform }: {
   }
 
   const menu: MenuItem[] = [
-    { key: 'all', title: 'Show all', icon: 'hugeicons-users', checked: model.showAll, onPress: () => model.setShowAll(!model.showAll) },
     ...(model.sheet?.session.mandatory
       ? [{ key: 'absent', title: 'Mark rest absent', icon: 'hugeicons-user-x', destructive: true, disabled: !model.canMarkRestAbsent, onPress: confirmMarkAbsent }]
       : []),
     { key: 'add', title: 'Add attendee', icon: 'hugeicons-user-add-01', disabled: !model.canEdit, onPress: () => present({ kind: 'attendee', model: model.makeAttendees() }) },
     { key: 'divider', divider: true },
     { key: 'late', title: 'Set late deadline', icon: 'hugeicons-clock-01', onPress: () => present({ kind: 'late' }) },
-    { key: 'scan', title: 'Open scanner', icon: 'hugeicons-scan', onPress: () => present({ kind: 'scanner', model: model.makeScanner() }) },
+    // Manual attendance stays; the scanner only exists once the sheet confirms this academy uses student codes.
+    ...(model.sheet?.student_codes_enabled === true
+      ? [{ key: 'scan', title: 'Open scanner', icon: 'hugeicons-scan', onPress: () => present({ kind: 'scanner', model: model.makeScanner() }) }]
+      : []),
   ]
 
   let content
@@ -176,12 +189,34 @@ function Loaded({ model, sheet, platform, bottom }: { model: SessionDetailModel;
       )}
       <Stats sheet={sheet} />
       <Text style={[type.footnote, styles.inset, { color: colors.secondary, marginTop: 8 }]}>Draft counts · {officialLabel(model.official ?? 'notFinalized')}</Text>
-      <Text accessibilityRole="header" style={[type.title2, styles.inset, { color: colors.label, marginTop: 32, marginBottom: 12 }]}>
-        {model.showAll ? 'All students' : 'Checked in students'}
-      </Text>
+      <View style={styles.pills}>
+        <Pill
+          name="Show"
+          value={FILTERS[model.filter]}
+          platform={platform}
+          items={(Object.keys(FILTERS) as RosterFilter[]).flatMap((filter) => [
+            ...(filter === 'present' ? [{ key: 'divider', divider: true as const }] : []),
+            { key: filter, title: FILTERS[filter], checked: model.filter === filter, onPress: () => model.setFilter(filter) },
+          ])}
+        />
+        <Pill
+          name="Sort"
+          value={SORTS[model.sort]}
+          platform={platform}
+          items={(Object.keys(SORTS) as RosterSort[]).map((sort) => ({
+            key: sort,
+            title: SORTS[sort],
+            checked: model.sort === sort,
+            onPress: () => model.setSort(sort),
+          }))}
+        />
+      </View>
       {entries.length === 0 ? (
         <View style={[styles.empty, { paddingBottom: 96 + bottom }]}>
-          <Text style={[type.body, { color: colors.secondary }]}>{model.showAll ? 'No students on this roster' : 'No students checked in yet'}</Text>
+          <Text style={[type.body, { color: colors.secondary, textAlign: 'center' }]}>{emptyMessage(model.filter, sheet.entries.length)}</Text>
+          {model.filter !== 'all' && sheet.entries.length > 0 && (
+            <Button title="Show all students" onPress={() => model.setFilter('all')} style={{ marginTop: 12 }} />
+          )}
         </View>
       ) : (
         <FlatList
@@ -195,6 +230,29 @@ function Loaded({ model, sheet, platform, bottom }: { model: SessionDetailModel;
         />
       )}
     </View>
+  )
+}
+
+function emptyMessage(filter: RosterFilter, rosterSize: number) {
+  if (rosterSize === 0) return 'No students on this roster'
+  if (filter === 'checkedIn') return 'No students checked in yet'
+  if (filter === 'unknown') return 'Every student is recorded'
+  return `No students marked ${FILTERS[filter]}`
+}
+
+/** Compact menu pill showing the current choice; the menu marks it with a checkmark. */
+function Pill({ name, value, items, platform }: { name: string; value: string; items: MenuItem[]; platform: SessionsPlatform }) {
+  const colors = useColors()
+  return (
+    <platform.Menu items={items} accessibilityLabel={`${name}, ${value}`} style={styles.pillMenu}>
+      <View style={[styles.pill, { backgroundColor: colors.fill }]}>
+        <Text numberOfLines={1} style={[type.subheadline, { color: colors.label, fontWeight: '600' }]}>{value}</Text>
+        {/* No chevron-down asset is bundled yet; the right chevron turned down is the same Hugeicon stroke. */}
+        <View style={styles.chevron}>
+          <platform.Icon name="hugeicons-chevron-right" size={14} color={colors.secondary as string} />
+        </View>
+      </View>
+    </platform.Menu>
   )
 }
 
@@ -252,6 +310,10 @@ function Stats({ sheet }: { sheet: AttendanceSheet }) {
 
 const styles = StyleSheet.create({
   inset: { paddingHorizontal: 16 },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, marginTop: 24, marginBottom: 12 },
+  pillMenu: { alignSelf: 'flex-start' },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36, paddingLeft: 14, paddingRight: 10, borderRadius: 18 },
+  chevron: { transform: [{ rotate: '90deg' }] },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   fab: { position: 'absolute', right: 20 },
   tile: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 14, gap: 4 },

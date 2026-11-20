@@ -9,7 +9,7 @@ import type { StyleProp, ViewStyle } from 'react-native'
 export type IconName =
   | 'hugeicons-add-01'
   | 'hugeicons-tick-02'
-  | 'hugeicons-users'
+  | 'hugeicons-chevron-right'
   | 'hugeicons-user-x'
   | 'hugeicons-user-add-01'
   | 'hugeicons-clock-01'
