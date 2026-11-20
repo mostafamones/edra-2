@@ -16,6 +16,7 @@ import type { GlassButtonProps, MenuItem, PillMenuProps } from '../../features/s
 import { useBoldText, useReduceMotion } from './boldText.ts'
 import { FeatureIcon, featureIconAsset } from './FeatureIcon.tsx'
 import type { CapsuleProps, PopupProps } from './controlsTypes.ts'
+import { placeMenu, type Rect } from './menuPlacement.ts'
 
 const supportsGlass = isLiquidGlassAvailable()
 
@@ -126,7 +127,7 @@ export function Popup({ items, disabled: unavailable, accessibilityLabel: label,
 
 /**
  * The selection pill draws its trigger in React Native (Hugeicons bitmaps beside the title) on genuine glass, and
- * opens an anchored popup below it. SwiftUI's menu flattened the label and dropped both glyphs on device.
+ * opens an anchored popup over it, so the popup covers the pill rather than sitting beside it. SwiftUI's menu flattened the label and dropped both glyphs on device.
  * On iOS 26 one SwiftUI glass shape grows from the pill into the popup and back, standing in for the system menu morph.
  */
 export function Pill({ title, accessibilityLabel: label, items, icon }: PillMenuProps) {
@@ -170,7 +171,6 @@ function PillFace({ icon, title }: Pick<PillMenuProps, 'icon' | 'title'>) {
   )
 }
 
-type Rect = { x: number; y: number; width: number; height: number }
 type AnchoredMenuProps = {
   anchor: Rect
   items: MenuItem[]
@@ -216,12 +216,7 @@ function AnchoredMenu({ anchor, items, label, face, onCover, onClosed }: Anchore
   }, [window]) // Only a size change matters; dismiss is idempotent.
   const keyboard = Keyboard.isVisible() ? Keyboard.metrics() : undefined
   const floor = Math.min(window.height - insets.bottom, keyboard?.screenY ?? Infinity)
-  const below = floor - (anchor.y + anchor.height) - 2 * GAP
-  const above = anchor.y - insets.top - 2 * GAP
-  const down = below >= Math.min(above, 240)
-  const width = Math.min(Math.max(anchor.width, 220), window.width - 2 * GAP)
-  const left = Math.min(Math.max(anchor.x, GAP), window.width - GAP - width)
-  const place = down ? { top: anchor.y + anchor.height + GAP } : { bottom: window.height - anchor.y + GAP }
+  const place = placeMenu(anchor, window, insets.top, floor)
   const glass = expanded ? rect : anchor
   return (
     <Modal transparent visible={visible} animationType={morph ? 'none' : 'fade'} onRequestClose={() => dismiss()}
@@ -258,7 +253,7 @@ function AnchoredMenu({ anchor, items, label, face, onCover, onClosed }: Anchore
       )}
       <Animated.View accessibilityViewIsModal accessibilityLabel={label} onAccessibilityEscape={() => dismiss()}
         onLayout={morph ? (event) => setRect(event.nativeEvent.layout) : undefined}
-        style={[styles.menu, place, { left, width, maxHeight: Math.max(down ? below : above, 120) },
+        style={[styles.menu, place,
           morph && { opacity: progress.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' }) }]}>
         {!morph && (supportsGlass
           ? <GlassView glassEffectStyle="regular" style={[StyleSheet.absoluteFill, styles.menuFace]} />
@@ -286,8 +281,6 @@ function AnchoredMenu({ anchor, items, label, face, onCover, onClosed }: Anchore
 
 const MORPH_MS = 350
 const RADIUS = 20
-// Space between trigger and popup, and the popup's minimum margin from the screen edges.
-const GAP = 8
 
 export function Segmented({ values, selectedIndex, onChange, accessibilityLabel }: SegmentedProps) {
   return <SegmentedControl values={[...values]} selectedIndex={selectedIndex} accessibilityLabel={accessibilityLabel}
