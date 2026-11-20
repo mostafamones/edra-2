@@ -6,6 +6,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { SafeAreaView } from 'react-native-screens/experimental'
 import type { AppChrome, StackProps, TabsProps } from '../app/contract.ts'
 import { PageHeader } from '../chrome/PageHeader'
+import { useBoldText } from '../platform/chrome/boldText.ts'
 import { featureIconSource } from '../platform/chrome/FeatureIcon.tsx'
 import { pointSized } from './barIcon.ts'
 import { createNativeTabsNavigator } from './createNativeTabsNavigator.tsx'
@@ -19,9 +20,10 @@ const SHELL_ROUTES = {
 const ROOT = 'Root'
 
 /** A catalog icon declared at the native bar item's point size. */
-export const barIconSource = (name: string) => pointSized(Image.resolveAssetSource(featureIconSource(name))!)
+export const barIconSource = (name: string, bold = false) => pointSized(Image.resolveAssetSource(featureIconSource(name, bold))!)
 
 function Tabs({ selected, onSelect, tabs }: TabsProps) {
+  const bold = useBoldText()
   return (
     <ShellTabs.Navigator
       initialRouteName={SHELL_ROUTES[selected]}
@@ -33,7 +35,7 @@ function Tabs({ selected, onSelect, tabs }: TabsProps) {
       backBehavior="none"
     >
       {tabs.map(({ key, title, icon, content }) => (
-        <ShellTabs.Screen key={key} name={SHELL_ROUTES[key]} options={{ title, iconOnly: true, icon: barIconSource(icon), testID: `${key}-tab` }}>
+        <ShellTabs.Screen key={key} name={SHELL_ROUTES[key]} options={{ title, iconOnly: true, icon: barIconSource(icon, bold), testID: `${key}-tab` }}>
           {() => Platform.OS === 'android' ? <TabBottomArea>{content}</TabBottomArea> : content}
         </ShellTabs.Screen>
       ))}

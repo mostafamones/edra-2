@@ -5,6 +5,7 @@ import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect'
 import { StyleSheet, View, useColorScheme } from 'react-native'
 import type { SegmentedProps } from '../../features/assignments/platform.ts'
 import type { GlassButtonProps } from '../../features/sessions/screens/platform.ts'
+import { useBoldText } from './boldText.ts'
 import { FeatureIcon, featureIconAsset } from './FeatureIcon.tsx'
 import type { CapsuleProps, PopupProps } from './controlsTypes.ts'
 
@@ -61,11 +62,12 @@ export function GlassCapsule({ interactive, children, style }: CapsuleProps) {
 const styles = StyleSheet.create({ capsule: { borderRadius: 999 } })
 
 export function Popup({ items, disabled: unavailable, accessibilityLabel: label, longPress, style, children }: PopupProps) {
+  const bold = useBoldText()
   const trigger = <RNHostView matchContents={{ vertical: true, horizontal: !longPress && !!style }}><View>{children}</View></RNHostView>
   const actions = items.map((item) => {
     if ('divider' in item) return <Divider key={item.key} />
     // UIMenu draws the template asset beside the title, as the Swift app's `Label { } icon: { Image(asset) }` did.
-    const content = item.icon ? <Label title={item.title} icon={<Image assetName={featureIconAsset(item.icon)} />} /> : undefined
+    const content = item.icon ? <Label title={item.title} icon={<Image assetName={featureIconAsset(item.icon, bold)} />} /> : undefined
     if (item.checked !== undefined) {
       return (
         <Toggle key={item.key} label={content ? undefined : item.title} isOn={item.checked} onIsOnChange={item.onPress}

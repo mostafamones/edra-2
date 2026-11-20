@@ -43,6 +43,25 @@ test('native Hugeicons and React Native PNGs come from the same catalog', () => 
   assert.deepEqual(reactNativeNames, nativeNames)
 })
 
+test('Bold Text icons are the same catalog at the heavier stroke', async () => {
+  const { STROKE, BOLD_STROKE, boldSvg } = (await import('../platform/chrome/icons/stroke.cjs')).default
+  const bold = new URL('bold/', catalog)
+  const names = (directory: URL) => readdirSync(directory).filter((name) => name.endsWith('.png')).sort()
+  assert.deepEqual(names(bold), names(catalog))
+  for (const file of names(bold)) {
+    const png = readFileSync(new URL(file, bold))
+    assert.equal(png.readUInt32BE(16), png.readUInt32BE(20), file)
+    assert.equal(png.readUInt32BE(16), readFileSync(new URL(file, catalog)).readUInt32BE(16), file)
+  }
+  for (const folder of readdirSync(nativeCatalog).filter((name) => name.endsWith('.imageset'))) {
+    const directory = new URL(`${folder}/`, nativeCatalog)
+    const svg = readFileSync(new URL(readdirSync(directory).find((name) => name.endsWith('.svg'))!, directory), 'utf8')
+    const heavier = boldSvg(svg)
+    assert.ok(!heavier.includes(`stroke-width="${STROKE}"`), folder)
+    assert.equal(heavier.split(`stroke-width="${BOLD_STROKE}"`).length, svg.split(`stroke-width="${STROKE}"`).length, folder)
+  }
+})
+
 test('the bundled AccentColor matches the Swift app asset', () => {
   const read = (path: string) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'))
   assert.deepEqual(read('../../assets/AccentColor.colorset/Contents.json'),

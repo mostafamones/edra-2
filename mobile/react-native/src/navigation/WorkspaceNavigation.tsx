@@ -7,6 +7,7 @@ import type { BarItem, NavigationBarProps, TabsProps } from '../features/assignm
 import type { BarItem as HeaderItem, SearchBar } from '../features/sessions/screens/platform.ts'
 import { hasSearchTabs } from '../chrome/platform'
 import { NavigationBar as SheetBar } from '../platform/chrome/Bars'
+import { useBoldText } from '../platform/chrome/boldText.ts'
 import { barIconSource, pageBackground, TabBottomArea } from './AppChrome.tsx'
 import { createNativeTabsNavigator } from './createNativeTabsNavigator.tsx'
 import { NativeHeader } from './NativeHeader.tsx'
@@ -56,6 +57,7 @@ function ScanContent({ render }: Pick<TabsProps, 'render'>) {
 
 export function WorkspaceTabs({ tabs, selected, onSelect, searchText, onSearchText, searchPrompt, render }: TabsProps) {
   const theme = useTheme()
+  const bold = useBoldText()
   // The feature contract identifies confirmation by its checkmark on the search-role item.
   const actionTab = tabs.find((tab) => tab.search && tab.icon === 'tick-02')
   const hasSelected = tabs.some((tab) => tab.pane === selected)
@@ -83,7 +85,7 @@ export function WorkspaceTabs({ tabs, selected, onSelect, searchText, onSearchTe
             return (
               <Tabs.Screen key={pane} name={ROUTES[pane]} options={{
                 title,
-                icon: barIconSource(icon),
+                icon: barIconSource(icon, bold),
                 role: search ? 'search' : undefined,
                 activatesSearch: search && !announce,
                 action: announce ? () => onSelect(pane) : undefined,

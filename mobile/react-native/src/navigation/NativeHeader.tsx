@@ -5,6 +5,7 @@ import { ActivityIndicator, Platform, Pressable } from 'react-native'
 import type { SearchBarCommands } from 'react-native-screens'
 import { HeaderTextButton } from '../chrome/HeaderIconButton'
 import type { BarItem, HeaderProps } from '../features/sessions/screens/platform.ts'
+import { useBoldText } from '../platform/chrome/boldText.ts'
 import { FeatureIcon } from '../platform/chrome/FeatureIcon.tsx'
 import { barIconSource } from './AppChrome.tsx'
 
@@ -19,13 +20,13 @@ function HeaderAction({ item }: { item: BarItem }) {
   )
 }
 
-function headerItem(item: BarItem): NativeStackHeaderItem[] {
+function headerItem(item: BarItem, bold: boolean): NativeStackHeaderItem[] {
   if (item.busy) return [{ type: 'custom', element: <HeaderAction item={item} /> }]
   return [{
     type: 'button',
     label: item.title,
     accessibilityLabel: item.title,
-    icon: item.icon ? { type: 'image', source: barIconSource(item.icon) } : undefined,
+    icon: item.icon ? { type: 'image', source: barIconSource(item.icon, bold) } : undefined,
     onPress: item.onPress,
     disabled: item.disabled,
     variant: item.role === 'confirm' ? 'done' : 'plain',
@@ -34,6 +35,7 @@ function headerItem(item: BarItem): NativeStackHeaderItem[] {
 
 export function NativeHeader({ title, leading, trailing, search }: HeaderProps) {
   const navigation = useNavigation<NativeStackNavigationProp<Record<string, undefined>>>()
+  const bold = useBoldText()
   const searchRef = useRef<SearchBarCommands>(null)
   const nativeText = useRef('')
   const listensToSearch = useRef(false)
@@ -70,15 +72,15 @@ export function NativeHeader({ title, leading, trailing, search }: HeaderProps) 
       } : undefined,
     }
     if (Platform.OS === 'ios') {
-      options.unstable_headerLeftItems = leading ? () => headerItem(leading) : undefined
-      options.unstable_headerRightItems = trailing ? () => headerItem(trailing) : undefined
+      options.unstable_headerLeftItems = leading ? () => headerItem(leading, bold) : undefined
+      options.unstable_headerRightItems = trailing ? () => headerItem(trailing, bold) : undefined
       if (showSearchAlways && options.headerSearchBarOptions) options.headerSearchBarOptions.placement = 'stacked'
     }
     navigation.setOptions(options)
     return () => {
       listensToSearch.current = false
     }
-  }, [leading, navigation, onSearchChange, onSearchSubmit, searchPrompt, showSearch, showSearchAlways, title, trailing])
+  }, [bold, leading, navigation, onSearchChange, onSearchSubmit, searchPrompt, showSearch, showSearchAlways, title, trailing])
 
   useEffect(() => {
     if (searchValue !== undefined && searchRef.current && searchValue !== nativeText.current) {
