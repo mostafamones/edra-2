@@ -2,7 +2,7 @@ import { useIsFocused } from '@react-navigation/native'
 import { createFeatureChrome } from '../platform/chrome'
 import { useRouteBottomInset } from './AppChrome.tsx'
 import { NativeHeader } from './NativeHeader.tsx'
-import { AssessmentNavigationBar, hasWorkspaceSearchTab, WorkspaceTabs } from './WorkspaceNavigation.tsx'
+import { AssessmentNavigationBar, hasWorkspaceSearchTab, workspaceSheet, WorkspaceTabs } from './WorkspaceNavigation.tsx'
 
 export { appChrome } from './AppChrome.tsx'
 
@@ -16,5 +16,5 @@ const { sessions, assessments } = createFeatureChrome({
 
 export const featureChrome = {
   sessions,
-  assessments: { ...assessments, NavigationBar: AssessmentNavigationBar },
+  assessments: { ...assessments, NavigationBar: AssessmentNavigationBar, Sheet: workspaceSheet(assessments.Sheet) },
 }

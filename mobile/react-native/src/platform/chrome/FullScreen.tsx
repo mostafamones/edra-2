@@ -17,8 +17,9 @@ export function SheetContent({ children }: { children: ReactNode }) {
   return <SheetContext.Provider value={true}>{children}</SheetContext.Provider>
 }
 
-export function FullScreen(props: FeatureSheetProps) {
-  const { visible, dismissDisabled, onDismiss, children } = props
+/** `pageSheet`: React Native's own iOS page sheet (swipe follows `dismissDisabled`) instead of a full-screen cover. */
+export function FullScreen(props: FeatureSheetProps & { pageSheet?: boolean }) {
+  const { visible, dismissDisabled, onDismiss, children, pageSheet } = props
   const colors = useColors()
   const requested = useRef(false)
   const nativeDismiss = Platform.OS === 'ios'
@@ -33,7 +34,9 @@ export function FullScreen(props: FeatureSheetProps) {
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="fullScreen"
+      presentationStyle={pageSheet ? 'pageSheet' : 'fullScreen'}
+      // A blocked swipe also reports here; the guard below ignores it.
+      allowSwipeDismissal={!!pageSheet && !dismissDisabled}
       onRequestClose={() => {
         if (visible && !dismissDisabled && !requested.current) {
           requested.current = true

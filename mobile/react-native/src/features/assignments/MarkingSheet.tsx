@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react'
-import { AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, useColorScheme } from 'react-native'
+import { useEffect, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from 'react'
+import { AppState, Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, useColorScheme } from 'react-native'
 import { choiceLetter, isWrittenWork, markFor, studentStatus, takesAnswers, takesTotal, type Question } from './api.ts'
 import { MarkingModel, MODE_TITLES, NOT_ENTERED, type Entry, type Quick } from './marking.ts'
 import { systemConfirm, type AssessmentPlatform, type BarItem, type IconName } from './platform.ts'
@@ -22,6 +22,8 @@ export function MarkingSheet({ model, platform, onClose }: { model: MarkingModel
   // Feedback stays out of the way until asked for, or when the student already has some.
   const [showFeedback, setShowFeedback] = useState(() => model.feedback !== '')
   const inputs = useRef(new Map<string, ComponentRef<typeof TextInput>>())
+  const body = useRef<ComponentRef<typeof View>>(null)
+  const keyboard = useKeyboardInset(body)
 
   const requestSave = () => {
     if (model.needsReplaceConfirmation) {
@@ -83,7 +85,7 @@ export function MarkingSheet({ model, platform, onClose }: { model: MarkingModel
   const quickBar = showsQuickBar(focus !== null, model.mode, part)
   return (
     <platform.NavigationBar title={model.assignment.title} leading={leading} trailing={trailing}>
-      <KeyboardAvoidingView style={[styles.fill, { backgroundColor: colors.groupedBackground }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View ref={body} style={[styles.fill, { backgroundColor: colors.groupedBackground, paddingBottom: keyboard }]}>
         <ScrollView style={styles.fill} contentContainerStyle={[styles.content, quickBar && styles.underQuickBar]} keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} keyboardShouldPersistTaps="handled">
           <Header model={model} />
           {model.saveState.status === 'conflict' && <Conflict model={model} />}
@@ -142,9 +144,31 @@ export function MarkingSheet({ model, platform, onClose }: { model: MarkingModel
           <Status model={model} />
         </ScrollView>
         {quickBar && <QuickBar model={model} platform={platform} />}
-      </KeyboardAvoidingView>
+      </View>
     </platform.NavigationBar>
   )
+}
+
+/**
+ * iOS: how much of `view` the keyboard covers. Measured in the window when the keyboard moves, so the sheet's
+ * offset and header count (KeyboardAvoidingView only knows its parent-relative frame). Android resizes the window.
+ */
+function useKeyboardInset(view: RefObject<ComponentRef<typeof View> | null>): number {
+  const [inset, setInset] = useState(0)
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return
+    const move = (screenY: number | null, duration: number) =>
+      view.current?.measureInWindow((_x, y, _width, height) => {
+        if (duration > 0) LayoutAnimation.configureNext({ duration, update: { type: 'keyboard', duration } })
+        setInset(screenY === null ? 0 : Math.max(y + height - screenY, 0))
+      })
+    const subs = [
+      Keyboard.addListener('keyboardWillChangeFrame', (e) => move(e.endCoordinates.screenY, e.duration)),
+      Keyboard.addListener('keyboardWillHide', (e) => move(null, e.duration)),
+    ]
+    return () => subs.forEach((s) => s.remove())
+  }, [view])
+  return inset
 }
 
 type FocusProps = (id: string) => { onFocus: () => void; onBlur: () => void }

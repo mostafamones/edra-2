@@ -1,11 +1,13 @@
 import { NavigationContainer, NavigationIndependentTree, useIsFocused, useTheme } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import { createContext, useContext, useLayoutEffect } from 'react'
-import type { BarItem, NavigationBarProps, TabsProps } from '../features/assignments/platform.ts'
+import { createContext, useContext, useLayoutEffect, type ReactNode } from 'react'
+import { Platform } from 'react-native'
+import type { AssessmentPlatform, BarItem, NavigationBarProps, TabsProps } from '../features/assignments/platform.ts'
 import type { BarItem as HeaderItem, SearchBar } from '../features/sessions/screens/platform.ts'
 import { hasSearchTabs } from '../chrome/platform'
 import { NavigationBar as SheetBar } from '../platform/chrome/Bars'
 import { useBoldText } from '../platform/chrome/boldText.ts'
+import { FullScreen } from '../platform/chrome/FullScreen.tsx'
 import { barIconSource, pageBackground, TabBottomArea } from './AppChrome.tsx'
 import { createNativeTabsNavigator } from './createNativeTabsNavigator.tsx'
 import { NativeHeader } from './NativeHeader.tsx'
@@ -102,3 +104,35 @@ export function WorkspaceTabs({ tabs, selected, onSelect, searchText, onSearchTe
 }
 
 export const hasWorkspaceSearchTab = hasSearchTabs
+
+/**
+ * iOS marking and announce sheets open over the workspace's full-screen Modal. There, the SwiftUI `BottomSheet`
+ * page sheet (zero-sized Host) opened nothing on a physical iPhone, so these use React Native's own page-sheet
+ * Modal, as the workspace cover does, with a native stack header. Covers and Android keep `Sheet`.
+ */
+export function workspaceSheet(Sheet: AssessmentPlatform['Sheet']): AssessmentPlatform['Sheet'] {
+  if (Platform.OS !== 'ios') return Sheet
+  return function WorkspaceSheet({ presentation, ...props }) {
+    if (presentation !== 'sheet') return <Sheet presentation={presentation} {...props} />
+    return (
+      <FullScreen visible={props.visible} onDismiss={props.onDismiss} dismissDisabled={props.dismissDisabled} pageSheet>
+        <SheetStack>{props.children}</SheetStack>
+      </FullScreen>
+    )
+  }
+}
+
+function SheetStack({ children }: { children: ReactNode }) {
+  const theme = useTheme()
+  return (
+    <NavigationIndependentTree>
+      <NavigationContainer theme={theme}>
+        <Stack.Navigator screenOptions={paneOptions}>
+          <Stack.Screen name="SheetPage">
+            {() => <WorkspaceHeader.Provider value={defaultHeader}>{children}</WorkspaceHeader.Provider>}
+          </Stack.Screen>
+        </Stack.Navigator>
+      </NavigationContainer>
+    </NavigationIndependentTree>
+  )
+}
