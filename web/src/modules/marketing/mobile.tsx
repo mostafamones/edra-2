@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, QrCodeIcon, ScanIcon, SmartPhone01Icon, TeachingIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
@@ -81,17 +81,45 @@ function MarkingScreen() {
   );
 }
 
+const depth = 22;
+
+/** A CSS 3D phone: stacked layers give the body real thickness and side buttons, and it turns toward the pointer. */
 function Phone({ children }: { children: ReactNode }) {
+  const body = useRef<HTMLDivElement>(null);
+  const turn = (x: number, y: number) => {
+    body.current?.style.setProperty("--x", String(x));
+    body.current?.style.setProperty("--y", String(y));
+  };
+
   return (
-    <div className="[perspective:1800px]">
-      <div className="mx-auto w-[17.5rem] rounded-[3.1rem] bg-gradient-to-br from-neutral-500 via-neutral-700 to-neutral-900 p-[3px] shadow-[-30px_50px_90px_-20px_rgba(0,0,0,0.6),0_0_120px_-30px_var(--primary)] transition-transform duration-700 ease-out [transform:rotateY(-22deg)_rotateX(10deg)_rotateZ(4deg)] hover:[transform:rotateY(-10deg)_rotateX(5deg)_rotateZ(2deg)] motion-reduce:transition-none">
-        <div className="rounded-[2.95rem] bg-black p-2.5">
-          <div role="img" aria-label="Edra instructor app" className="relative h-[35rem] overflow-hidden rounded-[2.45rem] bg-black font-sans text-white antialiased">
-            <div aria-hidden="true" className="flex h-11 items-center px-7 text-[12px] font-semibold">
-              9:41<span className="absolute left-1/2 top-2.5 h-[1.6rem] w-[5.5rem] -translate-x-1/2 rounded-full bg-[#0b0b0b]" />
+    <div className="relative py-6 [perspective:1600px]"
+      onPointerMove={event => {
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const box = event.currentTarget.getBoundingClientRect();
+        turn((event.clientX - box.left) / box.width - 0.5, (event.clientY - box.top) / box.height - 0.5);
+      }}
+      onPointerLeave={() => turn(0, 0)}>
+      <span aria-hidden="true" className="absolute bottom-0 left-1/2 h-10 w-56 -translate-x-1/3 rounded-[100%] bg-black/60 blur-2xl dark:bg-black" />
+      <div ref={body} style={{ transform: "rotateY(calc(-26deg + var(--x, 0) * 30deg)) rotateX(calc(12deg - var(--y, 0) * 18deg)) rotateZ(4deg)" }}
+        className="relative mx-auto w-[17.5rem] transition-transform duration-500 ease-out [transform-style:preserve-3d] motion-reduce:transition-none">
+        <span aria-hidden="true" style={{ transform: "translateZ(-80px)" }} className="absolute inset-6 rounded-[3rem] bg-primary/40 blur-3xl" />
+        {Array.from({ length: depth }, (_, layer) => (
+          <div key={layer} aria-hidden="true" style={{ transform: `translateZ(${-(layer + 1)}px)` }}
+            className={cn("absolute inset-0 rounded-[3.1rem]", layer === depth - 1 ? "bg-neutral-900" : layer < 2 || layer > depth - 4 ? "bg-neutral-500" : "bg-gradient-to-b from-neutral-400 via-neutral-600 to-neutral-500")}>
+            {layer > 2 && layer < depth - 3 && ["top-28 h-7", "top-40 h-12", "top-56 h-12"].map(button => <span key={button} className={cn("absolute -left-[3px] w-[3px] rounded-l-sm bg-neutral-600", button)} />)}
+            {layer > 2 && layer < depth - 3 && <span className="absolute -right-[3px] top-44 h-20 w-[3px] rounded-r-sm bg-neutral-600" />}
+          </div>
+        ))}
+        <div className="rounded-[3.1rem] bg-gradient-to-br from-neutral-400 via-neutral-700 to-neutral-900 p-[3px]">
+          <div className="rounded-[2.95rem] bg-black p-2.5">
+            <div role="img" aria-label="Edra instructor app" className="relative h-[35rem] overflow-hidden rounded-[2.45rem] bg-black font-sans text-white antialiased">
+              <div aria-hidden="true" className="flex h-11 items-center px-7 text-[12px] font-semibold">
+                9:41<span className="absolute left-1/2 top-2.5 h-[1.6rem] w-[5.5rem] -translate-x-1/2 rounded-full bg-[#0b0b0b]" />
+              </div>
+              <div aria-hidden="true" className="absolute inset-x-0 bottom-0 top-11">{children}</div>
+              <span aria-hidden="true" className="absolute bottom-1.5 left-1/2 h-1 w-28 -translate-x-1/2 rounded-full bg-white/80" />
+              <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.09] via-transparent to-transparent" />
             </div>
-            <div aria-hidden="true" className="absolute inset-x-0 bottom-0 top-11">{children}</div>
-            <span aria-hidden="true" className="absolute bottom-1.5 left-1/2 h-1 w-28 -translate-x-1/2 rounded-full bg-white/80" />
           </div>
         </div>
       </div>
