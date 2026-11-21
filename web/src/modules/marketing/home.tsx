@@ -21,7 +21,6 @@ import { MarketingNav, type NavProps } from "./nav";
 import { SampleRegister } from "./register";
 import { Reveal } from "./reveal";
 import { academy, learning, mariamId, pastAttendance, results, sessionStartedAt, settled, student } from "./sample";
-import { SampleWorkspace } from "./workspace";
 
 const container = "mx-auto w-full max-w-[76rem] px-4 sm:px-8 lg:px-10";
 const title = "text-balance font-heading text-[clamp(2rem,4.4vw,3.4rem)] font-semibold leading-[1.04] tracking-[-0.045em]";
@@ -73,8 +72,8 @@ export function MarketingHome(props: NavProps) {
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(color-mix(in_oklab,var(--foreground)_12%,transparent)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_70%_55%_at_50%_25%,black,transparent)]" />
           <div aria-hidden="true" className="absolute left-1/2 top-[45%] -z-10 h-[34rem] w-[64rem] max-w-[160vw] -translate-x-1/2 rounded-full bg-primary/20 blur-[130px] motion-safe:animate-pulse motion-safe:[animation-duration:6s]" />
           <div className={cn(container, "text-center")}>
-            <h1 id="home-heading" className="mx-auto max-w-[14ch] text-balance font-heading text-[clamp(2.6rem,7.6vw,5.75rem)] font-semibold leading-[0.96] tracking-[-0.055em] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-700">
-              Your whole academy. <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">One place.</span>
+            <h1 id="home-heading" className="mx-auto font-heading text-[clamp(2rem,7.4vw,5.75rem)] font-semibold leading-[0.96] tracking-[-0.055em] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-700">
+              <span className="block">Your whole academy.</span> <span className="block bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">One place.</span>
             </h1>
             <p className={cn(lead, "mx-auto mt-6 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:delay-100 motion-safe:duration-700 motion-safe:fill-mode-both")}>
               Students, classes, attendance, lessons, exams and results, on the web and in your pocket.
@@ -86,13 +85,13 @@ export function MarketingHome(props: NavProps) {
               <Button asChild size="lg" variant="outline" className="h-11 rounded-full bg-background/80 px-6"><a href="/pricing">See pricing</a></Button>
             </div>
           </div>
-          <div className={cn(container, "mt-14 [perspective:2400px] sm:mt-20 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-12 motion-safe:delay-300 motion-safe:duration-1000 motion-safe:fill-mode-both")}>
-            <figure aria-label={`${academy.name} · Students`} className="group/window relative mx-auto max-w-6xl overflow-hidden rounded-2xl border bg-sidebar shadow-2xl shadow-primary/15 transition-transform duration-700 ease-out motion-safe:lg:[transform:rotateX(9deg)_scale(0.97)] motion-safe:lg:hover:[transform:none]">
+          <div className={cn(container, "mt-8 [perspective:2400px] sm:mt-12 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-12 motion-safe:delay-300 motion-safe:duration-1000 motion-safe:fill-mode-both")}>
+            <figure aria-label="Students" className="group/window relative mx-auto max-w-6xl overflow-hidden rounded-2xl border bg-sidebar shadow-2xl shadow-primary/15 transition-transform duration-700 ease-out motion-safe:lg:[transform:rotateX(9deg)_scale(0.97)] motion-safe:lg:hover:[transform:none]">
               <div className="flex h-10 items-center gap-3 border-b px-4" aria-hidden="true">
                 <span className="flex gap-1.5">{["bg-red-400/70", "bg-amber-400/70", "bg-green-500/70"].map(color => <span key={color} className={cn("size-2.5 rounded-full", color)} />)}</span>
-                <span className="mx-auto rounded-md bg-muted/60 px-10 py-0.5 text-xs text-muted-foreground">app.edra · {academy.name} · Students</span>
+                <span className="mx-auto rounded-md bg-muted/60 px-10 py-0.5 text-xs text-muted-foreground">app.edra · Students</span>
               </div>
-              <div className="max-h-[40rem] overflow-hidden [mask-image:linear-gradient(black_80%,transparent)]"><SampleWorkspace /></div>
+              <img src="/marketing/students.png" width={2000} height={1172} fetchPriority="high" alt="Edra's Students page: a sidebar of academy sections beside a searchable table of students with their phones, levels, groups and labels." className="block h-auto w-full" />
             </figure>
           </div>
         </section>

@@ -49,4 +49,3 @@ export { StudentBookingPage } from "./booking/components/page";
 export { StudentFacts } from "./records/components/facts";
 export { StudentAttendance } from "./records/components/attendance";
 export { ResultsChart } from "./records/components/results-chart";
-export { StudentsPreview } from "./records/components/preview";

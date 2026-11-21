@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import type { SheetEntry } from "@/modules/attendance";
 import type { LearningHome } from "@/modules/learning";
-import type { ResultsChart, StudentAttendance, StudentRecord, StudentsPreview } from "@/modules/students";
+import type { ResultsChart, StudentAttendance, StudentRecord } from "@/modules/students";
 
 /** A fictional academy rendered through Edra's real components. Never sent to or read from the server. */
 export const academy = { name: "Nile Academy", slug: "nile" };
@@ -63,37 +63,4 @@ export const learning: ComponentProps<typeof LearningHome>["data"] = {
   upcoming: [
     { examId: "midterm", title: "Midterm: Algebra", academy: nile, action: "not_yet_open", opensAt: "2026-12-05T08:00:00Z" },
   ],
-};
-
-type Row = ComponentProps<typeof StudentsPreview>["rows"][number];
-const levelNames = { g10: "Grade 10", g11: "Grade 11", g12: "Grade 12" };
-export const studentsPage: Omit<ComponentProps<typeof StudentsPreview>, never> = {
-  total: 148,
-  levelNames,
-  levels: [{ level_id: "g10", sort_order: 1 }, { level_id: "g11", sort_order: 2 }, { level_id: "g12", sort_order: 3 }],
-  tracks: [{ id: "sci", level_id: "g11", name: "Science", sort_order: 1 }, { id: "math", level_id: "g10", name: "Mathematics", sort_order: 1 }],
-  groups: [],
-  catalog: [
-    { id: "scholar", name: "Scholarship", color: "violet" },
-    { id: "followup", name: "Follow up", color: "amber" },
-    { id: "sibling", name: "Siblings", color: "teal" },
-  ],
-  rows: ([
-    ["Mariam Hassan", "g10", "math", "Group A", "in_person", "connected", ["scholar"]],
-    ["Omar Nasser", "g10", "math", "Group A", "in_person", "connected", []],
-    ["Youssef Ali", "g10", "math", "Group B", "in_person", "not_connected", ["followup"]],
-    ["Salma Adel", "g11", "sci", "Group A", "in_person", "connected", ["sibling"]],
-    ["Karim Fathy", "g11", "sci", "Group C", "in_person", "connected", []],
-    ["Nour Ibrahim", "g11", "sci", null, "online_only", "connected", []],
-    ["Hana Mostafa", "g12", null, "Group A", "in_person", "suspended", ["sibling"]],
-    ["Ali Samir", "g12", null, "Group B", "in_person", "connected", []],
-    ["Farida Kamal", "g12", null, null, "online_only", "connected", ["scholar", "followup"]],
-    ["Adam Tarek", "g10", "math", "Group B", "in_person", "not_connected", []],
-  ] as const).map(([fullName, levelId, trackId, groupName, participationType, onlineAccount, labelIds], index): Row => ({
-    id: `s${index}`, academyStudentProfileId: `p${index}`, fullName, levelId, levelName: levelNames[levelId], trackId,
-    trackName: trackId === "sci" ? "Science" : trackId ? "Mathematics" : null, primaryGroupId: groupName, groupName,
-    participationType, onlineAccount, labelIds: [...labelIds], studentPhone: `+2010${String(12345670 + index * 1317).padStart(8, "0")}`,
-    parentPhone: `+2011${String(23456780 + index * 2741).padStart(8, "0")}`, archivedAt: null, createdAt: "2026-09-01T09:00:00Z",
-    updatedAt: "2026-09-01T09:00:00Z", version: 1, manuallySuspended: false, suspensionRevision: 0, accountName: null,
-  })),
 };
