@@ -56,7 +56,7 @@ export function MarketingNav({ isSignedIn, primaryHref, signInHref }: NavProps) 
               <NavigationMenuItem key={menu.label}>
                 <NavigationMenuTrigger className="bg-transparent">{menu.label}</NavigationMenuTrigger>
                 {/* One fixed size for every menu, so the shared panel never resizes. */}
-                <NavigationMenuContent className="md:h-[24rem] md:w-[46rem] md:p-1.5">
+                <NavigationMenuContent className="motion-safe:duration-300 motion-safe:data-[motion=from-end]:slide-in-from-right-16 motion-safe:data-[motion=from-start]:slide-in-from-left-16 motion-safe:data-[motion=to-end]:slide-out-to-right-16 motion-safe:data-[motion=to-start]:slide-out-to-left-16 motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 md:h-[24rem] md:w-[46rem] md:p-1.5">
                   {menu.label === "Mobile" ? (
                     <div className="grid h-full grid-cols-[14rem_1fr] gap-2">
                       <NavigationMenuLink asChild className="block rounded-xl p-0 hover:bg-transparent focus:bg-transparent">
