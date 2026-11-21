@@ -7,3 +7,5 @@ export type {
 } from "./types";
 export { loadStudentAttendance, studentAttendanceSummary } from "./student";
 export { attendanceInsights } from "./insights";
+export { AttendanceOverview } from "./components/overview";
+export { SheetTable } from "./components/sheet-table";

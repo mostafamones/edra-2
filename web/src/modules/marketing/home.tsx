@@ -1,42 +1,30 @@
 import { useState } from "react";
-import { IconArrowRight, IconPlus, IconSchool } from "@/components/shared/icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Task01Icon } from "@hugeicons/core-free-icons";
+import { IconArrowDown, IconArrowRight, IconPlus, IconSchool } from "@/components/shared/icons";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { MarketingCapabilities } from "./capabilities";
-import { MarketingHero } from "./hero";
-import { WorkflowPreview, type WorkflowStep } from "./workflow";
+import type { SheetEntry } from "@/modules/attendance";
+import { HomeView } from "@/modules/home";
+import { LearningHome } from "@/modules/learning";
+import { ResultsChart, StudentAttendance, StudentFacts } from "@/modules/students";
+import { AppFrame } from "./frame";
+import { SampleRegister } from "./register";
+import { academy, learning, live, mariamId, overview, pastAttendance, results, sessionStartedAt, settled, student } from "./sample";
 
-const container = "mx-auto w-full max-w-[76rem] px-5 sm:px-8 lg:px-10";
-const sectionTitle = "text-balance text-[clamp(1.9rem,4vw,3.375rem)] font-medium leading-[1.12] tracking-[-0.055em]";
-
-const walkthrough = {
-  attendance: {
-    title: "Take attendance as students arrive",
-    detail: "Try marking a student in the roster. In Edra, staff can review attendance before finalizing it.",
-  },
-  lessons: {
-    title: "Give students a place to revisit the lesson",
-    detail: "Group the explanation, practice assignment, and quiz into one unit students can open online.",
-  },
-  results: {
-    title: "Give students a clear view of their marks",
-    detail: "Announced results appear for students alongside their other classroom and online work.",
-  },
-};
+const container = "mx-auto w-full max-w-[76rem] px-4 sm:px-8 lg:px-10";
+const sectionTitle = "text-balance font-heading text-[clamp(2rem,4.6vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.045em]";
+const lead = "max-w-[46ch] text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg";
+const navLink = "rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4";
+const sections = [["register", "Attendance"], ["record", "Records"], ["students", "Students"], ["questions", "FAQ"]] as const;
 
 const questions = [
-  {
-    question: "Can I teach in person and online in the same academy?",
-    answer: "Yes. Edra supports classroom, online, and hybrid participation, with attendance and results kept on the same student record.",
-  },
-  {
-    question: "Can I add students before they have an account?",
-    answer: "Yes. Staff can add students and record attendance and marks before the students join the online academy.",
-  },
-  {
-    question: "Can students join my academy with a link?",
-    answer: "Yes. Share your academy’s student invite link for online access. Enrollment can also use a booking link when bookings are open.",
-  },
+  { question: "Can I teach in person and online in the same academy?", answer: "Yes. Edra supports classroom, online and hybrid students, with attendance and results kept on the same student record." },
+  { question: "Can I add students before they have an account?", answer: "Yes. Staff can add students and record attendance and marks before the students join online." },
+  { question: "Can students join my academy with a link?", answer: "Yes. Share your academy’s student invite link for online access. Enrollment can also use a booking link when bookings are open." },
+  { question: "Is the app on this page real?", answer: "Yes. Every screen here is Edra’s own interface, filled with a fictional academy. Nothing you do on this page is saved." },
 ];
 
 export function MarketingHome({ isSignedIn, primaryHref, signInHref }: {
@@ -45,101 +33,142 @@ export function MarketingHome({ isSignedIn, primaryHref, signInHref }: {
   signInHref: string;
 }) {
   const primaryLabel = isSignedIn ? "Go to app" : "Get started";
-  const [activeStep, setActiveStep] = useState<WorkflowStep>("attendance");
-  const currentStep = walkthrough[activeStep];
+  const [taken, setTaken] = useState<SheetEntry | null>(null);
+  const attendance = taken?.publishedStatus
+    ? [{ session_id: "today", session_started_at: sessionStartedAt, status: taken.publishedStatus, mandatory: true }, ...pastAttendance]
+    : pastAttendance;
 
   return (
-    <div id="top" className="min-h-screen bg-background text-foreground">
-      <div className="dark bg-[#101611] text-[#f6faf6]">
-        <header className="border-b border-white/10">
-          <div className={`${container} grid min-h-[4.5rem] grid-cols-[auto_1fr] items-center gap-2 py-3 md:grid-cols-[1fr_auto_1fr]`}>
-            <a href="#top" aria-label="Edra home" className="flex w-fit items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4">
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-emerald-300/15 text-emerald-300">
-                <IconSchool className="size-5" aria-hidden="true" />
-              </span>
-              <span className="font-heading text-xl font-semibold tracking-tight">Edra</span>
-            </a>
-            <nav aria-label="Main navigation" className="hidden items-center gap-7 text-sm text-zinc-300 md:flex">
-              <a className="rounded-sm hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4" href="#workflow">How it works</a>
-              <a className="rounded-sm hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4" href="#features">Features</a>
-              <a className="rounded-sm hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4" href="#questions">FAQ</a>
-            </nav>
-            <div className="flex justify-end gap-1 sm:gap-2">
-              {!isSignedIn && (
-                <Button asChild variant="ghost" className="px-2.5 sm:px-3">
-                  <a href={signInHref}>Sign in</a>
-                </Button>
-              )}
-              <Button asChild className="rounded-full bg-emerald-300 px-3.5 text-emerald-950 hover:bg-emerald-200 sm:px-4">
-                <a href={primaryHref}>{primaryLabel}</a>
+    <div id="top" className="min-h-screen overflow-x-clip bg-background text-foreground">
+      <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-md">
+        <div className={`${container} flex h-16 items-center justify-between gap-4`}>
+          <a href="#top" aria-label="Edra home" className="flex items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4">
+            <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground"><IconSchool className="size-5" aria-hidden="true" /></span>
+            <span className="font-heading text-xl font-semibold tracking-tight">Edra</span>
+          </a>
+          <nav aria-label="Main navigation" className="hidden items-center gap-7 text-sm md:flex">
+            {sections.map(([id, label]) => <a key={id} className={navLink} href={`#${id}`}>{label}</a>)}
+          </nav>
+          <div className="flex items-center gap-1 sm:gap-2">
+            {!isSignedIn && <Button asChild variant="ghost"><a href={signInHref}>Sign in</a></Button>}
+            <Button asChild><a href={primaryHref}>{primaryLabel}</a></Button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section aria-labelledby="home-heading" className="relative isolate pb-16 pt-14 sm:pb-24 sm:pt-20">
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(color-mix(in_oklab,var(--foreground)_12%,transparent)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_30%,black,transparent)]" />
+          <div aria-hidden="true" className="absolute left-1/2 top-[38%] -z-10 h-[32rem] w-[60rem] max-w-[150vw] -translate-x-1/2 rounded-full bg-primary/20 blur-[120px]" />
+          <div className={`${container} text-center`}>
+            <Badge variant="outline" className="mb-6 gap-2 rounded-full bg-background px-3 py-1 text-xs">
+              <span className="size-1.5 animate-pulse rounded-full bg-primary motion-reduce:animate-none" aria-hidden="true" />Not a screenshot
+            </Badge>
+            <h1 id="home-heading" className="mx-auto max-w-[15ch] text-balance font-heading text-[clamp(2.5rem,7.5vw,5.5rem)] font-semibold leading-[0.98] tracking-[-0.055em]">
+              Your academy, already running.
+            </h1>
+            <p className={`${lead} mx-auto mt-6`}>
+              Every screen on this page is Edra itself, running a sample academy. Scroll down and take a class register.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Button asChild size="lg" className="h-11 gap-2 rounded-full px-5"><a href={primaryHref}>{primaryLabel}<IconArrowRight aria-hidden="true" /></a></Button>
+              <Button asChild size="lg" variant="outline" className="group h-11 gap-2 rounded-full bg-background px-5">
+                <a href="#register">Take the register<IconArrowDown className="motion-safe:transition-transform motion-safe:group-hover:translate-y-0.5" aria-hidden="true" /></a>
               </Button>
             </div>
           </div>
-        </header>
-      </div>
-
-      <main>
-        <div className="dark bg-[#101611] text-[#f6faf6]">
-          <MarketingHero primaryHref={primaryHref} primaryLabel={primaryLabel} onExplore={setActiveStep} />
-        </div>
-
-        <section id="workflow" aria-labelledby="workflow-heading" className="scroll-mt-6 border-b bg-primary/[0.045] py-16 sm:py-24 dark:bg-primary/[0.08]">
-          <div className={`${container} grid items-center gap-8 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)] lg:gap-16`}>
-            <div>
-              <h2 id="workflow-heading" className={sectionTitle}>Follow a class from check-in to results.</h2>
-              <div key={activeStep} className="mt-6 min-h-24 border-l-2 border-emerald-600 pl-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200 dark:border-emerald-400">
-                <h3 className="font-sans text-base font-semibold">{currentStep.title}</h3>
-                <p className="mt-2 max-w-[40ch] leading-relaxed text-foreground/75">{currentStep.detail}</p>
+          <div className={`${container} mt-14 sm:mt-20`}>
+            <AppFrame label={`${academy.name} · Home`} className="relative mx-auto max-w-6xl [&>div:last-child]:max-h-[38rem] [&>div:last-child]:overflow-hidden [&>div:last-child]:[mask-image:linear-gradient(black_75%,transparent)] sm:[&>div:last-child]:max-h-[44rem]">
+              <div className="p-4 sm:p-8">
+                <HomeView academyName={academy.name} base="/app" overview={settled(overview)} live={settled(live)} />
               </div>
-            </div>
-            <WorkflowPreview activeStep={activeStep} onStepChange={setActiveStep} />
+            </AppFrame>
           </div>
         </section>
 
-        <section id="features" aria-labelledby="features-heading" className={`${container} scroll-mt-6 py-16 sm:py-24`}>
-          <h2 id="features-heading" className={`mb-8 max-w-[21ch] sm:mb-10 ${sectionTitle}`}>What you can run with Edra.</h2>
-          <MarketingCapabilities />
+        <section id="register" aria-labelledby="register-heading" className="scroll-mt-16 border-y bg-muted/40 py-16 sm:py-24">
+          <div className={container}>
+            <div className="mb-10 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+              <h2 id="register-heading" className={sectionTitle}>Go on. Take the register.</h2>
+              <p className={`${lead} md:max-w-[30ch] md:text-right`}>Mark a few students, finalize, then keep scrolling.</p>
+            </div>
+            <SampleRegister onFinalize={entries => setTaken(entries.find(entry => entry.annualStudentRecordId === mariamId) ?? null)} />
+          </div>
         </section>
 
-        <section id="questions" aria-labelledby="questions-heading" className="scroll-mt-6 border-y bg-muted/35 py-16 sm:py-20">
-          <div className={`${container} grid items-start gap-7 md:grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)] md:gap-12`}>
-            <h2 id="questions-heading" className={sectionTitle}>Before you get started</h2>
+        <section id="record" aria-labelledby="record-heading" className="scroll-mt-16 py-16 sm:py-24">
+          <div className={container}>
+            <div aria-live="polite" className="mb-10">
+              <h2 id="record-heading" className={`${sectionTitle} max-w-[20ch]`}>
+                {taken ? "Mariam’s record already has today’s class." : "Every class lands on the student’s record."}
+              </h2>
+            </div>
+            <AppFrame label={`${academy.name} · Students · ${student.fullName}`}>
+              <article className="page-shell p-4 sm:p-8" aria-label="Student record">
+                <header className="space-y-2">
+                  <h3 className="text-2xl font-semibold tracking-tight">{student.fullName}</h3>
+                  <div className="flex flex-wrap items-center gap-2"><Badge variant="secondary">Active</Badge><Badge variant="secondary">In person</Badge><span className="text-xs text-muted-foreground">Account connected</span></div>
+                </header>
+                <StudentFacts student={student} grade="Grade 10" track="Mathematics" group="Group A" />
+                <div key={attendance.length} className="rounded-xl motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-[0.98] motion-safe:duration-500">
+                  <StudentAttendance query={settled(attendance) as unknown as Parameters<typeof StudentAttendance>[0]["query"]} base="/app" />
+                </div>
+                <Card className="gap-0 py-0 shadow-none">
+                  <div className="flex items-center gap-2 border-b p-4 sm:px-5"><HugeiconsIcon icon={Task01Icon} size={18} strokeWidth={1.5} aria-hidden="true" /><h4 className="flex-1 text-base font-semibold">Assessments</h4></div>
+                  <div className="p-4 sm:p-5"><ResultsChart items={results} base="/app" /></div>
+                </Card>
+              </article>
+            </AppFrame>
+          </div>
+        </section>
+
+        <section id="students" aria-labelledby="students-heading" className="scroll-mt-16 border-y bg-muted/40 py-16 sm:py-24">
+          <div className={`${container} grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-20`}>
+            <div>
+              <h2 id="students-heading" className={sectionTitle}>Students get a home of their own.</h2>
+              <p className={`${lead} mt-6`}>Lessons to continue, work that’s due and exams coming up, across every academy they join.</p>
+            </div>
+            <AppFrame label="Student · Home" className="mx-auto w-full max-w-[26rem] rounded-[2rem]">
+              <div className="p-4 sm:p-6"><LearningHome data={learning} /></div>
+            </AppFrame>
+          </div>
+        </section>
+
+        <section id="questions" aria-labelledby="questions-heading" className="scroll-mt-16 py-16 sm:py-24">
+          <div className={`${container} grid items-start gap-8 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] md:gap-12`}>
+            <h2 id="questions-heading" className={sectionTitle}>Before you start</h2>
             <div className="divide-y border-y">
               {questions.map(({ question, answer }) => (
                 <Collapsible key={question}>
                   <h3 className="font-sans">
                     <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="group h-auto min-h-14 w-full justify-between gap-3 whitespace-normal px-2 py-4 text-left text-base hover:bg-muted/60 motion-reduce:transition-none">
+                      <Button variant="ghost" className="group h-auto min-h-14 w-full justify-between gap-3 whitespace-normal px-2 py-4 text-left text-base hover:bg-muted/60">
                         {question}
-                        <IconPlus className="size-4 text-muted-foreground group-aria-expanded:rotate-45 motion-safe:transition-transform" aria-hidden="true" />
+                        <IconPlus className="size-4 shrink-0 text-muted-foreground group-aria-expanded:rotate-45 motion-safe:transition-transform" aria-hidden="true" />
                       </Button>
                     </CollapsibleTrigger>
                   </h3>
-                  <CollapsibleContent className="max-w-[61ch] px-2 pb-4 leading-relaxed text-foreground/75">
-                    {answer}
-                  </CollapsibleContent>
+                  <CollapsibleContent className="max-w-[61ch] px-2 pb-4 leading-relaxed text-muted-foreground">{answer}</CollapsibleContent>
                 </Collapsible>
               ))}
             </div>
           </div>
         </section>
 
-        <section aria-labelledby="start-heading" className="dark relative isolate overflow-hidden bg-[#101611] px-5 py-16 text-center text-[#f6faf6] sm:py-24">
-          <div aria-hidden="true" className="pointer-events-none absolute -inset-x-20 bottom-0 -z-10 h-full bg-[radial-gradient(ellipse_at_50%_100%,#164532_0%,transparent_65%)]" />
-          <h2 id="start-heading" className={sectionTitle}>Set up your academy.</h2>
-          <Button asChild size="lg" className="mt-6 h-11 gap-2 rounded-full bg-emerald-300 px-5 text-emerald-950 hover:bg-emerald-200">
+        <section aria-labelledby="start-heading" className="relative isolate overflow-hidden bg-primary py-20 text-center text-primary-foreground sm:py-28">
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(currentColor_1px,transparent_1px)] opacity-15 [background-size:22px_22px] [mask-image:radial-gradient(ellipse_60%_80%_at_50%_100%,black,transparent)]" />
+          <h2 id="start-heading" className={`${sectionTitle} px-4`}>Now do it with your own students.</h2>
+          <Button asChild size="lg" variant="secondary" className="mt-8 h-11 gap-2 rounded-full px-5">
             <a href={primaryHref}>{primaryLabel}<IconArrowRight aria-hidden="true" /></a>
           </Button>
         </section>
       </main>
 
-      <footer className="dark border-t border-white/10 bg-[#101611] text-[#f6faf6]">
+      <footer className="border-t">
         <div className={`${container} flex flex-wrap items-center justify-between gap-4 py-6`}>
           <a href="#top" className="rounded-sm font-heading text-lg font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4">Edra</a>
-          <nav aria-label="Footer navigation" className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-zinc-300">
-            <a className="rounded-sm hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4" href="#workflow">How it works</a>
-            <a className="rounded-sm hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4" href="#features">Features</a>
-            <a className="rounded-sm hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4" href="#questions">FAQ</a>
+          <nav aria-label="Footer navigation" className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm">
+            {sections.map(([id, label]) => <a key={id} className={navLink} href={`#${id}`}>{label}</a>)}
           </nav>
         </div>
       </footer>
