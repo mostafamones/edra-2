@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils";
 import { features, mobile, tools, type Entry } from "./catalog";
 
 const menus = [
-  { label: "Features", items: features, width: "md:w-[46rem]", columns: "grid-cols-3" },
-  { label: "Mobile", items: mobile, width: "md:w-[42rem]", columns: "grid-cols-2" },
-  { label: "Tools", items: tools, width: "md:w-[44rem]", columns: "grid-cols-3" },
+  { label: "Features", items: features, columns: "grid-cols-3 grid-rows-2" },
+  { label: "Mobile", items: mobile, columns: "grid-cols-2" },
+  { label: "Tools", items: tools, columns: "grid-cols-3 grid-rows-3" },
 ] as const;
 
 export type NavProps = { isSignedIn: boolean; primaryHref: string; signInHref: string };
@@ -55,9 +55,10 @@ export function MarketingNav({ isSignedIn, primaryHref, signInHref }: NavProps) 
             {menus.map(menu => (
               <NavigationMenuItem key={menu.label}>
                 <NavigationMenuTrigger className="bg-transparent">{menu.label}</NavigationMenuTrigger>
-                <NavigationMenuContent className={cn("md:p-1.5", menu.width)}>
+                {/* One fixed size for every menu, so the shared panel never resizes. */}
+                <NavigationMenuContent className="md:h-[24rem] md:w-[46rem] md:p-1.5">
                   {menu.label === "Mobile" ? (
-                    <div className="grid grid-cols-[14rem_1fr] gap-2">
+                    <div className="grid h-full grid-cols-[14rem_1fr] gap-2">
                       <NavigationMenuLink asChild className="block rounded-xl p-0 hover:bg-transparent focus:bg-transparent">
                         <a href="/#mobile" className="group/entry">
                           <Card className="relative h-full justify-end gap-2 overflow-hidden border-0 bg-primary p-5 text-primary-foreground shadow-none ring-0">
@@ -68,10 +69,10 @@ export function MarketingNav({ isSignedIn, primaryHref, signInHref }: NavProps) 
                           </Card>
                         </a>
                       </NavigationMenuLink>
-                      <ul className="grid grid-cols-2 gap-2">{menu.items.slice(1).map(entry => <li key={entry.title}><EntryCard entry={entry} compact /></li>)}</ul>
+                      <ul className="grid grid-cols-2 grid-rows-3 gap-2">{menu.items.map(entry => <li key={entry.title}><EntryCard entry={entry} compact /></li>)}</ul>
                     </div>
                   ) : (
-                    <ul className={cn("grid gap-2", menu.columns)}>
+                    <ul className={cn("grid h-full gap-2", menu.columns)}>
                       {menu.items.map(entry => <li key={entry.title}><EntryCard entry={entry} compact={menu.label === "Tools"} /></li>)}
                     </ul>
                   )}

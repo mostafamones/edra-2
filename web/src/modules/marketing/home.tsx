@@ -73,10 +73,6 @@ export function MarketingHome(props: NavProps) {
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(color-mix(in_oklab,var(--foreground)_12%,transparent)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_70%_55%_at_50%_25%,black,transparent)]" />
           <div aria-hidden="true" className="absolute left-1/2 top-[45%] -z-10 h-[34rem] w-[64rem] max-w-[160vw] -translate-x-1/2 rounded-full bg-primary/20 blur-[130px] motion-safe:animate-pulse motion-safe:[animation-duration:6s]" />
           <div className={cn(container, "text-center")}>
-            <a href="#mobile" className="group/pill mb-7 inline-flex items-center gap-2 rounded-full border bg-background/80 py-1 pl-1 pr-3 text-xs shadow-sm backdrop-blur transition-colors hover:border-primary/40 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-700">
-              <Badge className="rounded-full">New</Badge>Edra for iPhone
-              <HugeiconsIcon icon={ArrowRight01Icon} size={14} strokeWidth={1.5} className="transition-transform group-hover/pill:translate-x-0.5" aria-hidden="true" />
-            </a>
             <h1 id="home-heading" className="mx-auto max-w-[14ch] text-balance font-heading text-[clamp(2.6rem,7.6vw,5.75rem)] font-semibold leading-[0.96] tracking-[-0.055em] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-700">
               Your whole academy. <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">One place.</span>
             </h1>

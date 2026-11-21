@@ -1,6 +1,6 @@
 import {
   AndroidIcon, AssignmentsIcon, BubbleChatIcon, Calendar03Icon, ChartLineData01Icon, CommandIcon, FileImportIcon, FolderLibraryIcon,
-  Link01Icon, Message01Icon, Note01Icon, Notification01Icon, QrCodeIcon, ScanIcon, SmartPhone01Icon, StudentsIcon, Tag01Icon, TeachingIcon,
+  Link01Icon, Message01Icon, Note01Icon, Notification01Icon, QrCodeIcon, ScanIcon, StudentsIcon, Tag01Icon, TeachingIcon,
   Ticket01Icon, UserIdVerificationIcon, LibraryIcon,
 } from "@hugeicons/core-free-icons";
 
@@ -17,7 +17,6 @@ export const features: Entry[] = [
 ];
 
 export const mobile: Entry[] = [
-  { title: "Edra for iPhone", detail: "Run live sessions from your pocket.", icon: SmartPhone01Icon, href: "/#mobile" },
   { title: "Scan to check in", detail: "Point the camera at a student code.", icon: QrCodeIcon, href: "/#mobile" },
   { title: "Mark paper work", detail: "Scan a student, enter marks per part.", icon: ScanIcon, href: "/#mobile" },
   { title: "Staff notifications", detail: "Know when work needs you.", icon: Notification01Icon, href: "/#mobile", soon: true },
