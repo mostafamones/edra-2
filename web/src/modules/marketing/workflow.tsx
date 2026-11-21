@@ -11,7 +11,9 @@ const steps = [
   { id: "attendance", label: "Attendance", icon: IconCalendar },
   { id: "lessons", label: "Lessons", icon: IconBook },
   { id: "results", label: "Results", icon: IconClipboardCheck },
-];
+] as const;
+
+export type WorkflowStep = (typeof steps)[number]["id"];
 
 const students = [
   { id: "mariam", name: "Mariam Hassan", initials: "MH", score: 18 },
@@ -40,15 +42,16 @@ const panelHeaderClass = "flex min-h-20 items-center justify-between gap-3 borde
 const rowClass = "flex min-h-14 items-center gap-2 py-2 sm:gap-3";
 const avatarClass = "hidden size-8 shrink-0 place-items-center rounded-lg bg-muted text-xs font-semibold text-foreground/75 sm:grid";
 
-export function WorkflowPreview() {
-  const [activeStep, setActiveStep] = useState(steps[0].id);
+export function WorkflowPreview({ activeStep, onStepChange }: {
+  activeStep: WorkflowStep;
+  onStepChange: (step: WorkflowStep) => void;
+}) {
   const [attendance, setAttendance] = useState(initialAttendance);
   const marked = Object.values(attendance).filter(status => status !== "unmarked").length;
   const activeIndex = steps.findIndex(step => step.id === activeStep);
 
   return (
     <section
-      id="workflow"
       aria-labelledby="workspace-heading"
       className="min-w-0 scroll-mt-5 rounded-[1.75rem] border border-primary/15 bg-primary/[0.06] p-2.5 sm:p-5 xl:p-6 dark:border-primary/40 dark:bg-primary/10"
     >
@@ -58,12 +61,15 @@ export function WorkflowPreview() {
             <span className="hidden size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-emerald-800 sm:grid dark:bg-primary/25 dark:text-emerald-300">
               <IconSchool className="size-5" aria-hidden="true" />
             </span>
-            <h2 id="workspace-heading" className="font-sans font-semibold sm:text-base">Grade 10 Mathematics</h2>
+            <h3 id="workspace-heading" className="font-sans font-semibold sm:text-base">Grade 10 Mathematics</h3>
           </div>
           <Badge variant="outline" className="rounded-full text-foreground/75">Sample workspace</Badge>
         </header>
 
-        <Tabs value={activeStep} onValueChange={setActiveStep} className="gap-0">
+        <Tabs value={activeStep} onValueChange={value => {
+          const step = steps.find(step => step.id === value);
+          if (step) onStepChange(step.id);
+        }} className="gap-0">
           <TabsList
             aria-label="Sample workspace"
             className="group-data-horizontal/tabs:h-12 relative mx-3 my-3 grid w-auto grid-cols-3 rounded-xl p-1 sm:mx-5"
@@ -90,7 +96,7 @@ export function WorkflowPreview() {
             <div className={panelBodyClass}>
               <div className={panelHeaderClass}>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-sans font-semibold">Tuesday class</h3>
+                  <h4 className="font-sans font-semibold">Tuesday class</h4>
                   <p role="status" className="mt-0.5 text-xs tabular-nums text-muted-foreground">{marked} of {students.length} marked</p>
                   <Progress
                     aria-label="Attendance marked"
@@ -129,7 +135,7 @@ export function WorkflowPreview() {
           <TabsContent value="lessons" className={panelClass}>
             <div className={panelBodyClass}>
               <div className={panelHeaderClass}>
-                <h3 className="font-sans font-semibold">Quadratic equations</h3>
+                <h4 className="font-sans font-semibold">Quadratic equations</h4>
                 <Badge variant="secondary" className="rounded-full">Released</Badge>
               </div>
               <ul className="divide-y px-3 sm:px-5">
@@ -149,7 +155,7 @@ export function WorkflowPreview() {
           <TabsContent value="results" className={panelClass}>
             <div className={panelBodyClass}>
               <div className={panelHeaderClass}>
-                <h3 className="font-sans font-semibold">Practice problems</h3>
+                <h4 className="font-sans font-semibold">Practice problems</h4>
                 <Badge variant="secondary" className="rounded-full">Announced</Badge>
               </div>
               <ul className="divide-y px-3 sm:px-5">
