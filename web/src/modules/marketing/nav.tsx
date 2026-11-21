@@ -64,7 +64,7 @@ export function MarketingNav({ isSignedIn, primaryHref, signInHref }: NavProps) 
                           <Card className="relative h-full justify-end gap-2 overflow-hidden border-0 bg-primary p-5 text-primary-foreground shadow-none ring-0">
                             <HugeiconsIcon icon={SmartPhone01Icon} size={120} strokeWidth={1} className="absolute -right-6 -top-4 opacity-20 transition-transform duration-500 group-hover/entry:-rotate-6 group-hover/entry:scale-110 motion-reduce:transition-none" aria-hidden="true" />
                             <span className="font-heading text-lg font-semibold">The instructor companion</span>
-                            <span className="text-xs leading-relaxed opacity-80">Sessions, attendance and marking on iPhone.</span>
+                            <span className="text-xs leading-relaxed opacity-80">Sessions, attendance and marking on iPhone and Android.</span>
                             <span className="mt-2 flex items-center gap-1 text-xs font-medium">See it<HugeiconsIcon icon={ArrowRight01Icon} size={14} strokeWidth={1.5} className="transition-transform group-hover/entry:translate-x-0.5" aria-hidden="true" /></span>
                           </Card>
                         </a>

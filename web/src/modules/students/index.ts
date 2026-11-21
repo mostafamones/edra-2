@@ -46,6 +46,3 @@ export {
 export type { BookingForm, BookingOutcome, BookingRegistrations, BookingSettings } from "./booking/types";
 export { StudentBookingForm } from "./booking/components/form";
 export { StudentBookingPage } from "./booking/components/page";
-export { StudentFacts } from "./records/components/facts";
-export { StudentAttendance } from "./records/components/attendance";
-export { ResultsChart } from "./records/components/results-chart";

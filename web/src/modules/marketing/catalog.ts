@@ -21,7 +21,7 @@ export const mobile: Entry[] = [
   { title: "Mark paper work", detail: "Scan a student, enter marks per part.", icon: ScanIcon, href: "/#mobile" },
   { title: "Staff notifications", detail: "Know when work needs you.", icon: Notification01Icon, href: "/#mobile", soon: true },
   { title: "Concern threads", detail: "Follow up on a student as a team.", icon: BubbleChatIcon, href: "/#mobile", soon: true },
-  { title: "Edra for Android", detail: "The same companion on Android.", icon: AndroidIcon, href: "/#mobile", soon: true },
+  { title: "Edra for Android", detail: "The same companion on Android.", icon: AndroidIcon, href: "/#mobile" },
 ];
 
 export const tools: Entry[] = [
