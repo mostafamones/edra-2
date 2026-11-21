@@ -91,7 +91,7 @@ export function MarketingHome(props: NavProps) {
                 <span className="flex gap-1.5">{["bg-red-400/70", "bg-amber-400/70", "bg-green-500/70"].map(color => <span key={color} className={cn("size-2.5 rounded-full", color)} />)}</span>
                 <span className="mx-auto rounded-md bg-muted/60 px-10 py-0.5 text-xs text-muted-foreground">app.edra · Students</span>
               </div>
-              <img src="/marketing/students.png" width={2000} height={1172} fetchPriority="high" alt="Edra's Students page: a sidebar of academy sections beside a searchable table of students with their phones, levels, groups and labels." className="block h-auto w-full" />
+              <img src="/marketing/students.webp" width={2304} height={1350} fetchPriority="high" alt="Edra's Students page: a sidebar of academy sections beside a searchable table of students with their phones, levels, groups and labels." className="block h-auto w-full" />
             </figure>
           </div>
         </section>
