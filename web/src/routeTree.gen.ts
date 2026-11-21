@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as LearnRouteRouteImport } from './routes/learn/route'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as AccountIndexRouteImport } from './routes/account/index'
 import { Route as ApiSessionsRouteImport } from './routes/api/sessions'
 import { Route as ApiStudentsRouteImport } from './routes/api/students'
@@ -150,6 +151,11 @@ const AuthRouteRoute = AuthRouteRouteImport.update({
 const LearnRouteRoute = LearnRouteRouteImport.update({
   id: '/learn',
   path: '/learn',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountIndexRoute = AccountIndexRouteImport.update({
@@ -816,6 +822,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
   '/auth': typeof AuthRouteRouteWithChildren
   '/learn': typeof LearnRouteRouteWithChildren
+  '/pricing': typeof PricingRoute
   '/app/$academySlug': typeof AppAcademySlugRouteRouteWithChildren
   '/api/sessions': typeof ApiSessionsRouteWithChildren
   '/api/students': typeof ApiStudentsRouteWithChildren
@@ -938,6 +945,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
+  '/pricing': typeof PricingRoute
   '/api/sessions': typeof ApiSessionsRouteWithChildren
   '/api/students': typeof ApiStudentsRouteWithChildren
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -1061,6 +1069,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/auth': typeof AuthRouteRouteWithChildren
   '/learn': typeof LearnRouteRouteWithChildren
+  '/pricing': typeof PricingRoute
   '/app/$academySlug': typeof AppAcademySlugRouteRouteWithChildren
   '/api/sessions': typeof ApiSessionsRouteWithChildren
   '/api/students': typeof ApiStudentsRouteWithChildren
@@ -1187,6 +1196,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/learn'
+    | '/pricing'
     | '/app/$academySlug'
     | '/api/sessions'
     | '/api/students'
@@ -1309,6 +1319,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/pricing'
     | '/api/sessions'
     | '/api/students'
     | '/auth/forgot-password'
@@ -1431,6 +1442,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/learn'
+    | '/pricing'
     | '/app/$academySlug'
     | '/api/sessions'
     | '/api/students'
@@ -1556,6 +1568,7 @@ export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   LearnRouteRoute: typeof LearnRouteRouteWithChildren
+  PricingRoute: typeof PricingRoute
   ApiSessionsRoute: typeof ApiSessionsRouteWithChildren
   ApiStudentsRoute: typeof ApiStudentsRouteWithChildren
   AccountIndexRoute: typeof AccountIndexRoute
@@ -1612,6 +1625,13 @@ declare module '@tanstack/react-router' {
       path: '/learn'
       fullPath: '/learn'
       preLoaderRoute: typeof LearnRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/': {
@@ -2835,6 +2855,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   LearnRouteRoute: LearnRouteRouteWithChildren,
+  PricingRoute: PricingRoute,
   ApiSessionsRoute: ApiSessionsRouteWithChildren,
   ApiStudentsRoute: ApiStudentsRouteWithChildren,
   AccountIndexRoute: AccountIndexRoute,
