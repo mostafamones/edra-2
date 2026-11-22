@@ -72,7 +72,7 @@ export function MarketingHome(props: NavProps) {
                       </Button>
                     </CollapsibleTrigger>
                   </h3>
-                  <CollapsibleContent className="max-w-[61ch] px-2 pb-4 leading-relaxed text-muted-foreground">{answer}</CollapsibleContent>
+                  <CollapsibleContent className="overflow-hidden motion-safe:data-[state=closed]:animate-collapsible-up motion-safe:data-[state=open]:animate-collapsible-down"><p className="max-w-[61ch] px-2 pb-4 leading-relaxed text-muted-foreground">{answer}</p></CollapsibleContent>
                 </Collapsible>
               ))}
             </div>
