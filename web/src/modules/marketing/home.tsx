@@ -61,12 +61,12 @@ export function MarketingHome(props: NavProps) {
         <section id="questions" aria-labelledby="questions-heading" className="scroll-mt-16 border-t py-16 sm:py-24">
           <div className={cn(container, "grid items-start gap-8 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] md:gap-12")}>
             <h2 id="questions-heading" className={title}>Before you start</h2>
-            <div className="divide-y border-y">
+            <div className="divide-y border-y has-[[data-state=open]:first-child]:border-t-transparent">
               {questions.map(({ question, answer }) => (
-                <Collapsible key={question}>
+                <Collapsible key={question} className="has-[+[data-state=open]]:border-b-transparent">
                   <h3 className="font-sans">
                     <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="group h-auto min-h-14 w-full justify-between gap-3 whitespace-normal px-2 py-4 text-left text-base hover:bg-muted/60">
+                      <Button variant="ghost" className="group h-auto min-h-14 w-full justify-between gap-3 whitespace-normal rounded-none px-2 py-4 text-left text-base hover:bg-muted/60">
                         {question}
                         <IconPlus className="size-4 shrink-0 text-muted-foreground group-aria-expanded:rotate-45 motion-safe:transition-transform" aria-hidden="true" />
                       </Button>
