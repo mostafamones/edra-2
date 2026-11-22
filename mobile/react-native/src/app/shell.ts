@@ -13,6 +13,9 @@ import { LiveSessionsModel } from '../features/sessions/live.ts'
 import { ProfileModel } from '../features/overview/profile.ts'
 import { SchedulesModel } from '../features/sessions/schedules.ts'
 import { StartSessionModel } from '../features/sessions/start.ts'
+import type { AssessmentItem } from '../features/students/api.ts'
+import { StudentDirectoryModel } from '../features/students/directory.ts'
+import { StudentRecordModel } from '../features/students/record.ts'
 import type { AppServices, ShellTab } from './contract.ts'
 
 export type ShellDeps = Readonly<{
@@ -34,6 +37,15 @@ export type SwitchGuard = Readonly<{
 }>
 
 export type SessionRoute = Readonly<{ key: string; session: LiveSession }>
+export type StudentRoute = Readonly<{ key: string; recordId: string; name: string }>
+/** An assignment workspace opened from a student record, focused on that annual record. */
+export type StudentAssignment = Readonly<{
+  key: string
+  summary: AssignmentSummary
+  focus: Readonly<{ recordId: string; name: string }>
+  /** Refreshes the record's assessment history when the workspace closes. */
+  onReturn: () => void
+}>
 
 /**
  * One account scope's signed-in shell (port of SwiftUI `SignedInRoot` + `ShellView` state): its models, the
@@ -47,6 +59,9 @@ export class Shell extends Model {
   assignment: AssignmentSummary | null = null
   /** Overview's history: Settings (account-level, so an academy change keeps it). */
   settingsOpen = false
+  /** Student records belong to the selected academy; they close when the selection changes. */
+  studentsPath: readonly StudentRoute[] = []
+  studentAssignment: StudentAssignment | null = null
 
   readonly academies: AcademiesController
   /** The account's own name and picture; account-level, so academy changes keep it. */
@@ -57,6 +72,7 @@ export class Shell extends Model {
   readonly assignments: AssignmentsModel
   /** Overview's own active list, so the Assessments tab's status filter never changes the recap. */
   readonly activeAssignments: AssignmentsModel
+  readonly students: StudentDirectoryModel
 
   private readonly deps: ShellDeps
   private readonly api: ReturnType<typeof bindRequestPort>
@@ -99,6 +115,7 @@ export class Shell extends Model {
     }
     this.assignments = new AssignmentsModel(assignmentsEnv)
     this.activeAssignments = new AssignmentsModel(assignmentsEnv)
+    this.students = new StudentDirectoryModel(assignmentsEnv)
     // A started (or opened) session: its identity comes from the server acknowledgment.
     this.start.subscribe(() => {
       const destination = this.start.destination
@@ -153,6 +170,52 @@ export class Shell extends Model {
     if (!this.sessionsPath.length) void this.sessions.load(this.academies.context)
   }
 
+  /** Pushes a student record; the directory below keeps its search, filter and scroll position. */
+  openStudent = (student: Readonly<{ id: string; fullName: string }>) => {
+    this.studentsPath = [...this.studentsPath, { key: `${student.id}#${++this.pushes}`, recordId: student.id, name: student.fullName }]
+    this.changed()
+  }
+
+  /** A user pop of the Students stack. */
+  popStudents = (length: number) => {
+    if (length >= this.studentsPath.length) return
+    this.studentsPath = this.studentsPath.slice(0, Math.max(0, length))
+    this.studentAssignment = null
+    this.changed()
+  }
+
+  /** A record screen's model: it belongs to the account scope and academy selection it was opened in. */
+  makeStudentModel = (recordId: string) => {
+    const context = this.academies.context
+    const isCurrent = this.academies.isCurrent
+    return new StudentRecordModel(recordId, context ?? { academyId: '', epoch: -1 }, {
+      api: this.deps.client,
+      // A model made without a selection never commits anything.
+      isCurrent: (c) => context !== null && isCurrent(c),
+      onUnauthenticated: () => this.deps.auth.signOutFrom(this.deps.scope),
+      onForbidden: this.academies.ownership.onForbidden,
+    })
+  }
+
+  /**
+   * Opens an assignment from a student record in the same workspace the Assessments tab uses (its permissions,
+   * save and announce flows and the unsaved-marking guard), focused on the record.
+   */
+  openStudentAssignment = (item: AssessmentItem, focus: StudentAssignment['focus'], onReturn: () => void) => {
+    if (item.kind !== 'assignment' || !this.academies.context) return
+    const summary: AssignmentSummary = { id: item.id, title: item.title, dueAt: null, state: '', maxScore: '', recipientCount: 0 }
+    this.studentAssignment = { key: `assignment:${item.id}#${++this.pushes}`, summary, focus, onReturn }
+    this.changed()
+  }
+
+  closeStudentAssignment = () => {
+    const open = this.studentAssignment
+    if (!open) return
+    this.studentAssignment = null
+    this.changed()
+    open.onReturn()
+  }
+
   /** Overview academy choice. Returns a guard to present when the switch would lose unsaved marks; reselecting changes nothing. */
   chooseAcademy = (academyId: string): SwitchGuard | null => {
     if (this.academies.choose(academyId) !== 'confirm') return null
@@ -189,7 +252,11 @@ export class Shell extends Model {
    */
   foreground = async () => {
     void this.profile.load()
-    if (await this.academies.revalidate()) await this.sessions.load(this.academies.context)
+    if (await this.academies.revalidate()) {
+      const context = this.academies.context
+      if (this.students.context) void this.students.refresh()
+      await this.sessions.load(context)
+    }
   }
 
   /** The session screen belongs to the account scope and academy selection it was opened in. */
@@ -213,7 +280,10 @@ export class Shell extends Model {
     this.tab = 'overview'
     this.sessionsPath = []
     this.assignment = null
+    this.studentsPath = []
+    this.studentAssignment = null
     this.start.reset()
+    void this.students.load(context)
     void this.sessions.load(context)
     // Prefetch the start picker's schedules so it opens already populated.
     if (context) void this.schedules.load(context)

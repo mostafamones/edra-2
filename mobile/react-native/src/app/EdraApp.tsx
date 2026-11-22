@@ -18,6 +18,8 @@ import type { SessionsPlatform } from '../features/sessions/screens/platform.ts'
 import { SessionScreen } from '../features/sessions/screens/SessionScreen.tsx'
 import { SessionsHomeScreen } from '../features/sessions/screens/SessionsHomeScreen.tsx'
 import { StartSessionSheet } from '../features/sessions/screens/StartSessionScreen.tsx'
+import { StudentScreen } from '../features/students/StudentScreen.tsx'
+import { StudentsScreen } from '../features/students/StudentsScreen.tsx'
 import type { AppChrome, AppServices, EdraAppProps } from './contract.ts'
 import { academyIcon, Shell, type SwitchGuard } from './shell.ts'
 
@@ -145,6 +147,38 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
 
   const closeAssignment = () => shell.openAssignment(null)
 
+  const studentAssignment = shell.studentAssignment
+  // The record's workspace: the shared assignment workspace (permissions, saves, announcement and the academy-switch
+  // guard through `shell.assignments`), focused on the record. iOS presents it as a modal route, Android as a sheet.
+  const studentWorkspace = studentAssignment && context && (
+    <WorkspaceScreen key={studentAssignment.key} summary={studentAssignment.summary} focus={studentAssignment.focus} context={context}
+      parent={shell.assignments} platform={assessmentPlatform} onClose={shell.closeStudentAssignment} />
+  )
+  const studentRoutes = [
+    ...shell.studentsPath.map(({ key, recordId, name }) => ({
+      key,
+      element: (
+        <StudentScreen key={key} name={name} makeModel={() => shell.makeStudentModel(recordId)} platform={sessionsPlatform} assessments={assessmentPlatform}
+          onOpenAssignment={(item, refresh) => shell.openStudentAssignment(item, { recordId, name }, refresh)} />
+      ),
+    })),
+    ...(chrome.modalRoutes && studentAssignment && studentWorkspace ? [{ key: studentAssignment.key, modal: true, element: studentWorkspace }] : []),
+  ]
+  const students = (
+    <chrome.Stack
+      root={page('Students', <>
+        <StudentsScreen model={shell.students} platform={assessmentPlatform} onOpen={shell.openStudent} />
+        {!chrome.modalRoutes && (
+          <assessmentPlatform.Sheet visible={!!studentWorkspace} presentation="fullScreen" onDismiss={shell.closeStudentAssignment}>
+            {studentWorkspace}
+          </assessmentPlatform.Sheet>
+        )}
+      </>)}
+      routes={studentRoutes}
+      onPop={(length) => (studentAssignment && length === shell.studentsPath.length ? shell.closeStudentAssignment() : shell.popStudents(length))}
+    />
+  )
+
   const comingSoon = (title: string) => (
     <chrome.Stack root={page(title, <Unavailable title="Coming soon" />)} routes={NO_ROUTES} onPop={noop} />
   )
@@ -198,7 +232,7 @@ function SignedInShell({ auth, scope, client, selection, services, chrome, sessi
               />
             ),
           },
-          { key: 'students', title: 'Students', icon: 'hugeicons-users', content: comingSoon('Students') },
+          { key: 'students', title: 'Students', icon: 'hugeicons-users', content: students },
           { key: 'concerns', title: 'Concerns', icon: 'hugeicons-bubble-chat', content: comingSoon('Concerns') },
         ]}
       />

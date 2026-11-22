@@ -7,7 +7,7 @@ import { AccountScope } from '../core/ownership.ts'
 import type { MarkingModel } from '../features/assignments/marking.ts'
 import type { LiveSession } from '../features/sessions/contract.ts'
 import type { LateAfterStore } from '../features/sessions/detail.ts'
-import { academyIcon, Shell } from './shell.ts'
+import { academyIcon, Shell, type StudentAssignment } from './shell.ts'
 
 const tick = async (n = 20) => {
   for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r))
@@ -28,6 +28,8 @@ function setup(options: { remembered?: string | null } = {}) {
     academies: [academy('a'), academy('b')],
     status: new Map<string, number>(),
     started: null as LiveSession | null,
+    /** null: an older server without student endpoints. */
+    students: null as unknown,
   }
   const fetch = async (url: string, init: RequestInit) => {
     const path = new URL(url).pathname.replace(/^\//, '')
@@ -40,6 +42,7 @@ function setup(options: { remembered?: string | null } = {}) {
     if (/sessions$/.test(path) && init.method === 'POST') return json({ session: server.started })
     if (path.includes('/schedules')) return json({ schedules: [], next_offset: null, academic_year: null, time_zone: 'Africa/Cairo' })
     if (path.includes('/assignments')) return json({ total: 0, assignments: [] })
+    if (path.endsWith('/students') && server.students) return json(server.students)
     return new Response('{}', { status: 404 })
   }
   let id = 0
@@ -308,4 +311,53 @@ test('Overview opens a session on Sessions with only that session, and an assign
 test('academy icons map like the SwiftUI app', () => {
   assert.equal(academyIcon('science'), 'hugeicons-microscope')
   assert.equal(academyIcon('constructor'), 'hugeicons-school-01')
+})
+
+test('Students: an academy change closes records and the focused workspace; closing the workspace refreshes the history', async () => {
+  const { shell, server } = setup({ remembered: 'a' })
+  server.students = { academic_year: { id: 'y', start_year: 2030, closed: false }, total: 0, page: 0, page_size: 50, students: [] }
+  await shell.academies.load()
+  await tick()
+  assert.equal(shell.students.state.status, 'loaded')
+  shell.openStudent({ id: 'r1', fullName: 'Amal' })
+  // A getter defeats narrowing from the assertion above it.
+  const open = (): StudentAssignment | null => shell.studentAssignment
+  let refreshed = 0
+  const item = { id: 'asg', kind: 'assignment' as const, title: 'Homework', createdAt: 'x', status: 'unannounced' as const, result: null,
+    marking: { complete: true, score: '5', maximum: '10' } }
+  shell.openStudentAssignment({ ...item, kind: 'quiz' }, { recordId: 'r1', name: 'Amal' }, () => void refreshed++)
+  assert.equal(shell.studentAssignment, null, 'quizzes have no native workspace')
+  shell.openStudentAssignment(item, { recordId: 'r1', name: 'Amal' }, () => void refreshed++)
+  assert.deepEqual(open()?.focus, { recordId: 'r1', name: 'Amal' })
+  shell.closeStudentAssignment()
+  assert.equal(refreshed, 1)
+  assert.equal(shell.studentsPath.length, 1)
+
+  shell.openStudentAssignment(item, { recordId: 'r1', name: 'Amal' }, () => void refreshed++)
+  const before = shell.academies.context
+  shell.chooseAcademy('b')
+  await tick()
+  assert.notEqual(shell.academies.context, before)
+  assert.deepEqual(shell.studentsPath, [])
+  assert.equal(shell.studentAssignment, null)
+  assert.equal(shell.students.context, shell.academies.context)
+})
+
+test('Students: a record model from an earlier academy selection never commits after A → B → A', async () => {
+  const { shell } = setup({ remembered: 'a' })
+  await shell.academies.load()
+  await tick()
+  const model = shell.makeStudentModel('r1')
+  shell.chooseAcademy('b')
+  shell.chooseAcademy('a')
+  await tick()
+  await model.loadDetail()
+  assert.equal(model.detail, null)
+})
+
+test('Students: a server without student endpoints is unsupported, not an empty directory', async () => {
+  const { shell } = setup({ remembered: 'a' })
+  await shell.academies.load()
+  await tick()
+  assert.equal(shell.students.state.status, 'unsupported')
 })
