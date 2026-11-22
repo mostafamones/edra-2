@@ -1,8 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import { IconPlus } from "@/components/shared/icons";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { MarketingFooter } from "./footer";
 import { MobileShowcase } from "./mobile";
@@ -61,21 +60,18 @@ export function MarketingHome(props: NavProps) {
         <section id="questions" aria-labelledby="questions-heading" className="scroll-mt-16 border-t py-16 sm:py-24">
           <div className={cn(container, "grid items-start gap-8 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] md:gap-12")}>
             <h2 id="questions-heading" className={title}>Before you start</h2>
-            <div className="divide-y border-y has-[[data-state=open]:first-child]:border-t-transparent">
+            <Accordion type="single" collapsible className="border-y motion-reduce:[&_[data-slot=accordion-content]]:animate-none">
               {questions.map(({ question, answer }) => (
-                <Collapsible key={question} className="has-[+[data-state=open]]:border-b-transparent">
-                  <h3 className="font-sans">
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="group h-auto min-h-14 w-full justify-between gap-3 whitespace-normal rounded-none px-2 py-4 text-left text-base hover:bg-muted/60">
-                        {question}
-                        <IconPlus className="size-4 shrink-0 text-muted-foreground group-aria-expanded:rotate-45 motion-safe:transition-transform" aria-hidden="true" />
-                      </Button>
-                    </CollapsibleTrigger>
-                  </h3>
-                  <CollapsibleContent className="overflow-hidden motion-safe:data-[state=closed]:animate-collapsible-up motion-safe:data-[state=open]:animate-collapsible-down"><p className="max-w-[61ch] px-2 pb-4 leading-relaxed text-muted-foreground">{answer}</p></CollapsibleContent>
-                </Collapsible>
+                <AccordionItem key={question} value={question}>
+                  <AccordionTrigger className="items-center gap-4 rounded-none px-0 py-5 text-base hover:no-underline [&_svg]:[stroke-width:1.5]">
+                    {question}
+                  </AccordionTrigger>
+                  <AccordionContent className="h-auto pb-5 text-base leading-relaxed text-muted-foreground">
+                    {answer}
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           </div>
         </section>
 

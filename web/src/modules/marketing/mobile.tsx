@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, QrCodeIcon, ScanIcon, SmartPhone01Icon, TeachingIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,7 @@ const cycle = 5000;
 function Header({ back, title }: { back: string; title: string }) {
   return (
     <div className="px-5 pt-2">
-      <span className="flex items-center text-[13px]" style={{ color: accent }}><HugeiconsIcon icon={ArrowLeft01Icon} size={18} strokeWidth={2} />{back}</span>
+      <span className="flex items-center text-[13px]" style={{ color: accent }}><HugeiconsIcon icon={ArrowLeft01Icon} size={18} strokeWidth={1.5} />{back}</span>
       <p className="mt-3 text-[22px] font-bold leading-tight tracking-tight">{title}</p>
     </div>
   );
@@ -29,17 +30,17 @@ function SessionScreen() {
     <>
       <Header back="Sessions" title="Grade 10 Maths" />
       <ul className="mx-4 mt-5 divide-y divide-white/[0.07] overflow-hidden rounded-2xl bg-[#1C1C1E]">
-        {students.map(([name, here], index) => (
-          <li key={name} style={{ animationDelay: `${index * 70}ms` }} className="flex items-center gap-3 px-3.5 py-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:fill-mode-both">
+        {students.map(([name, here]) => (
+          <li key={name} className="flex items-center gap-3 px-3.5 py-3">
             <span className="flex-1 text-[13px]">{name}</span>
             <span className={cn("grid size-5 place-items-center rounded-full", here ? "text-black" : "ring-1 ring-white/25")} style={here ? { background: accent } : undefined}>
-              {here && <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={3} />}
+              {here && <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={1.5} />}
             </span>
           </li>
         ))}
       </ul>
       <span className="absolute inset-x-4 bottom-6 flex items-center justify-center gap-1.5 rounded-full py-3 text-[13px] font-semibold text-black" style={{ background: accent }}>
-        <HugeiconsIcon icon={ScanIcon} size={16} strokeWidth={2} />Open scanner
+        <HugeiconsIcon icon={ScanIcon} size={16} strokeWidth={1.5} />Open scanner
       </span>
     </>
   );
@@ -50,11 +51,11 @@ function ScannerScreen() {
     <>
       <Header back="Grade 10 Maths" title="Scanner" />
       <div className="relative mx-4 mt-5 grid aspect-square place-items-center overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_40%_30%,#3a3a3c,#0b0b0c)]">
-        <span className="grid size-28 place-items-center rounded-2xl bg-white text-black motion-safe:animate-in motion-safe:zoom-in-90 motion-safe:duration-700"><HugeiconsIcon icon={QrCodeIcon} size={88} strokeWidth={1.25} /></span>
+        <span className="grid size-28 place-items-center rounded-2xl bg-white text-black"><HugeiconsIcon icon={QrCodeIcon} size={88} strokeWidth={1.5} /></span>
         <span className="absolute inset-x-8 top-1/2 h-0.5 rounded-full motion-safe:animate-[pulse_1.4s_ease-in-out_infinite]" style={{ background: accent, boxShadow: `0 0 18px ${accent}` }} />
       </div>
-      <div className="mx-4 mt-4 flex items-center gap-3 rounded-2xl bg-[#1C1C1E] p-3.5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4 motion-safe:delay-700 motion-safe:duration-500 motion-safe:fill-mode-both">
-        <span className="grid size-9 place-items-center rounded-full text-black" style={{ background: accent }}><HugeiconsIcon icon={Tick02Icon} size={18} strokeWidth={2.5} /></span>
+      <div className="mx-4 mt-4 flex items-center gap-3 rounded-2xl bg-[#1C1C1E] p-3.5">
+        <span className="grid size-9 place-items-center rounded-full text-black" style={{ background: accent }}><HugeiconsIcon icon={Tick02Icon} size={18} strokeWidth={1.5} /></span>
         <span><span className="block text-[13px] font-semibold">Omar Nasser</span><span className="text-[11px] text-white/55">Checked in</span></span>
       </div>
     </>
@@ -67,13 +68,13 @@ function MarkingScreen() {
     <>
       <Header back="Assignments" title="Mariam Hassan" />
       <ul className="mx-4 mt-5 divide-y divide-white/[0.07] overflow-hidden rounded-2xl bg-[#1C1C1E]">
-        {parts.map(([part, mark], index) => (
-          <li key={part} style={{ animationDelay: `${150 + index * 120}ms` }} className="flex items-center justify-between px-3.5 py-3.5 text-[13px] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-4 motion-safe:fill-mode-both">
+        {parts.map(([part, mark]) => (
+          <li key={part} className="flex items-center justify-between px-3.5 py-3.5 text-[13px]">
             {part}<span className="font-semibold tabular-nums">{mark}</span>
           </li>
         ))}
       </ul>
-      <div className="mx-4 mt-3 flex items-baseline justify-between rounded-2xl bg-[#1C1C1E] px-4 py-3.5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:delay-500 motion-safe:fill-mode-both">
+      <div className="mx-4 mt-3 flex items-baseline justify-between rounded-2xl bg-[#1C1C1E] px-4 py-3.5">
         <span className="text-[13px] text-white/60">Total</span>
         <span className="text-[26px] font-bold tabular-nums" style={{ color: accent }}>18<span className="text-[13px] text-white/50">/20</span></span>
       </div>
@@ -131,13 +132,14 @@ function Phone({ children }: { children: ReactNode }) {
 export function MobileShowcase({ className }: { className?: string }) {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const reduceMotion = useReducedMotion();
   const Screen = steps[active].screen;
 
   useEffect(() => {
-    if (paused || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (paused || reduceMotion) return;
     const timer = setTimeout(() => setActive(current => (current + 1) % steps.length), cycle);
     return () => clearTimeout(timer);
-  }, [active, paused]);
+  }, [active, paused, reduceMotion]);
 
   return (
     <section id="mobile" aria-labelledby="mobile-heading" className={cn("relative isolate scroll-mt-16 overflow-hidden py-20 sm:py-28", className)}>
@@ -146,15 +148,15 @@ export function MobileShowcase({ className }: { className?: string }) {
         <Reveal>
           <p className="mb-4 flex items-center gap-2 text-sm font-medium text-primary">
             <span className="grid size-8 place-items-center rounded-lg bg-primary/10"><HugeiconsIcon icon={SmartPhone01Icon} size={18} strokeWidth={1.5} aria-hidden="true" /></span>
-            iPhone & Android
+            Companion App
           </p>
           <h2 id="mobile-heading" className="text-balance font-heading text-[clamp(2rem,4.4vw,3.4rem)] font-semibold leading-[1.04] tracking-[-0.045em]">Teach with your phone in hand.</h2>
-          <ul className="mt-8 space-y-1.5" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+          <ul className="mt-8 space-y-1.5" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocusCapture={() => setPaused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false); }}>
             {steps.map((step, index) => {
               const current = index === active;
               return (
                 <li key={step.title}>
-                  <button type="button" aria-pressed={current} onClick={() => setActive(index)} onFocus={() => setActive(index)}
+                  <button type="button" aria-pressed={current} onClick={() => setActive(index)}
                     className={cn("flex w-full items-start gap-4 rounded-2xl p-4 text-left outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-ring",
                       current ? "bg-card ring-1 ring-foreground/10" : "hover:bg-muted/60")}>
                     <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl transition-colors duration-300", current ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary")}>
@@ -162,7 +164,7 @@ export function MobileShowcase({ className }: { className?: string }) {
                     </span>
                     <span>
                       <span className="block font-semibold">{step.title}</span>
-                      <span className={cn("grid text-sm text-muted-foreground transition-[grid-template-rows,opacity] duration-300", current ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
+                      <span className="block text-sm text-muted-foreground">
                         <span className="overflow-hidden">{step.detail}</span>
                       </span>
                     </span>
@@ -173,7 +175,20 @@ export function MobileShowcase({ className }: { className?: string }) {
           </ul>
         </Reveal>
         <Reveal delay={120}>
-          <Phone><div key={active} className="absolute inset-0 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-6 motion-safe:duration-500"><Screen /></div></Phone>
+          <Phone>
+            <AnimatePresence initial={false}>
+              <motion.div
+                key={active}
+                className="absolute inset-0"
+                initial={{ opacity: 0, x: reduceMotion ? 0 : 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: reduceMotion ? 0 : -8 }}
+                transition={{ duration: reduceMotion ? 0 : 0.35, ease: "easeInOut" }}
+              >
+                <Screen />
+              </motion.div>
+            </AnimatePresence>
+          </Phone>
         </Reveal>
       </div>
     </section>
