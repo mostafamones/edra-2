@@ -31,4 +31,4 @@ Import remains an explicit extraction, review and save workflow. Automatic sourc
 
 ## Implementation reference
 
-The [question-bank module README](../../../src/modules/question-bank/README.md) describes the current importer, persisted question format, assessment picker and verification evidence. Its description of a **Saved questions** dialog is the current implementation; this product contract replaces that dialog as the main library entry point. The dialog may remain as an assessment selection surface.
+The [question-bank module README](../../../src/modules/question-bank/README.md) describes the implemented library, collections, import page, persisted question format, assessment picker and verification evidence. The assessment picker remains a dialog selection surface over the same library reads.
