@@ -1,5 +1,7 @@
 # Question bank import beta
 
+Approved next behavior: the [question-bank product contract](../../../docs/product/domains/question-bank.md) makes the sidebar destination a saved-question library, moves import to a separate page, and introduces overlapping Topic, Source document, Source section and Custom collections. The implementation described below still uses the combined importer and saved-question dialog, a single topic field and filename-based source metadata; those are implementation gaps, not restrictions on the approved collection model.
+
 Academy Owners, Head Admins and Admins can open Question bank from the staff sidebar. The route reuses the academy membership resolved by the staff layout. An Instructor cannot open the route directly. The in-memory import is discarded when leaving the page or changing academy or account.
 
 The page starts empty or opens a built-in mixed-language sample. Managers can select multiple question PDFs, up to 1,000 pages and 200 MB each, and work through one PDF and up to 24 consecutive pages at a time. The browser reads the page count, then renders the selected range. Gemini imports also read the immediately preceding page separately for context when starting after page 1; that page's exercises stay outside the import. **Next pages** fills the next range after a successful extraction. Save or export the current review before replacing it. The selection and draft review are lost on reload; this is not an unattended job queue. Page numbers stay relative to the original PDF.
