@@ -4742,6 +4742,112 @@ export type Database = {
         }
         Relationships: []
       }
+      question_bank_collections: {
+        Row: {
+          academy_id: string
+          created_at: string
+          created_by: string
+          first_page: number | null
+          id: string
+          kind: string
+          last_page: number | null
+          name: string
+          name_key: string | null
+          parent_id: string | null
+          parent_kind: string | null
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          created_by: string
+          first_page?: number | null
+          id: string
+          kind: string
+          last_page?: number | null
+          name: string
+          parent_id?: string | null
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          created_by?: string
+          first_page?: number | null
+          id?: string
+          kind?: string
+          last_page?: number | null
+          name?: string
+          parent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_bank_collections_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_bank_collections_academy_id_parent_id_parent_kind_fkey"
+            columns: ["academy_id", "parent_id", "parent_kind"]
+            isOneToOne: false
+            referencedRelation: "question_bank_collections"
+            referencedColumns: ["academy_id", "id", "kind"]
+          },
+          {
+            foreignKeyName: "question_bank_collections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_bank_memberships: {
+        Row: {
+          academy_id: string
+          collection_id: string
+          created_at: string
+          created_by: string
+          question_id: string
+        }
+        Insert: {
+          academy_id: string
+          collection_id: string
+          created_at?: string
+          created_by: string
+          question_id: string
+        }
+        Update: {
+          academy_id?: string
+          collection_id?: string
+          created_at?: string
+          created_by?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_bank_memberships_academy_id_collection_id_fkey"
+            columns: ["academy_id", "collection_id"]
+            isOneToOne: false
+            referencedRelation: "question_bank_collections"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "question_bank_memberships_academy_id_question_id_fkey"
+            columns: ["academy_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "question_bank_questions"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "question_bank_memberships_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_bank_questions: {
         Row: {
           academy_id: string
@@ -4750,6 +4856,7 @@ export type Database = {
           id: string
           payload: Json
           program_id: string | null
+          search_text: string | null
           unit_id: string | null
         }
         Insert: {
@@ -8241,6 +8348,15 @@ export type Database = {
         }
         Returns: Json
       }
+      create_question_bank_collection: {
+        Args: {
+          p_academy_id: string
+          p_id: string
+          p_kind: string
+          p_name: string
+        }
+        Returns: string
+      }
       create_quiz: {
         Args: {
           p_academic_year_id: string
@@ -8604,6 +8720,14 @@ export type Database = {
           track_id: string
         }[]
       }
+      get_question_bank_collections: {
+        Args: { p_academy_id: string }
+        Returns: Json
+      }
+      get_question_bank_question: {
+        Args: { p_academy_id: string; p_id: string }
+        Returns: Json
+      }
       get_question_bank_units: { Args: { p_academy_id: string }; Returns: Json }
       get_quiz: {
         Args: { p_academy_id: string; p_quiz_id: string }
@@ -8800,6 +8924,16 @@ export type Database = {
           p_limit: number
           p_search: string
           p_to: string
+        }
+        Returns: Json
+      }
+      list_question_bank_questions: {
+        Args: {
+          p_academy_id: string
+          p_collection_id: string
+          p_limit: number
+          p_offset: number
+          p_query: string
         }
         Returns: Json
       }
@@ -9213,6 +9347,10 @@ export type Database = {
         }
         Returns: Json
       }
+      rename_question_bank_collection: {
+        Args: { p_academy_id: string; p_id: string; p_name: string }
+        Returns: undefined
+      }
       renew_my_exam_editor: {
         Args: { p_academy_id: string; p_exam_id: string; p_token: string }
         Returns: Json
@@ -9396,6 +9534,16 @@ export type Database = {
         }
         Returns: Json
       }
+      save_question_bank_import: {
+        Args: {
+          p_academy_id: string
+          p_collection_id?: string
+          p_document: Json
+          p_program_id?: string
+          p_questions: Json
+        }
+        Returns: number
+      }
       save_question_bank_questions: {
         Args: { p_academy_id: string; p_program_id?: string; p_questions: Json }
         Returns: number
@@ -9539,6 +9687,15 @@ export type Database = {
       set_my_avatar: {
         Args: { p_expected: string; p_path: string }
         Returns: Json
+      }
+      set_question_bank_memberships: {
+        Args: {
+          p_academy_id: string
+          p_collection_id: string
+          p_member: boolean
+          p_question_ids: string[]
+        }
+        Returns: number
       }
       set_student_access_suspension: {
         Args: {
