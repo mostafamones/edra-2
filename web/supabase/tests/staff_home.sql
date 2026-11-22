@@ -73,10 +73,17 @@ select pg_temp.check((public.staff_student_learning(pg_temp.id('academy'),(selec
 select pg_temp.expect_error(format('select public.staff_student_learning(%L,%L,0)',pg_temp.id('other'),gen_random_uuid()),'forbidden');
 select pg_temp.check((public.staff_student_assessments(pg_temp.id('academy'),(select id from public.annual_student_records where full_name='Home online student' and academy_id=pg_temp.id('academy')),0)->>'total')::int=0,'empty assessment history is scoped');
 select pg_temp.expect_error(format('select public.staff_student_assessments(%L,%L,0)',pg_temp.id('other'),gen_random_uuid()),'forbidden');
+select pg_temp.check((public.staff_student_assessment_history(pg_temp.id('academy'),(select id from public.annual_student_records where full_name='Home online student' and academy_id=pg_temp.id('academy')),'exam',25,0)->>'total')::int=0,'filtered assessment history is scoped');
+select pg_temp.expect_error(format('select public.staff_student_assessment_history(%L,%L,null,25,0)',pg_temp.id('other'),gen_random_uuid()),'forbidden');
+select pg_temp.expect_error(format('select public.staff_student_assessment_history(%L,%L,%L,25,0)',pg_temp.id('academy'),gen_random_uuid(),'essay'),'validation');
+select pg_temp.expect_error(format('select public.staff_student_assessment_history(%L,%L,null,101,0)',pg_temp.id('academy'),gen_random_uuid()),'validation');
+select pg_temp.expect_error(format('select public.staff_student_assessment_history(%L,%L,null,25,0)',pg_temp.id('academy'),gen_random_uuid()),'not_found');
 select pg_temp.act('student');
 select pg_temp.expect_error(format('select public.staff_student_learning(%L,%L,0)',pg_temp.id('academy'),gen_random_uuid()),'forbidden');
+select pg_temp.expect_error(format('select public.staff_student_assessment_history(%L,%L,null,25,0)',pg_temp.id('academy'),gen_random_uuid()),'forbidden');
 reset role;
 select pg_temp.check(not has_function_privilege('anon','public.staff_home(uuid)','execute'),'anonymous execution denied');
 select pg_temp.check(not has_function_privilege('anon','public.staff_student_learning(uuid,uuid,integer)','execute'),'anonymous student learning denied');
 select pg_temp.check(not has_function_privilege('anon','public.staff_student_assessments(uuid,uuid,integer)','execute'),'anonymous assessment summary denied');
+select pg_temp.check(not has_function_privilege('anon','public.staff_student_assessment_history(uuid,uuid,text,integer,integer)','execute'),'anonymous assessment history denied');
 rollback;

@@ -349,7 +349,16 @@ do $$ declare saved jsonb; result jsonb; begin
   if saved->'recipient'->>'publication_state' <> 'pending_correction' or saved->'recipient'->'publication'->>'total' <> '23.25' then
     raise exception 'Pending correction is wrong: %', saved;
   end if;
-  result := public.publish_assignment_results('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', jsonb_build_array(
+  -- Student history: the official result stays the announced snapshot; the kind filter applies before paging.
+  result := public.staff_student_assessment_history('a5555555-5555-4555-8555-555555555555', pg_temp.rec('s1'), 'assignment', 10, 0);
+  if (result->>'total')::int < 1 or result->'items'->0->>'publicationState' <> 'pending_correction'
+    or result->'items'->0->'publication'->>'total' <> '23.25' or result->'items'->0->'publication'->>'max_score' is null then
+    raise exception 'Student history lost the announced result: %', result;
+  end if;
+  if (public.staff_student_assessment_history('a5555555-5555-4555-8555-555555555555', pg_temp.rec('s1'), 'quiz', 10, 0)->>'total')::int <> 0 then
+    raise exception 'Kind filter leaked other assessments';
+  end if;
+  result :=public.publish_assignment_results('a5555555-5555-4555-8555-555555555555', 'a9999999-0000-4000-8000-000000000001', jsonb_build_array(
     jsonb_build_object('annual_student_record_id', pg_temp.rec('s1'), 'expected_version', pg_temp.ver('s1'))), gen_random_uuid());
   if result->'results'->0->>'outcome' <> 'corrected' or (result->'results'->0->>'revision')::int <> 2 then raise exception 'Correction is wrong: %', result; end if;
   if pg_temp.effects('result_corrected') <> 1 then

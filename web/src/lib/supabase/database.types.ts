@@ -9572,6 +9572,16 @@ export type Database = {
         Args: { p_academy_id: string; p_offset?: number; p_record_id: string }
         Returns: Json
       }
+      staff_student_assessment_history: {
+        Args: {
+          p_academy_id: string
+          p_kind?: string
+          p_limit?: number
+          p_offset?: number
+          p_record_id: string
+        }
+        Returns: Json
+      }
       staff_student_learning: {
         Args: { p_academy_id: string; p_offset?: number; p_record_id: string }
         Returns: Json
