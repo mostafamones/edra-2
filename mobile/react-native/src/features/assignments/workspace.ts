@@ -135,11 +135,15 @@ export class WorkspaceModel extends Observable {
   private readonly parent: AssignmentsModel
   private get env(): AssignmentsEnvironment { return this.parent.env }
 
-  constructor(summary: AssignmentSummary, context: AcademyContext, parent: AssignmentsModel) {
+  /** Opened from a student record: that annual record's marking opens once the workspace has loaded. */
+  private focus: Readonly<{ recordId: string; name: string }> | null
+
+  constructor(summary: AssignmentSummary, context: AcademyContext, parent: AssignmentsModel, focus: Readonly<{ recordId: string; name: string }> | null = null) {
     super()
     this.summary = summary
     this.context = context
     this.parent = parent
+    this.focus = focus
   }
 
   get detail(): AssignmentDetail | null { return this._detail }
@@ -201,6 +205,33 @@ export class WorkspaceModel extends Observable {
     this._state = { status: 'loaded' }
     this.changed()
     await this.reloadStudents()
+    await this.openFocus()
+  }
+
+  /**
+   * Finds the focused record through the same server search and paging the list uses (its name, then its
+   * permanent id among the matches) and opens its sheet once. Permissions stay the server's `actions`.
+   */
+  private async openFocus(): Promise<void> {
+    const focus = this.focus
+    if (!focus || !this.isCurrent) return
+    this.focus = null
+    const ticket = this.lookupSlot.begin()
+    const base = `api/v1/assignments/${encodeURIComponent(this.summary.id)}/marks?filter=all&search=${queryValue(prefix(focus.name.trim(), 100))}&limit=${WorkspaceModel.pageSize}`
+    try {
+      for (let offset = 0; ; offset += WorkspaceModel.pageSize) {
+        const page = await this.env.api.get(`${base}&offset=${offset}`, { signal: ticket.signal, structuredErrors: true, decode: decodeStudentsPage })
+        if (!ticket.isCurrent() || !this.isCurrent) return
+        const student = page.students.find((s) => s.id === focus.recordId)
+        if (student) return this.open(student, 'row')
+        if (page.students.length === 0 || offset + page.students.length >= page.total) break
+      }
+      this.set(() => (this._notice = `${focus.name} isn't on this assignment's list.`))
+    } catch (error) {
+      if (!ticket.isCurrent() || !this.isCurrent) return
+      await this.fail(error, (message) => (this._notice = message))
+      this.changed()
+    }
   }
 
   /** Each chip is fetched the first time it's chosen, then reused until the data changes. */

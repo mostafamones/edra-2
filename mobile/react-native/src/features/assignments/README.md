@@ -33,6 +33,8 @@ The shell keeps the current Swift responsibilities: the "Assessments" page chrom
 
 ## Students list
 
+- Opened from a student record, `WorkspaceScreen` takes `focus` (annual record id and name). After the detail and first page load, the model searches the marks list by that name, pages through the matches to find the record id and opens its marking sheet once; permissions stay the server's `actions`. A non-recipient gets a notice and nothing opens.
+
 - Status (`filter`) and search are server-side and paged by name (50 rows, "Load more").
 - Sort: Name is the server's order. Group needs the whole cohort, so it refetches with the server's 1000-row page and sorts on device; it is disabled, and reverts to Name, when the list is larger than that. No backend change.
 - Scan (tab and camera) appears only when marking is permitted and the detail reports `student_codes_enabled: true`.

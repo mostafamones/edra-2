@@ -25,11 +25,19 @@ import {
 } from './views.ts'
 import { FILTERS, SORTS, WorkspaceModel } from './workspace.ts'
 
-type Props = { summary: AssignmentSummary; context: AcademyContext; parent: AssignmentsModel; platform: AssessmentPlatform; onClose: () => void }
+type Props = {
+  summary: AssignmentSummary
+  context: AcademyContext
+  parent: AssignmentsModel
+  platform: AssessmentPlatform
+  onClose: () => void
+  /** Opened from a student record: open that annual record's marking once loaded. */
+  focus?: Readonly<{ recordId: string; name: string }> | null
+}
 
 /** One assignment (WorkspaceView.swift): server-searched students with filters, marking entry points and announcement. */
-export function WorkspaceScreen({ summary, context, parent, platform, onClose }: Props) {
-  const [model] = useState(() => new WorkspaceModel(summary, context, parent))
+export function WorkspaceScreen({ summary, context, parent, platform, onClose, focus = null }: Props) {
+  const [model] = useState(() => new WorkspaceModel(summary, context, parent, focus))
   useModel(model)
   const [searchText, setSearchText] = useState('')
   const [pane, setPane] = useState<Pane>('students')

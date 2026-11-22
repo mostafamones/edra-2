@@ -14,7 +14,7 @@ export const sameContext = (a: AcademyContext | null, b: AcademyContext | null):
  * cancellation is not a failure. Returns the message to show, or null.
  */
 export async function failureMessage(
-  env: AssignmentsEnvironment,
+  env: Pick<AssignmentsEnvironment, 'onUnauthenticated' | 'onForbidden'>,
   error: unknown,
   rejected: (code: string, message: string) => string = (_, message) => message,
 ): Promise<string | null> {
