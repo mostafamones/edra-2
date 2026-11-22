@@ -1,0 +1,315 @@
+openapi: 3.1.0
+info:
+  title: Edra student records API (staff)
+  version: "1.0.0"
+  description: |
+    Bearer-token reads of staff student records for signed-in Edra staff (owner, head_admin, admin,
+    instructor). It shares authentication, response (`Cache-Control: no-store`, `X-Request-Id`),
+    throttling and CORS conventions with `sessions-attendance.openapi.yaml`; only what differs is stated here.
+
+    **Scope.** Read only: the open year's directory, one annual record, its finalized attendance and its
+    assessment history. Creating, editing, placement, archival, suspension, labels and codes remain cookie
+    web actions.
+
+    **Authorization.** Every request needs an active (unsuspended) staff membership in `academyId` (otherwise
+    `403 FORBIDDEN`). Reads run as the caller, so RLS applies. A record id that does not belong to `academyId`
+    is `404 NOT_FOUND`, never another academy's data. Every detail read is bound to the record's own academic
+    year, which may be closed; the directory lists only the academy's open year.
+
+    **Attendance.** Only finalized values of sessions that are not archived count (`counted_attendance`).
+    `mandatory.rate` is `(present + late) / (present + late + absent) × 100` over mandatory sessions; excused
+    and unknown are reported but excluded from the denominator. It is `null` when no qualifying record exists,
+    never `0` by default. Optional sessions are reported separately in `optional`. Summaries always cover the
+    record's complete counted history; only `items` is paged. Replacement attendance is not exposed by the
+    domain yet, so no replacement field exists.
+
+    **Assessments.** `result` is the announced publication snapshot only: its own `score` and `maximum`
+    (never the current draft maximum). It stays unchanged while private changes await correction
+    (`status: correction_pending`). `marking` is the private current marking state, staff only. Scores are
+    decimal strings with at most two fractional digits; `"0"` is a real result and missing or unmarked work
+    has `result: null`. `percentage` is one-decimal text, `null` when the maximum is absent or zero. `kind`
+    filters before paging, and `total` counts the filtered history. No averages or rankings are returned.
+
+    Requires migration `20261122100000_student_assessment_history.sql` for the assessments path. Source
+    support is not a deployment assertion; a server without these paths answers 404.
+servers:
+  - url: http://app.lvh.me:3000
+    description: Local development (the staff origin; requires the lvh.me host, not localhost)
+  - url: "{staffOrigin}"
+    description: Deployed staff origin (the value of EDRA_APP_ORIGIN)
+    variables:
+      staffOrigin:
+        default: https://app.example.invalid
+security:
+  - staffToken: []
+tags:
+  - name: Students
+paths:
+  /api/v1/academies/{academyId}/students:
+    get:
+      tags: [Students]
+      summary: The open year's student records, by name
+      description: |
+        Ordered by lower-cased name, then record id (stable). Search matches names, student and parent phones,
+        levels, tracks, groups and, only while the academy's student codes setting is enabled, current codes;
+        retired codes never match. Status and search are applied before counting and paging.
+      operationId: listStudents
+      parameters:
+        - $ref: "#/components/parameters/AcademyId"
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [active, archived, all], default: active } }
+        - { name: page, in: query, description: Zero-based page index., schema: { type: integer, minimum: 0, maximum: 10000, default: 0 } }
+        - { name: page_size, in: query, schema: { type: integer, enum: [20, 50, 100], default: 50 } }
+      responses:
+        "200":
+          description: One page. `academic_year` is null (with no students) when the academy has no open year.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [academic_year, total, page, page_size, students]
+                properties:
+                  academic_year: { oneOf: [{ $ref: "#/components/schemas/AcademicYear" }, { type: "null" }] }
+                  total: { type: integer, description: Records matching the status and search. }
+                  page: { type: integer }
+                  page_size: { type: integer }
+                  students:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, full_name, level_name, track_name, group_name, participation_type, archived, online_account]
+                      properties:
+                        id: { type: string, format: uuid, description: Annual student record id. }
+                        full_name: { type: string, description: The academy-entered name. }
+                        level_name: { type: string }
+                        track_name: { type: [string, "null"] }
+                        group_name: { type: [string, "null"] }
+                        participation_type: { $ref: "#/components/schemas/ParticipationType" }
+                        archived: { type: boolean }
+                        online_account: { $ref: "#/components/schemas/OnlineAccount" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /api/v1/academies/{academyId}/students/{recordId}:
+    get:
+      tags: [Students]
+      summary: One annual student record with contacts and resolved placement
+      operationId: getStudent
+      parameters:
+        - $ref: "#/components/parameters/AcademyId"
+        - $ref: "#/components/parameters/RecordId"
+      responses:
+        "200":
+          description: The record. Archived records and records in closed years are readable.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, full_name, student_phone, parent_phone, academic_year, level_id, level_name, track_name, group_name,
+                  participation_type, archived, archived_at, online_account, manually_suspended]
+                properties:
+                  id: { type: string, format: uuid }
+                  full_name: { type: string }
+                  student_phone: { type: string, description: Canonical +201XXXXXXXXX. }
+                  parent_phone: { type: string }
+                  academic_year: { $ref: "#/components/schemas/AcademicYear" }
+                  level_id: { type: string }
+                  level_name: { type: string }
+                  track_name: { type: [string, "null"] }
+                  group_name: { type: [string, "null"], description: The primary group; null when unassigned. }
+                  participation_type: { $ref: "#/components/schemas/ParticipationType" }
+                  archived: { type: boolean }
+                  archived_at: { type: [string, "null"], format: date-time }
+                  online_account: { $ref: "#/components/schemas/OnlineAccount" }
+                  manually_suspended:
+                    type: boolean
+                    description: Manual online-access suspension of the academy profile, connected or not.
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /api/v1/academies/{academyId}/students/{recordId}/attendance:
+    get:
+      tags: [Students]
+      summary: Finalized attendance in the record's year, newest session first
+      description: Ordered by session start (descending), then session id.
+      operationId: getStudentAttendance
+      parameters:
+        - $ref: "#/components/parameters/AcademyId"
+        - $ref: "#/components/parameters/RecordId"
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 100000, default: 0 } }
+      responses:
+        "200":
+          description: Full-history summaries plus one page of sessions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [academic_year_id, total, mandatory, optional, items, limit, offset]
+                properties:
+                  academic_year_id: { type: string, format: uuid }
+                  total: { type: integer, description: Counted sessions in the whole history. }
+                  mandatory:
+                    allOf:
+                      - $ref: "#/components/schemas/StatusCounts"
+                      - type: object
+                        required: [rate]
+                        properties:
+                          rate: { type: [number, "null"], minimum: 0, maximum: 100 }
+                  optional:
+                    allOf:
+                      - $ref: "#/components/schemas/StatusCounts"
+                      - type: object
+                        required: [attended]
+                        properties:
+                          attended: { type: integer, description: Present plus late. }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [session_id, started_at, title, group_name, status, mandatory]
+                      properties:
+                        session_id: { type: string, format: uuid }
+                        started_at: { type: string, format: date-time }
+                        title: { type: [string, "null"], description: The session's schedule title. }
+                        group_name: { type: [string, "null"] }
+                        status: { type: string, enum: [present, late, absent, excused, unknown] }
+                        mandatory: { type: boolean }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /api/v1/academies/{academyId}/students/{recordId}/assessments:
+    get:
+      tags: [Students]
+      summary: Assignments, quizzes and exams in the record's year, newest first
+      description: Ordered by creation (descending), then kind and id.
+      operationId: getStudentAssessments
+      parameters:
+        - $ref: "#/components/parameters/AcademyId"
+        - $ref: "#/components/parameters/RecordId"
+        - { name: kind, in: query, schema: { type: string, enum: [assignment, quiz, exam] } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 100000, default: 0 } }
+      responses:
+        "200":
+          description: One page of the (filtered) history.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [academic_year_id, kind, total, items, limit, offset]
+                properties:
+                  academic_year_id: { type: string, format: uuid }
+                  kind: { type: [string, "null"], enum: [assignment, quiz, exam, null] }
+                  total: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, kind, title, created_at, status, result, marking]
+                      properties:
+                        id: { type: string, format: uuid, description: The assignment, quiz or exam id. }
+                        kind: { type: string, enum: [assignment, quiz, exam] }
+                        title: { type: string }
+                        created_at: { type: string, format: date-time }
+                        status:
+                          type: string
+                          description: |
+                            announced and correction_pending have a `result`. Otherwise: excused, missing (assignment
+                            work marked missing), awaiting_submission, marking_incomplete (received, not fully marked)
+                            or unannounced (fully marked, never announced).
+                          enum: [announced, correction_pending, excused, missing, awaiting_submission, marking_incomplete, unannounced]
+                        result:
+                          oneOf:
+                            - type: "null"
+                            - type: object
+                              required: [score, maximum, percentage, announced_at]
+                              properties:
+                                score: { $ref: "#/components/schemas/Decimal" }
+                                maximum: { oneOf: [{ $ref: "#/components/schemas/Decimal" }, { type: "null" }] }
+                                percentage: { type: [string, "null"], examples: ["62.5"] }
+                                announced_at: { type: string, format: date-time }
+                        marking:
+                          type: object
+                          description: Private current marking (staff only); never the official result.
+                          required: [complete, score, maximum]
+                          properties:
+                            complete: { type: boolean }
+                            score: { oneOf: [{ $ref: "#/components/schemas/Decimal" }, { type: "null" }] }
+                            maximum: { oneOf: [{ $ref: "#/components/schemas/Decimal" }, { type: "null" }] }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+components:
+  securitySchemes:
+    staffToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: The Supabase Auth access token of a signed-in staff member.
+  parameters:
+    AcademyId:
+      name: academyId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RecordId:
+      name: recordId
+      in: path
+      required: true
+      description: The annual student record id.
+      schema: { type: string, format: uuid }
+  responses:
+    Error:
+      description: Error with a stable code (see sessions-attendance.openapi.yaml for the shape).
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: object
+                required: [code, message, request_id]
+                properties:
+                  code: { type: string, enum: [INVALID_REQUEST, AMBIGUOUS_AUTHENTICATION, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, THROTTLED, INTERNAL] }
+                  message: { type: string }
+                  request_id: { type: string }
+  schemas:
+    Decimal:
+      type: string
+      pattern: "^\\d{1,5}(\\.\\d{1,2})?$"
+    AcademicYear:
+      type: object
+      required: [id, start_year, closed]
+      properties:
+        id: { type: string, format: uuid }
+        start_year: { type: integer, description: Shown as start_year–start_year+1. }
+        closed: { type: boolean }
+    ParticipationType:
+      type: string
+      enum: [in_person, online_only]
+    OnlineAccount:
+      type: string
+      description: not_connected (no linked account), connected, or suspended (linked and archived or manually suspended).
+      enum: [not_connected, connected, suspended]
+    StatusCounts:
+      type: object
+      required: [present, late, absent, excused, unknown]
+      properties:
+        present: { type: integer }
+        late: { type: integer }
+        absent: { type: integer }
+        excused: { type: integer }
+        unknown: { type: integer }

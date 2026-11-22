@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { fetchAllPages } from "@/lib/supabase/paginate";
-import type { Db } from "@/lib/supabase/authority";
+import type { Authority, Db } from "@/lib/supabase/authority";
 import { academyMember } from "@/lib/supabase/membership";
 import type { StaffRole } from "./permissions";
 import type { StudentListParams } from "./list-params";
@@ -23,9 +23,12 @@ export type StaffContext = { db: Db; userId: string; role: StaffRole };
 
 export type ReadResult<T> = { ok: true; data: T } | { ok: false; status: 400 | 401 | 403 | 404 | 500 };
 
-/** The signed-in user's session and role in the academy, or null when they are not an active staff member. */
-export async function staffContext(academyId: string): Promise<StaffContext | null> {
-  return academyMember(academyId);
+/**
+ * The caller's session and role in the academy, or null when they are not an active staff member. Without
+ * `authority` it is the request's cookie session; a bearer authority is used as is, never falling back to cookies.
+ */
+export async function staffContext(academyId: string, authority?: Authority): Promise<StaffContext | null> {
+  return academyMember(academyId, authority);
 }
 
 async function openYearId(db: StaffContext["db"], academyId: string) {
@@ -85,8 +88,8 @@ const toRow = (row: z.infer<typeof listRowSchema>): StudentRecordRow => ({
 });
 
 /** One page of the academy's records for its open academic year. */
-export async function listStudentRecords(academyId: string, params: StudentListParams): Promise<ReadResult<StudentListResult>> {
-  const actor = await staffContext(academyId);
+export async function listStudentRecords(academyId: string, params: StudentListParams, authority?: Authority): Promise<ReadResult<StudentListResult>> {
+  const actor = await staffContext(academyId, authority);
   if (!actor) return { ok: false, status: 403 };
   try {
     const academicYearId = await openYearId(actor.db, academyId);
@@ -142,9 +145,9 @@ const suspensionStateSchema = z.object({
 const RECORD_COLUMNS = "id,academy_id,academic_year_id,academy_student_profile_id,full_name,student_phone,parent_phone,level_id,track_id,primary_group_id,participation_type,archived_at,created_at,updated_at,version";
 
 /** One record fetched fresh by tenant and id, for the edit sheet. */
-export async function getStudentRecord(academyId: string, recordId: string): Promise<ReadResult<StudentRecord>> {
+export async function getStudentRecord(academyId: string, recordId: string, authority?: Authority): Promise<ReadResult<StudentRecord>> {
   if (!z.guid().safeParse(recordId).success) return { ok: false, status: 400 };
-  const actor = await staffContext(academyId);
+  const actor = await staffContext(academyId, authority);
   if (!actor) return { ok: false, status: 403 };
   const { data, error } = await actor.db.from("annual_student_records").select(RECORD_COLUMNS)
     .eq("academy_id", academyId).eq("id", recordId).maybeSingle();

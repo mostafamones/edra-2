@@ -86,6 +86,7 @@ import { Route as ApiV1AcademiesAcademyIdExamsRouteImport } from './routes/api/v
 import { Route as ApiV1AcademiesAcademyIdQuizzesRouteImport } from './routes/api/v1/academies/$academyId/quizzes'
 import { Route as ApiV1AcademiesAcademyIdSchedulesRouteImport } from './routes/api/v1/academies/$academyId/schedules'
 import { Route as ApiV1AcademiesAcademyIdSessionsRouteImport } from './routes/api/v1/academies/$academyId/sessions'
+import { Route as ApiV1AcademiesAcademyIdStudentsRouteImport } from './routes/api/v1/academies/$academyId/students'
 import { Route as ApiV1AssignmentsAssignmentIdMarksRouteImport } from './routes/api/v1/assignments/$assignmentId/marks'
 import { Route as ApiV1AssignmentsAssignmentIdStudentResolutionRouteImport } from './routes/api/v1/assignments/$assignmentId/student-resolution'
 import { Route as ApiV1ExamsExamIdStudentsRouteImport } from './routes/api/v1/exams/$examId/students'
@@ -118,6 +119,7 @@ import { Route as LearnAcademyAcademySlugDiscoverIndexRouteImport } from './rout
 import { Route as LearnAcademyAcademySlugExamsIndexRouteImport } from './routes/learn/academy/$academySlug/exams/index'
 import { Route as LearnAcademyAcademySlugExamsExamIdRouteImport } from './routes/learn/academy/$academySlug/exams/$examId'
 import { Route as LearnAcademyAcademySlugUnitsUnitIdRouteImport } from './routes/learn/academy/$academySlug/units/$unitId'
+import { Route as ApiV1AcademiesAcademyIdStudentsRecordIdRouteImport } from './routes/api/v1/academies/$academyId/students/$recordId'
 import { Route as ApiV1AssignmentsAssignmentIdResultsPublicationsRouteImport } from './routes/api/v1/assignments/$assignmentId/results/publications'
 import { Route as ApiV1SessionsSessionIdAttendanceAnnualRecordIdRouteImport } from './routes/api/v1/sessions/$sessionId/attendance/$annualRecordId'
 import { Route as ApiV1SessionsSessionIdAttendanceAttendeesRouteImport } from './routes/api/v1/sessions/$sessionId/attendance/attendees'
@@ -132,6 +134,8 @@ import { Route as AppAcademySlugManageAcademyStructureIndexRouteImport } from '.
 import { Route as AppAcademySlugManageBookingsReviewIndexRouteImport } from './routes/app/$academySlug/manage/bookings/review/index'
 import { Route as AppAcademySlugQuizzesIdEditIndexRouteImport } from './routes/app/$academySlug/quizzes/$id/edit/index'
 import { Route as AppAcademySlugSchedulesIdEditIndexRouteImport } from './routes/app/$academySlug/schedules/$id/edit/index'
+import { Route as ApiV1AcademiesAcademyIdStudentsRecordIdAssessmentsRouteImport } from './routes/api/v1/academies/$academyId/students/$recordId/assessments'
+import { Route as ApiV1AcademiesAcademyIdStudentsRecordIdAttendanceRouteImport } from './routes/api/v1/academies/$academyId/students/$recordId/attendance'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -540,6 +544,12 @@ const ApiV1AcademiesAcademyIdSessionsRoute =
     path: '/$academyId/sessions',
     getParentRoute: () => ApiV1AcademiesRoute,
   } as any)
+const ApiV1AcademiesAcademyIdStudentsRoute =
+  ApiV1AcademiesAcademyIdStudentsRouteImport.update({
+    id: '/$academyId/students',
+    path: '/$academyId/students',
+    getParentRoute: () => ApiV1AcademiesRoute,
+  } as any)
 const ApiV1AssignmentsAssignmentIdMarksRoute =
   ApiV1AssignmentsAssignmentIdMarksRouteImport.update({
     id: '/marks',
@@ -732,6 +742,12 @@ const LearnAcademyAcademySlugUnitsUnitIdRoute =
     path: '/academy/$academySlug/units/$unitId',
     getParentRoute: () => LearnRouteRoute,
   } as any)
+const ApiV1AcademiesAcademyIdStudentsRecordIdRoute =
+  ApiV1AcademiesAcademyIdStudentsRecordIdRouteImport.update({
+    id: '/$recordId',
+    path: '/$recordId',
+    getParentRoute: () => ApiV1AcademiesAcademyIdStudentsRoute,
+  } as any)
 const ApiV1AssignmentsAssignmentIdResultsPublicationsRoute =
   ApiV1AssignmentsAssignmentIdResultsPublicationsRouteImport.update({
     id: '/results/publications',
@@ -816,6 +832,18 @@ const AppAcademySlugSchedulesIdEditIndexRoute =
     path: '/schedules/$id/edit/',
     getParentRoute: () => AppAcademySlugRouteRoute,
   } as any)
+const ApiV1AcademiesAcademyIdStudentsRecordIdAssessmentsRoute =
+  ApiV1AcademiesAcademyIdStudentsRecordIdAssessmentsRouteImport.update({
+    id: '/assessments',
+    path: '/assessments',
+    getParentRoute: () => ApiV1AcademiesAcademyIdStudentsRecordIdRoute,
+  } as any)
+const ApiV1AcademiesAcademyIdStudentsRecordIdAttendanceRoute =
+  ApiV1AcademiesAcademyIdStudentsRecordIdAttendanceRouteImport.update({
+    id: '/attendance',
+    path: '/attendance',
+    getParentRoute: () => ApiV1AcademiesAcademyIdStudentsRecordIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -895,6 +923,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/academies/$academyId/quizzes': typeof ApiV1AcademiesAcademyIdQuizzesRoute
   '/api/v1/academies/$academyId/schedules': typeof ApiV1AcademiesAcademyIdSchedulesRoute
   '/api/v1/academies/$academyId/sessions': typeof ApiV1AcademiesAcademyIdSessionsRoute
+  '/api/v1/academies/$academyId/students': typeof ApiV1AcademiesAcademyIdStudentsRouteWithChildren
   '/api/v1/assignments/$assignmentId/marks': typeof ApiV1AssignmentsAssignmentIdMarksRoute
   '/api/v1/assignments/$assignmentId/student-resolution': typeof ApiV1AssignmentsAssignmentIdStudentResolutionRoute
   '/api/v1/exams/$examId/students': typeof ApiV1ExamsExamIdStudentsRoute
@@ -927,6 +956,7 @@ export interface FileRoutesByFullPath {
   '/learn/academy/$academySlug/courses/': typeof LearnAcademyAcademySlugCoursesIndexRoute
   '/learn/academy/$academySlug/discover/': typeof LearnAcademyAcademySlugDiscoverIndexRoute
   '/learn/academy/$academySlug/exams/': typeof LearnAcademyAcademySlugExamsIndexRoute
+  '/api/v1/academies/$academyId/students/$recordId': typeof ApiV1AcademiesAcademyIdStudentsRecordIdRouteWithChildren
   '/api/v1/assignments/$assignmentId/results/publications': typeof ApiV1AssignmentsAssignmentIdResultsPublicationsRoute
   '/api/v1/sessions/$sessionId/attendance/$annualRecordId': typeof ApiV1SessionsSessionIdAttendanceAnnualRecordIdRoute
   '/api/v1/sessions/$sessionId/attendance/attendees': typeof ApiV1SessionsSessionIdAttendanceAttendeesRoute
@@ -941,6 +971,8 @@ export interface FileRoutesByFullPath {
   '/app/$academySlug/manage/bookings/review/': typeof AppAcademySlugManageBookingsReviewIndexRoute
   '/app/$academySlug/quizzes/$id/edit/': typeof AppAcademySlugQuizzesIdEditIndexRoute
   '/app/$academySlug/schedules/$id/edit/': typeof AppAcademySlugSchedulesIdEditIndexRoute
+  '/api/v1/academies/$academyId/students/$recordId/assessments': typeof ApiV1AcademiesAcademyIdStudentsRecordIdAssessmentsRoute
+  '/api/v1/academies/$academyId/students/$recordId/attendance': typeof ApiV1AcademiesAcademyIdStudentsRecordIdAttendanceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1016,6 +1048,7 @@ export interface FileRoutesByTo {
   '/api/v1/academies/$academyId/quizzes': typeof ApiV1AcademiesAcademyIdQuizzesRoute
   '/api/v1/academies/$academyId/schedules': typeof ApiV1AcademiesAcademyIdSchedulesRoute
   '/api/v1/academies/$academyId/sessions': typeof ApiV1AcademiesAcademyIdSessionsRoute
+  '/api/v1/academies/$academyId/students': typeof ApiV1AcademiesAcademyIdStudentsRouteWithChildren
   '/api/v1/assignments/$assignmentId/marks': typeof ApiV1AssignmentsAssignmentIdMarksRoute
   '/api/v1/assignments/$assignmentId/student-resolution': typeof ApiV1AssignmentsAssignmentIdStudentResolutionRoute
   '/api/v1/exams/$examId/students': typeof ApiV1ExamsExamIdStudentsRoute
@@ -1048,6 +1081,7 @@ export interface FileRoutesByTo {
   '/learn/academy/$academySlug/courses': typeof LearnAcademyAcademySlugCoursesIndexRoute
   '/learn/academy/$academySlug/discover': typeof LearnAcademyAcademySlugDiscoverIndexRoute
   '/learn/academy/$academySlug/exams': typeof LearnAcademyAcademySlugExamsIndexRoute
+  '/api/v1/academies/$academyId/students/$recordId': typeof ApiV1AcademiesAcademyIdStudentsRecordIdRouteWithChildren
   '/api/v1/assignments/$assignmentId/results/publications': typeof ApiV1AssignmentsAssignmentIdResultsPublicationsRoute
   '/api/v1/sessions/$sessionId/attendance/$annualRecordId': typeof ApiV1SessionsSessionIdAttendanceAnnualRecordIdRoute
   '/api/v1/sessions/$sessionId/attendance/attendees': typeof ApiV1SessionsSessionIdAttendanceAttendeesRoute
@@ -1062,6 +1096,8 @@ export interface FileRoutesByTo {
   '/app/$academySlug/manage/bookings/review': typeof AppAcademySlugManageBookingsReviewIndexRoute
   '/app/$academySlug/quizzes/$id/edit': typeof AppAcademySlugQuizzesIdEditIndexRoute
   '/app/$academySlug/schedules/$id/edit': typeof AppAcademySlugSchedulesIdEditIndexRoute
+  '/api/v1/academies/$academyId/students/$recordId/assessments': typeof ApiV1AcademiesAcademyIdStudentsRecordIdAssessmentsRoute
+  '/api/v1/academies/$academyId/students/$recordId/attendance': typeof ApiV1AcademiesAcademyIdStudentsRecordIdAttendanceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1142,6 +1178,7 @@ export interface FileRoutesById {
   '/api/v1/academies/$academyId/quizzes': typeof ApiV1AcademiesAcademyIdQuizzesRoute
   '/api/v1/academies/$academyId/schedules': typeof ApiV1AcademiesAcademyIdSchedulesRoute
   '/api/v1/academies/$academyId/sessions': typeof ApiV1AcademiesAcademyIdSessionsRoute
+  '/api/v1/academies/$academyId/students': typeof ApiV1AcademiesAcademyIdStudentsRouteWithChildren
   '/api/v1/assignments/$assignmentId/marks': typeof ApiV1AssignmentsAssignmentIdMarksRoute
   '/api/v1/assignments/$assignmentId/student-resolution': typeof ApiV1AssignmentsAssignmentIdStudentResolutionRoute
   '/api/v1/exams/$examId/students': typeof ApiV1ExamsExamIdStudentsRoute
@@ -1174,6 +1211,7 @@ export interface FileRoutesById {
   '/learn/academy/$academySlug/courses/': typeof LearnAcademyAcademySlugCoursesIndexRoute
   '/learn/academy/$academySlug/discover/': typeof LearnAcademyAcademySlugDiscoverIndexRoute
   '/learn/academy/$academySlug/exams/': typeof LearnAcademyAcademySlugExamsIndexRoute
+  '/api/v1/academies/$academyId/students/$recordId': typeof ApiV1AcademiesAcademyIdStudentsRecordIdRouteWithChildren
   '/api/v1/assignments/$assignmentId/results/publications': typeof ApiV1AssignmentsAssignmentIdResultsPublicationsRoute
   '/api/v1/sessions/$sessionId/attendance/$annualRecordId': typeof ApiV1SessionsSessionIdAttendanceAnnualRecordIdRoute
   '/api/v1/sessions/$sessionId/attendance/attendees': typeof ApiV1SessionsSessionIdAttendanceAttendeesRoute
@@ -1188,6 +1226,8 @@ export interface FileRoutesById {
   '/app/$academySlug/manage/bookings/review/': typeof AppAcademySlugManageBookingsReviewIndexRoute
   '/app/$academySlug/quizzes/$id/edit/': typeof AppAcademySlugQuizzesIdEditIndexRoute
   '/app/$academySlug/schedules/$id/edit/': typeof AppAcademySlugSchedulesIdEditIndexRoute
+  '/api/v1/academies/$academyId/students/$recordId/assessments': typeof ApiV1AcademiesAcademyIdStudentsRecordIdAssessmentsRoute
+  '/api/v1/academies/$academyId/students/$recordId/attendance': typeof ApiV1AcademiesAcademyIdStudentsRecordIdAttendanceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1269,6 +1309,7 @@ export interface FileRouteTypes {
     | '/api/v1/academies/$academyId/quizzes'
     | '/api/v1/academies/$academyId/schedules'
     | '/api/v1/academies/$academyId/sessions'
+    | '/api/v1/academies/$academyId/students'
     | '/api/v1/assignments/$assignmentId/marks'
     | '/api/v1/assignments/$assignmentId/student-resolution'
     | '/api/v1/exams/$examId/students'
@@ -1301,6 +1342,7 @@ export interface FileRouteTypes {
     | '/learn/academy/$academySlug/courses/'
     | '/learn/academy/$academySlug/discover/'
     | '/learn/academy/$academySlug/exams/'
+    | '/api/v1/academies/$academyId/students/$recordId'
     | '/api/v1/assignments/$assignmentId/results/publications'
     | '/api/v1/sessions/$sessionId/attendance/$annualRecordId'
     | '/api/v1/sessions/$sessionId/attendance/attendees'
@@ -1315,6 +1357,8 @@ export interface FileRouteTypes {
     | '/app/$academySlug/manage/bookings/review/'
     | '/app/$academySlug/quizzes/$id/edit/'
     | '/app/$academySlug/schedules/$id/edit/'
+    | '/api/v1/academies/$academyId/students/$recordId/assessments'
+    | '/api/v1/academies/$academyId/students/$recordId/attendance'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1390,6 +1434,7 @@ export interface FileRouteTypes {
     | '/api/v1/academies/$academyId/quizzes'
     | '/api/v1/academies/$academyId/schedules'
     | '/api/v1/academies/$academyId/sessions'
+    | '/api/v1/academies/$academyId/students'
     | '/api/v1/assignments/$assignmentId/marks'
     | '/api/v1/assignments/$assignmentId/student-resolution'
     | '/api/v1/exams/$examId/students'
@@ -1422,6 +1467,7 @@ export interface FileRouteTypes {
     | '/learn/academy/$academySlug/courses'
     | '/learn/academy/$academySlug/discover'
     | '/learn/academy/$academySlug/exams'
+    | '/api/v1/academies/$academyId/students/$recordId'
     | '/api/v1/assignments/$assignmentId/results/publications'
     | '/api/v1/sessions/$sessionId/attendance/$annualRecordId'
     | '/api/v1/sessions/$sessionId/attendance/attendees'
@@ -1436,6 +1482,8 @@ export interface FileRouteTypes {
     | '/app/$academySlug/manage/bookings/review'
     | '/app/$academySlug/quizzes/$id/edit'
     | '/app/$academySlug/schedules/$id/edit'
+    | '/api/v1/academies/$academyId/students/$recordId/assessments'
+    | '/api/v1/academies/$academyId/students/$recordId/attendance'
   id:
     | '__root__'
     | '/'
@@ -1515,6 +1563,7 @@ export interface FileRouteTypes {
     | '/api/v1/academies/$academyId/quizzes'
     | '/api/v1/academies/$academyId/schedules'
     | '/api/v1/academies/$academyId/sessions'
+    | '/api/v1/academies/$academyId/students'
     | '/api/v1/assignments/$assignmentId/marks'
     | '/api/v1/assignments/$assignmentId/student-resolution'
     | '/api/v1/exams/$examId/students'
@@ -1547,6 +1596,7 @@ export interface FileRouteTypes {
     | '/learn/academy/$academySlug/courses/'
     | '/learn/academy/$academySlug/discover/'
     | '/learn/academy/$academySlug/exams/'
+    | '/api/v1/academies/$academyId/students/$recordId'
     | '/api/v1/assignments/$assignmentId/results/publications'
     | '/api/v1/sessions/$sessionId/attendance/$annualRecordId'
     | '/api/v1/sessions/$sessionId/attendance/attendees'
@@ -1561,6 +1611,8 @@ export interface FileRouteTypes {
     | '/app/$academySlug/manage/bookings/review/'
     | '/app/$academySlug/quizzes/$id/edit/'
     | '/app/$academySlug/schedules/$id/edit/'
+    | '/api/v1/academies/$academyId/students/$recordId/assessments'
+    | '/api/v1/academies/$academyId/students/$recordId/attendance'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -2138,6 +2190,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1AcademiesAcademyIdSessionsRouteImport
       parentRoute: typeof ApiV1AcademiesRoute
     }
+    '/api/v1/academies/$academyId/students': {
+      id: '/api/v1/academies/$academyId/students'
+      path: '/$academyId/students'
+      fullPath: '/api/v1/academies/$academyId/students'
+      preLoaderRoute: typeof ApiV1AcademiesAcademyIdStudentsRouteImport
+      parentRoute: typeof ApiV1AcademiesRoute
+    }
     '/api/v1/assignments/$assignmentId/marks': {
       id: '/api/v1/assignments/$assignmentId/marks'
       path: '/marks'
@@ -2362,6 +2421,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearnAcademyAcademySlugUnitsUnitIdRouteImport
       parentRoute: typeof LearnRouteRoute
     }
+    '/api/v1/academies/$academyId/students/$recordId': {
+      id: '/api/v1/academies/$academyId/students/$recordId'
+      path: '/$recordId'
+      fullPath: '/api/v1/academies/$academyId/students/$recordId'
+      preLoaderRoute: typeof ApiV1AcademiesAcademyIdStudentsRecordIdRouteImport
+      parentRoute: typeof ApiV1AcademiesAcademyIdStudentsRoute
+    }
     '/api/v1/assignments/$assignmentId/results/publications': {
       id: '/api/v1/assignments/$assignmentId/results/publications'
       path: '/results/publications'
@@ -2459,6 +2525,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/$academySlug/schedules/$id/edit/'
       preLoaderRoute: typeof AppAcademySlugSchedulesIdEditIndexRouteImport
       parentRoute: typeof AppAcademySlugRouteRoute
+    }
+    '/api/v1/academies/$academyId/students/$recordId/assessments': {
+      id: '/api/v1/academies/$academyId/students/$recordId/assessments'
+      path: '/assessments'
+      fullPath: '/api/v1/academies/$academyId/students/$recordId/assessments'
+      preLoaderRoute: typeof ApiV1AcademiesAcademyIdStudentsRecordIdAssessmentsRouteImport
+      parentRoute: typeof ApiV1AcademiesAcademyIdStudentsRecordIdRoute
+    }
+    '/api/v1/academies/$academyId/students/$recordId/attendance': {
+      id: '/api/v1/academies/$academyId/students/$recordId/attendance'
+      path: '/attendance'
+      fullPath: '/api/v1/academies/$academyId/students/$recordId/attendance'
+      preLoaderRoute: typeof ApiV1AcademiesAcademyIdStudentsRecordIdAttendanceRouteImport
+      parentRoute: typeof ApiV1AcademiesAcademyIdStudentsRecordIdRoute
     }
   }
 }
@@ -2742,12 +2822,46 @@ const ApiStudentsRouteWithChildren = ApiStudentsRoute._addFileChildren(
   ApiStudentsRouteChildren,
 )
 
+interface ApiV1AcademiesAcademyIdStudentsRecordIdRouteChildren {
+  ApiV1AcademiesAcademyIdStudentsRecordIdAssessmentsRoute: typeof ApiV1AcademiesAcademyIdStudentsRecordIdAssessmentsRoute
+  ApiV1AcademiesAcademyIdStudentsRecordIdAttendanceRoute: typeof ApiV1AcademiesAcademyIdStudentsRecordIdAttendanceRoute
+}
+
+const ApiV1AcademiesAcademyIdStudentsRecordIdRouteChildren: ApiV1AcademiesAcademyIdStudentsRecordIdRouteChildren =
+  {
+    ApiV1AcademiesAcademyIdStudentsRecordIdAssessmentsRoute:
+      ApiV1AcademiesAcademyIdStudentsRecordIdAssessmentsRoute,
+    ApiV1AcademiesAcademyIdStudentsRecordIdAttendanceRoute:
+      ApiV1AcademiesAcademyIdStudentsRecordIdAttendanceRoute,
+  }
+
+const ApiV1AcademiesAcademyIdStudentsRecordIdRouteWithChildren =
+  ApiV1AcademiesAcademyIdStudentsRecordIdRoute._addFileChildren(
+    ApiV1AcademiesAcademyIdStudentsRecordIdRouteChildren,
+  )
+
+interface ApiV1AcademiesAcademyIdStudentsRouteChildren {
+  ApiV1AcademiesAcademyIdStudentsRecordIdRoute: typeof ApiV1AcademiesAcademyIdStudentsRecordIdRouteWithChildren
+}
+
+const ApiV1AcademiesAcademyIdStudentsRouteChildren: ApiV1AcademiesAcademyIdStudentsRouteChildren =
+  {
+    ApiV1AcademiesAcademyIdStudentsRecordIdRoute:
+      ApiV1AcademiesAcademyIdStudentsRecordIdRouteWithChildren,
+  }
+
+const ApiV1AcademiesAcademyIdStudentsRouteWithChildren =
+  ApiV1AcademiesAcademyIdStudentsRoute._addFileChildren(
+    ApiV1AcademiesAcademyIdStudentsRouteChildren,
+  )
+
 interface ApiV1AcademiesRouteChildren {
   ApiV1AcademiesAcademyIdAssignmentsRoute: typeof ApiV1AcademiesAcademyIdAssignmentsRoute
   ApiV1AcademiesAcademyIdExamsRoute: typeof ApiV1AcademiesAcademyIdExamsRoute
   ApiV1AcademiesAcademyIdQuizzesRoute: typeof ApiV1AcademiesAcademyIdQuizzesRoute
   ApiV1AcademiesAcademyIdSchedulesRoute: typeof ApiV1AcademiesAcademyIdSchedulesRoute
   ApiV1AcademiesAcademyIdSessionsRoute: typeof ApiV1AcademiesAcademyIdSessionsRoute
+  ApiV1AcademiesAcademyIdStudentsRoute: typeof ApiV1AcademiesAcademyIdStudentsRouteWithChildren
 }
 
 const ApiV1AcademiesRouteChildren: ApiV1AcademiesRouteChildren = {
@@ -2757,6 +2871,8 @@ const ApiV1AcademiesRouteChildren: ApiV1AcademiesRouteChildren = {
   ApiV1AcademiesAcademyIdQuizzesRoute: ApiV1AcademiesAcademyIdQuizzesRoute,
   ApiV1AcademiesAcademyIdSchedulesRoute: ApiV1AcademiesAcademyIdSchedulesRoute,
   ApiV1AcademiesAcademyIdSessionsRoute: ApiV1AcademiesAcademyIdSessionsRoute,
+  ApiV1AcademiesAcademyIdStudentsRoute:
+    ApiV1AcademiesAcademyIdStudentsRouteWithChildren,
 }
 
 const ApiV1AcademiesRouteWithChildren = ApiV1AcademiesRoute._addFileChildren(

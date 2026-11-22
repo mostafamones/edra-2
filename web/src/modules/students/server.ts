@@ -9,3 +9,4 @@ export {
 } from "./enrollment/server";
 export type { StudentAcademyLink } from "./enrollment/server";
 export { getStudentBookingForm, previewStudentBookingEntry } from "./booking/server";
+export { studentAssessmentsResponse, studentAttendanceResponse, studentResponse, studentsResponse } from "./records/v1";

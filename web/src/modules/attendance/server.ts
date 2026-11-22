@@ -3,3 +3,4 @@ export {
   addAttendeeResponse, attendanceResponse, attendeeSearchResponse, bulkResponse, checkInResponse, patchResponse, publishResponse,
   unrecordedAbsenceResponse,
 } from "./v1";
+export { studentAttendanceHistory } from "./history";
