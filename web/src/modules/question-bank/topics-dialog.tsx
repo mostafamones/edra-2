@@ -9,14 +9,16 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { topicLimit } from "./review-contract";
-import { cleanTopic, topicKey, unassignedTopic, type TopicAssignment, type TopicGroup } from "./topics";
+import { cleanTopic, topicKey, unassignedTopic, type TopicAssignment, type TopicChange, type TopicGroup } from "./topics";
 import type { Question } from "./parser";
 
 type Props = {
   groups: TopicGroup[];
-  assignments: Map<string, TopicAssignment>;
+  assignments: Map<string, TopicAssignment[]>;
+  /** Topics already saved in the library, offered as destinations. */
+  existing: string[];
   prompt: (question: Question) => string;
-  apply: (ids: string[], label: string | null) => void;
+  apply: (ids: string[], change: TopicChange) => void;
   showInQueue: (key: string) => void;
   disabled: boolean;
 };
@@ -39,7 +41,7 @@ export function TopicsDialog(props: Props) {
 
 const destinationValue = (key: string) => `topic:${key}`;
 
-function TopicWorkspace({ groups, assignments, prompt, apply, showInQueue, disabled }: Props) {
+function TopicWorkspace({ groups, assignments, existing, prompt, apply, showInQueue, disabled }: Props) {
   const [activeKey, setActiveKey] = useState(() => (groups.find(group => group.pending) ?? groups[0])?.key);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [destination, setDestination] = useState("");
@@ -48,10 +50,12 @@ function TopicWorkspace({ groups, assignments, prompt, apply, showInQueue, disab
   if (!active) return <p role="status" className="text-sm text-muted-foreground">No questions to categorize</p>;
   const ids = active.questions.filter(q => selected.has(q.id)).map(q => q.id);
   const all = ids.length === active.questions.length;
-  const target = destination === "new" ? cleanTopic(name) : destination === "unassigned" ? null : groups.find(group => destinationValue(group.key) === destination)?.label;
-  const existing = target ? groups.find(group => group.key === topicKey(target)) : undefined;
-  const canMove = !!destination && target !== undefined && target !== "" && (existing?.key ?? (target ? topicKey(target) : unassignedTopic)) !== active.key;
-  const canConfirm = active.label && ids.some(id => assignments.get(id)?.verification === "suggested");
+  const destinations = [...new Map([...groups.flatMap(group => group.label ? [group.label] : []), ...existing]
+    .map(label => [topicKey(label), label])).entries()].filter(([key]) => key !== active.key);
+  const target = destination === "new" ? cleanTopic(name) : destination === "unassigned" ? null : destinations.find(([key]) => destinationValue(key) === destination)?.[1];
+  const ready = !!destination && target !== undefined && target !== "";
+  const suggestedHere = (id: string) => assignments.get(id)?.find(topic => topicKey(topic.label) === active.key)?.verification === "suggested";
+  const canConfirm = !!active.label && ids.some(suggestedHere);
 
   function choose(key: string) {
     setActiveKey(key);
@@ -89,7 +93,7 @@ function TopicWorkspace({ groups, assignments, prompt, apply, showInQueue, disab
             })} />
             <span className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">Question {q.number} · Page {q.page}
-                {assignments.get(q.id)?.verification === "suggested" && <Badge variant="secondary">Suggested</Badge>}
+                {suggestedHere(q.id) && <Badge variant="secondary">Suggested</Badge>}
               </span>
               <span className="line-clamp-2 break-words text-sm" dir="auto">{prompt(q)}</span>
             </span>
@@ -98,12 +102,11 @@ function TopicWorkspace({ groups, assignments, prompt, apply, showInQueue, disab
       </ul>
       {!!ids.length && <div className="flex flex-wrap items-end gap-2 border-t pt-3">
         <Field className="min-w-36 flex-1">
-          <FieldLabel htmlFor="qb-topic-destination">Move to topic</FieldLabel>
+          <FieldLabel htmlFor="qb-topic-destination">Topic</FieldLabel>
           <Select value={destination} onValueChange={setDestination} disabled={disabled}>
             <SelectTrigger id="qb-topic-destination" className="w-full"><SelectValue placeholder="Choose topic" /></SelectTrigger>
             <SelectContent>
-              {groups.filter(group => group.label && group.key !== active.key).map(group =>
-                <SelectItem key={group.key} value={destinationValue(group.key)}><span dir="auto">{group.label}</span></SelectItem>)}
+              {destinations.map(([key, label]) => <SelectItem key={key} value={destinationValue(key)}><span dir="auto">{label}</span></SelectItem>)}
               <SelectItem value="new">New topic</SelectItem>
               {active.key !== unassignedTopic && <SelectItem value="unassigned">Unassigned</SelectItem>}
             </SelectContent>
@@ -112,16 +115,13 @@ function TopicWorkspace({ groups, assignments, prompt, apply, showInQueue, disab
         {destination === "new" && <Field className="min-w-36 flex-1"><FieldLabel htmlFor="qb-topic-name">Topic name</FieldLabel>
           <Input id="qb-topic-name" maxLength={topicLimit} dir="auto" value={name} onChange={event => setName(event.target.value)} />
         </Field>}
-        <Button type="button" disabled={disabled || (destination ? !canMove : !canConfirm)} onClick={() => {
-          if (canMove) {
-            const label = existing?.label ?? target ?? null;
-            apply(ids, label);
-            choose(label ? topicKey(label) : unassignedTopic);
-          } else if (canConfirm) {
-            apply(ids, active.label);
-            choose(active.key);
-          }
-        }}>{canMove || destination ? "Move questions" : "Confirm topic"}</Button>
+        {!destination && canConfirm && <Button type="button" disabled={disabled} onClick={() => { apply(ids, { type: "confirm", label: active.label! }); choose(active.key); }}>Confirm topic</Button>}
+        {!destination && active.label && <Button type="button" variant="outline" disabled={disabled} onClick={() => { apply(ids, { type: "remove", label: active.label! }); choose(active.key); }}>Remove topic</Button>}
+        {ready && target && <Button type="button" variant="outline" disabled={disabled} onClick={() => { apply(ids, { type: "confirm", label: target }); choose(active.key); }}>Add topic</Button>}
+        {ready && <Button type="button" disabled={disabled} onClick={() => {
+          apply(ids, target === null ? { type: "remove", label: active.label! } : active.label ? { type: "move", from: active.label, to: target } : { type: "confirm", label: target });
+          choose(target ? topicKey(target) : unassignedTopic);
+        }}>Move questions</Button>}
       </div>}
     </section>
   </div>;

@@ -14,12 +14,14 @@ import { suggestUnit } from "./unit-match";
 import type { TopicGroup } from "./topics";
 
 const unlinked = "unlinked";
-export type LinkSelection = { programId: string | null; links: { questionId: string; unitId: string | null }[] };
+export type LinkSelection = { programId: string | null; collectionId: string | null; links: { questionId: string; unitId: string | null }[] };
 
 type Props = {
   academyId: string;
   accountId: string;
   groups: TopicGroup[];
+  /** Custom collections the saved questions can optionally join. */
+  collections: { id: string; name: string }[];
   disabled: boolean;
   onSave: (selection: LinkSelection) => Promise<string | undefined>;
 };
@@ -45,7 +47,7 @@ export function AssignUnits({ disabled, ...props }: Props) {
   </Dialog>;
 }
 
-function AssignmentForm({ academyId, accountId, groups, disabled, saving, onSave }: Props & { saving: boolean }) {
+function AssignmentForm({ academyId, accountId, groups, collections, disabled, saving, onSave }: Props & { saving: boolean }) {
   const catalog = useQuery({
     queryKey: ["question-bank", accountId, academyId, "catalog"],
     queryFn: async ({ signal }) => {
@@ -57,6 +59,7 @@ function AssignmentForm({ academyId, accountId, groups, disabled, saving, onSave
     retry: false,
   });
   const [scope, setScope] = useState<string | undefined>();
+  const [collection, setCollection] = useState(unlinked);
   const [selected, setSelected] = useState(() => new Set(groups.flatMap(group => group.questions.map(q => q.id)).slice(0, maxSaveCount)));
   const [destinations, setDestinations] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
@@ -87,6 +90,16 @@ function AssignmentForm({ academyId, accountId, groups, disabled, saving, onSave
         </SelectContent>
       </Select>
     </Field>
+    {collections.length > 0 && <Field>
+      <FieldLabel htmlFor="qb-save-collection">Collection</FieldLabel>
+      <Select value={collection} disabled={blocked} onValueChange={setCollection}>
+        <SelectTrigger id="qb-save-collection" className="w-full"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={unlinked}>None</SelectItem>
+          {collections.map(item => <SelectItem key={item.id} value={item.id}><span dir="auto">{item.name}</span></SelectItem>)}
+        </SelectContent>
+      </Select>
+    </Field>}
     {catalog.isPending && <p role="status" className="text-sm text-muted-foreground">Loading Library units…</p>}
     {catalog.isError && <Alert><AlertTitle>{catalog.error.message}</AlertTitle><Button size="sm" variant="outline" onClick={() => void catalog.refetch()}>Reload units</Button></Alert>}
     {program && !program.units.length && <p role="status" className="text-sm text-muted-foreground">No units in this program</p>}
@@ -137,7 +150,7 @@ function AssignmentForm({ academyId, accountId, groups, disabled, saving, onSave
           const unit = destination(group);
           return group.questions.filter(q => selected.has(q.id)).map(q => ({ questionId: q.id, unitId: unit === unlinked ? null : unit }));
         });
-        const message = await onSave({ programId: program?.id ?? null, links });
+        const message = await onSave({ programId: program?.id ?? null, collectionId: collection === unlinked ? null : collection, links });
         if (message) setError(message);
       }}>{saving ? "Saving…" : `Save ${selected.size} ${selected.size === 1 ? "question" : "questions"}`}</Button>
     </DialogFooter>

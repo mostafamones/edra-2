@@ -72,6 +72,7 @@ import { Route as AppAcademySlugContentIndexRouteImport } from './routes/app/$ac
 import { Route as AppAcademySlugExamsIndexRouteImport } from './routes/app/$academySlug/exams/index'
 import { Route as AppAcademySlugManageAcademyRouteRouteImport } from './routes/app/$academySlug/manage/academy/route'
 import { Route as AppAcademySlugQuestionBankIndexRouteImport } from './routes/app/$academySlug/question-bank/index'
+import { Route as AppAcademySlugQuestionBankImportRouteImport } from './routes/app/$academySlug/question-bank/import'
 import { Route as AppAcademySlugQuizzesIndexRouteImport } from './routes/app/$academySlug/quizzes/index'
 import { Route as AppAcademySlugSchedulesIndexRouteImport } from './routes/app/$academySlug/schedules/index'
 import { Route as AppAcademySlugStudentsIndexRouteImport } from './routes/app/$academySlug/students/index'
@@ -456,6 +457,12 @@ const AppAcademySlugQuestionBankIndexRoute =
   AppAcademySlugQuestionBankIndexRouteImport.update({
     id: '/question-bank/',
     path: '/question-bank/',
+    getParentRoute: () => AppAcademySlugRouteRoute,
+  } as any)
+const AppAcademySlugQuestionBankImportRoute =
+  AppAcademySlugQuestionBankImportRouteImport.update({
+    id: '/question-bank/import',
+    path: '/question-bank/import',
     getParentRoute: () => AppAcademySlugRouteRoute,
   } as any)
 const AppAcademySlugQuizzesIndexRoute =
@@ -874,6 +881,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/exams/$examId': typeof ApiV1ExamsExamIdRouteWithChildren
   '/api/v1/quizzes/$quizId': typeof ApiV1QuizzesQuizIdRouteWithChildren
   '/api/v1/sessions/$sessionId': typeof ApiV1SessionsSessionIdRouteWithChildren
+  '/app/$academySlug/question-bank/import': typeof AppAcademySlugQuestionBankImportRoute
   '/invite/booking/$token/join': typeof InviteBookingTokenJoinRoute
   '/learn/academy/$academySlug/$': typeof LearnAcademyAcademySlugSplatRoute
   '/app/$academySlug/assessments/': typeof AppAcademySlugAssessmentsIndexRoute
@@ -995,6 +1003,7 @@ export interface FileRoutesByTo {
   '/api/v1/exams/$examId': typeof ApiV1ExamsExamIdRouteWithChildren
   '/api/v1/quizzes/$quizId': typeof ApiV1QuizzesQuizIdRouteWithChildren
   '/api/v1/sessions/$sessionId': typeof ApiV1SessionsSessionIdRouteWithChildren
+  '/app/$academySlug/question-bank/import': typeof AppAcademySlugQuestionBankImportRoute
   '/invite/booking/$token/join': typeof InviteBookingTokenJoinRoute
   '/learn/academy/$academySlug/$': typeof LearnAcademyAcademySlugSplatRoute
   '/app/$academySlug/assessments': typeof AppAcademySlugAssessmentsIndexRoute
@@ -1121,6 +1130,7 @@ export interface FileRoutesById {
   '/api/v1/exams/$examId': typeof ApiV1ExamsExamIdRouteWithChildren
   '/api/v1/quizzes/$quizId': typeof ApiV1QuizzesQuizIdRouteWithChildren
   '/api/v1/sessions/$sessionId': typeof ApiV1SessionsSessionIdRouteWithChildren
+  '/app/$academySlug/question-bank/import': typeof AppAcademySlugQuestionBankImportRoute
   '/invite/booking/$token/join': typeof InviteBookingTokenJoinRoute
   '/learn/academy/$academySlug/$': typeof LearnAcademyAcademySlugSplatRoute
   '/app/$academySlug/assessments/': typeof AppAcademySlugAssessmentsIndexRoute
@@ -1248,6 +1258,7 @@ export interface FileRouteTypes {
     | '/api/v1/exams/$examId'
     | '/api/v1/quizzes/$quizId'
     | '/api/v1/sessions/$sessionId'
+    | '/app/$academySlug/question-bank/import'
     | '/invite/booking/$token/join'
     | '/learn/academy/$academySlug/$'
     | '/app/$academySlug/assessments/'
@@ -1369,6 +1380,7 @@ export interface FileRouteTypes {
     | '/api/v1/exams/$examId'
     | '/api/v1/quizzes/$quizId'
     | '/api/v1/sessions/$sessionId'
+    | '/app/$academySlug/question-bank/import'
     | '/invite/booking/$token/join'
     | '/learn/academy/$academySlug/$'
     | '/app/$academySlug/assessments'
@@ -1494,6 +1506,7 @@ export interface FileRouteTypes {
     | '/api/v1/exams/$examId'
     | '/api/v1/quizzes/$quizId'
     | '/api/v1/sessions/$sessionId'
+    | '/app/$academySlug/question-bank/import'
     | '/invite/booking/$token/join'
     | '/learn/academy/$academySlug/$'
     | '/app/$academySlug/assessments/'
@@ -2040,6 +2053,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAcademySlugQuestionBankIndexRouteImport
       parentRoute: typeof AppAcademySlugRouteRoute
     }
+    '/app/$academySlug/question-bank/import': {
+      id: '/app/$academySlug/question-bank/import'
+      path: '/question-bank/import'
+      fullPath: '/app/$academySlug/question-bank/import'
+      preLoaderRoute: typeof AppAcademySlugQuestionBankImportRouteImport
+      parentRoute: typeof AppAcademySlugRouteRoute
+    }
     '/app/$academySlug/quizzes/': {
       id: '/app/$academySlug/quizzes/'
       path: '/quizzes'
@@ -2488,6 +2508,7 @@ interface AppAcademySlugRouteRouteChildren {
   AppAcademySlugSplatRoute: typeof AppAcademySlugSplatRoute
   AppAcademySlugIndexRoute: typeof AppAcademySlugIndexRoute
   AppAcademySlugManageAcademyRouteRoute: typeof AppAcademySlugManageAcademyRouteRouteWithChildren
+  AppAcademySlugQuestionBankImportRoute: typeof AppAcademySlugQuestionBankImportRoute
   AppAcademySlugAssessmentsIndexRoute: typeof AppAcademySlugAssessmentsIndexRoute
   AppAcademySlugAssignmentsIndexRoute: typeof AppAcademySlugAssignmentsIndexRoute
   AppAcademySlugAttendanceIndexRoute: typeof AppAcademySlugAttendanceIndexRoute
@@ -2529,6 +2550,7 @@ const AppAcademySlugRouteRouteChildren: AppAcademySlugRouteRouteChildren = {
   AppAcademySlugIndexRoute: AppAcademySlugIndexRoute,
   AppAcademySlugManageAcademyRouteRoute:
     AppAcademySlugManageAcademyRouteRouteWithChildren,
+  AppAcademySlugQuestionBankImportRoute: AppAcademySlugQuestionBankImportRoute,
   AppAcademySlugAssessmentsIndexRoute: AppAcademySlugAssessmentsIndexRoute,
   AppAcademySlugAssignmentsIndexRoute: AppAcademySlugAssignmentsIndexRoute,
   AppAcademySlugAttendanceIndexRoute: AppAcademySlugAttendanceIndexRoute,
