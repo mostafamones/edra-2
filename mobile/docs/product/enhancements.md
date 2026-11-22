@@ -91,6 +91,14 @@ Academy creation, staff invitation and role administration, academic-year setup 
 
 Concern threads cover academy team follow-up. General social messaging, student or parent chat, and task-management features are outside this milestone.
 
+## Student records first delivery
+
+The owner selected student records and performance for implementation planning on 2026-11-22. This first delivery provides staff with a searchable student directory, student details, finalized attendance history and individual announced assignment, quiz and exam results. Assessment history links to the existing mobile assessment experience where supported.
+
+Performance uses each announced result's score and published maximum. Missing, unmarked and unannounced work retain distinct states. Overall assessment weighting and graph calculations remain open in the shared reporting rules.
+
+Record editing and administrative actions follow a separate scope review. The wider enhancement milestone remains provisional outside this first delivery.
+
 ## Delivery tracking
 
 The current Linear target is November 30, 2026. Linear tracks delivery work; domain documents define the detailed academic and communication rules.
