@@ -87,7 +87,8 @@ it("previews a question in several collections and removes one membership withou
     academyId: scopeA.academyId, collectionId: ids.algebra, questionIds: [ids.q1], member: false,
   } }));
   await waitFor(() => expect(readQuestionBank).toHaveBeenCalledTimes(2));
-  expect(screen.getByRole("button", { name: /Solve for x/ })).toBeTruthy();
+  // The modal preview hides the list from assistive technology; the row must still exist.
+  expect(screen.getByRole("button", { name: /Solve for x/, hidden: true })).toBeTruthy();
 });
 
 it("adds selected questions to a collection in bulk", async () => {

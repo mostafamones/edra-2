@@ -8,8 +8,7 @@ import { QueryContent } from "@/components/shared/query-content";
 import { ActionBar, ActionBarSeparator } from "@/components/ui/action-bar";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { FloatingSheet, FloatingSheetContent, FloatingSheetHeader, FloatingSheetTitle } from "@/components/ui/floating-sheet";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { FloatingSheet, FloatingSheetContent, FloatingSheetFooter, FloatingSheetHeader, FloatingSheetTitle } from "@/components/ui/floating-sheet";
 import { staffAcademyHref } from "@/lib/routing";
 import type { BankCollection, BankSummary } from "./bank-contract";
 import { useBankBrowse } from "./browse";
@@ -55,7 +54,7 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
     </HeaderActions>
     {notice && <Alert variant="destructive"><AlertTitle>{notice}</AlertTitle></Alert>}
     <div className="grid min-w-0 gap-8 lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <aside className="hidden lg:sticky lg:top-(--header-height,4rem) lg:block lg:max-h-[calc(100svh-var(--header-height,4rem)-2rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain">
+      <aside className="hidden lg:sticky lg:top-(--header-height,4rem) lg:block lg:max-h-[calc(100svh-var(--header-height,4rem)-2rem)] lg:self-start lg:overflow-y-auto">
         {browser}
       </aside>
 
@@ -75,27 +74,32 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
       </section>
     </div>
 
-    <Sheet open={browsing} onOpenChange={setBrowsing}>
-      <SheetContent side="left" className="gap-0">
-        <SheetHeader className="border-b"><SheetTitle>Collections</SheetTitle></SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-3">{browser}</div>
-      </SheetContent>
-    </Sheet>
+    <FloatingSheet open={browsing} onOpenChange={setBrowsing}>
+      <FloatingSheetContent className="w-sm gap-0">
+        <FloatingSheetHeader className="shrink-0 border-b px-6 py-5 pr-16"><FloatingSheetTitle className="text-xl font-normal">Collections</FloatingSheetTitle></FloatingSheetHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">{browser}</div>
+      </FloatingSheetContent>
+    </FloatingSheet>
 
-    {/* Non-modal so the list stays usable: clicking another row swaps the preview instead of closing it. */}
-    <FloatingSheet modal={false} open={!!active} onOpenChange={open => { if (!open) setActive(undefined); }}>
-      <FloatingSheetContent className="gap-0 sm:w-lg"
-        onInteractOutside={event => { if ((event.target as Element | null)?.closest?.("[data-bank-rows]")) event.preventDefault(); }}>
-        <FloatingSheetHeader className="shrink-0 border-b px-6 py-4 pr-14">
-          <FloatingSheetTitle dir="auto">{active?.printedNumber ? `Question ${active.printedNumber}` : "Question"}</FloatingSheetTitle>
+    <FloatingSheet open={!!active} onOpenChange={open => { if (!open) setActive(undefined); }}>
+      <FloatingSheetContent className="w-xl gap-0">
+        <FloatingSheetHeader className="shrink-0 gap-1 border-b px-6 py-5 pr-16">
+          <FloatingSheetTitle className="text-xl font-normal" dir="auto">
+            Question <span className="font-semibold">{active?.printedNumber ?? ""}</span>
+          </FloatingSheetTitle>
+          {active && <p className="truncate text-sm text-muted-foreground" dir="auto">
+            {[active.file, active.page && `p. ${active.page}`, active.choice ? "Multiple choice" : "Written"].filter(Boolean).join(" · ")}
+          </p>}
         </FloatingSheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6">
           {active && <QueryContent query={detail} label="question" isEmpty={() => false} emptyTitle="">
             {data => <QuestionPreview detail={data} collections={list} academySlug={scope.academySlug}
-              onRemove={collection => void remove(collection, [data.id])}
-              actions={<AddToCollection scope={scope} collections={list} questionIds={[data.id]} />} />}
+              onRemove={collection => void remove(collection, [data.id])} />}
           </QueryContent>}
         </div>
+        {detail.data && <FloatingSheetFooter className="shrink-0 flex-row justify-end border-t px-6 py-4">
+          <AddToCollection scope={scope} collections={list} questionIds={[detail.data.id]} />
+        </FloatingSheetFooter>}
       </FloatingSheetContent>
     </FloatingSheet>
 

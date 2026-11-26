@@ -23,11 +23,12 @@ function Item({ label, count, active, nested, onClick, action }: {
   label: string; count: number; active: boolean; nested?: boolean; onClick: () => void; action?: ReactNode;
 }) {
   return <li className={cn("group flex items-center rounded-md hover:bg-muted/60", active && "bg-secondary hover:bg-secondary", nested && "ms-3 border-s ps-1")}>
-    <Button variant="ghost" aria-current={active ? "true" : undefined} onClick={onClick}
-      className={cn("h-auto min-h-8 min-w-0 flex-1 justify-between gap-2 py-1.5 font-normal whitespace-normal hover:bg-transparent", active && "font-medium")}>
+    {/* A plain button: the item carries the hover, so the control adds none of its own. */}
+    <button type="button" aria-current={active ? "true" : undefined} onClick={onClick}
+      className={cn("flex min-h-8 min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-3 py-1.5 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50", active && "font-medium")}>
       <span dir="auto" className="min-w-0 break-words text-start">{label}</span>
-      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{count}</span>
-    </Button>
+      <span className="shrink-0 text-xs font-normal text-muted-foreground tabular-nums">{count}</span>
+    </button>
     {action && <span className="pe-1 lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">{action}</span>}
   </li>;
 }
