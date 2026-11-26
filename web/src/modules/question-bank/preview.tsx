@@ -37,7 +37,7 @@ export function QuestionPreview({ detail, collections, academySlug, onRemove, on
   academySlug: string;
   onRemove?: (collection: BankCollection) => void;
   /** Makes each choice a control that confirms it as the answer. */
-  onAnswer?: (key: string) => void;
+  onAnswer?: (key: string | null) => void;
   actions?: ReactNode;
 }) {
   const { payload } = detail;
@@ -67,6 +67,9 @@ export function QuestionPreview({ detail, collections, academySlug, onRemove, on
         })}
       </ul>}
       {payload.choices.length > 0 && !payload.answer && <p role="status" className="text-sm text-muted-foreground">No answer confirmed</p>}
+      {onAnswer && payload.answer && <Button type="button" variant="ghost" size="sm" className="-ms-2 text-muted-foreground" onClick={() => onAnswer(null)}>
+        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.5} />Clear answer
+      </Button>}
     </div>
 
     {payload.modelAnswer && <Block title="Model answer">

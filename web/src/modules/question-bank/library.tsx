@@ -106,7 +106,7 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
     setEditing(false);
   }
 
-  const answer = (question: BankDetail, key: string) => {
+  const answer = (question: BankDetail, key: string | null) => {
     const { prompt, choices, modelAnswer } = question.payload;
     void save(question, { prompt, choices, answer: key, modelAnswer: modelAnswer ?? "" });
   };

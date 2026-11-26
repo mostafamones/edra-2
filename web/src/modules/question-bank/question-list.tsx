@@ -72,13 +72,13 @@ export function QuestionList({ browse, activeId, onOpen, selected, onSelect, emp
   const row = (item: BankSummary) => {
     const number = questionNumber(item.printedNumber);
     const chips = item.collections.map(id => names.get(id)).filter(name => !!name);
-    const content = <li className={cn("flex items-start gap-3 px-4 transition-colors hover:bg-muted/50", item.id === activeId && "bg-muted/70")}>
-      {onSelect && <Checkbox className="mt-4" checked={selected?.has(item.id) ?? false}
+    const content = <li className={cn("flex items-center gap-3 px-4 transition-colors hover:bg-muted/50", item.id === activeId && "bg-muted/70")}>
+      {onSelect && <Checkbox checked={selected?.has(item.id) ?? false}
         aria-label={`Select ${number ? `question ${number}` : "question"}`} onCheckedChange={checked => onSelect(item.id, checked === true)} />}
       {/* A plain button: the row carries the hover, so the control adds none of its own. */}
       <button type="button" aria-current={item.id === activeId ? "true" : undefined} onClick={() => onOpen(item)}
-        className="flex min-w-0 flex-1 items-start gap-3 rounded-md py-3 text-start outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-        <span className="mt-0.5 w-7 shrink-0 text-sm text-muted-foreground tabular-nums">{number}</span>
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-md py-3 text-start outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+        <span className="w-7 shrink-0 text-sm text-muted-foreground tabular-nums">{number}</span>
         <span className="min-w-0 flex-1 space-y-1.5">
           <MathText value={item.prompt} className="line-clamp-2 text-sm leading-6 text-foreground" />
           {chips.length > 0 && <span className="flex flex-wrap gap-1">
@@ -87,7 +87,7 @@ export function QuestionList({ browse, activeId, onOpen, selected, onSelect, emp
           </span>}
         </span>
       </button>
-      <span className="flex shrink-0 items-center gap-0.5 pt-3">
+      <span className="flex shrink-0 items-center gap-0.5">
         {!item.answered && <Indicator icon={AlertCircleIcon} label={item.choice ? "No answer confirmed" : "No model answer"} />}
         {item.figures && <Indicator icon={Image01Icon} label="Has figures" />}
         {item.unitId && <Indicator icon={Link04Icon} label="Linked to a Library unit" />}

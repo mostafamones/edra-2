@@ -148,6 +148,20 @@ it("confirms an answer by clicking a choice, and lists source groups without fil
     changes: { prompt: "Pick one", choices: [{ key: "a", text: "R" }, { key: "b", text: "{-4}" }], answer: "b", modelAnswer: "" } } }));
 });
 
+it("clears a confirmed answer from the preview", async () => {
+  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: collections });
+  vi.mocked(listQuestionBank).mockResolvedValue(page([{ ...row(ids.q1, "Pick one"), choice: true }]));
+  vi.mocked(readQuestionBank).mockResolvedValue({ ok: true, data: { id: ids.q1, unitId: null, archived: false, collections: [], payload: {
+    prompt: "Pick one", choices: [{ key: "a", text: "R" }, { key: "b", text: "S" }], answer: "a", topic: null, section: null, printedNumber: "1",
+    source: { file: "book.pdf", page: 4, continuationPages: [] }, visuals: [],
+  } } });
+  vi.mocked(updateQuestionBankQuestion).mockResolvedValue({ ok: true, data: null });
+  mount();
+  fireEvent.click(await screen.findByRole("button", { name: /Pick one/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Clear answer" }));
+  await waitFor(() => expect(vi.mocked(updateQuestionBankQuestion).mock.lastCall![0]!.data.changes.answer).toBeNull());
+});
+
 it("archives selected questions and deletes only after confirmation", async () => {
   vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: collections });
   vi.mocked(listQuestionBank).mockResolvedValue(page([row(ids.q1, "First"), row(ids.q2, "Second")]));
