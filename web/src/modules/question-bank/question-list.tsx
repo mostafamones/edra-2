@@ -5,7 +5,6 @@ import { MathText } from "@/components/shared/math-text";
 import { QueryContent } from "@/components/shared/query-content";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
 import type { BankSummary } from "./bank-contract";
@@ -34,15 +33,15 @@ export function QuestionList({ browse, activeId, onOpen, selected, onSelect, emp
     emptyTitle={browse.filtered ? "No matching questions" : "No saved questions"}
     emptyAction={browse.filtered ? <Button variant="outline" size="sm" onClick={browse.clear}>Clear filters</Button> : emptyAction}>
     {data => <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <ul className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain rounded-lg border" aria-label="Questions">
-        {data.rows.map(row => <li key={row.id} className={cn("flex items-start gap-2 px-2", row.id === activeId && "bg-muted")}>
-          {onSelect && <Checkbox className="mt-3.5" checked={selected?.has(row.id) ?? false} aria-label={`Select question ${row.printedNumber ?? ""}`.trim()}
+      <ul data-bank-rows className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain rounded-xl border" aria-label="Questions">
+        {data.rows.map(row => <li key={row.id} className={cn("flex items-start gap-3 px-3 transition-colors hover:bg-muted/50", row.id === activeId && "bg-muted hover:bg-muted")}>
+          {onSelect && <Checkbox className="mt-4" checked={selected?.has(row.id) ?? false} aria-label={`Select question ${row.printedNumber ?? ""}`.trim()}
             onCheckedChange={checked => onSelect(row.id, checked === true)} />}
           <Button variant="ghost" aria-current={row.id === activeId ? "true" : undefined}
-            className="h-auto min-h-12 min-w-0 flex-1 justify-start px-1 py-2.5 whitespace-normal hover:bg-transparent" onClick={() => onOpen(row)}>
+            className="h-auto min-h-14 min-w-0 flex-1 justify-start px-0 py-3 whitespace-normal hover:bg-transparent" onClick={() => onOpen(row)}>
             <span className="min-w-0 text-start font-normal">
               <MathText value={row.prompt} className="line-clamp-2 text-sm" />
-              <span className="mt-0.5 block truncate text-xs text-muted-foreground" dir="auto">
+              <span className="mt-1 block truncate text-xs text-muted-foreground" dir="auto">
                 {[row.printedNumber && `Q${row.printedNumber}`, row.file, row.page && `p. ${row.page}`, row.choice ? "Choice" : "Written", row.unitId && "Linked unit"].filter(Boolean).join(" · ")}
               </span>
             </span>
@@ -56,8 +55,4 @@ export function QuestionList({ browse, activeId, onOpen, selected, onSelect, emp
       </div>}
     </div>}
   </QueryContent>;
-}
-
-export function NoQuestion({ title, children }: { title: string; children?: ReactNode }) {
-  return <Empty className="min-h-56"><EmptyHeader><EmptyTitle>{title}</EmptyTitle></EmptyHeader>{children && <EmptyContent>{children}</EmptyContent>}</Empty>;
 }

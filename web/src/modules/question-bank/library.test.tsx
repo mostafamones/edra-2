@@ -16,6 +16,7 @@ vi.mock("@/lib/routing", () => ({ staffAcademyHref: (slug: string, path: string)
 vi.mock("@/components/shared/link", () => ({ default: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props} /> }));
 
 Element.prototype.scrollIntoView ??= () => {};
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };
 afterEach(() => { cleanup(); vi.resetAllMocks(); });
 
 const ids = { q1: "10000000-0000-4000-8000-000000000001", q2: "10000000-0000-4000-8000-000000000002", doc: "20000000-0000-4000-8000-000000000001",

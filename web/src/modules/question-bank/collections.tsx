@@ -3,7 +3,6 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
 import { QueryContent } from "@/components/shared/query-content";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -23,19 +22,19 @@ function IconAction({ label, icon, ...props }: ComponentProps<typeof Button> & {
 function Item({ label, count, active, nested, onClick, action }: {
   label: string; count: number; active: boolean; nested?: boolean; onClick: () => void; action?: ReactNode;
 }) {
-  return <li className={cn("group flex items-center gap-1 rounded-md", active && "bg-secondary", nested && "ms-4")}>
+  return <li className={cn("group flex items-center rounded-md hover:bg-muted/60", active && "bg-secondary hover:bg-secondary", nested && "ms-3 border-s ps-1")}>
     <Button variant="ghost" aria-current={active ? "true" : undefined} onClick={onClick}
-      className="h-auto min-h-8 min-w-0 flex-1 justify-between gap-2 py-1.5 font-normal whitespace-normal hover:bg-transparent">
+      className={cn("h-auto min-h-8 min-w-0 flex-1 justify-between gap-2 py-1.5 font-normal whitespace-normal hover:bg-transparent", active && "font-medium")}>
       <span dir="auto" className="min-w-0 break-words text-start">{label}</span>
-      <Badge variant="outline" className="shrink-0">{count}</Badge>
+      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{count}</span>
     </Button>
-    {action}
+    {action && <span className="pe-1 lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">{action}</span>}
   </li>;
 }
 
 function Group({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return <section className="space-y-1">
-    <div className="flex min-h-7 items-center justify-between px-2"><h2 className="text-xs font-medium text-muted-foreground">{title}</h2>{action}</div>
+    <div className="flex min-h-7 items-center justify-between ps-3 pe-1"><h2 className="text-xs font-medium text-muted-foreground">{title}</h2>{action}</div>
     <ul className="space-y-0.5">{children}</ul>
   </section>;
 }
@@ -53,7 +52,7 @@ export function CollectionBrowser({ scope, query, activeId, onChoose }: {
       const editable = (kind: "topic" | "custom") => of(kind).map(collection => <Item key={collection.id} label={collection.name} count={collection.count}
         active={collection.id === activeId} onClick={() => onChoose(collection)}
         action={<CollectionDialog scope={scope} target={{ kind, collection }} trigger={<IconAction label={`Rename ${collection.name}`} icon={PencilEdit01Icon} />} />} />);
-      return <nav aria-label="Collections" className="space-y-4">
+      return <nav aria-label="Collections" className="space-y-5">
         <ul><Item label="All questions" count={total} active={!activeId} onClick={() => onChoose(null)} /></ul>
         <Group title="Topics" action={<CollectionDialog scope={scope} target={{ kind: "topic" }} trigger={<IconAction label="New topic" icon={Add01Icon} />} />}>
           {editable("topic")}
