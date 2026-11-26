@@ -4,7 +4,7 @@ import type { Json } from "@/lib/supabase/database.types";
 import { isAcademyManager } from "@/modules/academies/roles";
 import {
   bankDetailSchema, bankPageSchema, catalogSchema, collectionsSchema, maxSaveBytes, pageSize, saveBankInput,
-  type BankCollections, type BankDetail, type BankFilters, type BankPage, type BankProgram, type BankResult,
+  type BankCollections, type BankDetail, type BankFilters, type BankPage, type BankProgram, type BankResult, type QuestionEdit,
 } from "./bank-contract";
 
 async function manager(academyId: string) {
@@ -34,7 +34,7 @@ export async function listBank(academyId: string, filters: BankFilters): Promise
   const db = await manager(academyId);
   if (!db) return denied;
   const { data, error } = await db.rpc("list_question_bank_questions", {
-    p_academy_id: academyId, p_collection_id: filters.collectionId as string, p_query: filters.query.trim(), p_offset: filters.offset, p_limit: pageSize,
+    p_academy_id: academyId, p_collection_id: filters.collectionId as string, p_query: filters.query.trim(), p_offset: filters.offset, p_limit: pageSize, p_archived: filters.archived,
   });
   const parsed = bankPageSchema.safeParse(data);
   return error || !parsed.success ? loadFailed : { ok: true, data: parsed.data };
@@ -96,4 +96,28 @@ export async function saveBank(value: unknown): Promise<BankResult<number>> {
       ? "The selected source document or collection is no longer available. Choose it again."
       : "Couldn’t save these questions. Your review is still here." };
   return { ok: true, data };
+}
+
+const questionError = (message: string) => message === "invalid_questions" ? "One or more questions are no longer available. Reload and try again."
+  : message === "invalid_question" ? "Check the question and try again." : "Couldn’t update the question. Try again.";
+
+export async function updateQuestion(academyId: string, id: string, changes: QuestionEdit): Promise<BankResult<null>> {
+  const db = await manager(academyId);
+  if (!db) return denied;
+  const { error } = await db.rpc("update_question_bank_question", { p_academy_id: academyId, p_id: id, p_changes: changes as Json });
+  return error ? { ok: false, message: questionError(error.message) } : { ok: true, data: null };
+}
+
+export async function archiveQuestions(academyId: string, questionIds: string[], archived: boolean): Promise<BankResult<number>> {
+  const db = await manager(academyId);
+  if (!db) return denied;
+  const { data, error } = await db.rpc("set_question_bank_archived", { p_academy_id: academyId, p_question_ids: questionIds, p_archived: archived });
+  return error ? { ok: false, message: questionError(error.message) } : { ok: true, data };
+}
+
+export async function deleteQuestions(academyId: string, questionIds: string[]): Promise<BankResult<number>> {
+  const db = await manager(academyId);
+  if (!db) return denied;
+  const { data, error } = await db.rpc("delete_question_bank_questions", { p_academy_id: academyId, p_question_ids: questionIds });
+  return error ? { ok: false, message: "Couldn’t delete. Try again." } : { ok: true, data };
 }

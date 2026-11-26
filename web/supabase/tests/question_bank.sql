@@ -147,6 +147,33 @@ begin
   if not rejected then raise exception 'Source membership removable'; end if;
   if jsonb_array_length(public.get_question_bank_question(c.academy,c.question_id)->'collections') <> 4
     then raise exception 'Detail memberships incorrect'; end if;
+
+  -- Editing: prompt, choice text and answer change; keys, source and memberships stay.
+  perform public.update_question_bank_question(c.academy,pg_temp.id('q2'),jsonb_build_object('prompt',' Edited ',
+    'choices',jsonb_build_array(jsonb_build_object('key','a','text','Square')),'answer','a'));
+  if (select payload->>'prompt' <> 'Edited' or payload->>'answer' <> 'a' or payload->'choices'->0->>'text' <> 'Square'
+      or payload->'source'->>'page' <> '5' from public.question_bank_questions where id=pg_temp.id('q2'))
+    or not pg_temp.member(topic_id,pg_temp.id('q2')) then raise exception 'Question edit failed'; end if;
+  rejected := false;
+  begin perform public.update_question_bank_question(c.academy,pg_temp.id('q2'),jsonb_build_object('prompt','x',
+    'choices',jsonb_build_array(jsonb_build_object('key','z','text','Other')),'answer','z'));
+  exception when raise_exception then if sqlerrm='invalid_question' then rejected := true; else raise; end if;
+  end;
+  if not rejected then raise exception 'Choice keys changed by an edit'; end if;
+
+  -- Archive hides a question from lists and counts; restore returns it; delete removes it and its memberships.
+  listed := public.get_question_bank_collections(c.academy);
+  if public.set_question_bank_archived(c.academy,array[pg_temp.id('q2')],true) <> 1 then raise exception 'Archive failed'; end if;
+  if (public.get_question_bank_collections(c.academy)->>'total')::int <> (listed->>'total')::int - 1
+    or (public.get_question_bank_collections(c.academy)->>'archived')::int <> 1
+    or (public.list_question_bank_questions(c.academy,topic_id,'',0,24)->>'total')::int <> 0
+    or (public.list_question_bank_questions(c.academy,null,'',0,24,true)->>'total')::int <> 1
+    then raise exception 'Archived question still listed or counted'; end if;
+  perform public.set_question_bank_archived(c.academy,array[pg_temp.id('q2')],false);
+  if (public.list_question_bank_questions(c.academy,topic_id,'',0,24)->>'total')::int <> 1 then raise exception 'Restore failed'; end if;
+  if public.delete_question_bank_questions(c.academy,array[pg_temp.id('q2')]) <> 1
+    or exists(select 1 from public.question_bank_questions where id=pg_temp.id('q2'))
+    or exists(select 1 from public.question_bank_memberships where question_id=pg_temp.id('q2')) then raise exception 'Delete failed'; end if;
 end $$;
 
 select set_config('request.jwt.claim.sub',instructor_id::text,true) from bank_context;
@@ -167,6 +194,11 @@ begin
   exception when raise_exception then if sqlerrm='forbidden' then rejected := true; else raise; end if;
   end;
   if not rejected then raise exception 'Instructor can create collections'; end if;
+  rejected := false;
+  begin perform public.delete_question_bank_questions(c.academy,array[c.question_id]);
+  exception when raise_exception then if sqlerrm='forbidden' then rejected := true; else raise; end if;
+  end;
+  if not rejected then raise exception 'Instructor can delete questions'; end if;
 end $$;
 select set_config('request.jwt.claim.sub',outsider_id::text,true) from bank_context;
 do $$
@@ -192,5 +224,12 @@ begin
   exception when raise_exception then if sqlerrm='invalid_questions' then rejected := true; else raise; end if;
   end;
   if not rejected then raise exception 'Foreign question accepted'; end if;
+  -- Archive and delete are scoped to the caller's academy: another academy's question is untouched.
+  if public.delete_question_bank_questions(c.other_academy,array[c.question_id]) <> 0 then raise exception 'Foreign question deleted'; end if;
+  rejected := false;
+  begin perform public.set_question_bank_archived(c.other_academy,array[c.question_id],true);
+  exception when raise_exception then if sqlerrm='invalid_questions' then rejected := true; else raise; end if;
+  end;
+  if not rejected then raise exception 'Foreign question archived'; end if;
 end $$;
 rollback;

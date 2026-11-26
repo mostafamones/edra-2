@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { createCollection, listBank, loadBankCatalog, loadCollections, readBank, renameCollection, saveBank, setMembership } from "./bank.server";
-import { bankFilters, collectionName } from "./bank-contract";
+import { archiveQuestions, createCollection, deleteQuestions, listBank, loadBankCatalog, loadCollections, readBank, renameCollection, saveBank, setMembership, updateQuestion } from "./bank.server";
+import { bankFilters, collectionName, questionEdit, questionIds } from "./bank-contract";
 
 const academy = z.object({ academyId: z.guid() });
 export const loadQuestionBankCatalog = createServerFn({ method: "GET" })
@@ -22,3 +22,9 @@ export const readQuestionBank = createServerFn({ method: "GET" })
   .validator(academy.extend({ id: z.guid() })).handler(({ data }) => readBank(data.academyId, data.id));
 export const saveQuestionBank = createServerFn({ method: "POST", strict: false })
   .validator((data: unknown) => data).handler(({ data }) => saveBank(data));
+export const updateQuestionBankQuestion = createServerFn({ method: "POST" })
+  .validator(academy.extend({ id: z.guid(), changes: questionEdit })).handler(({ data }) => updateQuestion(data.academyId, data.id, data.changes));
+export const archiveQuestionBankQuestions = createServerFn({ method: "POST" })
+  .validator(academy.extend({ questionIds, archived: z.boolean() })).handler(({ data }) => archiveQuestions(data.academyId, data.questionIds, data.archived));
+export const deleteQuestionBankQuestions = createServerFn({ method: "POST" })
+  .validator(academy.extend({ questionIds })).handler(({ data }) => deleteQuestions(data.academyId, data.questionIds));

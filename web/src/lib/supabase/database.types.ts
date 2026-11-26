@@ -4851,6 +4851,7 @@ export type Database = {
       question_bank_questions: {
         Row: {
           academy_id: string
+          archived_at: string | null
           created_at: string
           created_by: string
           id: string
@@ -4861,6 +4862,7 @@ export type Database = {
         }
         Insert: {
           academy_id: string
+          archived_at?: string | null
           created_at?: string
           created_by: string
           id: string
@@ -4870,6 +4872,7 @@ export type Database = {
         }
         Update: {
           academy_id?: string
+          archived_at?: string | null
           created_at?: string
           created_by?: string
           id?: string
@@ -8720,6 +8723,10 @@ export type Database = {
           track_id: string
         }[]
       }
+      delete_question_bank_questions: {
+        Args: { p_academy_id: string; p_question_ids: string[] }
+        Returns: number
+      }
       get_question_bank_collections: {
         Args: { p_academy_id: string }
         Returns: Json
@@ -8927,9 +8934,14 @@ export type Database = {
         }
         Returns: Json
       }
+      update_question_bank_question: {
+        Args: { p_academy_id: string; p_changes: Json; p_id: string }
+        Returns: undefined
+      }
       list_question_bank_questions: {
         Args: {
           p_academy_id: string
+          p_archived?: boolean
           p_collection_id: string
           p_limit: number
           p_offset: number
@@ -9542,6 +9554,10 @@ export type Database = {
           p_program_id?: string
           p_questions: Json
         }
+        Returns: number
+      }
+      set_question_bank_archived: {
+        Args: { p_academy_id: string; p_archived: boolean; p_question_ids: string[] }
         Returns: number
       }
       save_question_bank_questions: {
