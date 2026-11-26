@@ -116,6 +116,12 @@ begin
   -- Whole-library search and collection filters run server-side.
   listed := public.list_question_bank_questions(c.academy,null,'QUADRILATERAL',0,2);
   if (listed->>'total')::int <> 5 or jsonb_array_length(listed->'rows') <> 2 then raise exception 'Choice search or paging failed: %', listed; end if;
+  -- Rows come back in source order: file, then page, then printed number.
+  listed := public.list_question_bank_questions(c.academy,null,'',0,24);
+  if exists(select 1 from (select r, lag(r) over (order by n) prev from jsonb_array_elements(listed->'rows') with ordinality t(r,n)) s
+    where (lower(prev->>'file'),(prev->>'page')::int,(substring(prev->>'printedNumber' from '[0-9]+'))::numeric)
+      > (lower(r->>'file'),(r->>'page')::int,(substring(r->>'printedNumber' from '[0-9]+'))::numeric))
+    then raise exception 'Questions not in source order: %', listed; end if;
   if (public.list_question_bank_questions(c.academy,topic_id,'',0,24)->>'total')::int <> 2
     or (public.list_question_bank_questions(c.academy,null,'%',0,24)->>'total')::int <> 0 then raise exception 'Collection filter or escaping failed'; end if;
 
