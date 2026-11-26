@@ -21,6 +21,12 @@ Saving reviewed questions from an import automatically creates or reuses their s
 
 Preserve source references when staff reorganize questions. Removing an organizational membership does not delete the question or its original source evidence. Source collection identity must not rely on a filename alone, and section identity must retain its document context.
 
+## Managing saved questions
+
+Requested by the owner, 2026-11-26. Staff can edit a saved question's prompt, choice texts, confirmed answer and written model answer from the library, including confirming an answer by choosing it in the preview. Choice keys, source evidence, visuals and memberships do not change through an edit.
+
+Staff can archive questions (singly or in bulk) and restore them. Archived questions leave the library, collection counts and the assessment picker but keep their content and memberships. Staff can also permanently delete questions after a confirmation. Editing, archiving or deleting a bank question never changes copies already added to assessments.
+
 ## Existing behavior to preserve
 
 Keep saved question content, confirmed answers, optional written model answers, visuals, source page references and optional Library unit links available. The content Library and its units remain distinct from the question-bank library and collections.

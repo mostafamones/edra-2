@@ -15,19 +15,22 @@ function useDebounced(value: string, delay = 250) {
 /** Server-side search, collection filter and pagination shared by the library and the assessment picker. */
 export function useBankBrowse(scope: BankScope) {
   const [collectionId, setCollectionId] = useState<string | null>(null);
+  const [archived, setArchivedState] = useState(false);
   const [text, setText] = useState("");
   const [offset, setOffset] = useState(0);
   const query = useDebounced(text.trim());
   // A changed filter starts again at the first page, including when the debounced search lands.
   const [settled, setSettled] = useState(query);
   if (settled !== query) { setSettled(query); setOffset(0); }
-  const page = useQuery(bankPageOptions(scope, { collectionId, query, offset }));
+  const page = useQuery(bankPageOptions(scope, { collectionId, query, offset, archived }));
   const total = page.data?.total ?? 0;
   return {
-    page, text, query, collectionId, offset, total,
+    page, text, query, collectionId, archived, offset, total,
     filtered: !!query || !!collectionId,
     setText,
-    setCollection: (id: string | null) => { setCollectionId(id); setOffset(0); },
+    setCollection: (id: string | null) => { setCollectionId(id); setArchivedState(false); setOffset(0); },
+    /** The archive is its own scope, outside every collection. */
+    setArchived: () => { setCollectionId(null); setArchivedState(true); setOffset(0); },
     clear: () => { setText(""); setCollectionId(null); setOffset(0); },
     previous: offset > 0 ? () => setOffset(Math.max(0, offset - pageSize)) : undefined,
     next: offset + pageSize < total ? () => setOffset(offset + pageSize) : undefined,

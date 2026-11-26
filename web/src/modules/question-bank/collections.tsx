@@ -41,20 +41,22 @@ function Group({ title, action, children }: { title: string; action?: ReactNode;
 }
 
 /** All questions, then the four collection types; sections sit beneath their source document. */
-export function CollectionBrowser({ scope, query, activeId, onChoose }: {
+export function CollectionBrowser({ scope, query, activeId, onChoose, archive }: {
   scope: BankScope;
   query: UseQueryResult<BankCollections, Error>;
   activeId: string | null;
   onChoose: (collection: BankCollection | null) => void;
+  /** The archive entry, listed after every collection. */
+  archive?: { active: boolean; onChoose: () => void };
 }) {
   return <QueryContent query={query} label="collections" isEmpty={() => false} emptyTitle="">
-    {({ total, collections }) => {
+    {({ total, archived, collections }) => {
       const of = (kind: BankCollection["kind"]) => collections.filter(collection => collection.kind === kind);
       const editable = (kind: "topic" | "custom") => of(kind).map(collection => <Item key={collection.id} label={collection.name} count={collection.count}
         active={collection.id === activeId} onClick={() => onChoose(collection)}
         action={<CollectionDialog scope={scope} target={{ kind, collection }} trigger={<IconAction label={`Rename ${collection.name}`} icon={PencilEdit01Icon} />} />} />);
       return <nav aria-label="Collections" className="space-y-5">
-        <ul><Item label="All questions" count={total} active={!activeId} onClick={() => onChoose(null)} /></ul>
+        <ul><Item label="All questions" count={total} active={!activeId && !archive?.active} onClick={() => onChoose(null)} /></ul>
         <Group title="Topics" action={<CollectionDialog scope={scope} target={{ kind: "topic" }} trigger={<IconAction label="New topic" icon={Add01Icon} />} />}>
           {editable("topic")}
         </Group>
@@ -69,6 +71,7 @@ export function CollectionBrowser({ scope, query, activeId, onChoose }: {
         <Group title="Collections" action={<CollectionDialog scope={scope} target={{ kind: "custom" }} trigger={<IconAction label="New collection" icon={Add01Icon} />} />}>
           {editable("custom")}
         </Group>
+        {archive && <ul className="border-t pt-3"><Item label="Archived" count={archived} active={archive.active} onClick={archive.onChoose} /></ul>}
       </nav>;
     }}
   </QueryContent>;

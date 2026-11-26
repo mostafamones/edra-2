@@ -391,7 +391,7 @@ it("attaches a labelled crop and exports its image and source bounds with the re
 });
 
 it("saves confirmed topics and automatic source grouping, keeping one document identity across save batches", async () => {
-  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: { total: 0, collections: [] } });
+  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: { total: 0, archived: 0, collections: [] } });
   vi.mocked(loadQuestionBankCatalog).mockResolvedValue({ ok: true, data: [] });
   vi.mocked(saveQuestionBank).mockResolvedValue({ ok: true, data: 1 });
   render(<QuestionBankPage bankScope={{ academyId: "a0000000-0000-4000-8000-000000000001", academySlug: "science", accountId: "staff" }} />);

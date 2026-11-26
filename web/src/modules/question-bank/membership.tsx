@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { useAcademyScope } from "@/modules/auth";
 import { setQuestionBankMembership } from "./bank";
 import type { BankCollection } from "./bank-contract";
-import { invalidateMemberships, type BankScope } from "./queries";
+import { invalidateQuestions, type BankScope } from "./queries";
 
 /** Adds or removes Topic and Custom memberships. Source memberships and the question itself are never touched. */
 export function useMembership(scope: BankScope) {
@@ -20,29 +20,33 @@ export function useMembership(scope: BankScope) {
     const academyId = scope.academyId;
     try {
       const result = await setQuestionBankMembership({ data: { academyId, collectionId, questionIds, member } });
-      invalidateMemberships(client, scope, collectionId, questionIds);
+      invalidateQuestions(client, scope, questionIds);
       if (!isCurrent(academyId)) return null;
       return result.ok ? undefined : result.message;
     } catch {
-      invalidateMemberships(client, scope, collectionId, questionIds);
+      invalidateQuestions(client, scope, questionIds);
       return isCurrent(academyId) ? "Couldn’t update the collection. Try again." : null;
     }
   };
 }
 
-export function AddToCollection({ scope, collections, questionIds, onDone, label = "Add to collection" }: {
+/** With `open`/`onOpenChange` it is controlled and renders no trigger, for opening from a menu. */
+export function AddToCollection({ scope, collections, questionIds, onDone, label = "Add to collection", variant = "outline", ...controlled }: {
   scope: BankScope; collections: BankCollection[]; questionIds: string[]; onDone?: () => void; label?: string;
+  variant?: "outline" | "ghost"; open?: boolean; onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = controlled.open ?? ownOpen;
+  const setOpen = controlled.onOpenChange ?? setOwnOpen;
   const [target, setTarget] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const update = useMembership(scope);
   const choices = collections.filter(collection => collection.kind === "topic" || collection.kind === "custom");
   return <Dialog open={open} onOpenChange={next => { if (!pending) { setOpen(next); setError(""); setTarget(""); } }}>
-    <DialogTrigger asChild><Button size="sm" variant="outline" disabled={!questionIds.length}>
+    {controlled.open === undefined && <DialogTrigger asChild><Button size="sm" variant={variant} disabled={!questionIds.length}>
       <HugeiconsIcon icon={FolderAddIcon} strokeWidth={1.5} />{label}
-    </Button></DialogTrigger>
+    </Button></DialogTrigger>}
     <DialogContent className="w-[calc(100%-1rem)] sm:max-w-md">
       <DialogHeader><DialogTitle>Add {questionIds.length === 1 ? "question" : `${questionIds.length} questions`} to a collection</DialogTitle>
         <DialogDescription className="sr-only">Choose a topic or collection.</DialogDescription>

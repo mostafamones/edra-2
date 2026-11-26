@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { staffAcademyHref } from "@/lib/routing";
 import { cn } from "@/lib/utils";
 import type { BankCollection, BankDetail } from "./bank-contract";
-import { collectionLabel } from "./queries";
+import { collectionLabel, fileTitle, questionTitle } from "./queries";
 
 const kindLabels: Record<BankCollection["kind"], string> = {
   topic: "Topics", source_document: "Document", source_section: "Section", custom: "Collections",
@@ -31,11 +31,13 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** The full saved question with its source evidence and memberships. */
-export function QuestionPreview({ detail, collections, academySlug, onRemove, actions }: {
+export function QuestionPreview({ detail, collections, academySlug, onRemove, onAnswer, actions }: {
   detail: BankDetail;
   collections: BankCollection[];
   academySlug: string;
   onRemove?: (collection: BankCollection) => void;
+  /** Makes each choice a control that confirms it as the answer. */
+  onAnswer?: (key: string) => void;
   actions?: ReactNode;
 }) {
   const { payload } = detail;
@@ -43,49 +45,62 @@ export function QuestionPreview({ detail, collections, academySlug, onRemove, ac
   const memberships = detail.collections.map(id => byId.get(id)).filter(collection => !!collection);
   const topics = memberships.filter(collection => collection.kind === "topic");
   const pages = [payload.source.page, ...payload.source.continuationPages];
-  return <article className="space-y-7" aria-label={`Question ${payload.printedNumber}`}>
+  return <article className="space-y-7" aria-label={questionTitle(payload.printedNumber)}>
     <div className="space-y-4">
       <MathText value={payload.prompt} className="block text-base leading-7" />
       {payload.choices.length > 0 && <ul className="space-y-2">
         {payload.choices.map(choice => {
           const correct = choice.key === payload.answer;
-          return <li key={choice.key} className={cn("flex items-start gap-3 rounded-lg border px-3 py-2.5", correct && "border-primary/50 bg-primary/5")}>
+          const body = <>
             <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium", correct && "border-primary bg-primary text-primary-foreground")}>{choice.key}</span>
-            <MathText value={choice.text} className="min-w-0 flex-1 pt-0.5" />
-            {correct && <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={1.5} className="mt-0.5 size-5 shrink-0 text-primary" aria-label="Correct answer" />}
+            <MathText value={choice.text} className="min-w-0 flex-1 leading-normal" />
+            {correct && <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={1.5} className="size-5 shrink-0 text-primary" aria-label="Correct answer" />}
+          </>;
+          const frame = cn("flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-start", correct && "border-primary/50 bg-primary/5");
+          return <li key={choice.key}>
+            {onAnswer
+              ? <button type="button" aria-pressed={correct} aria-label={`Choice ${choice.key}${correct ? ", the confirmed answer" : ""}`}
+                  className={cn(frame, "outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50", !correct && "hover:bg-muted/50")}
+                  onClick={() => { if (!correct) onAnswer(choice.key); }}>{body}</button>
+              : <div className={frame}>{body}</div>}
           </li>;
         })}
       </ul>}
-      {payload.choices.length > 0 && !payload.answer && <p className="text-sm text-muted-foreground">No answer confirmed</p>}
+      {payload.choices.length > 0 && !payload.answer && <p role="status" className="text-sm text-muted-foreground">No answer confirmed</p>}
     </div>
 
     {payload.modelAnswer && <Block title="Model answer">
       <MathText value={payload.modelAnswer} className="block rounded-lg bg-muted/50 p-3" />
     </Block>}
 
-    {payload.visuals.length > 0 && <Block title="Visuals">
+    {payload.visuals.length > 0 && <Block title="Figures">
       {payload.visuals.map((visual, index) => <figure key={index} className="space-y-2 rounded-lg border p-2">
         <img className="mx-auto max-h-72 max-w-full rounded-sm bg-white object-contain" src={visual.image} alt={visual.description} />
-        <figcaption dir="auto" className="text-xs text-muted-foreground">{visual.description} · p. {visual.page}</figcaption>
+        <figcaption dir="auto" className="text-xs text-muted-foreground">{visual.description} · Page {visual.page}</figcaption>
       </figure>)}
     </Block>}
 
     <Block title="Source">
-      <dl className="divide-y rounded-lg border px-3 text-sm">
-        <Row label="File">{payload.source.file}</Row>
-        <Row label={pages.length > 1 ? "Pages" : "Page"}>{pages.join(", ")}</Row>
-        <Row label="Question">{payload.printedNumber}</Row>
-        {payload.section && <Row label="Printed section">{payload.section}</Row>}
-        {payload.answerSource && <Row label="Answer source">{payload.answerSource.file} · p. {payload.answerSource.page}</Row>}
-        {!topics.length && payload.topic && <Row label="Imported topic">{payload.topic}</Row>}
-        {detail.unitId && <Row label="Library unit">
-          <Link className="inline-flex items-center gap-1 underline-offset-4 hover:underline" href={staffAcademyHref(academySlug, `/content/${detail.unitId}`)}>
-            Open linked unit<HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={1.5} className="size-4" />
-          </Link>
-        </Row>}
-      </dl>
+      <div className="rounded-lg border text-sm">
+        <dl className="grid grid-cols-[minmax(0,1fr)_auto_auto] divide-x">
+          {[["File", fileTitle(payload.source.file)], [pages.length > 1 ? "Pages" : "Page", pages.join(", ")], ["Question", payload.printedNumber]].map(([label, value]) =>
+            <div key={label} className="min-w-0 space-y-0.5 px-3 py-2.5">
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="break-words font-medium" dir="auto">{value}</dd>
+            </div>)}
+        </dl>
+        {(payload.section || payload.answerSource || (!topics.length && payload.topic) || detail.unitId) && <dl className="divide-y border-t px-3">
+          {payload.section && <Row label="Printed section">{payload.section}</Row>}
+          {payload.answerSource && <Row label="Answer source">{fileTitle(payload.answerSource.file)} · Page {payload.answerSource.page}</Row>}
+          {!topics.length && payload.topic && <Row label="Imported topic">{payload.topic}</Row>}
+          {detail.unitId && <Row label="Library unit">
+            <Link className="inline-flex items-center gap-1 underline-offset-4 hover:underline" href={staffAcademyHref(academySlug, `/content/${detail.unitId}`)}>
+              Open linked unit<HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={1.5} className="size-4" />
+            </Link>
+          </Row>}
+        </dl>}
+      </div>
     </Block>
-
     {memberships.length > 0 && <Block title="Belongs to">
       <dl className="space-y-2 text-sm">
         {order.map(kind => {

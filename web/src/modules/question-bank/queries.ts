@@ -37,12 +37,24 @@ export const bankDetailOptions = (scope: BankScope, id: string) => queryOptions(
   retry: false,
 });
 
-/** After a membership change: counts, the lists that can include or exclude these questions, and their details. */
-export function invalidateMemberships(client: QueryClient, scope: BankScope, collectionId: string, questionIds: string[]) {
+/** After a membership, edit, archive or delete: counts, every list (rows show memberships and answer state) and the touched details. */
+export function invalidateQuestions(client: QueryClient, scope: BankScope, questionIds: string[]) {
   void client.invalidateQueries({ queryKey: bankKeys.collections(scope) });
-  void client.invalidateQueries({ queryKey: bankKeys.lists(scope), predicate: query => (query.queryKey[4] as BankFilters | undefined)?.collectionId === collectionId });
+  void client.invalidateQueries({ queryKey: bankKeys.lists(scope) });
   for (const id of questionIds) void client.invalidateQueries({ queryKey: bankKeys.detail(scope, id) });
 }
 
 export const collectionLabel = (collection: Pick<BankCollection, "kind" | "name" | "firstPage">) =>
-  collection.kind === "source_section" && collection.firstPage ? `${collection.name} · p. ${collection.firstPage}` : collection.name;
+  collection.kind === "source_section" && collection.firstPage ? `${collection.name} · Page ${collection.firstPage}` : collection.name;
+
+/** A source filename without its extension. */
+export const fileTitle = (file: string) => file.replace(/\.[a-z0-9]{1,5}$/i, "");
+
+/** A printed number such as "12" or "3b"; printed labels like "First Question" or "Unnumbered" are not numbers. */
+export const questionNumber = (printed: string | null | undefined) => printed && /^\d{1,4}[a-z]?$/i.test(printed.trim()) ? printed.trim() : null;
+
+export function questionTitle(printed: string | null | undefined) {
+  const number = questionNumber(printed);
+  if (number) return `Question ${number}`;
+  return printed?.trim() && !/^unnumbered$/i.test(printed.trim()) ? printed.trim() : "Question";
+}

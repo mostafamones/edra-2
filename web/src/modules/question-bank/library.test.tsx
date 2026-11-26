@@ -2,7 +2,9 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
-import { listQuestionBank, loadQuestionBankCollections, readQuestionBank, setQuestionBankMembership } from "./bank";
+import {
+  archiveQuestionBankQuestions, deleteQuestionBankQuestions, listQuestionBank, loadQuestionBankCollections, readQuestionBank, setQuestionBankMembership, updateQuestionBankQuestion,
+} from "./bank";
 import type { BankCollections, BankPage } from "./bank-contract";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QuestionLibraryPage } from "./library";
@@ -10,7 +12,9 @@ import { QuestionLibraryPage } from "./library";
 vi.mock("./bank", () => ({
   listQuestionBank: vi.fn(), loadQuestionBankCollections: vi.fn(), readQuestionBank: vi.fn(), setQuestionBankMembership: vi.fn(),
   createQuestionBankCollection: vi.fn(), renameQuestionBankCollection: vi.fn(),
+  updateQuestionBankQuestion: vi.fn(), archiveQuestionBankQuestions: vi.fn(), deleteQuestionBankQuestions: vi.fn(),
 }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/modules/auth", () => ({ useAcademyScope: () => () => true }));
 vi.mock("@/lib/routing", () => ({ staffAcademyHref: (slug: string, path: string) => `/${slug}${path}` }));
 vi.mock("@/components/shared/link", () => ({ default: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props} /> }));
@@ -22,13 +26,13 @@ afterEach(() => { cleanup(); vi.resetAllMocks(); });
 const ids = { q1: "10000000-0000-4000-8000-000000000001", q2: "10000000-0000-4000-8000-000000000002", doc: "20000000-0000-4000-8000-000000000001",
   section: "20000000-0000-4000-8000-000000000002", algebra: "20000000-0000-4000-8000-000000000003", review: "20000000-0000-4000-8000-000000000004" };
 const scopeA = { academyId: "a0000000-0000-4000-8000-000000000001", academySlug: "science", accountId: "staff-a" };
-const collections: BankCollections = { total: 2, collections: [
+const collections: BankCollections = { total: 2, archived: 0, collections: [
   { id: ids.algebra, kind: "topic", name: "Algebra", parentId: null, firstPage: null, count: 2 },
   { id: ids.doc, kind: "source_document", name: "Unit 3 book", parentId: null, firstPage: null, count: 2 },
   { id: ids.section, kind: "source_section", name: "Exercises", parentId: ids.doc, firstPage: 4, count: 1 },
   { id: ids.review, kind: "custom", name: "Revision", parentId: null, firstPage: null, count: 1 },
 ] };
-const row = (id: string, prompt: string) => ({ id, unitId: null, prompt, printedNumber: "1", file: "book.pdf", page: 4, choice: false });
+const row = (id: string, prompt: string) => ({ id, unitId: null, prompt, printedNumber: "1", file: "book.pdf", page: 4, choice: false, answered: true, figures: false, collections: [] });
 const page = (rows: BankPage["rows"], total = rows.length): { ok: true; data: BankPage } => ({ ok: true, data: { total, rows } });
 
 function mount(scope = scopeA, client = new QueryClient()) {
@@ -45,18 +49,18 @@ it("searches and filters the whole library on the server, resetting pagination, 
   await screen.findByText("Question at 0");
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
   await screen.findByText("Question at 24");
-  fireEvent.click(within(screen.getByRole("navigation", { name: "Collections" })).getByRole("button", { name: /Exercises · p\. 4/ }));
-  await waitFor(() => expect(vi.mocked(listQuestionBank).mock.lastCall![0]!.data.filters).toEqual({ collectionId: ids.section, query: "", offset: 0 }));
+  fireEvent.click(within(screen.getByRole("navigation", { name: "Collections" })).getByRole("button", { name: /Exercises · Page 4/ }));
+  await waitFor(() => expect(vi.mocked(listQuestionBank).mock.lastCall![0]!.data.filters).toEqual({ collectionId: ids.section, query: "", offset: 0, archived: false }));
   fireEvent.change(screen.getByRole("searchbox", { name: "Search questions" }), { target: { value: "missing" } });
   expect(await screen.findByText("No matching questions")).toBeTruthy();
-  expect(vi.mocked(listQuestionBank).mock.lastCall![0]!.data).toMatchObject({ academyId: scopeA.academyId, filters: { collectionId: ids.section, query: "missing", offset: 0 } });
+  expect(vi.mocked(listQuestionBank).mock.lastCall![0]!.data).toMatchObject({ academyId: scopeA.academyId, filters: { collectionId: ids.section, query: "missing", offset: 0, archived: false } });
   expect(screen.queryByRole("list", { name: "Questions" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
   await screen.findByText("Question at 0");
 });
 
 it("shows an empty library separately from a failed read, and retries", async () => {
-  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: { total: 0, collections: [] } });
+  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: { total: 0, archived: 0, collections: [] } });
   vi.mocked(listQuestionBank).mockResolvedValueOnce({ ok: false, message: "Couldn’t load the question bank. Try again." }).mockResolvedValueOnce(page([]));
   mount();
   expect(await screen.findByText("Couldn’t load questions")).toBeTruthy();
@@ -69,7 +73,7 @@ it("shows an empty library separately from a failed read, and retries", async ()
 it("previews a question in several collections and removes one membership without removing the question", async () => {
   vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: collections });
   vi.mocked(listQuestionBank).mockResolvedValue(page([row(ids.q1, "Solve for x")]));
-  vi.mocked(readQuestionBank).mockResolvedValue({ ok: true, data: { id: ids.q1, unitId: null, collections: [ids.doc, ids.section, ids.algebra, ids.review], payload: {
+  vi.mocked(readQuestionBank).mockResolvedValue({ ok: true, data: { id: ids.q1, unitId: null, archived: false, collections: [ids.doc, ids.section, ids.algebra, ids.review], payload: {
     prompt: "Solve for x", choices: [], answer: null, modelAnswer: "x = 2", topic: null, section: "Exercises", printedNumber: "1",
     source: { file: "book.pdf", page: 4, continuationPages: [5] }, visuals: [],
   } } });
@@ -78,7 +82,7 @@ it("previews a question in several collections and removes one membership withou
   fireEvent.click(await screen.findByRole("button", { name: /Solve for x/ }));
   const preview = within(await screen.findByRole("article", { name: "Question 1" }));
   expect(preview.getByText("Unit 3 book")).toBeTruthy();
-  expect(preview.getByText("Exercises · p. 4")).toBeTruthy();
+  expect(preview.getByText("Exercises · Page 4")).toBeTruthy();
   expect(preview.getByText("4, 5")).toBeTruthy();
   expect(preview.getByText("x = 2")).toBeTruthy();
   expect(preview.queryByRole("button", { name: "Remove from Unit 3 book" })).toBeNull();
@@ -110,7 +114,7 @@ it("adds selected questions to a collection in bulk", async () => {
 });
 
 it("never shows a late response from the previous account or academy", async () => {
-  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: { total: 1, collections: [] } });
+  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: { total: 1, archived: 0, collections: [] } });
   let finishA!: (value: ReturnType<typeof page>) => void;
   vi.mocked(listQuestionBank).mockImplementation(({ data }) => data.academyId === scopeA.academyId
     ? new Promise(resolve => { finishA = resolve; }) : Promise.resolve(page([row(ids.q2, "Academy B question")])));
@@ -123,4 +127,43 @@ it("never shows a late response from the previous account or academy", async () 
   expect(screen.queryByText("Academy A question")).toBeNull();
   expect(client.getQueryCache().findAll({ queryKey: ["question-bank", scopeB.accountId, scopeB.academyId] })
     .every(query => JSON.stringify(query.state.data ?? "").includes("Academy A") === false)).toBe(true);
+});
+
+it("confirms an answer by clicking a choice, and lists source groups without file extensions", async () => {
+  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: collections });
+  vi.mocked(listQuestionBank).mockResolvedValue(page([{ ...row(ids.q1, "Pick one"), printedNumber: "First Question", choice: true, answered: false, collections: [ids.algebra] }]));
+  vi.mocked(readQuestionBank).mockResolvedValue({ ok: true, data: { id: ids.q1, unitId: null, archived: false, collections: [], payload: {
+    prompt: "Pick one", choices: [{ key: "a", text: "R" }, { key: "b", text: "{-4}" }], answer: null, topic: null, section: null, printedNumber: "First Question",
+    source: { file: "book.pdf", page: 4, continuationPages: [] }, visuals: [],
+  } } });
+  vi.mocked(updateQuestionBankQuestion).mockResolvedValue({ ok: true, data: null });
+  mount();
+  expect(await screen.findByRole("button", { name: /^book · Page 4/ })).toBeTruthy();
+  expect(screen.queryByText(/QFirst/)).toBeNull();
+  expect(within(screen.getByRole("list", { name: "Questions" })).getByText("Algebra")).toBeTruthy();
+  expect(screen.getByRole("img", { name: "No answer confirmed" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Pick one/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Choice b" }, { timeout: 2000 }));
+  await waitFor(() => expect(updateQuestionBankQuestion).toHaveBeenCalledWith({ data: { academyId: scopeA.academyId, id: ids.q1,
+    changes: { prompt: "Pick one", choices: [{ key: "a", text: "R" }, { key: "b", text: "{-4}" }], answer: "b", modelAnswer: "" } } }));
+});
+
+it("archives selected questions and deletes only after confirmation", async () => {
+  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: collections });
+  vi.mocked(listQuestionBank).mockResolvedValue(page([row(ids.q1, "First"), row(ids.q2, "Second")]));
+  vi.mocked(archiveQuestionBankQuestions).mockResolvedValue({ ok: true, data: 2 });
+  vi.mocked(deleteQuestionBankQuestions).mockResolvedValue({ ok: true, data: 1 });
+  mount();
+  await screen.findByText("First");
+  for (const box of screen.getAllByRole("checkbox", { name: "Select question 1" })) fireEvent.click(box);
+  fireEvent.click(screen.getByRole("button", { name: "Archive" }));
+  await waitFor(() => expect(archiveQuestionBankQuestions).toHaveBeenCalledWith({ data: { academyId: scopeA.academyId, questionIds: [ids.q1, ids.q2], archived: true } }));
+  await waitFor(() => expect(screen.queryByText("2 selected")).toBeNull());
+
+  fireEvent.click(screen.getAllByRole("checkbox", { name: "Select question 1" })[0]!);
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  expect(deleteQuestionBankQuestions).not.toHaveBeenCalled();
+  fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Delete" }));
+  await waitFor(() => expect(deleteQuestionBankQuestions).toHaveBeenCalledWith({ data: { academyId: scopeA.academyId, questionIds: [ids.q1] } }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 });
