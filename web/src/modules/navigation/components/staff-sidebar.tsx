@@ -4,7 +4,7 @@ import Link from "@/components/shared/link";
 import { useRouter } from "@/lib/navigation";
 import { type ComponentProps } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft02Icon, AssignmentsIcon, Building03Icon, Calendar03Icon, FolderLibraryIcon, Home07Icon, Message01Icon, StudentsIcon, TeachingIcon, Task01Icon, Ticket01Icon, UserCircleIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft02Icon, AssignmentsIcon, Building03Icon, Calendar03Icon, CheckListIcon, FolderLibraryIcon, Home07Icon, Message01Icon, StudentsIcon, TeachingIcon, Task01Icon, Ticket01Icon, UserCircleIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ function StaffLink({ item, icon, pathname, closeMobile, also = [] }: {
   const active = [item.href, ...also].some((target) => activeFor(pathname, target));
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild tooltip={item.label} isActive={active} className={icon ? "text-sidebar-foreground/75" : undefined}>
+      <SidebarMenuButton asChild tooltip={item.label} isActive={active} className="text-sidebar-foreground/75">
         <Link href={href(item.href)} onClick={closeMobile} aria-current={pathname === item.href ? "page" : undefined}>
           {icon ? <HugeiconsIcon icon={icon} strokeWidth={1.5} aria-hidden="true" /> : <Icon aria-hidden="true" />}
           <span>{item.label}</span>
@@ -173,7 +173,7 @@ function WorkspaceNavigation({ pathname, role, closeMobile, sidebarOpen, expandS
             })}
             <StaffLink item={pageFor("/app/content")} icon={FolderLibraryIcon} pathname={pathname} closeMobile={closeMobile} />
             <StaffLink item={pageFor("/app/assessments")} icon={AssignmentsIcon} pathname={pathname} closeMobile={closeMobile} also={ASSESSMENT_PATHS} />
-            {canViewStaffItem(questionBank, role) && <StaffLink item={questionBank} pathname={pathname} closeMobile={closeMobile} />}
+            {canViewStaffItem(questionBank, role) && <StaffLink item={questionBank} icon={CheckListIcon} pathname={pathname} closeMobile={closeMobile} />}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
