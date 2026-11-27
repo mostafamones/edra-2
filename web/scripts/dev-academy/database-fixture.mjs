@@ -33,15 +33,15 @@ from fixture_accounts;
 create temp table fx on commit drop as select ${jsonLiteral({ lockToken, scenarioHash: scenarioHash(scenario), academySlug: "edra-fixture", scenario })} as doc;
 insert into edra_private.dev_runs (id, project_ref, recipe_version, seed, reference_date, student_count, scenario_hash,
   developer_id, state, lock_token, lock_expires_at)
-select '${runId}', 'abcdefghijklmnopqrst', doc->'scenario'->'config'->>'recipeVersion', doc->'scenario'->'config'->>'seed',
+select '${runId}'::uuid, 'abcdefghijklmnopqrst', doc->'scenario'->'config'->>'recipeVersion', doc->'scenario'->'config'->>'seed',
   (doc->'scenario'->'config'->>'referenceDate')::date, (doc->'scenario'->'config'->>'studentCount')::integer,
-  doc->>'scenarioHash', '${developerId}', 'loading', '${lockToken}', now() + interval '30 minutes' from fx;
+  doc->>'scenarioHash', '${developerId}'::uuid, 'loading', '${lockToken}'::uuid, now() + interval '30 minutes' from fx;
 insert into edra_private.dev_contacts (phone, run_id, logical_id, purpose)
-select account->>'phone', '${runId}', account->>'logicalId', 'login' from fixture_accounts
-union all select account->>'parentPhone', '${runId}', account->>'logicalId', 'parent'
+select account->>'phone', '${runId}'::uuid, account->>'logicalId', 'login' from fixture_accounts
+union all select account->>'parentPhone', '${runId}'::uuid, account->>'logicalId', 'parent'
 from fixture_accounts where account->>'parentPhone' is not null;
 insert into edra_private.dev_accounts (run_id, logical_id, kind, display_name, phone, user_id, credential_ciphertext, state)
-select '${runId}', account->>'logicalId', account->>'kind', account->>'displayName', account->>'phone',
+select '${runId}'::uuid, account->>'logicalId', account->>'kind', account->>'displayName', account->>'phone',
   (account->>'userId')::uuid, 'fixture-only-unused-credential', 'created' from fixture_accounts;
 ${readSql("load")}
 ${verify}
