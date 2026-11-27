@@ -46,3 +46,8 @@ it("transports authorized start and checkpoint results", async () => {
   expect(saved.ok).toBe(true);
   expect(await throughTransport(saved)).toEqual(saved);
 });
+it("keeps open-only YouTube plays separate from Mux duration backfill", async () => {
+  mocks.rpc.mockResolvedValue({ error: null, data: { sessionId, assetId: itemId, providerAssetId: null, youtubeId: "4BUq8tldjyo", durationSeconds: null, positionSeconds: 0 } });
+  expect(await startVideoProgress({ academyId, unitId, itemId })).toEqual({ ok: true, value: { sessionId, durationSeconds: null, positionSeconds: 0 } });
+  expect(mocks.mux).not.toHaveBeenCalled();
+});

@@ -3,7 +3,7 @@ import { createPrivateKey, createSign, createHmac, timingSafeEqual } from "node:
 
 type MuxResponse<T> = { data: T };
 export class MuxRequestError extends Error {
-  constructor(readonly status: number) { super("The video provider is unavailable. Please retry."); }
+  constructor(readonly status: number, message = "The video provider is unavailable. Please retry.") { super(message); }
 }
 export async function muxRequest<T>(path: string, body?: object, method = body ? "POST" : "GET"): Promise<T> {
   const id = process.env.MUX_TOKEN_ID, secret = process.env.MUX_TOKEN_SECRET;
@@ -13,7 +13,16 @@ export async function muxRequest<T>(path: string, body?: object, method = body ?
     headers: { Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString("base64")}`, "Content-Type": "application/json" },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
-  if (!response.ok) throw new MuxRequestError(response.status);
+  if (!response.ok) {
+    if (method === "POST" && path === "video/v1/uploads" && response.status === 400) {
+      const payload = await response.json().catch(() => null) as { error?: { messages?: unknown } } | null;
+      const messages = payload?.error?.messages;
+      if (Array.isArray(messages) && messages.some(message => typeof message === "string" && /^Free plan is limited to \d+ assets, you cannot create direct uploads while exceeding this limit$/i.test(message))) {
+        throw new MuxRequestError(response.status, "Video storage is full on the current plan. Free up space or contact the account owner.");
+      }
+    }
+    throw new MuxRequestError(response.status);
+  }
   if (response.status === 204) return undefined as T;
   return ((await response.json()) as MuxResponse<T>).data;
 }

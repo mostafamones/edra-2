@@ -2539,6 +2539,7 @@ export type Database = {
           status: string
           storage_path: string | null
           unit_id: string
+          youtube_id: string | null
         }
         Insert: {
           academy_id: string
@@ -2556,6 +2557,7 @@ export type Database = {
           status?: string
           storage_path?: string | null
           unit_id: string
+          youtube_id?: string | null
         }
         Update: {
           academy_id?: string
@@ -2573,6 +2575,7 @@ export type Database = {
           status?: string
           storage_path?: string | null
           unit_id?: string
+          youtube_id?: string | null
         }
         Relationships: [
           {
@@ -9171,6 +9174,10 @@ export type Database = {
           p_session: Database["public"]["Tables"]["sessions"]["Row"]
         }
         Returns: Json
+      }
+      register_youtube_lesson: {
+        Args: { p_academy_id: string; p_unit_id: string; p_asset_id: string; p_youtube_id: string; p_title: string; p_duration?: number }
+        Returns: string
       }
       remove_staff_member: {
         Args: { p_academy_id: string; p_user_id: string }

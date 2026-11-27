@@ -28,6 +28,13 @@ describe("student material authority", () => {
     expect(await throughTransport(result)).toEqual({ ok: false, message: "Active unit access is required." });
     expect(mocks.admin).not.toHaveBeenCalled(); expect(mocks.token).not.toHaveBeenCalled();
   });
+  it("returns the YouTube embed ID only through authorized lesson access and does not sign Mux playback", async () => {
+    mocks.rpc.mockResolvedValue({ error: null, data: { kind: "video", playbackId: null, storagePath: null, youtubeId: "4BUq8tldjyo", expiresAt: new Date(1800000060000).toISOString() } });
+    const result = await openLearningMaterial(input);
+    expect(await throughTransport(result)).toEqual({ ok: true, value: { kind: "youtube", youtubeId: "4BUq8tldjyo", expires: 1800000060 } });
+    expect(mocks.rpc).toHaveBeenCalledWith("authorize_content_material", { p_academy_id: academyId, p_unit_id: unitId, p_item_id: itemId });
+    expect(mocks.token).not.toHaveBeenCalled();
+  });
   it("caps every video audience at the authorized grant expiry", async () => {
     mocks.rpc.mockResolvedValue({ error: null, data: { kind: "video", playbackId: "published-video", storagePath: null, expiresAt: new Date(1800000060000).toISOString() } });
     const result = await openLearningMaterial(input);

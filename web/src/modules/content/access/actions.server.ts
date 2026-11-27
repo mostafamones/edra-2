@@ -49,11 +49,13 @@ export async function openLearningMaterial(value: unknown) {
   return contentResult(async () => {
     const input = unitInput.extend({ itemId: z.guid() }).parse(value);
     const { db } = await learningCaller();
-    const { data, error } = await db.rpc("authorize_content_material", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_item_id: input.itemId });
+    const scope = { p_academy_id: input.academyId, p_unit_id: input.unitId, p_item_id: input.itemId };
+    const { data, error } = await db.rpc("authorize_content_material", scope);
     learningError(error);
     const material = materialSchema.parse(data);
     const deadline = Math.floor(new Date(material.expiresAt).getTime() / 1000);
     if (deadline <= Math.floor(Date.now() / 1000)) throw new Error("Your access has expired.");
+    if (material.kind === "video" && material.youtubeId) return { kind: "youtube" as const, youtubeId: material.youtubeId, expires: deadline };
     if (material.kind === "video" && material.playbackId) {
       const playback = playbackToken(material.playbackId, "v", deadline);
       return { kind: "video" as const, playbackId: material.playbackId, token: playback.token, expires: playback.expires,
