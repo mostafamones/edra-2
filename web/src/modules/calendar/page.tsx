@@ -21,6 +21,8 @@ import { EventButton } from "./event";
 import { calendarHistoryOptions, calendarLiveOptions } from "./queries";
 
 const HOUR = 72;
+// Share of the visible grid above the now line when a week opens.
+const NOW_POSITION = 0.3;
 const VIEWS = [
   { value: "month", label: "Month", icon: Calendar03Icon },
   { value: "week", label: "Week", icon: Calendar02Icon },
@@ -76,12 +78,12 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
   const hourLabel = (hour: number) => `${hour % 12 || 12} ${hour % 24 < 12 ? "AM" : "PM"}`;
   const scroller = useRef<HTMLDivElement>(null);
   const weekStart = days[0];
-  // Centre the now line (or 8 AM on other weeks) once the grid exists; the user scrolls freely afterwards.
+  // Put the now line near the top so the grid favours what is coming over what has passed (or 8 AM on other weeks) once the grid exists; the user scrolls freely afterwards.
   useEffect(() => {
     const box = scroller.current; if (!box) return;
     const now = box.querySelector<HTMLElement>("[data-now]");
     const head = box.firstElementChild?.getBoundingClientRect().height ?? 0;
-    box.scrollTop = now ? now.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - (box.clientHeight + head) / 2 : 8 * HOUR;
+    box.scrollTop = now ? now.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - head - (box.clientHeight - head) * NOW_POSITION : 8 * HOUR;
   }, [weekStart, loading, view, year]);
   const height = (lastHour - firstHour) * HOUR;
   const renderEvent = (event: (typeof events)[number], compact = false) => <EventButton key={event.id} event={event} format={timeFormat} now={minutes(wall.slice(11))} academyId={academy.id} role={academy.role} compact={compact} today={today} pending={pendingId !== null} onStart={id => void start(id)} />;
