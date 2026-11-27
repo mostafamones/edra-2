@@ -54,6 +54,8 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
   const [hidden, setHidden] = useState<ReadonlySet<CalendarEvent["kind"]>>(new Set());
   useEffect(() => { const timer = setInterval(() => setWall(academyNow()), 60_000); return () => clearInterval(timer); }, []);
   const today = wall.slice(0, 10), days = weekDays(selected), range = view === "month" ? monthGrid(selected) : days;
+  // The period button only offers a tooltip when it would actually move the view.
+  const onNow = view === "month" ? selected.slice(0, 7) === today.slice(0, 7) : days.includes(today);
   const schedules = useQuery({ queryKey: scheduleListQueryKey(academy.id), queryFn: () => loadSchedules(academy.id) });
   const structure = useQuery({ queryKey: structureQueryKey(academy.id), queryFn: () => loadStructure(academy.id) });
   const groups = useQuery({ queryKey: groupListQueryKey(academy.id, false), queryFn: () => loadGroups(academy.id) });
@@ -113,7 +115,7 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
       </HeaderActions>
       <div className="flex items-center rounded-lg bg-card p-1">
         <Button variant="ghost" size="icon-sm" aria-label={`Previous ${unit}`} onClick={() => step(-1)}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} /></Button>
-        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="sm" aria-label="Go to today" onClick={() => setSelected(today)}>{view === "month" ? dateLabel(selected, { month: "short", year: "numeric" }) : `${dateLabel(days[0], { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short" })}`}</Button></TooltipTrigger><TooltipContent>Return to now</TooltipContent></Tooltip>
+        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="sm" aria-label="Go to today" onClick={() => setSelected(today)}>{view === "month" ? dateLabel(selected, { month: "short", year: "numeric" }) : `${dateLabel(days[0], { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short" })}`}</Button></TooltipTrigger>{!onNow && <TooltipContent>Return to now</TooltipContent>}</Tooltip>
         <Button variant="ghost" size="icon-sm" aria-label={`Next ${unit}`} onClick={() => step(1)}><HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={1.5} /></Button>
       </div>
       <FilterPopover iconOnly icon={PreferenceHorizontalIcon} label="View options" sections={[{ id: "show", active: hidden.size > 0, onReset: () => setHidden(new Set()),
