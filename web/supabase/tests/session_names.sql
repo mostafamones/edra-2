@@ -22,7 +22,8 @@ exception when sqlstate 'XX001' then raise;
 end $$;
 create temporary table name_ids(name text primary key, id uuid not null default gen_random_uuid());
 insert into name_ids(name) values ('owner'),('instructor'),('suspended'),('outsider'),('academy'),('other');
-grant select on pg_temp.name_ids to authenticated;
+-- Schedule creation runs as authenticated and stores its returned IDs in this fixture table.
+grant select, insert on pg_temp.name_ids to authenticated;
 create function pg_temp.id(label text) returns uuid language sql as $$ select id from pg_temp.name_ids where name=label $$;
 create function pg_temp.act(label text) returns void language sql as $$ select set_config('request.jwt.claim.sub',coalesce(pg_temp.id(label)::text,''),true) $$;
 
