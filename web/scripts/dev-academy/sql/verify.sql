@@ -73,7 +73,7 @@ with run as (
     'exam_attempts', (select count(*) from public.exam_attempts x, run where x.academy_id = run.academy_id),
     'exam_online_answers', (select count(*) from public.exam_online_answers x, run where x.academy_id = run.academy_id),
     'exam_submission_answers', (select count(*) from public.exam_submission_answers x, run where x.academy_id = run.academy_id),
-    'exam_marks', (select count(*) from public.exam_marks x, run where x.academy_id = run.academy_id),
+    'exam_marks', (select count(*) from public.exam_marks x, run where x.academy_id = run.academy_id)
   ) || jsonb_build_object(
     'content_units', (select count(*) from public.content_units x, run where x.academy_id = run.academy_id),
     'content_placeholder_videos', (select count(*) from public.content_assets x, run where x.academy_id = run.academy_id and x.placeholder),
