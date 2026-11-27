@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SquareArrowUpRightIcon } from "@hugeicons/core-free-icons";
+import { SquareArrowOutUpRightIcon } from "@hugeicons/core-free-icons";
 import Link from "@/components/shared/link";
 import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ export function AssignmentPerformance({ items, base }: { items: NonNullable<Over
         <h2 id="home-assignments" className={heading}>Assignment performance</h2>
         {overall !== null && <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="font-heading text-3xl font-semibold tabular-nums tracking-tight">{overall}%</span><span className="text-sm text-muted-foreground">average across {items.length} {items.length === 1 ? "assignment" : "assignments"}</span>{below > 0 && <span className="text-sm font-medium text-destructive tabular-nums">{below} below 50%</span>}</p>}
       </div>
-      <Button asChild variant="ghost" size="sm" className="-mr-2"><Link href={`${base}/assignments`}>Assignments<HugeiconsIcon icon={SquareArrowUpRightIcon} strokeWidth={1.5} aria-hidden="true" /></Link></Button>
+      <Button asChild variant="ghost" size="sm" className="-mr-2"><Link href={`${base}/assignments`}>Assignments<HugeiconsIcon icon={SquareArrowOutUpRightIcon} strokeWidth={1.5} aria-hidden="true" /></Link></Button>
     </div>
     {items.length ? <ChartContainer config={config} className="aspect-auto h-56 w-full px-2" role="img" aria-label={`Assignment averages: ${items.map(item => `${item.title}, ${Math.round(item.average)}%, ${item.marked} of ${item.recipients} marked`).join("; ")}`}>
       <BarChart data={series} accessibilityLayer margin={{ left: 4, right: 16, top: 8, bottom: 0 }}>

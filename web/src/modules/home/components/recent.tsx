@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SquareArrowUpRightIcon } from "@hugeicons/core-free-icons";
+import { SquareArrowOutUpRightIcon } from "@hugeicons/core-free-icons";
 import Link from "@/components/shared/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { focus, heading } from "./shared";
 /** Latest ended sessions with their attendance; drafts are labelled rather than mixed with official results. */
 export function RecentSessions({ sessions, base }: { sessions: NonNullable<Overview["recent"]>; base: string }) {
   return <Card aria-labelledby="home-recent" className="h-full min-w-0 gap-0 rounded-xl py-0 shadow-none">
-    <div className="flex items-center justify-between gap-2 border-b px-5 py-3"><h2 id="home-recent" className={heading}>Recent sessions</h2><Button asChild variant="ghost" size="sm" className="-mr-2"><Link href={`${base}/attendance`}>All sessions<HugeiconsIcon icon={SquareArrowUpRightIcon} strokeWidth={1.5} aria-hidden="true" /></Link></Button></div>
+    <div className="flex items-center justify-between gap-2 border-b px-5 py-3"><h2 id="home-recent" className={heading}>Recent sessions</h2><Button asChild variant="ghost" size="sm" className="-mr-2"><Link href={`${base}/attendance`}>All sessions<HugeiconsIcon icon={SquareArrowOutUpRightIcon} strokeWidth={1.5} aria-hidden="true" /></Link></Button></div>
     {sessions.length ? <ul className="divide-y">{sessions.map(session => {
       const percent = session.counted ? Math.round(session.attended / session.counted * 100) : null;
       return <li key={session.id}><Link href={`${base}/attendance/${session.id}`} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 px-5 py-3 transition-colors hover:bg-muted/40 sm:grid-cols-[minmax(0,1fr)_7rem_minmax(6rem,10rem)_3rem] ${focus}`}>
