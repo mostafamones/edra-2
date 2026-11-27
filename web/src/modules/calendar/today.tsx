@@ -28,7 +28,7 @@ export function TodayEvents({ academy }: { academy: AcademyEntry }) {
     <PopoverTrigger asChild>
       <button type="button" aria-label={`Today, session ${position + 1} of ${sessions.length}: ${event.title}`}
         onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onFocus={() => setHover(true)} onBlur={() => setHover(false)}
-        className="flex max-w-60 min-w-0 items-center gap-2 rounded-lg bg-muted/50 px-2.5 py-1 outline-none transition-colors duration-200 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">
+        className="flex max-w-60 min-w-0 items-center gap-2 rounded-lg bg-muted/50 px-2.5 py-1.5 outline-none transition-colors duration-200 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">
         <span key={event.id} className="flex min-w-0 flex-col items-end gap-0.5 text-right leading-none duration-300 animate-in fade-in slide-in-from-bottom-1 motion-reduce:animate-none">
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">{event.live && <span aria-hidden="true" className="size-1.5 animate-pulse rounded-full bg-primary" />}Today<span className="tabular-nums">{position + 1}/{sessions.length}</span></span>
           <span dir="auto" className="max-w-full truncate text-sm leading-4 font-medium">{event.title}</span>
