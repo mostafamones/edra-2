@@ -21,7 +21,7 @@ The iOS Home Screen icon uses the SwiftUI app’s original Icon Composer asset i
 
 ## App configuration
 
-Set these public values in `.env.local` or export them in your shell before running Expo commands:
+Copy [.env.example](.env.example) to `.env.local` (or export the values in your shell) before running Expo commands:
 
 ```dotenv
 EXPO_PUBLIC_EDRA_SUPABASE_URL=https://your-project-ref.supabase.co
