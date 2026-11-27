@@ -1,5 +1,5 @@
 import type { AssessmentListItem } from "@/modules/assessments";
-import { academyNow, audienceLabel, type AudienceLookup, type Schedule, type ScheduleSession, type ScheduleSlot } from "@/modules/schedules";
+import { academyNow, audienceLabel, type AudienceLookup, type OccurrenceName, type Schedule, type ScheduleSession, type ScheduleSlot } from "@/modules/schedules";
 import type { LiveSession, PastSession } from "@/modules/sessions";
 
 export type CalendarEvent = {
@@ -8,6 +8,8 @@ export type CalendarEvent = {
   location?: string | null; scheduleId?: string; sessionId?: string; assessmentId?: string; openOnly?: boolean;
   trackIds?: string[]; groupIds?: string[]; window?: boolean; opensAt?: string; closesAt?: string | null;
   live?: boolean; recorded?: boolean; status?: string; expected?: number;
+  /** Sessions only: the schedule occurrence this event names, and the schedule title it falls back to. */
+  occursOn?: string; scheduleTitle?: string; named?: boolean; scheduleKind?: Schedule["kind"];
 };
 export const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
 export const clock = (value: number) => `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
@@ -16,8 +18,16 @@ export function shiftDay(day: string, amount: number) {
 }
 export function weekDays(day: string) {
   const weekday = new Date(`${day}T12:00:00Z`).getUTCDay();
-  const first = shiftDay(day, -((weekday + 6) % 7));
+  const first = shiftDay(day, -weekday);
   return Array.from({ length: 7 }, (_, index) => shiftDay(first, index));
+}
+export function shiftMonth(day: string, amount: number) {
+  const date = new Date(`${day.slice(0, 7)}-01T12:00:00Z`); date.setUTCMonth(date.getUTCMonth() + amount); return date.toISOString().slice(0, 10);
+}
+/** Six Sunday-first weeks covering the month of `day`, so the grid never changes height. */
+export function monthGrid(day: string) {
+  const first = weekDays(`${day.slice(0, 7)}-01`)[0];
+  return Array.from({ length: 42 }, (_, index) => shiftDay(first, index));
 }
 export function dateLabel(day: string, options: Intl.DateTimeFormatOptions) {
   return new Intl.DateTimeFormat("en-GB", { ...options, timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
@@ -36,16 +46,23 @@ function interval(start: string, end: string | null, days: string[], base: Omit<
 
 export function calendarEvents(input: {
   days: string[]; today: string; schedules: Schedule[]; slots: ScheduleSlot[]; dates: ScheduleSession[];
-  lookup: AudienceLookup; sessions: (LiveSession | PastSession)[]; assessments: AssessmentListItem[];
+  lookup: AudienceLookup; sessions: (LiveSession | PastSession)[]; assessments: AssessmentListItem[]; names: OccurrenceName[];
   year: { starts_on: string; ends_on: string } | null;
 }): CalendarEvent[] {
   const events: CalendarEvent[] = [];
   const recorded = new Set<string>();
+  const names = new Map(input.names.map(item => [`${item.schedule_id}:${item.occurs_on}`, item.name]));
+  // Only active schedules can be renamed; archived ones keep their names read-only.
+  const kinds = new Map(input.schedules.filter(schedule => !schedule.archived_at).map(schedule => [schedule.id, schedule.kind]));
+  const naming = (scheduleId: string, day: string, scheduleTitle: string) => {
+    const name = names.get(`${scheduleId}:${day}`);
+    return { title: name ?? scheduleTitle, named: !!name, scheduleTitle, occursOn: day, scheduleKind: kinds.get(scheduleId) };
+  };
   for (const session of new Map(input.sessions.map(session => [session.id, session])).values()) {
     const day = academyNow(new Date(session.startedAt)).slice(0, 10);
     recorded.add(`${session.scheduleId}:${day}`);
     events.push(...interval(session.startedAt, "endedAt" in session ? session.endedAt : session.autoEndAt, input.days, {
-      id: `session:${session.id}`, title: session.scheduleTitle, kind: "session", deadline: false,
+      id: `session:${session.id}`, ...naming(session.scheduleId, day, session.scheduleTitle), kind: "session", deadline: false,
       audience: [session.groupName, session.levelName, session.trackName].filter(Boolean).join(" · "),
       levelIds: [session.levelId], trackIds: session.trackId ? [session.trackId] : [], groupIds: session.groupId ? [session.groupId] : [], location: session.location, scheduleId: session.scheduleId,
       sessionId: session.id, recorded: true, live: session.state === "live", expected: session.rosterCount,
@@ -54,19 +71,20 @@ export function calendarEvents(input: {
   for (const schedule of input.schedules) {
     if (schedule.archived_at) continue;
     for (const day of input.days) {
-      if (!input.year || day < input.year.starts_on || day > input.year.ends_on || recorded.has(`${schedule.id}:${day}`)) continue;
+      // Past occurrences that never started are not history, so they are not shown.
+      if (!input.year || day < input.today || day < input.year.starts_on || day > input.year.ends_on || recorded.has(`${schedule.id}:${day}`)) continue;
       const weekday = new Date(`${day}T12:00:00Z`).getUTCDay() || 7;
       const occurrences = schedule.kind === "recurring"
         ? input.slots.filter(slot => slot.schedule_id === schedule.id && slot.weekday === weekday)
         : input.dates.filter(date => date.schedule_id === schedule.id && date.occurs_on === day);
       for (const occurrence of occurrences) {
         const level = schedule.level_id ?? (schedule.group_id ? input.lookup.groups.get(schedule.group_id)?.level_id : null);
-        events.push({ id: `planned:${occurrence.id}:${day}`, title: schedule.title, day,
+        events.push({ id: `planned:${occurrence.id}:${day}`, ...naming(schedule.id, day, schedule.title), day,
           start: minutes(occurrence.starts_at), end: minutes(occurrence.ends_at), deadline: false, kind: "session",
           audience: audienceLabel(schedule, input.lookup), levelIds: level ? [level] : [],
           trackIds: (schedule.track_id ?? (schedule.group_id ? input.lookup.groups.get(schedule.group_id)?.track_id : null)) ? [schedule.track_id ?? input.lookup.groups.get(schedule.group_id!)!.track_id!] : [],
           groupIds: schedule.group_id ? [schedule.group_id] : [], location: schedule.location,
-          scheduleId: schedule.id, status: day < input.today ? "Planned" : undefined });
+          scheduleId: schedule.id });
       }
     }
   }

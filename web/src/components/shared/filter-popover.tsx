@@ -33,7 +33,7 @@ export type FilterSection = { id: string; active: boolean; onReset: () => void; 
  * `children` (such as a Create button) sit beside it, and the panel aligns to the right edge of the whole group.
  * With `iconOnly`, the trigger is an icon button and `children` join it in a button group; the caller places the group.
  */
-export function FilterPopover({ fields, sections = [], children, iconOnly = false }: { fields: FilterField[]; sections?: FilterSection[]; children?: ReactNode; iconOnly?: boolean }) {
+export function FilterPopover({ fields, sections = [], children, iconOnly = false, label = "Filters", icon = FilterIcon }: { icon?: typeof FilterIcon; fields: FilterField[]; sections?: FilterSection[]; children?: ReactNode; iconOnly?: boolean; label?: string }) {
   const active = fields.filter((field) => field.value !== field.defaultValue).length + sections.filter((section) => section.active).length;
   return (
     <Popover>
@@ -43,8 +43,8 @@ export function FilterPopover({ fields, sections = [], children, iconOnly = fals
             <Tooltip>
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="icon" className="relative" aria-label={active > 0 ? `Filters, ${active} applied` : "Filters"}>
-                    <HugeiconsIcon icon={FilterIcon} />
+                  <Button variant="outline" size="icon" className="relative" aria-label={active > 0 ? `${label}, ${active} applied` : label}>
+                    <HugeiconsIcon icon={icon} strokeWidth={1.5} />
                     {active > 0 && (
                       <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 z-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
                         {active}
@@ -53,7 +53,7 @@ export function FilterPopover({ fields, sections = [], children, iconOnly = fals
                   </Button>
                 </PopoverTrigger>
               </TooltipTrigger>
-              <TooltipContent>Filters</TooltipContent>
+              <TooltipContent>{label}</TooltipContent>
             </Tooltip>
             {children}
           </ButtonGroup>
@@ -71,7 +71,7 @@ export function FilterPopover({ fields, sections = [], children, iconOnly = fals
       </PopoverAnchor>
       <PopoverContent align="end" className="w-72 gap-3">
         <div className="mb-2 flex min-h-7 items-center justify-between">
-          <p className="font-heading text-sm font-semibold">Filters</p>
+          <p className="font-heading text-sm font-semibold">{label}</p>
           {active > 0 && (
             <Button variant="ghost" size="sm" className="-mr-2 h-7 text-muted-foreground"
               onClick={(event) => {

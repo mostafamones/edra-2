@@ -7,6 +7,7 @@ export type Schedule = Pick<Tables<"schedules">,
   "id" | "academy_id" | "academic_year_id" | "title" | "kind" | "audience" | "group_id" | "level_id" | "track_id"
   | "mandatory" | "location" | "archived_at" | "created_by">;
 export type ScheduleSession = Pick<Tables<"schedule_sessions">, "id" | "academy_id" | "academic_year_id" | "schedule_id" | "occurs_on" | "starts_at" | "ends_at">;
+export type OccurrenceName = Pick<Tables<"schedule_occurrence_names">, "schedule_id" | "occurs_on" | "name">;
 export type ScheduleSlot = Pick<Tables<"schedule_slots">, "id" | "academy_id" | "academic_year_id" | "schedule_id" | "weekday" | "starts_at" | "ends_at">;
 
 const SCHEDULE_COLUMNS = "id,academy_id,academic_year_id,title,kind,audience,group_id,level_id,track_id,mandatory,location,archived_at,created_by";
@@ -22,9 +23,9 @@ export const scheduleQueryKey = (academyId: string, scheduleId: string) => [...s
 /** Active or archived schedules for the active academic year, with their weekly slots. */
 export async function loadSchedules(academyId: string, options: { archived?: boolean } = {}) {
   const year = await loadActiveYear(academyId);
-  if (!year) return { year: null, schedules: [] as Schedule[], slots: [] as ScheduleSlot[], sessions: [] as ScheduleSession[] };
+  if (!year) return { year: null, schedules: [] as Schedule[], slots: [] as ScheduleSlot[], sessions: [] as ScheduleSession[], names: [] as OccurrenceName[] };
   const db = createClient();
-  const [schedules, slots, sessions] = await Promise.all([
+  const [schedules, slots, sessions, names] = await Promise.all([
     fetchAllPages<Schedule>((from, to) => {
       const query = db.from("schedules").select(SCHEDULE_COLUMNS)
         .eq("academy_id", academyId).eq("academic_year_id", year.id);
@@ -37,11 +38,14 @@ export async function loadSchedules(academyId: string, options: { archived?: boo
     fetchAllPages<ScheduleSession>((from, to) => db.from("schedule_sessions").select(SESSION_COLUMNS)
       .eq("academy_id", academyId).eq("academic_year_id", year.id)
       .order("id").range(from, to)),
+    fetchAllPages<OccurrenceName>((from, to) => db.from("schedule_occurrence_names").select("schedule_id,occurs_on,name")
+      .eq("academy_id", academyId).eq("academic_year_id", year.id)
+      .order("schedule_id").order("occurs_on").range(from, to)),
   ]);
   // Slots and sessions are read for the whole year; keep only those whose schedule is in this list.
   const ids = new Set(schedules.map((schedule) => schedule.id));
   return { year, schedules, slots: slots.filter((slot) => ids.has(slot.schedule_id)),
-    sessions: sessions.filter((session) => ids.has(session.schedule_id)) };
+    sessions: sessions.filter((session) => ids.has(session.schedule_id)), names };
 }
 
 /** One schedule and its slots fetched directly by tenant and id. */
