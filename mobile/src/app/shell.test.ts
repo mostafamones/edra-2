@@ -1,4 +1,4 @@
-// Run: node --test mobile/react-native/src/app/*.test.ts (Node ≥ 22.18, no dependencies).
+// Run: node --test mobile/src/app/*.test.ts (Node ≥ 22.18, no dependencies).
 // The real AcademiesController, sessions/assignments models and ApiClient over a routed fake fetch.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'

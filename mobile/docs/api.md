@@ -17,7 +17,7 @@ Request ownership: cancellation is best effort; correctness comes from explicit 
 - `SessionsModel` and `SchedulesModel` commit only their newest load for the current context; a stale 401/403 neither signs out nor clears a newer context. An older page load cannot reset a newer load's busy state.
 - On a context change the shell returns to Overview, clears academy navigation and resets the start flow (retry key, picker, pending navigation). Reselecting the current academy changes nothing. `AssignmentsModel`/`WorkspaceModel`/`MarkingModel` follow the same newest-load and context checks; a voluntary academy switch with an unsaved marking draft asks Save / Discard / Keep editing before `select`.
 
-Deterministic TypeScript tests cover request ownership, token recovery, session start and academy changes. Run them with `npm test` from `mobile/react-native`.
+Deterministic TypeScript tests cover request ownership, token recovery, session start and academy changes. Run them with `npm test` from `mobile`.
 
 ## Starting a session
 

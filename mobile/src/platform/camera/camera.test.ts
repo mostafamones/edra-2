@@ -1,4 +1,4 @@
-// Run: node --test mobile/react-native/src/platform/camera/*.test.ts (Node ≥ 22.18, no dependencies).
+// Run: node --test mobile/src/platform/camera/*.test.ts (Node ≥ 22.18, no dependencies).
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { ScanFilter } from '../../features/assignments/scan.ts'

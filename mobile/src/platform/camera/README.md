@@ -40,4 +40,4 @@ The Expo foundation provides the following:
 
 ## Verification
 
-`node --test mobile/react-native/src/platform/camera/*.test.ts` covers presence/rearm with `ScanFilter`, status, torch, permission and pinch. The `.tsx` and Swift sources need the foundation toolchain to type-check and build. Camera behaviour requires device evidence on iPhone and Android.
+`node --test mobile/src/platform/camera/*.test.ts` covers presence/rearm with `ScanFilter`, status, torch, permission and pinch. The `.tsx` and Swift sources need the foundation toolchain to type-check and build. Camera behaviour requires device evidence on iPhone and Android.

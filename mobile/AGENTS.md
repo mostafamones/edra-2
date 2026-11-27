@@ -4,7 +4,7 @@ Follow `../AGENTS.md`, including Master-thread planning-only and cloud-database 
 
 ## Confirmed platform and architecture
 
-- Edra ships one React Native instructor companion for iOS and Android. Keep Expo and Node dependencies and the lockfile in `mobile/react-native/`. Use Expo development builds for testing on phones.
+- Edra ships one React Native instructor companion for iOS and Android. Keep Expo and Node dependencies and the lockfile in `mobile/`. Use Expo development builds for testing on phones.
 - React Native owns screens, routes and feature state. Use native UIKit or SwiftUI components for iOS tabs, navigation chrome, presentation, Liquid Glass controls and other platform behavior where needed. SwiftUI may implement components consumed by React Native. Preserve the approved iPhone appearance and interaction on the same devices and OS versions, including native fallbacks on earlier supported versions.
 - The product is a simplified instructor dashboard with academy selection, live sessions, and shared attendance; it is not constrained to a single scan screen. The approved instructor MVP includes session/attendance and physical marking; later enhancements remain provisional until reviewed before implementation planning.
 - Generate the iOS and Android projects through Expo prebuild. Preserve pinned native dependencies and the upgrade verification path documented in the setup guide. Keep mobile build and release workflows independent of `web/`. Do not migrate web dependencies or introduce root workspace orchestration.

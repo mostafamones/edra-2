@@ -1,4 +1,4 @@
-// Run: node --test mobile/react-native/src/navigation/*.test.ts (Node ≥ 22.18, no dependencies).
+// Run: node --test mobile/src/navigation/*.test.ts (Node ≥ 22.18, no dependencies).
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import { test } from 'node:test'

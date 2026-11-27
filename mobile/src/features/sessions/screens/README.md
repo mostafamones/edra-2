@@ -72,6 +72,6 @@ On an academy or account change the shell pops the Sessions stack and calls `sta
 
 ## Checks
 
-`node --test mobile/react-native/src/features/sessions/screens/*.test.ts` covers the formatting helpers.
+`node --test mobile/src/features/sessions/screens/*.test.ts` covers the formatting helpers.
 Screen rendering, native chrome, VoiceOver/TalkBack, Dynamic Type and device behavior are verified once
 the foundation's Expo project and native components exist.

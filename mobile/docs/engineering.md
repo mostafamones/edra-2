@@ -12,7 +12,7 @@ Use current credentials per request, controlled refresh and secure platform stor
 
 ## UI and dependencies
 
-Use native accessibility, safe areas, keyboard handling and text sizing. Ordinary app icons follow the shared Hugeicons rule. The app bundles [Hugeicons assets](../react-native/assets/hugeicons/ATTRIBUTION.md) at stroke width 1.5, with a heavier iOS Bold Text variant. Brand logos use official assets and brand colors unless a different variant is explicitly specified. Browser primitives do not define native components. Keep necessary native dependencies and committed resolution files.
+Use native accessibility, safe areas, keyboard handling and text sizing. Ordinary app icons follow the shared Hugeicons rule. The app bundles [Hugeicons assets](../assets/hugeicons/ATTRIBUTION.md) at stroke width 1.5, with a heavier iOS Bold Text variant. Brand logos use official assets and brand colors unless a different variant is explicitly specified. Browser primitives do not define native components. Keep necessary native dependencies and committed resolution files.
 
 ## Checks
 

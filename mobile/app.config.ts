@@ -1,7 +1,6 @@
 import type { ExpoConfig } from "expo/config";
 
-const candidateId = "com.mostafamones.edra.rn";
-const releaseId = "com.mostafamones.edra";
+const appId = "com.mostafamones.edra";
 const releaseTeam = "39YK2DQP92";
 const upgradeVerification = process.env.EDRA_IOS_IDENTITY === "upgrade";
 const signingTeam = process.env.EDRA_APPLE_TEAM_ID || undefined;
@@ -11,15 +10,15 @@ if (upgradeVerification && signingTeam !== releaseTeam) {
 }
 
 const config: ExpoConfig = {
-  name: "Edra RN",
+  name: "Edra",
   slug: "edra-instructor",
-  scheme: "edra-rn",
+  scheme: "edra",
   version: "0.1.0",
   orientation: "portrait",
   ios: {
     icon: "./assets/Edra.icon",
     userInterfaceStyle: "automatic",
-    bundleIdentifier: upgradeVerification ? releaseId : candidateId,
+    bundleIdentifier: appId,
     supportsTablet: false,
     appleTeamId: signingTeam,
     infoPlist: {
@@ -29,7 +28,7 @@ const config: ExpoConfig = {
     },
   },
   android: {
-    package: candidateId,
+    package: appId,
     blockedPermissions: [
       "android.permission.RECORD_AUDIO",
       "android.permission.READ_EXTERNAL_STORAGE",

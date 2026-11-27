@@ -3,7 +3,6 @@
 - [Product scope](product.md): instructor MVP and confirmed later direction.
 - [Engineering](engineering.md): native architecture, UI, authority and checks.
 - [API integration](api.md): current adapter and web contract boundaries.
-- [Run/setup](../README.md): app setup and historical SwiftUI reference.
-- [React Native setup](../react-native/README.md): Expo toolchain, dev-client/release workflow and integration contract.
+- [Setup](../README.md): Expo toolchain, dev-client/release workflow, integration contract and historical SwiftUI reference.
 
 Shared [app boundaries](../../docs/engineering/application-boundaries.md) and [brand](../../docs/engineering/brand.md) are canonical. Plans and unresolved review choices stay outside this index.

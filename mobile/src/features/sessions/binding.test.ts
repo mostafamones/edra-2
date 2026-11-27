@@ -1,4 +1,4 @@
-// Run: node --test mobile/react-native/src/features/sessions/*.test.ts (Node ≥ 22.18, no dependencies).
+// Run: node --test mobile/src/features/sessions/*.test.ts (Node ≥ 22.18, no dependencies).
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { AccountScope, AcademySelection } from '../../core/ownership.ts'

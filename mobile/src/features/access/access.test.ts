@@ -1,4 +1,4 @@
-// Run: node --test mobile/react-native/src/features/access/*.test.ts (Node ≥ 22.18, no dependencies).
+// Run: node --test mobile/src/features/access/*.test.ts (Node ≥ 22.18, no dependencies).
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { AuthFailure, SignInFailure, type AuthAuthority, type AuthFailureKind, type SignInFailureKind } from '../../core/auth.ts'
