@@ -23,6 +23,8 @@ describe("learning recipe (v6)", () => {
     assert.ok(!scenario.roster.some((r) => online.has(r.studentId)));
     assert.ok(scenario.assignmentResults.some((r) => online.has(r.studentId) && r.answers.length));
     assert.ok(scenario.examResults.some((r) => online.has(r.studentId) && r.attempt));
+    // The loader requires a grader on every received result.
+    assert.ok(scenario.examResults.filter((r) => r.receivedAt).every((r) => r.gradedById));
   });
 
   it("builds a varied placeholder library with access and progress", () => {

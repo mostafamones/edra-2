@@ -71,7 +71,7 @@ export function addOnlineAssessments(scenario, rand, weeks, content) {
         scenario.examResults.push({
           id: rand.uuid(rkey), key: rkey, examId: e.id, studentId: student.id, state: sat ? "announced" : "missing",
           receivedAt: sat ? iso(Date.parse(e.opensAt) + 50 * 60_000) : null, gradedAt: null, announcedAt: null,
-          gradedById: null, components: null, total: null,
+          gradedById: sat ? staff : null, components: null, total: null,
         });
       });
     }
