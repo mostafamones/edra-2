@@ -12,16 +12,11 @@ export function RecentSessions({ sessions, base }: { sessions: NonNullable<Overv
     <div className="flex items-center justify-between gap-2 border-b px-5 py-3"><h2 id="home-recent" className={heading}>Recent sessions</h2><Button asChild variant="ghost" size="sm" className="-mr-2"><Link href={`${base}/attendance`}>All sessions</Link></Button></div>
     {sessions.length ? <ul className="divide-y">{sessions.map(session => {
       const percent = session.counted ? Math.round(session.attended / session.counted * 100) : null;
-      return <li key={session.id}><Link href={`${base}/attendance/${session.id}`} className={`block space-y-2 px-5 py-3 transition-colors hover:bg-muted/40 ${focus}`}>
-        <span className="flex items-center gap-2">
-          <span dir="auto" className="min-w-0 flex-1 truncate text-sm font-medium">{session.title}</span>
-          {!session.finalized && <Badge variant="outline">Draft</Badge>}
-          <span className="shrink-0 text-sm font-semibold tabular-nums">{percent === null ? "—" : `${percent}%`}</span>
-        </span>
-        <span className="flex items-center gap-3">
-          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted" aria-hidden="true"><span className="block h-full rounded-full bg-[var(--chart-2)]" style={{ width: `${percent ?? 0}%` }} /></span>
-          <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{session.attended}/{session.counted} · <time dateTime={session.startedAt}>{formatAcademyRelative(session.startedAt)}</time></span>
-        </span>
+      return <li key={session.id}><Link href={`${base}/attendance/${session.id}`} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 px-5 py-3 transition-colors hover:bg-muted/40 sm:grid-cols-[minmax(0,1fr)_7rem_minmax(6rem,10rem)_3rem] ${focus}`}>
+        <span className="flex min-w-0 items-center gap-2"><span dir="auto" className="truncate text-sm font-medium">{session.title}</span>{!session.finalized && <Badge variant="outline" className="shrink-0">Draft</Badge>}</span>
+        <time dateTime={session.startedAt} className="text-right text-xs text-muted-foreground tabular-nums sm:text-left">{formatAcademyRelative(session.startedAt)}</time>
+        <span className="flex items-center gap-2"><span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted" aria-hidden="true"><span className="block h-full rounded-full bg-[var(--chart-2)]" style={{ width: `${percent ?? 0}%` }} /></span><span className="w-8 text-right text-xs text-muted-foreground tabular-nums">{session.attended}/{session.counted}</span></span>
+        <span className="text-right text-sm font-semibold tabular-nums">{percent === null ? "—" : `${percent}%`}</span>
       </Link></li>;
     })}</ul> : <p className="px-5 py-12 text-center text-sm text-muted-foreground">No ended sessions yet</p>}
   </Card>;

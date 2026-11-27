@@ -23,16 +23,16 @@ export function HomeView({ academyName, base, live, overview }: {
     <QueryContent query={overview} label="academy overview" isEmpty={() => false} emptyTitle="No overview">
       {data => data.year === null ? <Card className="p-5 font-medium">No open academic year</Card> : <>
         <HomeStats data={data} live={live.data?.length ?? null} base={base} />
-        <div className="grid items-stretch gap-4 xl:grid-cols-3">
+        <div className="grid gap-4 xl:grid-cols-3">
           <div className="min-w-0 xl:col-span-2">{data.attendance ? <AttendanceTrend weeks={data.attendance} /> : <StudentsByGrade data={data} base={base} />}</div>
-          <HomeAlerts data={data} live={live.data ?? null} base={base} />
-        </div>
-        <div className="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+          <div className="flex min-w-0 flex-col gap-4">
+            <HomeAlerts data={data} live={live.data ?? null} base={base} />
+            <TodayPlan items={data.today} base={base} />
+          </div>
+          {data.recent && <div className="min-w-0 xl:col-span-2"><RecentSessions sessions={data.recent} base={base} /></div>}
           {data.watch && <StudentsToWatch students={data.watch} base={base} />}
-          {data.recent && <RecentSessions sessions={data.recent} base={base} />}
-          <TodayPlan items={data.today} base={base} />
+          {data.attendance && <div className="min-w-0 xl:col-span-3"><StudentsByGrade data={data} base={base} /></div>}
         </div>
-        {data.attendance && <StudentsByGrade data={data} base={base} />}
       </>}
     </QueryContent>
   </main>;

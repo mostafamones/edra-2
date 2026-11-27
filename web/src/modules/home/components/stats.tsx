@@ -1,4 +1,5 @@
 import Link from "@/components/shared/link";
+import { useId } from "react";
 import { Area, AreaChart } from "recharts";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
@@ -41,27 +42,27 @@ export function HomeStats({ data, live, base }: { data: Overview; live: number |
   return <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
     {stats.map(stat => {
       const body = <>
-        <span className="flex items-center justify-between gap-2 text-sm text-muted-foreground">{stat.label}{stat.href && <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={1.5} className="size-4 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true" />}</span>
-        <span className="flex items-end justify-between gap-3">
-          <span className="space-y-1">
-            <span className="block font-heading text-3xl font-semibold tabular-nums tracking-tight">{stat.value}</span>
-            <span className={`block h-4 text-xs font-medium tabular-nums ${tones[stat.tone]}`}>{stat.change}{stat.change && stat.spark && <span className="font-normal text-muted-foreground"> vs prior 4 weeks</span>}</span>
-          </span>
-          {stat.spark && <Spark values={stat.spark} />}
-        </span>
+        {stat.spark && <Spark values={stat.spark} />}
+        <span className="relative flex items-center justify-between gap-2 text-sm text-muted-foreground">{stat.label}{stat.href && <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={1.5} className="size-4 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true" />}</span>
+        <span className="relative block font-heading text-3xl font-semibold tabular-nums tracking-tight">{stat.value}</span>
+        <span className={`relative block h-4 text-xs font-medium tabular-nums ${tones[stat.tone]}`}>{stat.change}{stat.change && stat.spark && <span className="font-normal text-muted-foreground"> vs prior 4 weeks</span>}</span>
       </>;
-      return <Card key={stat.label} className="gap-3 rounded-xl p-0 shadow-none">
-        {stat.href ? <Link href={stat.href} className={`group flex flex-col gap-3 rounded-xl p-5 transition-colors hover:bg-muted/30 ${focus}`}>{body}<span className="sr-only">Open {stat.label.toLowerCase()}</span></Link> : <div className="flex flex-col gap-3 p-5">{body}</div>}
+      const box = "relative isolate flex flex-col gap-1.5 overflow-hidden rounded-xl p-5";
+      return <Card key={stat.label} className="gap-0 rounded-xl p-0 shadow-none">
+        {stat.href ? <Link href={stat.href} className={`group ${box} transition-colors hover:bg-muted/30 ${focus}`}>{body}<span className="sr-only">Open {stat.label.toLowerCase()}</span></Link> : <div className={box}>{body}</div>}
       </Card>;
     })}
   </div>;
 }
 
+/** A faint full-bleed trend behind the figures, read as texture rather than a separate chart. */
 function Spark({ values }: { values: (number | null)[] }) {
+  const id = `spark${useId().replace(/:/g, "")}`;
   const series = values.map((value, index) => ({ index, value }));
-  return <ChartContainer config={{ value: { label: "Trend", color: "var(--chart-2)" } }} className="aspect-auto h-10 w-24 shrink-0" aria-hidden="true">
-    <AreaChart data={series} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
-      <Area dataKey="value" type="monotone" stroke="var(--color-value)" strokeWidth={1.5} fill="var(--color-value)" fillOpacity={0.12} connectNulls dot={false} isAnimationActive={false} />
+  return <ChartContainer config={{ value: { label: "Trend", color: "var(--muted-foreground)" } }} className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 aspect-auto h-14 w-full opacity-60" aria-hidden="true">
+    <AreaChart data={series} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+      <defs><linearGradient id={id} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.18} /><stop offset="100%" stopColor="var(--color-value)" stopOpacity={0} /></linearGradient></defs>
+      <Area dataKey="value" type="monotone" stroke="var(--color-value)" strokeOpacity={0.35} strokeWidth={1} fill={`url(#${id})`} connectNulls dot={false} isAnimationActive={false} />
     </AreaChart>
   </ChartContainer>;
 }

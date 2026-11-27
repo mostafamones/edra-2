@@ -11,8 +11,8 @@ const ranges = [{ value: "4", label: "4w" }, { value: "8", label: "8w" }, { valu
 const statuses = ["present", "late", "excused", "absent"] as const;
 const config = {
   present: { label: "Present", color: "var(--chart-2)" },
-  late: { label: "Late", color: "var(--chart-4)" },
-  excused: { label: "Excused", color: "var(--chart-5)" },
+  late: { label: "Late", color: "oklch(0.769 0.188 70.08)" },
+  excused: { label: "Excused", color: "var(--muted-foreground)" },
   absent: { label: "Absent", color: "var(--destructive)" },
 } satisfies ChartConfig;
 
