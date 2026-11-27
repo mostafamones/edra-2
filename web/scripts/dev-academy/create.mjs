@@ -113,7 +113,7 @@ export async function createRun(ctx, log = console.log) {
     && run.seed === ctx.scenario.config.seed && run.reference_date === ctx.scenario.config.referenceDate;
   if (!same) throw new Error("Run already exists with a different configuration; resume requires identical inputs.");
   if (run.state === "ready") throw new Error("Run is already ready; use inspect or verify instead of create.");
-  if (!(await one(ctx.runSql, lockRunSql(ctx.runId, ctx.lockToken, ctx.scenario.config.studentCount === 300 ? 30 : 5)))) {
+  if (!(await one(ctx.runSql, lockRunSql(ctx.runId, ctx.lockToken, ctx.scenario.config.studentCount > 20 ? 30 : 5)))) {
     throw new Error(`Run cannot be locked (state ${run.state}, or another create holds the lock).`);
   }
 
