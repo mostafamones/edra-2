@@ -8,8 +8,12 @@ The daily overview prioritizes actionable work, today's teaching and active enro
 - The queue shows the oldest eight tasks; the count covers all matching tasks. Each row opens its actual session, unit or assignment. No action is performed by opening Home.
 - Students: unarchived annual records in the open year, grouped by grade and participation type. These are enrolled records, not linked-account counts. Online means `online_only`; grade and participation summaries link to the existing student filters.
 - Today: the first twelve planned occurrences in Cairo's current calendar date, including separate times for schedules with multiple slots. Live activity uses the existing Sessions infinite-query contract and opens attendance. Planned times are not actual start times. Schedules remains the complete plan.
-- Layout: live sessions and the needs-attention queue sit at the top as alerts, followed by headline numbers, the attendance trend, students by grade (stacked in-person/online bars that open the grade filter) and today's plan.
-- Attendance by week: the last eight ISO weeks in Cairo time, counting published marks of finalized sheets on unarchived sessions in the open year. Rate is present + late over present, late and absent; excused and unknown are excluded. A week with nothing finalized has no rate rather than 0%. If the server omits the series (migration not yet applied), the chart and headline tile are hidden instead of showing zero.
+- Layout: the only full-width page (no max width, so it grows when the sidebar collapses), with no page header (an sr-only "Home" heading remains). Order: headline tiles; attendance area chart beside Alerts; Students to watch, Recent sessions and Today; Students by grade.
+- Headline tiles compare the last four ISO weeks with the four before and draw a twelve-week sparkline: attendance rate (points), finalized sessions, active students (new records created), needs attention (plus live count).
+- Attendance chart: twelve ISO weeks in Cairo time of published marks on finalized sheets of unarchived open-year sessions, stacked by present, late, excused and absent. The 4w/8w/12w range slices loaded data without a request. Rate is present + late over present, late and absent. A week with nothing finalized has no rate rather than 0%.
+- Students to watch: unarchived open-year records with two or more official absences in finalized sessions started in the last 28 days; top six by absences. Names and grade only, no contact details. Each opens the student record.
+- Recent sessions: the six latest ended unarchived sessions; counts use the current sheet and are labelled Draft until the latest revision is finalized.
+- Sections whose data the server omits (migration not yet applied) are hidden rather than shown as zero.
 - No open year: show the status rather than implying an empty academy. Unknown/failed reads never become zero counters or an all-clear state.
 
 ## Data, authority and freshness
