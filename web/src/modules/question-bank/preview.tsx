@@ -18,7 +18,7 @@ const kindLabels: Record<BankCollection["kind"], string> = {
 const order: BankCollection["kind"][] = ["source_document", "source_section", "topic", "custom"];
 
 function Block({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="space-y-2.5" aria-label={title}>
+  return <section className="space-y-1.5" aria-label={title}>
     <SectionHeader title={title} />
     {children}
   </section>;
@@ -89,9 +89,9 @@ export function QuestionPreview({ detail, collections, academySlug, onRemove, on
 
     <Block title="Source">
       <div className="rounded-lg border text-sm">
-        <dl className="grid grid-cols-[minmax(0,1fr)_auto_auto] divide-x">
-          {[["File", fileTitle(payload.source.file)], [pages.length > 1 ? "Pages" : "Page", pages.join(", ")], ["Question", payload.printedNumber]].map(([label, value]) =>
-            <div key={label} className="min-w-0 space-y-0.5 px-3 py-2.5">
+        <dl className="grid grid-cols-[minmax(0,1fr)_6rem_6rem] divide-x">
+          {[["File", fileTitle(payload.source.file)], [pages.length > 1 ? "Pages" : "Page", pages.join(", ")], ["Q#", payload.printedNumber]].map(([label, value]) =>
+            <div key={label} className={cn("min-w-0 space-y-0.5 px-3 py-2.5", label !== "File" && "text-center")}>
               <dt className="text-xs text-muted-foreground">{label}</dt>
               <dd className="break-words font-medium" dir="auto">{value}</dd>
             </div>)}
