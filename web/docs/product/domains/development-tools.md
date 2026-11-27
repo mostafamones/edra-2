@@ -4,13 +4,21 @@ Final owner decisions recorded 2026-10-21. This document defines the development
 
 ## Dataset
 
-Create one synthetic academy in the existing cloud development Supabase project. Start with 20 fictional students and history **within the current academic year only**, beginning no earlier than August 16. This supersedes the original three-month request where it crosses the academic-year boundary. Expansion to 300–500 students is a later decision.
+Create one synthetic academy in the existing cloud development Supabase project. Start with 20 fictional students and history **within the current academic year only**, beginning no earlier than August 16. This supersedes the original three-month request where it crosses the academic-year boundary. On 2026-11-27 the owner approved a 300-student expansion with richer statistics data and students joining late. The versioned `edra-dev-v4` recipe has 12 groups of 20, 25 or 30 students, weekly physical assignments and fortnightly historical paper exams. Enrollment is staggered throughout the current academic year, including recent joiners with little or no history. Earlier attendance and assessment cohorts exclude students who had not enrolled yet; pre-enrollment sessions and work must never become absences, missing work or zero scores. Existing registered recipes remain reproducible and are not overwritten.
 
 Generate believable Egyptian names and valid-format synthetic contacts, with uniqueness where required. Use seeded randomness so a recipe, seed and reference date reproduce the same scenario. Secrets are independently random. Synthetic contacts must never receive actual OTPs or messages, including messages redirected to the developer by WhatsApp development routing.
 
 Students have compatible levels, tracks and groups, linked test accounts, and correlated patterns of attendance and academic performance. Include attendance, recorded physical assignment work, exam work and published scores. Include missing work and work awaiting marking or announcement. Do not invent replacement resolution or include quizzes in the first dataset.
 
 Generate actual records consumed by existing application services. Do not implement missing portal features, redesign screens, fabricate unsupported result visibility, or claim that seeded data proves a working UI. Recorded physical assignment work does not provide student online assignment submission.
+
+## Answer-level expansion
+
+On 2026-11-27 the owner approved richer question-level fixtures on top of the 300-student expansion. Version `edra-dev-v5` adds authored choice questions and per-question marking to physical assignments, with derived part marks. Assignment written work retains its existing score-only storage; typed student text is generated for online exam Written Work only.
+
+Historical exams include completed online attempts with saved and accepted answers. Cover correct, incorrect and unanswered choice questions, varied distractors, typed responses of varied quality, partial credit and recorded zeroes. Preserve the distinction between unmarked work and zero scores. Mixed exams include submitted/unmarked, partially marked, complete/private and announced work; automatic online exams publish on acceptance as normal. Marks and totals must agree with answers and existing scoring rules. Question difficulty and per-student strengths vary within the synthetic model; this does not define new reporting metrics or add a topic taxonomy.
+
+Use the existing acceptance, publication and solution-qualification contracts. Preserve enrollment eligibility, original attempt timers, immutable accepted answers/results and synthetic delivery suppression. These fixtures do not authorize changing the existing academy in place, creating live attempts in expired windows, or adding unsupported answer storage or analytics UI.
 
 ## Normal access
 

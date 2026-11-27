@@ -59,6 +59,9 @@ describe("S2 determinism", () => {
 });
 
 describe("legacy recipe compatibility", () => {
+  it("keeps the original v3 recipe byte-identical after adding the expanded recipe", () => {
+    assert.equal(scenarioHash(buildScenario({ recipeVersion: "edra-dev-v3" })), "607513cc63b1b60a5873a8e66c918b608b424a73a01beb84d8fe66305fb78246");
+  });
   // Captured before edra-dev-v2 existed; the registered development run was created from the first hash.
   it("rebuilds the registered v1 scenarios byte for byte", () => {
     assert.equal(scenarioHash(buildScenario({ recipeVersion: "edra-dev-v1" })), "b25cf643746ed25297cdace5a893bbfcccbe2c104fc65b8f15a4890627360ba8");

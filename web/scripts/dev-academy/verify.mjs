@@ -18,8 +18,9 @@ export function expectedCounts(scenario) {
   const parts = scenario.assignments.flatMap((a) => a.parts);
   const questions = scenario.exams.flatMap((e) => e.questions);
   const total = (list) => list.reduce((n, x) => n + x.maxScore, 0);
+  const accounts = scenario.students.length + scenario.staff.filter((s) => !s.placeholder).length;
   return {
-    accounts: 26, accounts_loaded: 26, auth_users: 26, years: 1, open_years: 1,
+    accounts, accounts_loaded: accounts, auth_users: accounts, years: 1, open_years: 1,
     memberships: scenario.staff.length, groups: scenario.groups.length, schedules: scenario.schedules.length,
     schedule_slots: scenario.schedules.reduce((n, s) => n + s.slots.length, 0),
     student_records: scenario.students.length, linked_records: scenario.students.length,
@@ -30,6 +31,9 @@ export function expectedCounts(scenario) {
     assignments: scenario.assignments.length, assignments_closed: scenario.assignments.filter((a) => a.kind === "historical").length,
     assignment_parts: parts.length,
     assignment_questions: parts.reduce((n, p) => n + (p.questions?.length ?? 1), 0),
+    assignment_choices: parts.reduce((n, p) => n + (p.questions ?? []).reduce((m, q) => m + (q.choices?.length ?? 0), 0), 0),
+    assignment_answers: scenario.assignmentResults.reduce((n, r) => n + (r.answers?.length ?? 0), 0),
+    assignment_derived_marks: scenario.assignmentResults.reduce((n, r) => n + (r.components ?? []).filter((c) => c.fromAnswers).length, 0),
     assignment_max_total: total(parts),
     assignment_recipients: scenario.assignmentResults.length,
     assignment_marks: scenario.assignmentResults.reduce((n, r) => n + (r.components?.length ?? 0), 0),
@@ -41,8 +45,21 @@ export function expectedCounts(scenario) {
     exam_max_total: total(questions),
     exam_closures: scenario.exams.filter((e) => e.kind === "historical").length,
     exam_work: scenario.examResults.filter(received).length, exam_submissions: scenario.examResults.filter(received).length,
-    exam_marks: scenario.examResults.reduce((n, r) => n + (r.components?.length ?? 0), 0),
+    exam_attempts: scenario.examResults.filter((r) => r.attempt).length,
+    exam_online_answers: scenario.examResults.reduce((n, r) => n + (r.answers?.length ?? 0), 0),
+    exam_submission_answers: scenario.examResults.reduce((n, r) => n + (r.answers?.length ?? 0), 0),
+    exam_marks: scenario.examResults.reduce((n, r) => {
+      const exam = scenario.exams.find((e) => e.id === r.examId);
+      return n + (r.components ?? []).filter((c) => !exam.questions.find((q) => q.id === c.partId)?.choices).length;
+    }, 0),
     exam_publications: scenario.examResults.filter((r) => r.state === "announced").length,
+    ...(scenario.library && {
+      content_units: scenario.library.units.length, content_placeholder_videos: scenario.library.assets.length,
+      content_attachments: scenario.library.units.filter((u) => u.assignmentId).length,
+      content_revisions: scenario.library.units.filter((u) => ["published", "published_edited"].includes(u.state)).length,
+      content_grants: scenario.library.grants.length, content_revocations: scenario.library.grants.filter((g) => g.revokedAt).length,
+      content_video_progress: scenario.library.progress.length,
+    }),
   };
 }
 

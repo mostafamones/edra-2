@@ -11,6 +11,15 @@ const cli = fileURLToPath(new URL("./cli.mjs", import.meta.url));
 const run = (args) => spawnSync(process.execPath, [cli, ...args], { env: {}, encoding: "utf8" });
 
 describe("S6 dry-run CLI", () => {
+  it("prints the expanded enrollment and work diagnostics without contacts", () => {
+    const result = run(["dry-run", "--recipe", "edra-dev-v4", "--students", "300", "--reference-date", "2026-11-27"]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Students 300 in 12 groups/);
+    assert.match(result.stdout, /^Enrollment months: /m);
+    assert.match(result.stdout, /^Attendance states: /m);
+    assert.match(result.stdout, /^Assignment states: /m);
+    assert.doesNotMatch(result.stdout, /\+20\d/);
+  });
   it("succeeds with an empty environment and prints a masked summary", () => {
     const result = run(["dry-run", "--reference-date", "2026-10-21", "--seed", "edra-20-v1", "--students", "20"]);
     assert.equal(result.status, 0, result.stderr);
@@ -169,5 +178,16 @@ describe("recipe of an existing run", () => {
 
   it("refuses a registered recipe this version does not know", () => {
     assert.throws(() => buildChecked(defaults, { recipe_version: "edra-dev-v7" }), /Unknown recipe "edra-dev-v7"/);
+  });
+});
+
+describe("academy name and slug", () => {
+  const base = ["create", "--project", "abcdefghijklmnopqrst", "--run", "11111111-1111-4111-8111-111111111111", "--developer", "22222222-2222-4222-8222-222222222222"];
+  it("accepts a name and slug on create only", () => {
+    const { options } = parseArgs([...base, "--academy-name", "Nile Coding Academy", "--slug", "nile-coding"]);
+    assert.equal(options.academyName, "Nile Coding Academy");
+    assert.equal(options.slug, "nile-coding");
+    assert.throws(() => parseArgs([...base, "--slug", "Bad Slug"]), /--slug/);
+    assert.throws(() => parseArgs(["dry-run", "--slug", "x"]), /not valid for dry-run/);
   });
 });

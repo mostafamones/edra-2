@@ -36,7 +36,8 @@ begin
   end if;
   if r.academy_id is not null then raise exception 'dev-academy: run already has an academy'; end if;
   if r.scenario_hash <> d->>'scenarioHash' then raise exception 'dev-academy: scenario hash mismatch'; end if;
-  if (select count(*) from edra_private.dev_accounts a where a.run_id = r.id and a.state = 'created') <> 26
+  if (select count(*) from edra_private.dev_accounts a where a.run_id = r.id and a.state = 'created') <> jsonb_array_length(d->'scenario'->'students') +
+      (select count(*) from jsonb_array_elements(d->'scenario'->'staff') x where not (x->>'placeholder')::boolean)
     or exists (select 1 from edra_private.dev_accounts a where a.run_id = r.id and a.state <> 'created') then
     raise exception 'dev-academy: generated accounts are not all provisioned';
   end if;
@@ -73,7 +74,8 @@ declare
 begin
   select user_id into owner_id from fx_people where key = 'staff:owner';
   select developer_id into developer from edra_private.dev_runs where id = v_run;
-  if owner_id is null or (select count(*) from fx_people) <> 26 then
+  if owner_id is null or (select count(*) from fx_people) <> jsonb_array_length(s->'students') +
+      (select count(*) from jsonb_array_elements(s->'staff') x where not (x->>'placeholder')::boolean) then
     raise exception 'dev-academy: scenario people do not match the registered accounts';
   end if;
 
@@ -113,10 +115,11 @@ begin
   select p.sid, p.user_id, p.name, p.phone, p.parent_phone,
     pg_temp.rid(pl->>'id') as record_id, pg_temp.rid(p.sid || ':academy-profile') as profile_id,
     pg_temp.rid(pl->>'groupId') as group_id, pl->>'levelKey' as level_id,
-    pg_temp.track(pl->>'levelKey', pl->>'track') as track_id, (pl->>'enrolledAt')::timestamptz as enrolled_at
+    pg_temp.track(pl->>'levelKey', pl->>'track') as track_id, (pl->>'enrolledAt')::timestamptz as enrolled_at,
+    case when pl->>'mode' = 'online-only' then 'online_only' else 'in_person' end::public.student_participation_type as ptype
   from fx_people p join jsonb_array_elements(s->'placements') pl on pl->>'studentId' = p.sid
   where p.is_student;
-  if (select count(*) from fx_students) <> 20 then raise exception 'dev-academy: expected 20 placed students'; end if;
+  if (select count(*) from fx_students) <> (s->'config'->>'studentCount')::integer then raise exception 'dev-academy: placed student count differs from scenario'; end if;
 
   insert into public.student_profiles (user_id, level_id, parent_phone, parent_phone_verified_at, created_at, updated_at)
   select user_id, level_id, parent_phone, enrolled_at, enrolled_at, enrolled_at from fx_students;
@@ -124,7 +127,7 @@ begin
   select profile_id, academy, enrolled_at, owner_id, user_id, enrolled_at from fx_students;
   insert into public.annual_student_records (id, academy_id, academic_year_id, academy_student_profile_id, full_name,
     student_phone, parent_phone, level_id, track_id, primary_group_id, participation_type, created_at, updated_at, created_by)
-  select record_id, academy, year_id, profile_id, name, phone, parent_phone, level_id, track_id, group_id, 'in_person',
+  select record_id, academy, year_id, profile_id, name, phone, parent_phone, level_id, track_id, group_id, ptype,
     enrolled_at, enrolled_at, owner_id
   from fx_students;
 
@@ -203,18 +206,18 @@ begin
   create temp table fx_assignments on commit drop as
   select a->>'id' as sid, pg_temp.rid(a->>'id') as id, a->>'kind' as kind, (a->>'week')::integer as week,
     coalesce(a->>'title', format('Week %s homework', a->>'week')) as title, coalesce(a->>'instructions', '') as instructions,
-    pg_temp.rid(a->>'groupId') as group_id, (a->>'assignedAt')::timestamptz as assigned_at,
+    pg_temp.rid(a->>'groupId') as group_id, coalesce(a->>'audience', 'groups') as audience, a->>'levelKey' as level_key, (a->>'assignedAt')::timestamptz as assigned_at,
     (a->>'dueAt')::timestamptz as due_at, a->'parts' as parts,
     (select p.user_id from fx_people p where p.role = 'instructor' order by p.key
      offset ((i - 1) % 3) limit 1) as author
   from jsonb_array_elements(s->'assignments') with ordinality t(a, i);
 
-  insert into public.assignments (id, academy_id, academic_year_id, title, instructions, audience, due_at, state, created_by,
+  insert into public.assignments (id, academy_id, academic_year_id, title, instructions, audience, level_id, due_at, state, created_by,
     created_at, updated_by, updated_at)
-  select id, academy, year_id, title, instructions, 'groups', due_at, 'active', author, assigned_at, author, assigned_at
+  select id, academy, year_id, title, instructions, audience::public.assignment_audience, level_key, due_at, 'active', author, assigned_at, author, assigned_at
   from fx_assignments;
   insert into public.assignment_audience_groups (assignment_id, academy_id, academic_year_id, group_id)
-  select id, academy, year_id, group_id from fx_assignments;
+  select id, academy, year_id, group_id from fx_assignments where audience = 'groups';
   insert into public.assignment_parts (id, academy_id, assignment_id, position, title, instructions, max_score, created_at, kind)
   select pg_temp.rid(p->>'id'), academy, a.id, n::smallint, p->>'title', coalesce(p->>'instructions', ''),
     (p->>'maxScore')::numeric, a.assigned_at, coalesce(p->>'kind', 'file_upload')::public.assignment_part_kind
@@ -227,6 +230,11 @@ begin
   select pg_temp.rid(q->>'id'), academy, a.id, pg_temp.rid(p->>'id'), (q->>'position')::smallint, q->>'prompt',
     (q->>'maxScore')::numeric
   from fx_assignments a, jsonb_array_elements(a.parts) p, jsonb_array_elements(p->'questions') q where p ? 'questions';
+  insert into public.assignment_question_choices (id, academy_id, assignment_id, part_id, question_id, position, label, is_correct)
+  select pg_temp.rid((q->>'id') || ':choice:' || n), academy, a.id, pg_temp.rid(p->>'id'), pg_temp.rid(q->>'id'),
+    n::smallint, label, chr(64 + n::integer) = q->>'correctChoice'
+  from fx_assignments a, jsonb_array_elements(a.parts) p, jsonb_array_elements(p->'questions') q,
+    jsonb_array_elements_text(q->'choices') with ordinality t(label, n) where q ? 'choices';
   if exists (select 1 from fx_assignments a join public.assignment_parts p on p.assignment_id = a.id, jsonb_array_elements(a.parts) x
       where p.id = pg_temp.rid(x->>'id') and p.max_score <> (x->>'maxScore')::numeric) then
     raise exception 'dev-academy: an assignment part maximum differs from the scenario';
@@ -240,7 +248,7 @@ begin
   select r->>'id' as sid, a.id as assignment_id, a.kind, a.assigned_at, a.due_at, a.author, st.record_id, r->>'state' as state,
     (r->>'receivedAt')::timestamptz as received_at, (r->>'late')::boolean as late,
     (r->>'gradedAt')::timestamptz as graded_at, (r->>'announcedAt')::timestamptz as announced_at,
-    g.user_id as grader, r->'components' as components
+    g.user_id as grader, r->'components' as components, coalesce(r->'answers', '[]'::jsonb) as answers
   from jsonb_array_elements(s->'assignmentResults') r
   join fx_assignments a on a.sid = r->>'assignmentId'
   join fx_students st on st.sid = r->>'studentId'
@@ -264,10 +272,18 @@ begin
   where x.id in (select id from fx_assignments);
 
   insert into public.assignment_marks (assignment_id, annual_student_record_id, part_id, academy_id, kind, score, updated_by,
-    updated_at)
-  select r.assignment_id, r.record_id, pg_temp.rid(c->>'partId'), academy, 'mark', (c->>'score')::numeric, r.grader, r.graded_at
+    updated_at, from_answers)
+  select r.assignment_id, r.record_id, pg_temp.rid(c->>'partId'), academy, 'mark', (c->>'score')::numeric, r.grader, r.graded_at, coalesce((c->>'fromAnswers')::boolean, false)
   from fx_assignment_results r, jsonb_array_elements(r.components) c
   where jsonb_typeof(r.components) = 'array';
+
+  insert into public.assignment_question_answers (assignment_id, annual_student_record_id, part_id, question_id,
+    academy_id, choice_id, score, updated_by, updated_at)
+  select r.assignment_id, r.record_id, pg_temp.rid(a->>'partId'), pg_temp.rid(a->>'questionId'), academy,
+    c.id, (a->>'score')::numeric, r.grader, r.graded_at
+  from fx_assignment_results r cross join lateral jsonb_array_elements(r.answers) a
+  left join public.assignment_question_choices c on c.question_id = pg_temp.rid(a->>'questionId')
+    and c.position = strpos('ABCDEFGHIJ', a->>'choice');
 
   -- Announced results mirror the publication RPC: ordered part snapshot and the canonical Postgres hash.
   for e in select * from fx_assignment_results where state in ('announced', 'late_announced') order by sid loop
@@ -316,7 +332,7 @@ begin
   create temp table fx_exams on commit drop as
   select x->>'id' as sid, pg_temp.rid(x->>'id') as id, x->>'kind' as kind, x->>'format' as format, (x->>'week')::integer as week,
     (x->>'opensAt')::timestamptz as opens_at, (x->>'scheduledClosesAt')::timestamptz as scheduled_closes_at,
-    (x->>'closesAt')::timestamptz as closes_at, (x->>'timerMinutes')::integer as timer, x->'groupIds' as group_ids,
+    (x->>'closesAt')::timestamptz as closes_at, (x->>'timerMinutes')::integer as timer, x->'groupIds' as group_ids, coalesce(x->>'audience', 'groups') as audience, x->>'levelKey' as level_key,
     x->'questions' as questions, x->'parts' as parts,
     coalesce(x->>'title', case x->>'kind' when 'historical' then format('Week %s paper exam', x->>'week')
       when 'open' then 'Preparatory practice exam' else 'Secondary practice exam' end) as title,
@@ -325,10 +341,10 @@ begin
     greatest(year_start, least((x->>'opensAt')::timestamptz - interval '3 days', reference_at - interval '1 day')) as created_at
   from jsonb_array_elements(s->'exams') with ordinality t(x, i);
 
-  insert into public.exams (id, academy_id, academic_year_id, title, instructions, solution_notes, audience, time_limit_minutes,
+  insert into public.exams (id, academy_id, academic_year_id, title, instructions, solution_notes, audience, level_id, time_limit_minutes,
     opens_at, closes_at, actual_closes_at, availability_updated_by, availability_updated_at, created_by, created_at, updated_by,
     updated_at)
-  select id, academy, year_id, title, instructions, solution_notes, 'groups', timer, opens_at, scheduled_closes_at, closes_at,
+  select id, academy, year_id, title, instructions, solution_notes, audience::public.exam_audience, level_key, timer, opens_at, scheduled_closes_at, closes_at,
     author, created_at, author, created_at, author, created_at
   from fx_exams;
   insert into public.exam_audience_groups (exam_id, academy_id, academic_year_id, group_id)
@@ -360,7 +376,13 @@ begin
   create temp table fx_exam_results on commit drop as
   select r->>'id' as sid, x.id as exam_id, x.closes_at, st.record_id, r->>'state' as state,
     (r->>'receivedAt')::timestamptz as received_at, (r->>'gradedAt')::timestamptz as graded_at,
-    (r->>'announcedAt')::timestamptz as announced_at, g.user_id as grader, r->'components' as components
+    (r->>'announcedAt')::timestamptz as announced_at, g.user_id as grader, r->'components' as components,
+    coalesce(r->'answers', '[]'::jsonb) as answers,
+    case when r ? 'attempt' then 'online' else 'physical' end as source,
+    case when r ? 'attempt' then pg_temp.rid(r->'attempt'->>'id') end as attempt_id,
+    (r->'attempt'->>'startedAt')::timestamptz as started_at,
+    (r->'attempt'->>'deadlineAt')::timestamptz as deadline_at,
+    r->'attempt'->>'reason' as reason
   from jsonb_array_elements(s->'examResults') r
   join fx_exams x on x.sid = r->>'examId'
   join fx_students st on st.sid = r->>'studentId'
@@ -371,22 +393,38 @@ begin
   end if;
 
   insert into public.exam_work (exam_id, annual_student_record_id, academy_id, academic_year_id, created_at, updated_at)
-  select exam_id, record_id, academy, year_id, received_at, received_at from fx_exam_results where received_at is not null;
+  select exam_id, record_id, academy, year_id, coalesce(started_at, received_at), received_at from fx_exam_results where received_at is not null;
   insert into public.exam_physical_drafts (exam_id, annual_student_record_id, academy_id, updated_by, updated_at)
-  select exam_id, record_id, academy, grader, graded_at from fx_exam_results where received_at is not null;
+  select exam_id, record_id, academy, grader, graded_at from fx_exam_results where received_at is not null and source = 'physical';
+  insert into public.exam_attempts (id, academy_id, exam_id, annual_student_record_id, started_at, deadline_at,
+    answers_version, last_saved_at)
+  select attempt_id, academy, exam_id, record_id, started_at, deadline_at, 1, received_at - interval '1 minute'
+  from fx_exam_results where received_at is not null and source = 'online';
+  insert into public.exam_online_answers (attempt_id, academy_id, exam_id, question_id, choice_id, text_answer, saved_at)
+  select r.attempt_id, academy, r.exam_id, pg_temp.rid(a->>'questionId'), c.id, a->>'textAnswer',
+    r.received_at - interval '1 minute'
+  from fx_exam_results r cross join lateral jsonb_array_elements(r.answers) a
+  left join public.exam_choices c on c.question_id = pg_temp.rid(a->>'questionId')
+    and c.position = strpos('ABCDEFGHIJ', a->>'choice')
+  where r.source = 'online';
+
   -- Exam components name the question in partId. Locks are set at the first historical receipt, so the activity helper keeps them instead of using now().
   update public.exams z set work_started_at = f.first_at, structure_locked_at = f.first_at
-  from (select exam_id, min(received_at) as first_at from fx_exam_results where received_at is not null group by exam_id) f
+  from (select exam_id, min(coalesce(started_at, received_at)) as first_at from fx_exam_results where received_at is not null group by exam_id) f
   where z.id = f.exam_id;
 
   for e in select * from fx_exam_results where received_at is not null order by exam_id, sid loop
     perform pg_temp.act(e.grader);
     select z.* into target from public.exams z where z.id = e.exam_id;
-    perform edra_private.accept_exam_submission(target, e.record_id, 'physical', 'physical', e.received_at, e.closes_at);
+    perform edra_private.accept_exam_submission(target, e.record_id, e.source::public.exam_source,
+      coalesce(e.reason, 'physical')::public.exam_finalization_reason, e.received_at,
+      case when e.source = 'online' then e.received_at else e.closes_at end);
   end loop;
   insert into public.exam_marks (exam_id, annual_student_record_id, academy_id, question_id, score, updated_by, updated_at)
   select r.exam_id, r.record_id, academy, pg_temp.rid(c->>'partId'), (c->>'score')::numeric, r.grader, r.graded_at
-  from fx_exam_results r, jsonb_array_elements(r.components) c
+  from fx_exam_results r cross join lateral jsonb_array_elements(r.components) c
+  join public.exam_questions q on q.id = pg_temp.rid(c->>'partId')
+  join public.exam_parts p on p.id = q.part_id and p.kind = 'written_work'
   where jsonb_typeof(r.components) = 'array';
 
   insert into public.exam_closures (exam_id, academy_id, closed_at, settled_at)
@@ -397,6 +435,87 @@ begin
     select z.* into target from public.exams z where z.id = e.exam_id;
     perform edra_private.announce_exam_result(target, e.record_id, false, e.announced_at);
   end loop;
+  -- Online solutions qualify at closure even while manual marks are still private/incomplete.
+  for e in select * from fx_exam_results where source = 'online' and received_at is not null loop
+    select z.* into target from public.exams z where z.id = e.exam_id;
+    perform edra_private.refresh_exam_qualification(target, e.record_id, e.closes_at);
+  end loop;
+  -- Learning library (edra-dev-v6): placeholder videos, attached assignments, access and synthetic watch progress.
+  if s ? 'library' then
+    insert into public.content_programs (id, academy_id, academic_year_id, level_id, track_id)
+    select pg_temp.rid('program:' || l), academy, year_id, l, null
+    from (select distinct u->>'levelKey' as l from jsonb_array_elements(s->'library'->'units') u) x;
+
+    for e in select u, (select p.user_id from fx_people p where p.sid = u->>'createdById') as creator
+        from jsonb_array_elements(s->'library'->'units') u loop
+      perform pg_temp.act(e.creator);
+      content := jsonb_build_object('title', e.u->>'title', 'description', e.u->>'description',
+        'accessDays', (e.u->>'accessDays')::integer,
+        'items', (select jsonb_agg(case when i->>'kind' = 'explanation'
+            then jsonb_build_object('id', pg_temp.rid(i->>'id'), 'kind', 'explanation', 'title', i->>'title', 'assetId', pg_temp.rid(i->>'assetId'))
+            else jsonb_build_object('id', pg_temp.rid(i->>'id'), 'kind', 'assessment', 'title', i->>'title',
+              'assessmentKind', 'assignment', 'assessmentId', pg_temp.rid(i->>'assessmentId')) end order by n)
+          from jsonb_array_elements(e.u->'items') with ordinality t(i, n)));
+      insert into public.content_units (id, academy_id, program_id, created_by, created_at, updated_at, version, state, draft,
+        published_revision, published_version)
+      values (pg_temp.rid(e.u->>'id'), academy, pg_temp.rid('program:' || (e.u->>'levelKey')), e.creator,
+        (e.u->>'createdAt')::timestamptz, coalesce((e.u->>'publishedAt')::timestamptz, (e.u->>'createdAt')::timestamptz),
+        case e.u->>'state' when 'published' then 2 when 'published_edited' then 3 else 1 end,
+        case e.u->>'state' when 'published_edited' then 'published' else e.u->>'state' end, content,
+        case when e.u->>'state' in ('published', 'published_edited') then 1 else 0 end,
+        case e.u->>'state' when 'published' then 2 when 'published_edited' then 2 else 0 end);
+      insert into public.content_assets (id, academy_id, unit_id, created_by, kind, name, mime_type, status, duration_seconds,
+        placeholder, created_at)
+      select pg_temp.rid(a->>'id'), academy, pg_temp.rid(e.u->>'id'), e.creator, 'video', a->>'name', 'video/placeholder', 'ready',
+        (a->>'durationSeconds')::numeric, true, (e.u->>'createdAt')::timestamptz
+      from jsonb_array_elements(s->'library'->'assets') a where a->>'unitKey' = e.u->>'key';
+      if e.u->>'assignmentId' is not null then
+        insert into public.content_assessments (academy_id, unit_id, kind, assessment_id)
+        values (academy, pg_temp.rid(e.u->>'id'), 'assignment', pg_temp.rid(e.u->>'assignmentId'));
+      end if;
+      if e.u->>'state' in ('published', 'published_edited') then
+        select draft into snapshot from public.content_units where id = pg_temp.rid(e.u->>'id');
+        insert into public.content_revisions (unit_id, academy_id, revision, document, published_by, published_at)
+        values (pg_temp.rid(e.u->>'id'), academy, 1, snapshot, e.creator, (e.u->>'publishedAt')::timestamptz);
+        if e.u->>'state' = 'published_edited' then
+          update public.content_units set draft = draft || jsonb_build_object('description', (e.u->>'description') || ' Revised outline.')
+          where id = pg_temp.rid(e.u->>'id');
+        end if;
+      end if;
+    end loop;
+    perform set_config('request.jwt.claims', '', true);
+
+    create temp table fx_grants on commit drop as
+    select pg_temp.rid(g->>'id') as id, g->>'kind' as kind, st.record_id, pg_temp.rid(g->>'unitId') as unit_id,
+      (g->>'startsAt')::timestamptz as starts_at, (g->>'expiresAt')::timestamptz as expires_at, (g->>'revokedAt')::timestamptz as revoked_at,
+      g->>'key' as key
+    from jsonb_array_elements(s->'library'->'grants') g join fx_students st on st.sid = g->>'studentId';
+    insert into public.content_access_accounts (academy_id, academic_year_id, annual_record_id, unit_id)
+    select distinct academy, year_id, record_id, unit_id from fx_grants;
+    insert into public.content_access_grants (id, academy_id, academic_year_id, annual_record_id, unit_id, kind, actor_id, issued_at,
+      starts_at, expires_at, duration_seconds)
+    select id, academy, year_id, record_id, unit_id, kind, owner_id, starts_at, starts_at, expires_at,
+      extract(epoch from expires_at - starts_at)::bigint
+    from fx_grants where kind = 'staff';
+    insert into public.content_access_grants (id, academy_id, academic_year_id, annual_record_id, unit_id, kind, actor_id, issued_at,
+      previous_grant_id, previous_expiry, starts_at, expires_at, duration_seconds)
+    select x.id, academy, year_id, x.record_id, x.unit_id, x.kind, owner_id, x.starts_at - interval '1 day', f.id, f.expires_at,
+      x.starts_at, x.expires_at, extract(epoch from x.expires_at - x.starts_at)::bigint
+    from fx_grants x join fx_grants f on f.record_id = x.record_id and f.unit_id = x.unit_id and f.kind = 'staff'
+    where x.kind = 'staff_extension';
+    update public.content_access_accounts a set current_grant_id = (select g.id from fx_grants g
+      where g.record_id = a.annual_record_id and g.unit_id = a.unit_id order by g.starts_at desc limit 1)
+    where a.academy_id = academy and exists (select 1 from fx_grants g where g.record_id = a.annual_record_id and g.unit_id = a.unit_id);
+    insert into public.content_access_revocations (id, grant_id, actor_id, revoked_at, reason)
+    select pg_temp.rid('revocation:' || key), id, owner_id, revoked_at, 'Synthetic access revocation' from fx_grants where revoked_at is not null;
+
+    insert into edra_private.content_video_progress (annual_record_id, unit_id, asset_id, watched, position_seconds, updated_at)
+    select st.record_id, pg_temp.rid(p->>'unitId'), pg_temp.rid(p->>'assetId'),
+      (select range_agg(numrange((r->>0)::numeric, (r->>1)::numeric, '[)')) from jsonb_array_elements(p->'ranges') r),
+      (p->>'positionSeconds')::numeric, (p->>'updatedAt')::timestamptz
+    from jsonb_array_elements(s->'library'->'progress') p join fx_students st on st.sid = p->>'studentId';
+  end if;
+
   perform set_config('request.jwt.claims', '', true);
 
   update edra_private.dev_accounts a set state = 'loaded', annual_student_record_id = st.record_id, updated_at = now()

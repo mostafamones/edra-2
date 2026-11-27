@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Dev academy CLI. dry-run is pure. create, inspect and verify act on one allow-listed cloud project and read
 // credentials from the environment or an env file; credential values are never printed.
-//   dry-run  [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--out FILE.json]
-//   create   --project REF --run UUID --developer UUID [--recipe ID] [--reference-date ...] [--seed ...] [--students 20] [--env FILE]
+//   dry-run  [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20|300] [--out FILE.json]
+//   create   --project REF --run UUID --developer UUID [--recipe ID] [--reference-date ...] [--seed ...] [--students 20|300] [--env FILE]
 //   inspect  --project REF --run UUID [--env FILE]
-//   verify   --project REF --run UUID --mode baseline|integrity [--recipe ID] [--reference-date ...] [--seed ...] [--students 20] [--env FILE]
+//   verify   --project REF --run UUID --mode baseline|integrity [--recipe ID] [--reference-date ...] [--seed ...] [--students 20|300] [--env FILE]
 // Without --recipe, create and verify use the recipe a registered run was created with, else the latest recipe.
 //   reset    --project REF --run UUID --dry-run [--env FILE]   (read-only impact report; destructive reset is refused)
 // --out writes only inside the gitignored out/ folder.
@@ -31,7 +31,7 @@ const ACTIONS = new Set(["dry-run", "create", "inspect", "verify", "reset"]);
 const SCENARIO_OPTIONS = ["--recipe", "--reference-date", "--seed", "--students"];
 const ALLOWED = {
   "dry-run": [...SCENARIO_OPTIONS, "--out"],
-  create: ["--project", "--run", "--developer", ...SCENARIO_OPTIONS, "--env"],
+  create: ["--project", "--run", "--developer", ...SCENARIO_OPTIONS, "--academy-name", "--slug", "--env"],
   inspect: ["--project", "--run", "--env"],
   verify: ["--project", "--run", "--mode", ...SCENARIO_OPTIONS, "--env"],
   reset: ["--project", "--run", "--env", "--dry-run", "--confirm-run", "--impact-hash"],
@@ -44,10 +44,10 @@ const HEX64 = /^[0-9a-f]{64}$/;
 const RESET_REFUSAL = "Destructive reset is not enabled in this version. It requires a separately approved reset brief with the reviewed child-first table list, trigger exceptions, cyclic pointer handling and encrypted backup location.";
 const USAGE = [
   "Usage: npm run dev:academy -- <action> [options]",
-  "  dry-run  [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--out scripts/dev-academy/out/NAME.json]",
-  "  create   --project REF --run UUID --developer UUID [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--env FILE]",
+  "  dry-run  [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20|300] [--out scripts/dev-academy/out/NAME.json]",
+  "  create   --project REF --run UUID --developer UUID [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20|300] [--academy-name TEXT] [--slug TEXT] [--env FILE]",
   "  inspect  --project REF --run UUID [--env FILE]",
-  "  verify   --project REF --run UUID --mode baseline|integrity [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20] [--env FILE]",
+  "  verify   --project REF --run UUID --mode baseline|integrity [--recipe ID] [--reference-date YYYY-MM-DD] [--seed TEXT] [--students 20|300] [--env FILE]",
   `  recipes: ${RECIPE_VERSIONS.join(", ")} (default ${DEFAULTS.recipeVersion}; create/verify default to a registered run's recipe)`,
   "  reset    --project REF --run UUID --dry-run [--env FILE]",
 ].join("\n");
@@ -59,8 +59,8 @@ export function parseArgs(argv) {
   if (!ACTIONS.has(action)) throw new UsageError(`Unknown action "${action ?? ""}"`);
 
   const options = {
-    recipe: null, referenceDate: DEFAULTS.referenceDate, seed: DEFAULTS.seed, students: DEFAULTS.students, out: null,
-    project: null, run: null, developer: null, mode: null, envFile: null,
+    recipe: null, referenceDate: DEFAULTS.referenceDate, seed: DEFAULTS.seed, students: undefined, out: null,
+    academyName: null, slug: null, project: null, run: null, developer: null, mode: null, envFile: null,
     dryRun: false, confirmRun: null, impactHash: null,
   };
   const seen = new Set();
@@ -91,7 +91,8 @@ export function parseArgs(argv) {
         options.seed = value;
         break;
       case "--students":
-        if (value !== "20") throw new UsageError(`Only --students 20 is supported, got "${value}"`);
+        if (!["20", "300"].includes(value)) throw new UsageError(`Only --students 20 or 300 is supported, got "${value}"`);
+        options.students = Number(value);
         break;
       case "--out": {
         // Keeps generated scenario files inside the gitignored folder.
@@ -103,6 +104,14 @@ export function parseArgs(argv) {
         options.out = target;
         break;
       }
+      case "--academy-name":
+        if (value.trim().length < 1 || value.length > 100 || value !== value.trim()) throw new UsageError("--academy-name must be 1 to 100 characters without surrounding spaces");
+        options.academyName = value;
+        break;
+      case "--slug":
+        if (value.length > 50 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(value)) throw new UsageError("--slug must be lowercase letters, digits and single hyphens, up to 50 characters");
+        options.slug = value;
+        break;
       case "--project":
         if (!PROJECT.test(value)) throw new UsageError("--project must be a 20-character lowercase project ref");
         options.project = value;
@@ -209,6 +218,20 @@ function summarize(scenario, validation, now) {
     ...scenario.exams.filter((e) => e.kind !== "historical" && e.parts).map((e) => `  ${e.kind}: ${e.title} | ${e.questions.length} questions | ${e.parts.map((p) => p.kind).join(" + ")}`),
     `Patterns: ${tally((s) => s.pattern)}`,
     ...(scenario.students[0].profile ? [`Tiers: ${tally((s) => s.profile.tier)}`] : []),
+    ...(["edra-dev-v4", "edra-dev-v5", "edra-dev-v6"].includes(config.recipeVersion) ? [
+      `Enrollment months: ${tally2(scenario.placements, (p) => new Intl.DateTimeFormat("sv-SE", { timeZone: config.timezone, year: "numeric", month: "2-digit" }).format(new Date(p.enrolledAt)))}`,
+      `Group sizes: ${scenario.groups.map((g) => `${g.name}: ${scenario.placements.filter((p) => p.groupId === g.id).length}`).join(", ")}`,
+      `Attendance states: ${tally2(scenario.attendancePublications.flatMap((p) => p.items), (i) => i.status)}`,
+      `Assignment states: ${tally2(scenario.assignmentResults, (r) => r.state)}`,
+      `Exam states: ${tally2(scenario.examResults, (r) => r.state)}`,
+    ] : []),
+    ...(["edra-dev-v5", "edra-dev-v6"].includes(config.recipeVersion) ? [
+      `Choice answers: ${tally2([...scenario.assignmentResults, ...scenario.examResults].flatMap((r) => r.answers ?? []).filter((a) => !a.quality), (a) => a.choice === null ? "blank" : a.score > 0 ? "correct" : "incorrect")}`,
+      `Assignment question answers: ${scenario.assignmentResults.reduce((n, r) => n + r.answers.length, 0)}`,
+      `Online exam attempts: ${scenario.examResults.filter((r) => r.attempt).length} | answers: ${scenario.examResults.reduce((n, r) => n + (r.answers?.length ?? 0), 0)}`,
+      `Online finalization: ${tally2(scenario.examResults.filter((r) => r.attempt), (r) => r.attempt.reason)}`,
+      `Online written answers: ${tally2(scenario.examResults.flatMap((r) => r.answers ?? []).filter((a) => a.quality), (a) => a.quality)}`,
+    ] : []),
     "Students (marks are % of each assessment's maximum):",
     ...studentLines(scenario),
     `Validation: ${validation.valid ? "passed" : "failed"} (${validation.errors.length} errors)`,
@@ -271,9 +294,11 @@ async function create(options, env, target, runSql) {
   const scenario = buildChecked(options, await registeredRun(runSql, options.run));
   console.log(`Recipe ${scenario.config.recipeVersion}`);
   const key = loadKey(env);
-  const slug = `edra-dev-${options.run.slice(0, 8)}`;
+  const slug = options.slug ?? `edra-dev-${options.run.slice(0, 8)}`;
+  // The name is cosmetic: the registered scenario hash stays that of the unnamed scenario.
+  const loaded = options.academyName ? { ...scenario, academy: { ...scenario.academy, name: options.academyName } } : scenario;
   const result = await createRun({
-    target, runSql, key, runId: options.run, developerId: options.developer, scenario, hash: scenarioHash(scenario), slug,
+    target, runSql, key, runId: options.run, developerId: options.developer, scenario: loaded, hash: scenarioHash(scenario), slug,
     migrationFiles: readdirSync(MIGRATIONS).filter((file) => /^\d+_.+\.sql$/.test(file)),
     lockToken: randomUUID(),
     probe: (account) => probeDeliveryGuard(target, env.SEND_SMS_HOOK_SECRET, account),

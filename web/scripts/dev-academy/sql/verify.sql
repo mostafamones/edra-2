@@ -55,6 +55,9 @@ with run as (
     'assignments_closed', (select count(*) from public.assignments x, run where x.academy_id = run.academy_id and x.state = 'closed'),
     'assignment_parts', (select count(*) from public.assignment_parts x, run where x.academy_id = run.academy_id),
     'assignment_questions', (select count(*) from public.assignment_part_questions x, run where x.academy_id = run.academy_id),
+    'assignment_choices', (select count(*) from public.assignment_question_choices x, run where x.academy_id = run.academy_id),
+    'assignment_answers', (select count(*) from public.assignment_question_answers x, run where x.academy_id = run.academy_id),
+    'assignment_derived_marks', (select count(*) from public.assignment_marks x, run where x.academy_id = run.academy_id and x.from_answers),
     'assignment_max_total', (select coalesce(sum(x.max_score), 0) from public.assignments x, run where x.academy_id = run.academy_id),
     'assignment_recipients', (select count(*) from public.assignment_recipients x, run where x.academy_id = run.academy_id),
     'assignment_marks', (select count(*) from public.assignment_marks x, run where x.academy_id = run.academy_id),
@@ -67,7 +70,17 @@ with run as (
     'exam_closures', (select count(*) from public.exam_closures x, run where x.academy_id = run.academy_id),
     'exam_work', (select count(*) from public.exam_work x, run where x.academy_id = run.academy_id),
     'exam_submissions', (select count(*) from public.exam_submissions x, run where x.academy_id = run.academy_id),
+    'exam_attempts', (select count(*) from public.exam_attempts x, run where x.academy_id = run.academy_id),
+    'exam_online_answers', (select count(*) from public.exam_online_answers x, run where x.academy_id = run.academy_id),
+    'exam_submission_answers', (select count(*) from public.exam_submission_answers x, run where x.academy_id = run.academy_id),
     'exam_marks', (select count(*) from public.exam_marks x, run where x.academy_id = run.academy_id),
+    'content_units', (select count(*) from public.content_units x, run where x.academy_id = run.academy_id),
+    'content_placeholder_videos', (select count(*) from public.content_assets x, run where x.academy_id = run.academy_id and x.placeholder),
+    'content_attachments', (select count(*) from public.content_assessments x, run where x.academy_id = run.academy_id),
+    'content_revisions', (select count(*) from public.content_revisions x, run where x.academy_id = run.academy_id),
+    'content_grants', (select count(*) from public.content_access_grants x, run where x.academy_id = run.academy_id),
+    'content_revocations', (select count(*) from public.content_access_revocations x join public.content_access_grants g on g.id = x.grant_id, run where g.academy_id = run.academy_id),
+    'content_video_progress', (select count(*) from edra_private.content_video_progress x join public.annual_student_records r on r.id = x.annual_record_id, run where r.academy_id = run.academy_id),
     'exam_publications', (select count(*) from public.exam_result_publications x, run where x.academy_id = run.academy_id),
     'effects', (select count(*) from (
       select x.id from public.attendance_effects x, run where x.academy_id = run.academy_id
@@ -78,6 +91,18 @@ with run as (
 ), failures as (
   select array_remove(array[
     case when (select count(*) from run) <> 1 then 'run is not registered' end,
+    case when exists (
+      select 1 from public.session_roster_entries r
+      join public.sessions s on s.id = r.session_id
+      join public.annual_student_records st on st.id = r.annual_student_record_id, run
+      where r.academy_id = run.academy_id and s.started_at < st.created_at
+    ) then 'a roster entry precedes student enrollment' end,
+    case when exists (
+      select 1 from public.assignment_recipients r
+      join public.assignments a on a.id = r.assignment_id
+      join public.annual_student_records st on st.id = r.annual_student_record_id, run
+      where r.academy_id = run.academy_id and a.created_at < st.created_at
+    ) then 'an assignment recipient precedes student enrollment' end,
     case when (select academy_id from run) is null
       or not exists (select 1 from public.academies a, run where a.id = run.academy_id) then 'run academy is missing' end,
     case when (select count(*) from public.academic_years y, run where y.academy_id = run.academy_id and y.closed_at is null) <> 1
@@ -105,6 +130,20 @@ with run as (
     case when exists (select 1 from public.attendance_sheets x, run
       where x.academy_id = run.academy_id and x.publication_count <> (
         select count(*) from public.attendance_publications p where p.session_id = x.session_id)) then 'an attendance sheet publication count is wrong' end,
+    case when exists (select 1 from public.assignment_question_answers a
+      join public.assignment_part_questions q on q.id = a.question_id
+      join public.assignment_parts pt on pt.id = a.part_id
+      left join public.assignment_question_choices c on c.id = a.choice_id, run
+      where a.academy_id = run.academy_id and not q.excluded
+        and (a.score > q.max_score or (pt.kind in ('online_questions','answer_sheet')
+          and a.score <> case when coalesce(c.is_correct,false) then q.max_score else 0 end)))
+      then 'an assignment question answer differs from its scoring basis' end,
+    case when exists (select 1 from public.assignment_marks m, run
+      where m.academy_id = run.academy_id and m.from_answers and not m.requires_remark
+        and m.score <> (select coalesce(sum(a.score),0) from public.assignment_question_answers a
+          join public.assignment_part_questions q on q.id = a.question_id and not q.excluded
+          where a.assignment_id = m.assignment_id and a.annual_student_record_id = m.annual_student_record_id and a.part_id = m.part_id))
+      then 'an assignment part mark differs from its question answers' end,
     case when exists (select 1 from public.assignment_result_publications p, run
       where p.academy_id = run.academy_id and p.total <> (select coalesce(sum((m->>'score')::numeric), 0) from jsonb_array_elements(p.marks) m))
       then 'an assignment result total differs from its marks' end,
@@ -156,6 +195,18 @@ with run as (
       where p.academy_id = run.academy_id
         and p.content_hash <> edra_private.exam_result_hash(edra_private.exam_result_content(p.exam_id, p.annual_student_record_id)))
       then 'an exam result hash differs from its canonical content' end,
+    case when exists (select 1 from public.exam_submissions s
+      join public.exam_attempts a on a.id = s.attempt_id, run
+      where s.academy_id = run.academy_id and s.source = 'online'
+        and (s.reason <> a.finalization_reason or s.submitted_at <> a.finalized_at
+          or s.original_deadline_at <> a.deadline_at))
+      then 'an online submission differs from its finalized attempt' end,
+    case when exists (select 1 from public.exam_submissions s
+      join public.exam_online_answers a on a.attempt_id = s.attempt_id
+      left join public.exam_submission_answers frozen on frozen.submission_id = s.id and frozen.question_id = a.question_id, run
+      where s.academy_id = run.academy_id and (frozen.question_id is null
+        or (frozen.choice_id, frozen.text_answer) is distinct from (a.choice_id, a.text_answer)))
+      then 'accepted online answers differ from the saved draft' end,
     case when exists (select 1 from public.exam_work w join public.exams z on z.id = w.exam_id, run
       where w.academy_id = run.academy_id and not exists (select 1 from public.exam_closures c where c.exam_id = z.id))
       then 'current exams already have work' end,
