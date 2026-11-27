@@ -18,13 +18,13 @@ export function shiftDay(day: string, amount: number) {
 }
 export function weekDays(day: string) {
   const weekday = new Date(`${day}T12:00:00Z`).getUTCDay();
-  const first = shiftDay(day, -((weekday + 6) % 7));
+  const first = shiftDay(day, -weekday);
   return Array.from({ length: 7 }, (_, index) => shiftDay(first, index));
 }
 export function shiftMonth(day: string, amount: number) {
   const date = new Date(`${day.slice(0, 7)}-01T12:00:00Z`); date.setUTCMonth(date.getUTCMonth() + amount); return date.toISOString().slice(0, 10);
 }
-/** Six Monday-first weeks covering the month of `day`, so the grid never changes height. */
+/** Six Sunday-first weeks covering the month of `day`, so the grid never changes height. */
 export function monthGrid(day: string) {
   const first = weekDays(`${day.slice(0, 7)}-01`)[0];
   return Array.from({ length: 42 }, (_, index) => shiftDay(first, index));

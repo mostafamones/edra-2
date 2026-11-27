@@ -121,7 +121,7 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
       ]} />
     </div>
     {failures.length > 0 && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 p-4 text-sm"><span>Couldn’t refresh {failures.map(query => query === assessments ? "assessments" : query === live || query === history ? "sessions" : "schedules").filter((name, index, names) => names.indexOf(name) === index).join(" and ")}. Calendar may be incomplete.</span><Button size="sm" variant="outline" onClick={() => failures.forEach(query => void query.refetch())}>Retry</Button></div>}
-    {loading && <div role="status" aria-label="Loading calendar"><Skeleton className="h-96 w-full" /></div>}
+    {loading && <CalendarSkeleton view={view} />}
     {!loading && !year && <div className="rounded-xl bg-card p-8 text-center">No open academic year</div>}
     {!loading && year && <>
       <div className="space-y-4 md:hidden">
@@ -170,4 +170,18 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
       </div>}
     </>}
   </main>;
+}
+
+/** Placeholder shaped like the view it stands in for, at the same viewport-bound height. */
+function CalendarSkeleton({ view }: { view: string }) {
+  const frame = "hidden h-[calc(100svh-15rem)] min-h-96 overflow-hidden rounded-xl border border-border/60 md:grid";
+  return <div role="status" aria-label="Loading calendar">
+    <Skeleton className="h-96 w-full md:hidden" />
+    {view === "month" ? <div className={`${frame} min-h-[30rem] grid-cols-7 grid-rows-6 gap-px bg-border/40`}>{Array.from({ length: 42 }, (_, index) =>
+      <div key={index} className="flex flex-col gap-1.5 bg-background p-1.5"><Skeleton className="size-6 rounded-full" />{index % 3 !== 1 && <Skeleton className="h-4 w-4/5" />}{index % 4 === 0 && <Skeleton className="h-4 w-3/5" />}</div>)}</div>
+      : view === "week" ? <div className={`${frame} grid-cols-7 gap-px bg-border/40`}>{Array.from({ length: 7 }, (_, index) =>
+        <div key={index} className="flex flex-col gap-3 bg-background p-2"><Skeleton className="mx-auto h-8 w-16" />{index % 2 === 0 && <Skeleton className="h-24 w-full" />}<Skeleton className="h-16 w-full" />{index % 3 === 0 && <Skeleton className="h-20 w-full" />}</div>)}</div>
+        : <div className={`${frame} grid-rows-7 divide-y divide-border/40`}>{Array.from({ length: 7 }, (_, index) =>
+          <div key={index} className="grid grid-cols-[7rem_minmax(0,1fr)] gap-4 px-4 py-3"><Skeleton className="size-9 rounded-full" /><div className="flex flex-col gap-2">{index % 2 === 0 && <Skeleton className="h-10 w-full" />}<Skeleton className="h-10 w-full" /></div></div>)}</div>}
+  </div>;
 }
