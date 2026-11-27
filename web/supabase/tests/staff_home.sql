@@ -55,6 +55,7 @@ select pg_temp.check((public.staff_home(pg_temp.id('academy'))#>>'{students,onli
 select pg_temp.check((public.staff_home(pg_temp.id('academy'))#>>'{students,levels,0,total}')::int=2,'grade breakdown agrees with total');
 select pg_temp.check(jsonb_array_length(public.staff_home(pg_temp.id('academy'))->'attendance')=12,'twelve attendance weeks, including empty ones');
 select pg_temp.check(public.staff_home(pg_temp.id('academy'))->'watch'='[]'::jsonb and public.staff_home(pg_temp.id('academy'))->'recent'='[]'::jsonb,'no sessions means nobody to watch and no recent sessions');
+select pg_temp.check(public.staff_home(pg_temp.id('academy'))->'assignments'='[]'::jsonb,'no marks means no assignment performance');
 select pg_temp.check((select bool_and((w->>'counted')::int=0 and (w->>'sessions')::int=0) from jsonb_array_elements(public.staff_home(pg_temp.id('academy'))->'attendance') w),'no finalized sheets is zero counted, not a rate');
 select pg_temp.expect_error(format('select public.staff_home(%L)',pg_temp.id('other')),'forbidden');
 select pg_temp.act('instructor');
