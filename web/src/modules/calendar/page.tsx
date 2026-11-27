@@ -16,11 +16,17 @@ import { assessmentCalendarOptions } from "@/modules/assessments";
 import { groupListQueryKey, loadGroups, loadStructure, structureQueryKey } from "@/modules/groups";
 import { academyNow, buildAudienceLookup, loadSchedules, scheduleListQueryKey } from "@/modules/schedules";
 import { useStartSession } from "@/modules/sessions";
-import { calendarEvents, dateLabel, layoutEvents, minutes, monthGrid, shiftDay, shiftMonth, weekDays } from "./events";
+import { calendarEvents, dateLabel, type CalendarEvent, layoutEvents, minutes, monthGrid, shiftDay, shiftMonth, weekDays } from "./events";
 import { EventButton } from "./event";
 import { calendarHistoryOptions, calendarLiveOptions } from "./queries";
 
 const HOUR = 72;
+const SHOWN = [
+  { kind: "session", label: "Sessions" },
+  { kind: "assignment", label: "Assignment dues" },
+  { kind: "quiz", label: "Quizzes" },
+  { kind: "exam", label: "Exams" },
+] as const;
 // Share of the visible grid above the now line when a week opens.
 const NOW_POSITION = 0.3;
 const VIEWS = [
@@ -42,7 +48,7 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
   const [selected, setSelected] = useState(() => academyNow().slice(0, 10));
   const [view, setView] = useState("month"), [level, setLevel] = useState("all");
   const [track, setTrack] = useState("all"), [group, setGroup] = useState("all");
-  const [sessionsVisible, setSessionsVisible] = useState(true), [assessmentsVisible, setAssessmentsVisible] = useState(true);
+  const [hidden, setHidden] = useState<ReadonlySet<CalendarEvent["kind"]>>(new Set());
   useEffect(() => { const timer = setInterval(() => setWall(academyNow()), 60_000); return () => clearInterval(timer); }, []);
   const today = wall.slice(0, 10), days = weekDays(selected), range = view === "month" ? monthGrid(selected) : days;
   const schedules = useQuery({ queryKey: scheduleListQueryKey(academy.id), queryFn: () => loadSchedules(academy.id) });
@@ -71,7 +77,7 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
       assessments: assessments.data ?? [],
     });
   }, [range[0], range.length, today, schedules.data, structure.data, groups.data, archivedGroups.data, live.data, history.data, assessments.data]);
-  const visible = events.filter(event => (event.kind === "session" ? sessionsVisible : assessmentsVisible)
+  const visible = events.filter(event => !hidden.has(event.kind)
     && (level === "all" || event.levelIds.includes(level)) && (track === "all" || event.trackIds?.includes(track)) && (group === "all" || event.groupIds?.includes(group)));
   const timed = visible.filter(event => !event.deadline && !event.window);
   const firstHour = 0, lastHour = 24;
@@ -94,8 +100,8 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
   return <main className="page-shell">
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <div className="mr-auto flex flex-col"><h1 className="text-2xl font-semibold tracking-tight">{dateLabel(selected, { month: "long", year: "numeric" })}</h1>{view !== "month" && <span className="text-sm text-muted-foreground">{`${dateLabel(days[0], { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short" })}`}</span>}</div>
-      <FilterPopover iconOnly icon={PreferenceHorizontalIcon} label="View options" sections={[{ id: "show", active: !sessionsVisible || !assessmentsVisible, onReset: () => { setSessionsVisible(true); setAssessmentsVisible(true); },
-        content: <ToggleBadgeGroup legend="Show">{[{ label: "Sessions", checked: sessionsVisible, change: setSessionsVisible }, { label: "Assessments", checked: assessmentsVisible, change: setAssessmentsVisible }].map(toggle => <ToggleBadge key={toggle.label} pressed={toggle.checked} onPressedChange={toggle.change}>{toggle.label}</ToggleBadge>)}</ToggleBadgeGroup> }]} fields={[
+      <FilterPopover iconOnly icon={PreferenceHorizontalIcon} label="View options" sections={[{ id: "show", active: hidden.size > 0, onReset: () => setHidden(new Set()),
+        content: <ToggleBadgeGroup legend="Show">{SHOWN.map(item => <ToggleBadge key={item.kind} pressed={!hidden.has(item.kind)} onPressedChange={on => setHidden(current => { const next = new Set(current); if (on) next.delete(item.kind); else next.add(item.kind); return next; })}>{item.label}</ToggleBadge>)}</ToggleBadgeGroup> }]} fields={[
         { id: "grade", label: "Grade", value: level, defaultValue: "all", onChange: value => { setLevel(value); setTrack("all"); setGroup("all"); }, options: [{ value: "all", label: "All grades" }, ...(structure.data?.historicalLevels.map(item => ({ value: item.level_id, label: structure.data.levelNames[item.level_id] ?? item.level_id })) ?? [])] },
         { id: "track", label: "Track", value: track, defaultValue: "all", onChange: value => { setTrack(value); setGroup("all"); }, options: [{ value: "all", label: "All tracks" }, ...(structure.data?.historicalTracks.filter(item => level === "all" || item.level_id === level).map(item => ({ value: item.id, label: item.name })) ?? [])] },
         { id: "group", label: "Group", value: group, defaultValue: "all", onChange: setGroup, options: [{ value: "all", label: "All groups" }, ...[...(groups.data?.groups ?? []), ...(archivedGroups.data?.groups ?? [])].filter(item => (level === "all" || item.level_id === level) && (track === "all" || item.track_id === track)).map(item => ({ value: item.id, label: item.name }))] },
