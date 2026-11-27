@@ -5,6 +5,7 @@ import {
   createSchedule as createScheduleServer,
   updateSchedule as updateScheduleServer,
   archiveSchedule as archiveScheduleServer,
+  nameOccurrence as nameOccurrenceServer,
 } from "./actions.server";
 
 const createScheduleFn = createServerFn({ method: "POST", strict: false })
@@ -29,4 +30,12 @@ const archiveScheduleFn = createServerFn({ method: "POST", strict: false })
 
 export async function archiveSchedule(academyId: Parameters<typeof archiveScheduleServer>[0], scheduleId: Parameters<typeof archiveScheduleServer>[1]): Promise<Awaited<ReturnType<typeof archiveScheduleServer>>> {
   return archiveScheduleFn({ data: { academyId, scheduleId } });
+}
+
+const nameOccurrenceFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ value: z.unknown() }))
+  .handler(({ data }) => nameOccurrenceServer(data.value));
+
+export async function nameOccurrence(value: { academyId: string; scheduleId: string; occursOn: string; name: string }): Promise<Awaited<ReturnType<typeof nameOccurrenceServer>>> {
+  return nameOccurrenceFn({ data: { value } });
 }

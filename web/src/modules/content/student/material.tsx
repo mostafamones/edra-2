@@ -39,7 +39,7 @@ export function StudentMaterialViewer({ academyId, unitId, itemId, title, expire
     if (!material) return;
     // Earned answer videos (expiresAt null) have no grant end: playback permission keeps renewing.
     const grantEnd = expiresAt ? Math.floor(new Date(expiresAt).getTime() / 1000) : Infinity;
-    const renew = material.kind === "video" && material.expires < grantEnd;
+    const renew = material.kind !== "document" && material.expires < grantEnd;
     const delay = Math.max(1000, material.expires * 1000 - Date.now() - (renew ? 30000 : -100));
     let stopped = false;
     const timer = setTimeout(async () => {
@@ -52,6 +52,7 @@ export function StudentMaterialViewer({ academyId, unitId, itemId, title, expire
   if (error) return <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive"><p>{error}</p><Button variant="outline" onClick={() => { setError(""); setAttempt(n => n + 1); }}><HugeiconsIcon icon={RefreshIcon} strokeWidth={1.5} />Retry access</Button></div>;
   if (!material) return <p role="status" className="p-4 text-sm text-muted-foreground">Opening…</p>;
   if (material.kind === "placeholder") return <PlaceholderVideo title={title} />;
+  if (material.kind === "youtube") return <LearningVideo academyId={academyId} unitId={unitId} itemId={itemId} title={title} youtubeId={material.youtubeId} />;
   return material.kind === "video"
     ? <LearningVideo academyId={academyId} unitId={unitId} itemId={itemId} title={title} playbackId={material.playbackId} tokens={{ playback: material.token, thumbnail: material.thumbnailToken, storyboard: material.storyboardToken }} />
     : <Button asChild><a href={material.url} target="_blank" rel="noopener noreferrer"><HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={1.5} />Open document</a></Button>;

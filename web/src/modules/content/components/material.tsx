@@ -27,6 +27,7 @@ const Separator = () => <span className="text-muted-foreground/40" aria-hidden="
 export function materialLabel(item: ContentItem, asset?: ContentDetail["assets"][number]) {
   if (item.kind === "assessment") return ASSESSMENT_LABELS[item.assessmentKind!];
   if (item.kind === "answer") return `Answer ${asset?.kind === "document" ? "document" : "video"}`;
+  if (item.kind === "explanation" && asset?.youtube_id) return "YouTube video";
   return item.attached ? "Attached document" : KIND_LABELS[item.kind];
 }
 
@@ -87,7 +88,7 @@ export function MaterialRow({ academyId, item, asset, disabled, framed, child, c
         </p>
       </div>
       {/* A child's action shows on hover, focus or selection (always on touch). */}
-      {action && <div className={`flex shrink-0 items-center ${child && !selected ? "opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 pointer-coarse:opacity-100" : ""}`}>{action}</div>}
+      {action && <div className={`flex max-w-[55%] shrink-0 flex-wrap items-center justify-end ${child && !selected ? "opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 pointer-coarse:opacity-100" : ""}`}>{action}</div>}
     </div>
     {/* The rail starts under the parent's icon (2rem in) and bridges the row's bottom padding. */}
     {branches.length > 0 && <ol aria-label={`${item.kind === "assessment" ? "Answers" : "Documents"} for ${item.title}`} className="relative ms-8 me-2 pb-3 before:absolute before:-top-3 before:start-0 before:h-3 before:w-px before:bg-border dark:before:bg-muted">{branches}</ol>}

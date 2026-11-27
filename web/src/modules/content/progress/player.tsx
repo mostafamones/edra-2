@@ -5,27 +5,32 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { unwrapContent } from "../types";
 import { saveVideoProgress, startVideoProgress } from "./actions";
+import { YoutubePlayer } from "../youtube-player";
 import { PlaybackCoverage } from "./coverage";
 import type { ProgressSession } from "./types";
 
-type Props = { academyId: string; unitId: string; itemId: string; title: string; playbackId: string;
-  tokens: { playback: string; thumbnail: string; storyboard: string } };
+type Props = { academyId: string; unitId: string; itemId: string; title: string } & (
+  { playbackId: string; tokens: { playback: string; thumbnail: string; storyboard: string }; youtubeId?: never }
+  | { youtubeId: string; playbackId?: never; tokens?: never }
+);
 
 export function LearningVideo(props: Props) {
   const [session, setSession] = useState<ProgressSession | null>(null), [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const cache = useQueryClient();
   useEffect(() => {
     let active = true;
     startVideoProgress({ academyId: props.academyId, unitId: props.unitId, itemId: props.itemId })
-      .then(result => { const value = unwrapContent(result); if (active) { setSession(value); setError(""); } })
+      .then(result => { const value = unwrapContent(result); if (active) { setSession(value); setError(""); if (value.durationSeconds === null) void cache.invalidateQueries({ queryKey: ["learning"] }); } })
       .catch(e => { if (active) setError(e instanceof Error ? e.message : "Could not load playback progress."); });
     return () => { active = false; };
-  }, [props.academyId, props.unitId, props.itemId, attempt]);
-  if (!session) return error ? <div role="alert"><p>{error}</p><Button variant="outline" onClick={() => { setError(""); setAttempt(n => n + 1); }}>Retry</Button></div> : <p role="status">Loading video…</p>;
-  return <TrackedVideo key={session.sessionId} {...props} session={session} />;
+  }, [props.academyId, props.unitId, props.itemId, attempt, cache]);
+  if (props.youtubeId && session?.durationSeconds === null) return <YoutubePlayer id={props.youtubeId} title={props.title} />;
+  if (!session || session.durationSeconds === null) return error ? <div role="alert"><p>{error}</p><Button variant="outline" onClick={() => { setError(""); setAttempt(n => n + 1); }}>Retry</Button></div> : <p role="status">Loading video…</p>;
+  return <TrackedVideo key={session.sessionId} {...props} session={{ ...session, durationSeconds: session.durationSeconds }} />;
 }
 
-function TrackedVideo({ session, ...props }: Props & { session: ProgressSession }) {
+function TrackedVideo({ session, ...props }: Props & { session: ProgressSession & { durationSeconds: number } }) {
   const cache = useQueryClient();
   const player = useRef<MuxPlayerElement>(null);
   const [error, setError] = useState("");
@@ -80,7 +85,12 @@ function TrackedVideo({ session, ...props }: Props & { session: ProgressSession 
       void flush();
     };
   }, [props.academyId, props.unitId, session.sessionId, cache]);
-  return <><MuxPlayer ref={player} className="max-h-[70dvh] w-full" style={{ height: "min(60dvh, 32rem)" }} playbackId={props.playbackId} tokens={props.tokens} metadata={{ video_title: props.title }}
+  return <>{props.youtubeId ? <YoutubePlayer id={props.youtubeId} title={props.title} start={session.positionSeconds}
+    onSample={({ position, rate, playing }) => {
+      if (playing) hasPlayed.current = true;
+      active.current = playing;
+      if (hasPlayed.current) coverage.current.sample(position, performance.now(), playing, rate);
+    }} onCheckpoint={() => { if (hasPlayed.current) void flushRef.current(); }} /> : <MuxPlayer ref={player} className="block max-h-[70dvh] w-full" style={{ height: "min(60dvh, 32rem)" }} playbackId={props.playbackId} tokens={props.tokens} metadata={{ video_title: props.title }}
     streamType="on-demand" autoPlay={false} startTime={session.positionSeconds}
     onPlaying={() => { hasPlayed.current = true; active.current = true; coverage.current.reset(); sample(); }}
     onTimeUpdate={() => sample()}
@@ -89,7 +99,7 @@ function TrackedVideo({ session, ...props }: Props & { session: ProgressSession 
     onRateChange={() => { coverage.current.reset(); sample(); }}
     onWaiting={() => { sample(); active.current = false; coverage.current.reset(); }}
     onPause={() => { sample(); active.current = false; coverage.current.reset(); void flushRef.current(); }}
-    onEnded={() => { sample(); active.current = false; coverage.current.reset(); void flushRef.current(); }} />
+    onEnded={() => { sample(); active.current = false; coverage.current.reset(); void flushRef.current(); }} />}
     {error && <div role="alert" className="flex items-center gap-2 text-sm text-destructive"><p>{error}</p><Button variant="outline" size="sm" onClick={() => void flushRef.current()}>Retry save</Button></div>}
   </>;
 }

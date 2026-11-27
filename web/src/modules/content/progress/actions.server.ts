@@ -13,9 +13,9 @@ export async function startVideoProgress(value: unknown) {
     const { db } = await learningCaller();
     const response = await db.rpc("start_my_content_progress", { p_academy_id: input.academyId, p_unit_id: input.unitId, p_item_id: input.itemId });
     learningError(response.error);
-    const session = z.object({ sessionId: z.guid(), assetId: z.guid(), providerAssetId: z.string().nullable(), durationSeconds: z.number().positive().nullable(), positionSeconds: z.number().nonnegative() }).parse(response.data);
+    const session = z.object({ sessionId: z.guid(), assetId: z.guid(), providerAssetId: z.string().nullable(), youtubeId: z.string().nullable().optional(), durationSeconds: z.number().positive().nullable(), positionSeconds: z.number().nonnegative() }).parse(response.data);
     // Backfill older videos only after the database authorized this exact published item.
-    if (session.durationSeconds === null) {
+    if (session.durationSeconds === null && !session.youtubeId) {
       if (!session.providerAssetId) throw new Error("Playback progress is unavailable for this video.");
       const asset = await muxRequest<MuxAsset>(`video/v1/assets/${encodeURIComponent(session.providerAssetId)}`);
       const duration = z.number().finite().positive().max(43200).parse(asset.duration);

@@ -15,6 +15,13 @@ vi.mock("@mux/mux-player-react", async () => {
       <button key={name} onClick={() => (props[name] as () => void)()}>{name}</button>)}</div>;
   }) };
 });
+vi.mock("../youtube-player", () => ({ YoutubePlayer: ({ start, onSample, onCheckpoint }: {
+  start?: number; onSample?: (sample: { position: number; rate: number; playing: boolean }) => void; onCheckpoint?: () => void;
+}) => <div>
+  <span>YouTube start {start ?? 0}</span>
+  <button onClick={() => onSample?.({ position: mocks.media.currentTime, rate: 1, playing: true })}>YouTube sample</button>
+  <button onClick={() => { onSample?.({ position: mocks.media.currentTime, rate: 1, playing: false }); onCheckpoint?.(); }}>YouTube pause</button>
+</div> }));
 import { LearningVideo } from "./player";
 const academyId = "10000000-0000-4000-8000-000000000001", unitId = "10000000-0000-4000-8000-000000000002", itemId = "10000000-0000-4000-8000-000000000003";
 beforeEach(() => {
@@ -74,4 +81,29 @@ it("does not render a player when progress initialization loses access", async (
   render(<QueryClientProvider client={new QueryClient()}><LearningVideo academyId={academyId} unitId={unitId} itemId={itemId} title="Lesson" playbackId="mux" tokens={{ playback: "p", thumbnail: "t", storyboard: "s" }} /></QueryClientProvider>);
   await screen.findByText("Active unit access is required.");
   expect(screen.queryByText("onPlaying")).toBeNull();
+});
+
+function openYoutube() {
+  return render(<QueryClientProvider client={new QueryClient()}><LearningVideo academyId={academyId} unitId={unitId} itemId={itemId} title="Math" youtubeId="4BUq8tldjyo" /></QueryClientProvider>);
+}
+it("resumes YouTube and saves intervals without crediting a forward seek", async () => {
+  mocks.start.mockResolvedValue({ ok: true, value: { sessionId: itemId, positionSeconds: 40, durationSeconds: 19841.461 } });
+  openYoutube();
+  expect(await screen.findByText("YouTube start 40")).toBeTruthy();
+  fireEvent.click(screen.getByText("YouTube sample"));
+  mocks.clock = 1000; mocks.media.currentTime = 41; fireEvent.click(screen.getByText("YouTube sample"));
+  mocks.clock = 1500; mocks.media.currentTime = 19207; fireEvent.click(screen.getByText("YouTube sample"));
+  fireEvent.click(screen.getByText("YouTube pause"));
+  await waitFor(() => expect(mocks.save).toHaveBeenCalled());
+  expect(mocks.save.mock.calls[0][0]).toMatchObject({ position: 19207, ranges: [[40, 41]] });
+});
+it("embeds an authorized open-only YouTube source without checkpointing", async () => {
+  mocks.start.mockResolvedValue({ ok: true, value: { sessionId: itemId, positionSeconds: 0, durationSeconds: null } });
+  const opened = openYoutube();
+  await screen.findByText("YouTube start 0");
+  fireEvent.click(screen.getByText("YouTube sample"));
+  fireEvent.click(screen.getByText("YouTube pause"));
+  opened.unmount();
+  expect(mocks.start).toHaveBeenCalledExactlyOnceWith({ academyId, unitId, itemId });
+  expect(mocks.save).not.toHaveBeenCalled();
 });

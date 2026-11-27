@@ -15,9 +15,10 @@ import { UploadedFiles } from "./uploads";
 type Asset = ContentDetail["assets"][number];
 
 /** The unit's Material tab: ordered material with answers under assessments and attached documents under videos, then unattached uploads. */
-export function MaterialList({ academyId, unitId, version, items, assets, editable, disabled, dirty, upload, onItems, onAdd, onChanged, onRefreshAssets, onError }: {
+export function MaterialList({ academyId, unitId, version, items, assets, editable, disabled, dirty, upload, onItems, onAdd, onUploaded, onChanged, onRefreshAssets, onError }: {
   academyId: string; unitId: string; version: number; items: ContentItem[]; assets: Asset[]; editable: boolean; disabled: boolean; dirty: boolean;
   upload: MaterialUpload; onItems: (change: (items: ContentItem[]) => ContentItem[]) => void; onAdd: (item: ContentItem) => void;
+  onUploaded: (item: ContentItem) => Promise<void>;
   onChanged: () => Promise<void>; onRefreshAssets: () => Promise<void>; onError: (message: string) => void;
 }) {
   const [dragged, setDragged] = useState<ContentItem | null>(null);
@@ -63,7 +64,8 @@ export function MaterialList({ academyId, unitId, version, items, assets, editab
   }
   const row = (item: ContentItem, extra: { child?: boolean; children?: ReactNode[] }) => {
     const options = dragged && dropOptions(items, dragged, item, isDocument);
-    return <MaterialRow key={item.id} academyId={academyId} item={item} asset={assets.find(a => a.id === item.assetId)} disabled={disabled} {...extra}
+    const asset = assets.find(a => a.id === item.assetId);
+    return <MaterialRow key={item.id} academyId={academyId} item={item} asset={asset} disabled={disabled} {...extra}
       selected={selected?.id === item.id} drag={options && { link: !!options.link, place: options.place }}
       acceptsFiles={item.kind === "assessment" || item.kind === "explanation" || !!extra.child}
       onSelect={() => setSelected(item.id)}
@@ -82,7 +84,7 @@ export function MaterialList({ academyId, unitId, version, items, assets, editab
           {canEnd && <EndSlot onDrop={dropAtEnd} />}
         </ol>
         : !editable && <Empty className="min-h-48 rounded-lg bg-card"><EmptyHeader><EmptyMedia variant="icon"><HugeiconsIcon icon={BookOpen01Icon} strokeWidth={1.5} aria-hidden="true" /></EmptyMedia><EmptyTitle>No material yet</EmptyTitle></EmptyHeader></Empty>}
-      {editable && <AddMaterial academyId={academyId} unitId={unitId} version={version} items={items} dirty={dirty} disabled={disabled} upload={upload} onAdd={onAdd} onCreated={onChanged} />}
+      {editable && <AddMaterial academyId={academyId} unitId={unitId} version={version} items={items} dirty={dirty} disabled={disabled} upload={upload} onAdd={onAdd} onUploaded={onUploaded} onCreated={onChanged} />}
     </section>
     {selected && <MaterialBar item={selected} label={materialLabel(selected, assets.find(a => a.id === selected.assetId))} document={isDocument(selected)} child={!!parent}
       first={siblings[0]?.id === selected.id} last={siblings.at(-1)?.id === selected.id}

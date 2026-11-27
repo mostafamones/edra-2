@@ -28,11 +28,12 @@ describe.each(RECIPE_VERSIONS)("generated development academy IDs (%s)", (recipe
   });
 
   it("pass student record validation and malformed IDs are rejected", () => {
-    for (const placement of scenario.placements) {
-      expect(studentRecordInputSchema.safeParse(student(scenario.academy.id, placement.groupId)).success).toBe(true);
+    // Online-only students (edra-dev-v6) have no group.
+    for (const placement of scenario.placements.filter((p) => p.groupId !== null)) {
+      expect(studentRecordInputSchema.safeParse(student(scenario.academy.id, placement.groupId!)).success).toBe(true);
     }
     for (const id of MALFORMED) {
-      expect(studentRecordInputSchema.safeParse(student(id, scenario.placements[0].groupId)).success).toBe(false);
+      expect(studentRecordInputSchema.safeParse(student(id, scenario.placements[0].groupId!)).success).toBe(false);
       expect(studentRecordInputSchema.safeParse(student(scenario.academy.id, id)).success).toBe(false);
     }
   });
@@ -48,7 +49,7 @@ describe.each(RECIPE_VERSIONS)("generated development academy IDs (%s)", (recipe
   });
 
   it("pass assessment audience validation and malformed IDs are rejected", () => {
-    for (const item of scenario.exams) expect(examDraftSchema.safeParse(exam(item.groupIds)).success).toBe(true);
+    for (const item of scenario.exams.filter((e) => e.groupIds.length)) expect(examDraftSchema.safeParse(exam(item.groupIds)).success).toBe(true);
     for (const id of MALFORMED) expect(examDraftSchema.safeParse(exam([id])).success).toBe(false);
   });
 });

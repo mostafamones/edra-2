@@ -30,7 +30,7 @@ export const learningUnitSchema = z.object({
   items: z.array(z.object({ id: z.guid(), kind: z.enum(["explanation", "document", "assessment", "answer"]), title: z.string(), available: z.boolean(), assessmentKind: z.enum(["assignment", "quiz", "exam"]).nullable(), assessmentId: z.guid().optional() })),
 });
 export type LearningUnit = z.infer<typeof learningUnitSchema>;
-export const materialSchema = z.object({ kind: z.enum(["video", "document"]), playbackId: z.string().nullable(), storagePath: z.string().nullable(), expiresAt: z.string() });
+export const materialSchema = z.object({ kind: z.enum(["video", "document"]), playbackId: z.string().nullable(), storagePath: z.string().nullable(), expiresAt: z.string(), youtubeId: z.string().regex(/^[A-Za-z0-9_-]{11}$/).nullable().optional(), durationSeconds: z.number().positive().nullable().optional() });
 export function normalizeUnitCode(value: string) { return normalizeCoupon(value); }
 export function isValidAccessCode(value: string) { return REDEMPTION_PATTERN.test(value); }
 export const redeemInput = requestInput.extend({ code: z.string().max(100).transform(normalizeUnitCode).refine(isValidAccessCode, "Enter a valid coupon.") });
