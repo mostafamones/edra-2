@@ -10,7 +10,7 @@ import { HeaderActions } from "@/components/shared/header-actions";
 import { Segmented } from "@/components/shared/segmented";
 import { ToggleBadge, ToggleBadgeGroup } from "@/components/shared/toggle-badge";
 import { AcademyGate } from "@/modules/auth";
-import { formatClock, useTimeFormat } from "@/modules/account";
+import { clockLabel } from "./time";
 import type { AcademyEntry } from "@/modules/academies";
 import { assessmentCalendarOptions } from "@/modules/assessments";
 import { groupListQueryKey, loadGroups, loadStructure, structureQueryKey } from "@/modules/groups";
@@ -42,8 +42,10 @@ export function StaffCalendarPage() {
 }
 
 function CalendarContent({ academy }: { academy: AcademyEntry }) {
-  const { format: timeFormat } = useTimeFormat();
-  const clock = (value: number) => formatClock(value, timeFormat);
+  // 12-hour AM/PM unless the viewer opts into 24-hour here; the account time setting does not apply to the calendar.
+  const [hour24, setHour24] = useState(false);
+  const timeFormat = hour24 ? "24h" : "12h";
+  const clock = (value: number) => clockLabel(value, timeFormat);
   const [wall, setWall] = useState(academyNow);
   const [selected, setSelected] = useState(() => academyNow().slice(0, 10));
   const [view, setView] = useState("month"), [level, setLevel] = useState("all");
@@ -81,7 +83,7 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
     && (level === "all" || event.levelIds.includes(level)) && (track === "all" || event.trackIds?.includes(track)) && (group === "all" || event.groupIds?.includes(group)));
   const timed = visible.filter(event => !event.deadline && !event.window);
   const firstHour = 0, lastHour = 24;
-  const hourLabel = (hour: number) => `${hour % 12 || 12} ${hour % 24 < 12 ? "AM" : "PM"}`;
+  const hourLabel = (hour: number) => hour24 ? `${String(hour % 24).padStart(2, "0")}:00` : `${hour % 12 || 12} ${hour % 24 < 12 ? "AM" : "PM"}`;
   const scroller = useRef<HTMLDivElement>(null);
   const weekStart = days[0];
   // Put the now line near the top so the grid favours what is coming over what has passed (or 8 AM on other weeks) once the grid exists; the user scrolls freely afterwards.
@@ -114,7 +116,8 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
         <Button variant="ghost" size="icon-sm" aria-label={`Next ${unit}`} onClick={() => step(1)}><HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={1.5} /></Button>
       </div>
       <FilterPopover iconOnly icon={PreferenceHorizontalIcon} label="View options" sections={[{ id: "show", active: hidden.size > 0, onReset: () => setHidden(new Set()),
-        content: <ToggleBadgeGroup legend="Show">{SHOWN.map(item => <ToggleBadge key={item.kind} pressed={!hidden.has(item.kind)} onPressedChange={on => setHidden(current => { const next = new Set(current); if (on) next.delete(item.kind); else next.add(item.kind); return next; })}>{item.label}</ToggleBadge>)}</ToggleBadgeGroup> }]} fields={[
+        content: <ToggleBadgeGroup legend="Show">{SHOWN.map(item => <ToggleBadge key={item.kind} pressed={!hidden.has(item.kind)} onPressedChange={on => setHidden(current => { const next = new Set(current); if (on) next.delete(item.kind); else next.add(item.kind); return next; })}>{item.label}</ToggleBadge>)}</ToggleBadgeGroup> },
+        { id: "time", active: hour24, onReset: () => setHour24(false), content: <ToggleBadgeGroup legend="Time"><ToggleBadge pressed={hour24} onPressedChange={setHour24}>24-hour</ToggleBadge></ToggleBadgeGroup> }]} fields={[
         { id: "grade", label: "Grade", value: level, defaultValue: "all", onChange: value => { setLevel(value); setTrack("all"); setGroup("all"); }, options: [{ value: "all", label: "All grades" }, ...(structure.data?.historicalLevels.map(item => ({ value: item.level_id, label: structure.data.levelNames[item.level_id] ?? item.level_id })) ?? [])] },
         { id: "track", label: "Track", value: track, defaultValue: "all", onChange: value => { setTrack(value); setGroup("all"); }, options: [{ value: "all", label: "All tracks" }, ...(structure.data?.historicalTracks.filter(item => level === "all" || item.level_id === level).map(item => ({ value: item.id, label: item.name })) ?? [])] },
         { id: "group", label: "Group", value: group, defaultValue: "all", onChange: setGroup, options: [{ value: "all", label: "All groups" }, ...[...(groups.data?.groups ?? []), ...(archivedGroups.data?.groups ?? [])].filter(item => (level === "all" || item.level_id === level) && (track === "all" || item.track_id === track)).map(item => ({ value: item.id, label: item.name }))] },
@@ -172,16 +175,22 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
   </main>;
 }
 
-/** Placeholder shaped like the view it stands in for, at the same viewport-bound height. */
+/** Placeholder shaped like the view it stands in for (day row included), at the same viewport-bound height. */
 function CalendarSkeleton({ view }: { view: string }) {
-  const frame = "hidden h-[calc(100svh-15rem)] min-h-96 overflow-hidden rounded-xl border border-border/60 md:grid";
+  const frame = "hidden h-[calc(100svh-15rem)] min-h-96 flex-col overflow-hidden rounded-xl border border-border/60 md:flex";
+  const cols = "grid-cols-[4.5rem_repeat(7,minmax(0,1fr))]";
   return <div role="status" aria-label="Loading calendar">
     <Skeleton className="h-96 w-full md:hidden" />
-    {view === "month" ? <div className={`${frame} min-h-[30rem] grid-cols-7 grid-rows-6 gap-px bg-border/40`}>{Array.from({ length: 42 }, (_, index) =>
-      <div key={index} className="flex flex-col gap-1.5 bg-background p-1.5"><Skeleton className="size-6 rounded-full" />{index % 3 !== 1 && <Skeleton className="h-4 w-4/5" />}{index % 4 === 0 && <Skeleton className="h-4 w-3/5" />}</div>)}</div>
-      : view === "week" ? <div className={`${frame} grid-cols-7 gap-px bg-border/40`}>{Array.from({ length: 7 }, (_, index) =>
-        <div key={index} className="flex flex-col gap-3 bg-background p-2"><Skeleton className="mx-auto h-8 w-16" />{index % 2 === 0 && <Skeleton className="h-24 w-full" />}<Skeleton className="h-16 w-full" />{index % 3 === 0 && <Skeleton className="h-20 w-full" />}</div>)}</div>
-        : <div className={`${frame} grid-rows-7 divide-y divide-border/40`}>{Array.from({ length: 7 }, (_, index) =>
-          <div key={index} className="grid grid-cols-[7rem_minmax(0,1fr)] gap-4 px-4 py-3"><Skeleton className="size-9 rounded-full" /><div className="flex flex-col gap-2">{index % 2 === 0 && <Skeleton className="h-10 w-full" />}<Skeleton className="h-10 w-full" /></div></div>)}</div>}
+    {view === "month" ? <div className={`${frame} min-h-[30rem]`}>
+      <div className="grid grid-cols-7 border-b border-border/40 bg-muted/20">{Array.from({ length: 7 }, (_, index) => <div key={index} className="px-2 py-2.5"><Skeleton className="h-3.5 w-8" /></div>)}</div>
+      <div className="grid min-h-0 flex-1 grid-cols-7 grid-rows-6 gap-px bg-border/40">{Array.from({ length: 42 }, (_, index) =>
+        <div key={index} className="flex flex-col gap-1.5 bg-background p-1.5"><Skeleton className="size-6 rounded-full" />{index % 3 !== 1 && <Skeleton className="h-4 w-4/5" />}{index % 4 === 0 && <Skeleton className="h-4 w-3/5" />}</div>)}</div>
+    </div> : view === "week" ? <div className={frame}>
+      <div className={`grid ${cols} border-b border-border/40 bg-muted/20`}><div />{Array.from({ length: 7 }, (_, index) =>
+        <div key={index} className="flex items-center justify-center gap-2 border-l border-border/40 px-2 py-3"><Skeleton className="h-3.5 w-8" /><Skeleton className="size-8 rounded-full" /></div>)}</div>
+      <div className={`grid min-h-0 flex-1 ${cols}`}><div className="flex flex-col gap-14 p-2 pt-3">{Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-3 w-8" />)}</div>{Array.from({ length: 7 }, (_, index) =>
+        <div key={index} className="flex flex-col gap-3 border-l border-border/40 p-2">{index % 2 === 0 && <Skeleton className="h-24 w-full" />}<Skeleton className="h-16 w-full" />{index % 3 === 0 && <Skeleton className="h-20 w-full" />}</div>)}</div>
+    </div> : <div className={`${frame} divide-y divide-border/40`}>{Array.from({ length: 7 }, (_, index) =>
+      <div key={index} className="grid flex-1 grid-cols-[7rem_minmax(0,1fr)] gap-4 px-4 py-3"><Skeleton className="size-9 rounded-full" /><div className="flex flex-col gap-2">{index % 2 === 0 && <Skeleton className="h-10 w-full" />}<Skeleton className="h-10 w-full" /></div></div>)}</div>}
   </div>;
 }

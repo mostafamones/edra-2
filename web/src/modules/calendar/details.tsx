@@ -6,21 +6,23 @@ import Link from "@/components/shared/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AcademyRole } from "@/modules/academies";
-import { formatClock, type TimeFormat } from "@/modules/account";
+import type { TimeFormat } from "@/modules/account";
+import { clockLabel } from "./time";
 import { useCanonicalHref } from "@/modules/navigation";
 import { ACADEMY_TIME_ZONE, canEditSchedule, nameOccurrence, schedulesRootKey } from "@/modules/schedules";
 import { dateLabel, type CalendarEvent } from "./events";
 
+const START_LEAD = 30;
 export const ACCENTS = { session: "bg-primary", assignment: "bg-amber-500", quiz: "bg-sky-500", exam: "bg-rose-500" } as const;
 
 /** Popover body for one calendar event: status, editable session name, details and the next action. */
-export function EventDetails({ event, today, past, format, academyId, role, pending, onStart }: {
-  event: CalendarEvent; today: string; past: boolean; format: TimeFormat; academyId: string; role: AcademyRole;
+export function EventDetails({ event, today, now, past, format, academyId, role, pending, onStart }: {
+  event: CalendarEvent; today: string; now: number; past: boolean; format: TimeFormat; academyId: string; role: AcademyRole;
   pending: boolean; onStart: (id: string) => void;
 }) {
   const href = useCanonicalHref();
-  const clock = (value: number) => formatClock(value, format);
-  const fullTime = (value: string) => new Intl.DateTimeFormat("en-GB", { timeZone: ACADEMY_TIME_ZONE, day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: format === "12h" }).format(new Date(value));
+  const clock = (value: number) => clockLabel(value, format);
+  const fullTime = (value: string) => new Intl.DateTimeFormat("en-GB", { timeZone: ACADEMY_TIME_ZONE, day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: format === "12h" }).format(new Date(value)).replace(":00 ", " ").replace(/\b(am|pm)\b/, meridiem => meridiem.toUpperCase());
   const route = event.kind === "assignment" ? "assignments" : event.kind === "quiz" ? "quizzes" : "exams";
   const status = event.live ? "Live" : event.kind === "session" ? event.recorded ? "Ended" : past ? "Not started" : "Planned"
     : event.deadline ? "Assignment due" : event.window ? `${event.kind} window` : event.kind;
@@ -48,11 +50,12 @@ export function EventDetails({ event, today, past, format, academyId, role, pend
     <ul className="flex flex-col gap-2 text-sm">{details.map((item, index) => <li key={index} className="flex items-start gap-2.5">
       <HugeiconsIcon icon={item.icon} strokeWidth={1.5} className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span className="min-w-0 tabular-nums">{item.text}</span>
     </li>)}</ul>
-    <div className="flex flex-wrap gap-2 border-t pt-4">
-      {event.sessionId ? <Button asChild size="sm"><Link href={href(`/app/attendance/${event.sessionId}`)}>Open attendance</Link></Button>
-        : event.assessmentId ? <Button asChild size="sm"><Link href={href(`/app/${route}/${event.assessmentId}`)}>Open {event.kind}</Link></Button>
-          : event.scheduleId && event.day === today ? <Button size="sm" disabled={pending} onClick={() => onStart(event.scheduleId!)}>{pending ? "Starting…" : "Start session"}</Button> : null}
-      {event.scheduleId && <Button asChild size="sm" variant="ghost"><Link href={href("/app/schedules")}>View schedules</Link></Button>}
+    <div className="flex gap-2">
+      {event.sessionId ? <Button asChild size="sm" className="flex-1"><Link href={href(`/app/attendance/${event.sessionId}`)}>Open attendance</Link></Button>
+        : event.assessmentId ? <Button asChild size="sm" className="flex-1"><Link href={href(`/app/${route}/${event.assessmentId}`)}>Open {event.kind}</Link></Button>
+          // Starting opens 30 minutes before the planned time and stays open for a late start that day.
+          : event.scheduleId && event.day === today && now >= event.start - START_LEAD ? <Button size="sm" className="flex-1" disabled={pending} onClick={() => onStart(event.scheduleId!)}>{pending ? "Starting…" : "Start session"}</Button> : null}
+      {event.scheduleId && <Button asChild size="sm" variant="outline" className="flex-1"><Link href={href("/app/schedules")}>View schedules</Link></Button>}
     </div>
   </div>;
 }
