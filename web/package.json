@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "vite dev",
     "build": "vite build",
     "lint": "eslint",
     "typecheck": "node workers-test/generate-routes.mjs && tsc --noEmit",

@@ -19,6 +19,21 @@ describe("trusted platform routes", () => {
     expect(classifyHost("lvh.me:3000")).toBe("marketing");
     for (const host of ["app.lvh.me.attacker:3000", "app.lvh.me:4000", "evil-app.lvh.me:3000", "preview.vercel.app", "app.lvh.me:3000@evil.test"]) expect(classifyHost(host)).toBeNull();
   });
+  it.each([3000, 3001, 3002, 3003, 3004])("accepts local platform origins on port %s", port => {
+    local();
+    expect(classifyHost(`lvh.me:${port}`)).toBe("marketing");
+    expect(classifyHost(`app.lvh.me:${port}`)).toBe("staff");
+    expect(classifyHost(`learn.lvh.me:${port}`)).toBe("student");
+    expect(validateReturnDestination(`http://learn.lvh.me:${port}/profile`)).toEqual({ platform: "student", path: "/profile" });
+    expect(classifyHost(`app.lvh.me.evil:${port}`)).toBeNull();
+  });
+  it("rejects ports outside the development range", () => {
+    local();
+    for (const port of [2999, 3005, 30000]) {
+      expect(classifyHost(`app.lvh.me:${port}`)).toBeNull();
+      expect(validateReturnDestination(`http://learn.lvh.me:${port}/profile`)).toBeNull();
+    }
+  });
   it("accepts no development tunnel unless one exact host is configured", () => {
     local();
     expect(classifyHost("mones.ddns.net:3000")).toBeNull();

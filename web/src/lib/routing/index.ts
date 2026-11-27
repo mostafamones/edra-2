@@ -43,11 +43,19 @@ function developmentTunnelHost() {
 }
 export function classifyHost(host: string): Platform | null {
   const origins = platformOrigins();
-  for (const platform of ["marketing", "staff", "student"] as const) if (host.toLowerCase() === new URL(origins[platform]).host.toLowerCase()) return platform;
+  for (const platform of ["marketing", "staff", "student"] as const) {
+    const configured = new URL(origins[platform]);
+    if (host.toLowerCase() === configured.host.toLowerCase()) return platform;
+    if (process.env.NODE_ENV !== "production" && configured.protocol === "http:"
+      && ["lvh.me", "app.lvh.me", "learn.lvh.me"].includes(configured.hostname)
+      && /^300[0-4]$/.test(configured.port)
+      && /^300[0-4]$/.test(host.split(":")[1] ?? "")
+      && host.toLowerCase() === `${configured.hostname}:${host.split(":")[1]}`) return platform;
+  }
   const tunnel = developmentTunnelHost();
   if (tunnel && host.toLowerCase() === tunnel) return "staff";
   // localhost is a bounded, development-only legacy marketing entry.
-  if (process.env.NODE_ENV !== "production" && ["localhost:3000", "127.0.0.1:3000"].includes(host)) return "marketing";
+  if (process.env.NODE_ENV !== "production" && /^(?:localhost|127\.0\.0\.1):300[0-4]$/.test(host)) return "marketing";
   return null;
 }
 export function validAcademySlug(slug: string) { return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 50 && !RESERVED_NAMESPACES.includes(slug as typeof RESERVED_NAMESPACES[number]); }
@@ -129,7 +137,7 @@ export function validateReturnDestination(value: unknown, platform: "staff" | "s
   try {
     const url = new URL(value);
     if (url.username || url.password) return null;
-    const target = (["staff", "student"] as const).find(p => platformOrigin(p) === url.origin);
+    const target = (["staff", "student"] as const).find(p => platformOrigin(p) === url.origin || (process.env.NODE_ENV !== "production" && url.protocol === "http:" && ["app.lvh.me", "learn.lvh.me"].includes(url.hostname) && /^300[0-4]$/.test(url.port) && classifyHost(url.host) === p));
     const path = safeRelativePath(url.pathname + url.search + url.hash);
     return target && path ? { platform: target, path } : null;
   } catch { return null; }
