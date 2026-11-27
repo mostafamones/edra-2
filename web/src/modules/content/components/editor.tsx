@@ -207,7 +207,7 @@ function UnitEditor({ academy, data }: { academy: AcademyEntry; data: ContentDet
       </div>
       <TabsContent value="material" forceMount className={panel}>
         <MaterialList academyId={academy.id} unitId={unit.id} version={saved.version} items={document.items} assets={assets} editable={editable} disabled={disabled} dirty={dirty} upload={upload}
-          onItems={change => setDocument(current => ({ ...current, items: change(current.items) }))} onAdd={add} onChanged={reload} onRefreshAssets={refreshAssets} onError={setError} />
+          onItems={change => setDocument(current => ({ ...current, items: change(current.items) }))} onAdd={add} onUploaded={uploaded} onChanged={reload} onRefreshAssets={refreshAssets} onError={setError} />
       </TabsContent>
       {unit.published_revision > 0 && <TabsContent value="students" forceMount className={panel}><UnitAccessPanel academyId={academy.id} unitId={unit.id} userId={data.userId} search={accessSearch} onClearSearch={() => { setAccessDraft(""); setAccessSearch(""); }} /></TabsContent>}
     </Tabs>

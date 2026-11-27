@@ -110,6 +110,7 @@ function LearningUnitContent({ academyId, academySlug, userId, initial }: Props)
         return <li key={item.id}>
           {available && item.kind === "explanation" ? <Button type="button" variant="ghost" aria-current={current?.id === item.id ? "true" : undefined} aria-label={item.title} className={cn(row, "h-auto justify-start whitespace-normal font-normal")} onClick={() => selectLesson(item.id)}>{title}{badge}<HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={1.5} className="size-4 text-muted-foreground" aria-hidden="true" /></Button>
             : <div className={row}>{title}
+              {state?.opened && !state.completed && !state.watchedSeconds && <span className="shrink-0 text-xs text-muted-foreground">Opened</span>}
               {!available && state?.completed && <span className="shrink-0 text-xs text-muted-foreground">Completed</span>}
               {badge}
               {available && assignment ? <Button asChild size="sm" variant="ghost"><Link href={studentAcademyPath(academySlug, `assignments/${item.assessmentId}`)}>Open assignment</Link></Button>

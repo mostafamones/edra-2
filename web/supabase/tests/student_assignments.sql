@@ -300,6 +300,17 @@ do $$ declare d jsonb; r jsonb; begin
   perform pg_temp.check(jsonb_array_length(r->'answerVideos')=1 and r->'result'->>'total'='0.00','submission qualifies answer videos');
   perform pg_temp.check(public.authorize_content_material(pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('answer-video'))->>'playbackId'='playback-answer-video','answer video authorized');
 end $$;
+reset role;
+savepoint answer_document;
+update public.content_assets set kind='document', mime_type='application/pdf', playback_id=null,
+  storage_path=pg_temp.sid('academy')||'/'||pg_temp.sid('unit')||'/answer.pdf'
+where id=pg_temp.sid('answer-video');
+set local role authenticated;
+select pg_temp.act('student');
+select pg_temp.check(public.authorize_content_material(pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('answer-video'))->>'storagePath'
+  =pg_temp.sid('academy')||'/'||pg_temp.sid('unit')||'/answer.pdf','qualified students can still open answer documents');
+rollback to savepoint answer_document;
+set local role authenticated;
 select pg_temp.act('outsider');
 select pg_temp.fails(format('select public.authorize_content_material(%L,%L,%L)',pg_temp.sid('academy'),pg_temp.sid('unit'),pg_temp.sid('answer-video')),'student_unavailable');
 

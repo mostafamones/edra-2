@@ -1,9 +1,18 @@
 import { createHmac, generateKeyPairSync, verify } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { deleteVideo, playbackToken, validMuxWebhook } from "./mux";
+import { createVideoUpload, deleteVideo, playbackToken, validMuxWebhook } from "./mux";
 
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+
+it("explains the Mux asset limit without exposing other provider messages", async () => {
+  vi.stubEnv("MUX_TOKEN_ID", "test-token"); vi.stubEnv("MUX_TOKEN_SECRET", "test-secret");
+  vi.stubGlobal("fetch", vi.fn()
+    .mockResolvedValueOnce(Response.json({ error: { messages: ["Free plan is limited to 10 assets, you cannot create direct uploads while exceeding this limit"] } }, { status: 400 }))
+    .mockResolvedValueOnce(Response.json({ error: { messages: ["Internal provider detail"] } }, { status: 400 })));
+  await expect(createVideoUpload("lesson", "https://example.com")).rejects.toThrow("Video storage is full on the current plan.");
+  await expect(createVideoUpload("lesson", "https://example.com")).rejects.toThrow("The video provider is unavailable. Please retry.");
+});
 
 describe("permanent video deletion", () => {
   function provider(responses: Response[]) {

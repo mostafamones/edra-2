@@ -189,6 +189,40 @@ do $$ declare unit jsonb; begin
  perform pg_temp.lerror(format('select public.start_my_content_progress(%L,%L,%L)',pg_temp.lid('academy'),pg_temp.lid('second-unit'),unit->'items'->0->>'id'),'access_required');
 end $$;
 reset role;
+-- YouTube lessons reuse publication, student access and watched-range authority.
+set local role authenticated;
+select pg_temp.lact('owner');
+do $$ declare a uuid:=pg_temp.lid('academy'); u uuid:=pg_temp.lid('draft'); item uuid:=gen_random_uuid();
+  unknown_item uuid:=gen_random_uuid(); existing public.content_units; doc jsonb; receipt jsonb; session_id uuid;
+begin
+  perform pg_temp.lerror(format('select public.register_youtube_lesson(%L,%L,%L,%L,%L,100)',a,u,item,'invalid','Bad video'),'validation');
+  perform public.register_youtube_lesson(a,u,item,'4BUq8tldjyo','YouTube lesson',100);
+  perform public.register_youtube_lesson(a,u,unknown_item,'dQw4w9WgXcQ','Video with no duration');
+  select * into strict existing from public.content_units where id=u;
+  doc:=jsonb_set(existing.draft,'{items}',jsonb_build_array(
+    jsonb_build_object('id',item,'kind','explanation','title','YouTube lesson','assetId',item),
+    jsonb_build_object('id',unknown_item,'kind','explanation','title','Video with no duration','assetId',unknown_item)));
+  perform public.save_content_unit(a,u,existing.version,doc);
+  perform public.change_content_unit(a,u,existing.version+1,'publish');
+  perform public.issue_content_access(a,u,pg_temp.lid('record-student'),gen_random_uuid());
+  perform pg_temp.lact('outsider');
+  perform pg_temp.lerror(format('select public.start_my_content_progress(%L,%L,%L)',a,u,item),'student_unavailable');
+  perform pg_temp.lact('second');
+  perform pg_temp.lerror(format('select public.authorize_content_material(%L,%L,%L)',a,u,item),'access_required');
+  perform pg_temp.lact('student');
+  perform pg_temp.lcheck(public.authorize_content_material(a,u,item)->>'youtubeId'='4BUq8tldjyo','authorized YouTube embed');
+  receipt:=public.start_my_content_progress(a,u,item);
+  perform pg_temp.lcheck(receipt->>'youtubeId'='4BUq8tldjyo' and (receipt->>'durationSeconds')::numeric=100,'YouTube progress opens with duration');
+  session_id:=(receipt->>'sessionId')::uuid;
+  receipt:=public.save_my_content_progress(a,u,session_id,1,95,'[]');
+  perform pg_temp.lcheck(receipt->>'completed'='false','seeking in a YouTube lesson does not complete it');
+  receipt:=public.save_my_content_progress(a,u,session_id,2,90,'[[0,90]]');
+  perform pg_temp.lcheck(receipt->>'completed'='true','saved YouTube coverage completes a lesson');
+  perform public.start_my_content_progress(a,u,unknown_item);
+  perform pg_temp.lcheck(public.get_my_content_unit(a,u)->'progress'->'items' @> jsonb_build_array(
+    jsonb_build_object('itemId',unknown_item,'opened',true,'completed',false)),'unknown duration records an open only');
+end $$;
+reset role;
 -- Suspension and expiry deny writes without clearing history.
 update public.academy_student_profiles p set access_suspended_at=clock_timestamp() from public.annual_student_records r where r.academy_student_profile_id=p.id and r.id=pg_temp.lid('record-student');
 set local role authenticated;
