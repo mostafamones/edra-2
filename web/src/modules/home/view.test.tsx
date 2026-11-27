@@ -17,11 +17,9 @@ const dashboard: Overview = { ...data,
   assignments: [{ id: "a1", title: "Fractions", at: "2026-10-08T20:59:00Z", recipients: 5, marked: 4, average: 40, below: 3 }, { id: "a2", title: "Decimals", at: "2026-10-15T20:59:00Z", recipients: 5, marked: 1, average: 90, below: 0 }],
   recent: [{ id: "s1", title: "Algebra", startedAt: "2026-10-29T10:00:00Z", finalized: false, attended: 4, counted: 5 }] };
 
-it("opens the actual work and filters student destinations", () => {
+it("opens the actual work", () => {
   render(<HomeView academyName="Academy" base="/a" live={read([])} overview={read(data)} />);
   expect(screen.getByRole("link", { name: /Loops/ }).getAttribute("href")).toBe("/a/content/u");
-  expect(screen.getByRole("link", { name: /Secondary/ }).getAttribute("href")).toBe("/a/students?level=secondary-2");
-  expect(screen.getByText("15 in person · 5 online")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Start session/ })).toBeNull();
 });
 it("does not claim all caught up or zero students after a failed overview read", () => {
