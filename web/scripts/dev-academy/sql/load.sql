@@ -90,6 +90,10 @@ begin
     raise exception 'dev-academy: the current academic year does not match the scenario reference date';
   end if;
 
+  -- Student learning is gated per year; the synthetic academy has started it so students can use the app.
+  update public.academic_years set student_learning_started_at = year_start, student_learning_started_by = owner_id,
+    student_learning_start_source = 'manager' where id = year_id;
+
   insert into public.academy_memberships (academy_id, user_id, role, created_by, created_at)
   select academy, p.user_id, p.role::public.academy_role, owner_id, year_start from fx_people p where not p.is_student
   union all select academy, developer, 'instructor', owner_id, year_start;
