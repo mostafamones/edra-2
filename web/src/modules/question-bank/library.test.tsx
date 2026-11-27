@@ -103,7 +103,7 @@ it("adds selected questions to a collection in bulk", async () => {
   await screen.findByText("First");
   for (const box of screen.getAllByRole("checkbox", { name: "Select question 1" })) fireEvent.click(box);
   expect(screen.getByText("2 selected")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Add to collection" }));
+  fireEvent.click(screen.getByRole("button", { name: "Collection" }));
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("combobox", { name: "Topic or collection" }));
   fireEvent.click(await screen.findByRole("option", { name: "Revision" }));
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Add" }));
@@ -111,6 +111,20 @@ it("adds selected questions to a collection in bulk", async () => {
     academyId: scopeA.academyId, collectionId: ids.review, questionIds: [ids.q1, ids.q2], member: true,
   } }));
   await waitFor(() => expect(screen.queryByText("2 selected")).toBeNull());
+});
+
+it("toggles a row's selection instead of opening it while questions are selected", async () => {
+  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: collections });
+  vi.mocked(listQuestionBank).mockResolvedValue(page([row(ids.q1, "First"), row(ids.q2, "Second")]));
+  mount();
+  await screen.findByText("First");
+  fireEvent.click(screen.getAllByRole("checkbox", { name: "Select question 1" })[0]);
+  expect(screen.getByText("1 selected")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Second/ }));
+  expect(screen.getByText("2 selected")).toBeTruthy();
+  expect(readQuestionBank).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: /Second/ }));
+  expect(screen.getByText("1 selected")).toBeTruthy();
 });
 
 it("never shows a late response from the previous account or academy", async () => {

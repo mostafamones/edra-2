@@ -12,6 +12,7 @@ import { ActionBar, ActionBarSeparator } from "@/components/ui/action-bar";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu";
@@ -118,6 +119,8 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
     if (message) toast.error(message);
   }
 
+  const select = (id: string, on: boolean) => setSelected(previous => { const next = new Set(previous); if (on && next.size < 100) next.add(id); else next.delete(id); return next; });
+
   const menu = (row: BankSummary) => <>
     <ContextMenuItem onSelect={() => open(row)}><HugeiconsIcon icon={ViewIcon} strokeWidth={1.5} />Open</ContextMenuItem>
     <ContextMenuItem onSelect={() => { open(row); setEditing(true); }}><HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={1.5} />Edit</ContextMenuItem>
@@ -155,8 +158,8 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
           <div className="w-full sm:ms-auto sm:w-72"><BankSearch browse={browse} id="qb-library-search" /></div>
         </div>
         <QuestionList browse={browse} activeId={active?.id} selected={selected} collections={list} menu={menu}
-          onSelect={(id, on) => setSelected(previous => { const next = new Set(previous); if (on && next.size < 100) next.add(id); else next.delete(id); return next; })}
-          onOpen={open}
+          onSelect={select}
+          onOpen={row => selected.size ? select(row.id, !selected.has(row.id)) : open(row)}
           emptyAction={<Button asChild size="sm"><Link href={importHref}>Import PDF</Link></Button>} />
       </section>
     </div>
@@ -170,7 +173,7 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
 
     <FloatingSheet open={!!active} onOpenChange={next => { if (!next && !pending) open(undefined); }}>
       <FloatingSheetContent className="w-xl gap-0" showCloseButton={!pending}>
-        <FloatingSheetHeader className="shrink-0 gap-1 border-b px-6 py-5 pr-16">
+        <FloatingSheetHeader className="shrink-0 gap-1 border-b px-6 py-5 pr-32">
           <FloatingSheetTitle className="flex items-center gap-2 text-xl font-semibold" dir="auto">
             {editing ? `Edit ${questionTitle(active?.printedNumber).toLowerCase()}` : questionTitle(active?.printedNumber)}
             {detail.data?.archived && <Badge variant="secondary" className="font-normal">Archived</Badge>}
@@ -178,6 +181,9 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
           {active && <p className="truncate text-sm text-muted-foreground" dir="auto">
             {[active.file && fileTitle(active.file), active.page && `Page ${active.page}`].filter(Boolean).join(" · ")}
           </p>}
+          {detail.data && !editing && <Button variant="ghost" size="sm" className="absolute top-4 right-14" onClick={() => setEditing(true)}>
+            <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={1.5} />Edit
+          </Button>}
         </FloatingSheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6">
           {active && <QueryContent query={detail} label="question" isEmpty={() => false} emptyTitle="">
@@ -193,15 +199,26 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
             <Button variant="ghost" className="ms-auto" disabled={pending} onClick={() => { setEditing(false); setEditError(""); }}>Cancel</Button>
             <Button type="submit" form="qb-edit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
           </> : <>
-            {detail.data.archived
-              ? <Button variant="ghost" size="sm" onClick={() => void archive([detail.data!.id], false)}><HugeiconsIcon icon={ArchiveRestoreIcon} strokeWidth={1.5} />Restore</Button>
-              : <Button variant="ghost" size="sm" onClick={() => void archive([detail.data!.id], true)}><HugeiconsIcon icon={Archive02Icon} strokeWidth={1.5} />Archive</Button>}
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleting([detail.data!.id])}>
-              <HugeiconsIcon icon={Delete02Icon} strokeWidth={1.5} />Delete
-            </Button>
+            {(() => {
+              const id = detail.data.id;
+              const restoring = detail.data.archived;
+              return <>
+                <Tooltip>
+                  <TooltipTrigger asChild><Button variant="ghost" size="icon-sm" aria-label={restoring ? "Restore" : "Archive"} onClick={() => void archive([id], !restoring)}>
+                    <HugeiconsIcon icon={restoring ? ArchiveRestoreIcon : Archive02Icon} strokeWidth={1.5} />
+                  </Button></TooltipTrigger>
+                  <TooltipContent>{restoring ? "Restore" : "Archive"}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild><Button variant="ghost" size="icon-sm" aria-label="Delete" className="text-destructive hover:text-destructive" onClick={() => setDeleting([id])}>
+                    <HugeiconsIcon icon={Delete02Icon} strokeWidth={1.5} />
+                  </Button></TooltipTrigger>
+                  <TooltipContent>Delete</TooltipContent>
+                </Tooltip>
+              </>;
+            })()}
             <span className="ms-auto" />
-            <AddToCollection scope={scope} collections={list} questionIds={[detail.data.id]} />
-            <Button size="sm" onClick={() => setEditing(true)}><HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={1.5} />Edit</Button>
+            <AddToCollection scope={scope} collections={list} questionIds={[detail.data.id]} label="Collection" variant="ghost" />
           </>}
         </FloatingSheetFooter>}
       </FloatingSheetContent>
@@ -227,7 +244,7 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
     {selected.size > 0 && <ActionBar aria-label="Selected questions">
       <span role="status" className="px-2 font-medium tabular-nums">{selected.size} selected</span>
       <ActionBarSeparator />
-      <AddToCollection scope={scope} collections={list} questionIds={ids} variant="ghost" onDone={() => setSelected(new Set())} />
+      <AddToCollection scope={scope} collections={list} questionIds={ids} variant="ghost" label="Collection" onDone={() => setSelected(new Set())} />
       {removable && <Button size="sm" variant="ghost" onClick={() => void remove(removable, ids)}>
         <HugeiconsIcon icon={FolderRemoveIcon} strokeWidth={1.5} />Remove from {removable.kind === "topic" ? "topic" : "collection"}
       </Button>}
