@@ -8,6 +8,13 @@ import { ACADEMY_TIME_ZONE } from "@/modules/schedules";
 import { formatClock, type TimeFormat } from "@/modules/account";
 import { dateLabel, type CalendarEvent } from "./events";
 
+const TONES = {
+  session: "border-l-primary bg-primary/10 text-foreground",
+  assignment: "border-l-amber-500 bg-amber-500/15 text-foreground",
+  quiz: "border-l-sky-500 bg-sky-500/15 text-foreground",
+  exam: "border-l-rose-500 bg-rose-500/15 text-foreground",
+} as const;
+
 export function EventButton({ event, today, format, compact = false, pending, onStart }: {
   event: CalendarEvent; today: string; format: TimeFormat; compact?: boolean; pending: boolean; onStart: (id: string) => void;
 }) {
@@ -19,11 +26,10 @@ export function EventButton({ event, today, format, compact = false, pending, on
   const fullTime = (value: string) => new Intl.DateTimeFormat("en-GB", { timeZone: ACADEMY_TIME_ZONE, day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: format === "12h" }).format(new Date(value));
   return <Popover>
     <PopoverTrigger asChild>
-      <button type="button" aria-label={`${event.title}, ${event.window ? "assessment window" : time}${event.live ? ", live" : ""}`} className={`relative flex h-full w-full min-w-0 flex-col gap-1 overflow-hidden rounded-lg bg-card px-3 py-2 text-left text-sm outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring ${event.live ? "ring-1 ring-primary" : event.kind !== "session" ? "ring-1 ring-border" : ""} ${banner ? "text-xs" : ""}`}>
-        {!event.deadline && <span aria-hidden="true" className={`absolute inset-y-2 left-0 w-0.5 ${event.kind === "session" ? "bg-primary" : "bg-muted-foreground"}`} />}
-        {!event.deadline && <span className="text-xs tabular-nums text-muted-foreground">{event.window ? `${event.kind} window` : event.live ? `${clock(event.start)} · Live` : time}</span>}
-        <span className={`min-w-0 font-medium ${compact ? "line-clamp-2" : ""}`}>{event.title}</span>
-        {event.deadline ? <span className="flex items-center gap-1 tabular-nums text-muted-foreground"><HugeiconsIcon icon={Clock01Icon} strokeWidth={1.5} className="size-3 shrink-0" />{clock(event.start)}</span> : !compact && <span className="text-xs text-muted-foreground">{event.location || event.audience || event.kind}</span>}
+      <button type="button" aria-label={`${event.title}, ${event.window ? "assessment window" : time}${event.live ? ", live" : ""}`} className={`relative flex h-full w-full min-w-0 flex-col gap-0.5 overflow-hidden rounded-md border-l-[3px] px-2 py-1.5 text-left text-xs leading-snug outline-none transition-[filter,box-shadow] hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring dark:hover:brightness-125 ${TONES[event.kind]} ${event.live ? "ring-2 ring-primary" : ""} ${event.recorded && !event.live ? "opacity-80" : ""}`}>
+        {!event.deadline && <span className="flex items-center gap-1 tabular-nums opacity-75">{event.live && <span aria-hidden="true" className="size-1.5 shrink-0 animate-pulse rounded-full bg-primary" />}{event.window ? `${event.kind} window` : event.live ? `${clock(event.start)} · Live` : time}</span>}
+        <span className={`min-w-0 text-[13px] font-semibold ${compact ? "line-clamp-2" : "line-clamp-3"}`}>{event.title}</span>
+        {event.deadline ? <span className="flex items-center gap-1 tabular-nums opacity-75"><HugeiconsIcon icon={Clock01Icon} strokeWidth={1.5} className="size-3 shrink-0" />Due {clock(event.start)}</span> : !compact && <span className="truncate opacity-75">{event.location || event.audience || event.kind}</span>}
       </button>
     </PopoverTrigger>
     <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] gap-3 p-5" side="right" align="start">

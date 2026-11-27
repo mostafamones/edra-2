@@ -20,6 +20,8 @@ import { calendarEvents, dateLabel, layoutEvents, minutes, shiftDay, weekDays } 
 import { EventButton } from "./event";
 import { calendarHistoryOptions, calendarLiveOptions } from "./queries";
 
+const HOUR = 72;
+
 export function StaffCalendarPage() {
   return <AcademyGate>{academy => <CalendarContent key={academy.id} academy={academy} />}</AcademyGate>;
 }
@@ -64,9 +66,9 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
   const visible = events.filter(event => (event.kind === "session" ? sessionsVisible : assessmentsVisible)
     && (level === "all" || event.levelIds.includes(level)) && (track === "all" || event.trackIds?.includes(track)) && (group === "all" || event.groupIds?.includes(group)));
   const timed = visible.filter(event => !event.deadline && !event.window);
-  const firstHour = Math.max(0, Math.min(14, ...timed.map(event => Math.floor(event.start / 60))));
-  const lastHour = Math.min(24, Math.max(21, ...timed.map(event => Math.ceil(event.end / 60))));
-  const height = (lastHour - firstHour) * 64;
+  const firstHour = Math.max(0, Math.min(8, ...timed.map(event => Math.floor(event.start / 60))));
+  const lastHour = Math.min(24, Math.max(20, ...timed.map(event => Math.ceil(event.end / 60))));
+  const height = (lastHour - firstHour) * HOUR;
   const renderEvent = (event: (typeof events)[number], compact = false) => <EventButton key={event.id} event={event} format={timeFormat} compact={compact} today={today} pending={pendingId !== null} onStart={id => void start(id)} />;
   const changeWeek = (delta: number) => setSelected(day => shiftDay(day, delta * 7));
 
@@ -103,17 +105,17 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
         {visible.filter(event => event.day === selected).map(event => <div key={event.id} className="min-h-20">{renderEvent(event)}</div>)}
         {!visible.some(event => event.day === selected) && <div className="rounded-xl bg-card p-8 text-center text-sm text-muted-foreground">{failures.length ? "Calendar unavailable" : "No events"}</div>}
       </div>
-      {view === "week" && <div className="hidden overflow-hidden rounded-xl border border-border/60 md:block">
+      {view === "week" && <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-card/30 md:block">
         <div className="grid grid-cols-[4.5rem_repeat(7,minmax(0,1fr))]">
-          <div className="bg-muted/10" />{days.map(day => <div key={day} className={`flex flex-col items-center gap-2 border-l border-border/40 p-3 text-sm ${day === today ? "bg-card" : "bg-muted/10"}`}><span className="text-xs text-muted-foreground">{dateLabel(day, { weekday: "short" })}</span><button className={`flex size-7 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring ${day === today ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`} aria-label={`Show agenda for ${day}`} onClick={() => { setSelected(day); setView("agenda"); }}>{Number(day.slice(-2))}</button></div>)}
-          <span className="border-t border-border/40 bg-muted/10 px-2 py-3 text-[10px] leading-4 text-muted-foreground">Windows<br />& deadlines</span>{days.map(day => <div key={day} className={`min-h-16 space-y-1 border-l border-t border-border/40 p-2 ${day === today ? "bg-card/40" : "bg-muted/10"}`}>{visible.filter(event => (event.deadline || event.window) && event.day === day).map(event => renderEvent(event, true))}</div>)}
+          <div className="bg-muted/20" />{days.map(day => <button key={day} type="button" aria-label={`Show agenda for ${day}`} onClick={() => { setSelected(day); setView("agenda"); }} className={`flex items-center justify-center gap-2 border-l border-border/40 px-2 py-3 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring ${day === today ? "bg-primary/5" : "bg-muted/20"}`}><span className={`text-xs font-medium uppercase tracking-wide ${day === today ? "text-primary" : "text-muted-foreground"}`}>{dateLabel(day, { weekday: "short" })}</span><span className={`flex size-8 items-center justify-center rounded-full text-base font-semibold tabular-nums ${day === today ? "bg-primary text-primary-foreground" : ""}`}>{Number(day.slice(-2))}</span></button>)}
+          <span className="border-t border-border/40 bg-muted/20 px-2 py-2 text-[11px] leading-4 text-muted-foreground">Due &<br />windows</span>{days.map(day => <div key={day} className={`min-h-12 space-y-1 border-l border-t border-border/40 p-1.5 ${day === today ? "bg-primary/5" : "bg-muted/20"}`}>{visible.filter(event => (event.deadline || event.window) && event.day === day).map(event => renderEvent(event, true))}</div>)}
         </div>
         <div className="grid grid-cols-[4.5rem_repeat(7,minmax(0,1fr))]">
-          <div className="relative border-t border-border/50" style={{ height }}>{Array.from({ length: lastHour - firstHour }, (_, index) => <span key={index} className="absolute left-2 text-[11px] tabular-nums text-muted-foreground" style={{ top: index * 64 + 4 }}>{clock((firstHour + index) * 60)}</span>)}</div>
-          {days.map(day => <div key={day} className={`relative border-l border-border/30 ${day === today ? "bg-card/40" : ""}`} style={{ height }}>
-            {Array.from({ length: lastHour - firstHour }, (_, index) => <div key={index} className="absolute inset-x-0 border-t border-border/50" style={{ top: index * 64 }} />)}
-            {layoutEvents(timed.filter(event => event.day === day)).map(({ event, lane, lanes }) => <div key={event.id} className="absolute z-10 px-1" style={{ top: (event.start / 60 - firstHour) * 64 + 2, height: Math.max(28, (event.end - event.start) / 60 * 64 - 4), left: `${lane / lanes * 100}%`, width: `${100 / lanes}%` }}>{renderEvent(event, event.end - event.start < 75 || lanes > 1)}</div>)}
-            {day === today && minutes(wall.slice(11)) >= firstHour * 60 && minutes(wall.slice(11)) < lastHour * 60 && <div aria-label={`Current time ${clock(minutes(wall.slice(11)))}`} className="pointer-events-none absolute inset-x-0 border-t border-destructive before:absolute before:-left-0.5 before:-top-1 before:size-1.5 before:rounded-full before:bg-destructive" style={{ top: (minutes(wall.slice(11)) / 60 - firstHour) * 64 }} />}
+          <div className="relative border-t border-border/50" style={{ height }}>{Array.from({ length: lastHour - firstHour }, (_, index) => <span key={index} className="absolute left-2 text-[11px] tabular-nums text-muted-foreground" style={{ top: index * HOUR + 4 }}>{clock((firstHour + index) * 60)}</span>)}</div>
+          {days.map(day => <div key={day} className={`relative border-l border-border/30 ${day === today ? "bg-primary/5" : ""}`} style={{ height }}>
+            {Array.from({ length: lastHour - firstHour }, (_, index) => <div key={index} className="absolute inset-x-0 border-t border-border/40" style={{ top: index * HOUR }} />)}
+            {layoutEvents(timed.filter(event => event.day === day)).map(({ event, lane, lanes }) => <div key={event.id} className="absolute z-10 px-1" style={{ top: (event.start / 60 - firstHour) * HOUR + 2, height: Math.max(28, (event.end - event.start) / 60 * HOUR - 4), left: `${lane / lanes * 100}%`, width: `${100 / lanes}%` }}>{renderEvent(event, event.end - event.start < 75 || lanes > 1)}</div>)}
+            {day === today && minutes(wall.slice(11)) >= firstHour * 60 && minutes(wall.slice(11)) < lastHour * 60 && <div aria-label={`Current time ${clock(minutes(wall.slice(11)))}`} className="pointer-events-none absolute inset-x-0 border-t border-destructive before:absolute before:-left-0.5 before:-top-1 before:size-1.5 before:rounded-full before:bg-destructive" style={{ top: (minutes(wall.slice(11)) / 60 - firstHour) * HOUR }} />}
           </div>)}
         </div>
         {!visible.length && <p className="pt-4 text-center text-sm text-muted-foreground">{failures.length ? "Calendar unavailable" : "No events this week"}</p>}
