@@ -100,7 +100,7 @@ function ScopedConcernPanel({ academyId, userId, manager, owner, children }: Con
     <FloatingSheet open modal={mobile} onOpenChange={setOpen}>
       <FloatingSheetContent ref={content} data-concern-panel="" aria-modal={mobile || undefined} aria-describedby={undefined} showCloseButton={false}
         className={mobile ? "gap-0 rounded-none border-0" : "gap-0"}
-        style={{ top: mobile ? 0 : undefined, bottom: mobile ? 0 : 80, right: mobile ? 0 : 16, width: mobile ? "100%" : 440, height: mobile ? "100dvh" : "min(720px, calc(100dvh - 104px))", maxWidth: "100%" }}
+        style={mobile ? { top: 0, bottom: 0, right: 0, width: "100%", height: "100dvh", maxWidth: "100%" } : undefined}
         onInteractOutside={(event) => { if (!mobile) event.preventDefault(); }}
         onOpenAutoFocus={(event) => { event.preventDefault(); const input = content.current?.querySelector<HTMLElement>("input:not([disabled]),textarea:not([disabled])") ?? content.current?.querySelector<HTMLElement>("button"); input?.focus(); }}
         onCloseAutoFocus={(event) => { event.preventDefault(); launcher.current?.focus(); }}>
