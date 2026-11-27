@@ -14,6 +14,7 @@ const data: Overview = { year: 2026, asOf: "2026-10-29T12:00:00Z", attentionCoun
 const dashboard: Overview = { ...data,
   attendance: Array.from({ length: 12 }, (_, index) => week(`2026-09-${String(index + 1).padStart(2, "0")}`, index < 8 ? { sessions: 1, attended: 3, counted: 4, present: 3, absent: 1 } : { sessions: 2, attended: 9, counted: 10, present: 8, late: 1, absent: 1, added: 1 })),
   watch: [{ id: "r1", name: "Nour Ali", level: "Secondary", absent: 3, counted: 5 }],
+  assignments: [{ id: "a1", title: "Fractions", at: "2026-10-08T20:59:00Z", recipients: 5, marked: 4, average: 40, below: 3 }, { id: "a2", title: "Decimals", at: "2026-10-15T20:59:00Z", recipients: 5, marked: 1, average: 90, below: 0 }],
   recent: [{ id: "s1", title: "Algebra", startedAt: "2026-10-29T10:00:00Z", finalized: false, attended: 4, counted: 5 }] };
 
 it("opens the actual work and filters student destinations", () => {
@@ -42,6 +43,8 @@ it("compares the last four weeks with the four before and links students to watc
   expect(screen.getByRole("link", { name: /Nour Ali/ }).getAttribute("href")).toBe("/a/students/r1");
   expect(screen.getByRole("link", { name: /Algebra/ }).getAttribute("href")).toBe("/a/attendance/s1");
   expect(screen.getByText("Draft")).toBeTruthy();
+  expect(screen.getAllByText("50%")).toHaveLength(2); // panel and tile, marked-weighted: (40×4 + 90×1) / 5
+  expect(screen.getByText("3 below 50%")).toBeTruthy();
 });
 it("never shows a rate without finalized marks, and hides sections the server did not report", () => {
   expect(rate([{attended: 3, counted: 4}, {attended: 0, counted: 0}, {attended: 5, counted: 6}])).toBe(80);

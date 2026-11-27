@@ -10,6 +10,7 @@ import { StudentsToWatch } from "./components/watch";
 import { RecentSessions } from "./components/recent";
 import { TodayPlan } from "./components/today";
 import { StudentsByGrade } from "./components/grades";
+import { AssignmentPerformance } from "./components/assignments";
 
 type Read<T> = ComponentProps<typeof QueryContent<T>>["query"];
 
@@ -22,16 +23,17 @@ export function HomeView({ academyName, base, live, overview }: {
     {live.error && <QueryContent query={live} label="live sessions" isEmpty={() => false} emptyTitle="No live sessions">{() => null}</QueryContent>}
     <QueryContent query={overview} label="academy overview" isEmpty={() => false} emptyTitle="No overview">
       {data => data.year === null ? <Card className="p-5 font-medium">No open academic year</Card> : <>
-        <HomeStats data={data} live={live.data?.length ?? null} base={base} />
+        <HomeStats data={data} base={base} />
         <div className="grid gap-4 xl:grid-cols-3">
           <div className="min-w-0 xl:col-span-2">{data.attendance ? <AttendanceTrend weeks={data.attendance} /> : <StudentsByGrade data={data} base={base} />}</div>
           <div className="flex min-w-0 flex-col gap-4">
             <HomeAlerts data={data} live={live.data ?? null} base={base} />
             <TodayPlan items={data.today} base={base} />
           </div>
-          {data.recent && <div className="min-w-0 xl:col-span-2"><RecentSessions sessions={data.recent} base={base} /></div>}
+          {data.assignments && <div className="min-w-0 xl:col-span-2"><AssignmentPerformance items={data.assignments} base={base} /></div>}
           {data.watch && <StudentsToWatch students={data.watch} base={base} />}
-          {data.attendance && <div className="min-w-0 xl:col-span-3"><StudentsByGrade data={data} base={base} /></div>}
+          {data.recent && <div className="min-w-0 xl:col-span-2"><RecentSessions sessions={data.recent} base={base} /></div>}
+          {data.attendance && <StudentsByGrade data={data} base={base} />}
         </div>
       </>}
     </QueryContent>
