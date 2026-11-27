@@ -76,8 +76,8 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
     box.scrollTop = now ? now.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - (box.clientHeight + head) / 2 : 8 * HOUR;
   }, [weekStart, loading, view, year]);
   const height = (lastHour - firstHour) * HOUR;
-  const renderEvent = (event: (typeof events)[number], compact = false) => <EventButton key={event.id} event={event} format={timeFormat} compact={compact} today={today} pending={pendingId !== null} onStart={id => void start(id)} />;
-  const renderRow = (event: (typeof events)[number]) => <EventButton key={event.id} event={event} format={timeFormat} row today={today} pending={pendingId !== null} onStart={id => void start(id)} />;
+  const renderEvent = (event: (typeof events)[number], compact = false) => <EventButton key={event.id} event={event} format={timeFormat} now={minutes(wall.slice(11))} academyId={academy.id} role={academy.role} compact={compact} today={today} pending={pendingId !== null} onStart={id => void start(id)} />;
+  const renderRow = (event: (typeof events)[number]) => <EventButton key={event.id} event={event} format={timeFormat} now={minutes(wall.slice(11))} academyId={academy.id} role={academy.role} row today={today} pending={pendingId !== null} onStart={id => void start(id)} />;
   const step = (delta: number) => setSelected(day => view === "month" ? shiftMonth(day, delta) : shiftDay(day, delta * 7));
   const unit = view === "month" ? "month" : "week";
 
@@ -125,7 +125,7 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
           const dayEvents = visible.filter(event => event.day === day), inMonth = day.slice(0, 7) === selected.slice(0, 7);
           return <div key={day} className={`flex min-h-0 min-w-0 flex-col gap-0.5 overflow-hidden border-t border-border/40 p-1.5 ${index % 7 ? "border-l" : ""} ${inMonth ? "" : "bg-muted/20 text-muted-foreground"}`}>
             <button type="button" aria-label={`Show agenda for ${day}`} onClick={() => { setSelected(day); setView("agenda"); }} className={`mb-0.5 flex size-6 items-center justify-center self-start rounded-full text-xs font-medium tabular-nums outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring ${day === today ? "bg-primary text-primary-foreground hover:bg-primary" : ""}`}>{day.slice(-2).replace(/^0/, "")}</button>
-            {dayEvents.slice(0, 3).map(event => <EventButton key={event.id} event={event} format={timeFormat} chip today={today} pending={pendingId !== null} onStart={id => void start(id)} />)}
+            {dayEvents.slice(0, 3).map(event => <EventButton key={event.id} event={event} format={timeFormat} now={minutes(wall.slice(11))} academyId={academy.id} role={academy.role} chip today={today} pending={pendingId !== null} onStart={id => void start(id)} />)}
             {dayEvents.length > 3 && <button type="button" className="self-start rounded px-1.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring" onClick={() => { setSelected(day); setView("agenda"); }}>+{dayEvents.length - 3} more</button>}
           </div>;
         })}</div>

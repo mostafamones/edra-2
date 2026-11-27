@@ -7,7 +7,7 @@ import type { PastSession } from "@/modules/sessions";
 
 const schedule: Schedule = { id: "s", academy_id: "a", academic_year_id: "y", title: "Class", kind: "recurring", audience: "level", group_id: null, level_id: "l", track_id: null, mandatory: true, location: null, archived_at: null, created_by: "u" };
 const slot: ScheduleSlot = { id: "slot", academy_id: "a", academic_year_id: "y", schedule_id: "s", weekday: 5, starts_at: "16:00:00", ends_at: "17:30:00" };
-const input = { days: weekDays("2026-10-30"), today: "2026-10-30", schedules: [schedule], slots: [slot], dates: [], lookup: { groups: new Map(), tracks: new Map(), levelNames: { l: "Grade" } }, sessions: [], assessments: [] as AssessmentListItem[], year: { starts_on: "2026-09-01", ends_on: "2027-08-31" } };
+const input = { days: weekDays("2026-10-30"), today: "2026-10-30", schedules: [schedule], slots: [slot], dates: [], lookup: { groups: new Map(), tracks: new Map(), levelNames: { l: "Grade" } }, sessions: [], assessments: [] as AssessmentListItem[], names: [] as { schedule_id: string; occurs_on: string; name: string }[], year: { starts_on: "2026-09-01", ends_on: "2027-08-31" } };
 describe("calendar projection", () => {
   it("crosses month boundaries without using the machine timezone", () => {
     expect(weekDays("2026-11-01")).toEqual(["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"]);
@@ -26,6 +26,11 @@ describe("calendar projection", () => {
     const assessment = { id: "q", title: "Quiz", type: "quiz", status: "scheduled", opensAt: "2026-10-30T21:30:00Z", closesAt: "2026-10-30T23:30:00Z", groupIds: [], levelId: "l", trackId: null } as unknown as Extract<AssessmentListItem, { type: "quiz" }>;
     expect(calendarEvents({ ...input, schedules: [], assessments: [assessment] })).toMatchObject([{ day: "2026-10-30", start: 1410, end: 1440 }, { day: "2026-10-31", start: 0, end: 90 }]);
     expect(calendarEvents({ ...input, schedules: [], assessments: [{ ...assessment, status: "preparing" }] })).toEqual([]);
+  });
+  it("hides past occurrences that never started and applies occurrence names", () => {
+    expect(calendarEvents({ ...input, today: "2026-10-31" })).toEqual([]);
+    expect(calendarEvents({ ...input, names: [{ schedule_id: "s", occurs_on: "2026-10-30", name: "Chapter 3" }] }))
+      .toMatchObject([{ title: "Chapter 3", scheduleTitle: "Class", named: true, occursOn: "2026-10-30", scheduleKind: "recurring" }]);
   });
   it("assigns lanes across an overlapping cluster and resets at touching boundaries", () => {
     const event = (id: string, start: number, end: number) => ({ id, start, end }) as CalendarEvent;
