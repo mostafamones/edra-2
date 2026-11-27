@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { LinkSquare02Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { newUuid } from "@/lib/uuid";
 import { formatVideoDuration, maxYoutubeDuration, youtubeIdFromUrl } from "../youtube";
 import { YoutubePlayer } from "../youtube-player";
-import { addYoutube } from "../youtube-actions";
+import { registerYoutube } from "../youtube-actions";
 import { unwrapContent, type ContentItem } from "../types";
 import { TILE, TileIcon } from "./uploader";
 
@@ -33,7 +33,7 @@ function YoutubeForm({ academyId, unitId, busy, disabled, setBusy, onAdded }: { 
     if (busy || disabled || !id || !title.trim()) return;
     setBusy(true); setError("");
     try {
-      unwrapContent(await addYoutube({ data: { academyId, unitId, assetId, url, title: title.trim(), duration } }));
+      unwrapContent(await registerYoutube({ academyId, unitId, assetId, url, title: title.trim(), duration }));
       await onAdded({ id: newUuid(), kind: "explanation", title: title.trim(), assetId });
     } catch (e) { setError(e instanceof Error ? e.message : "Could not add the video."); }
     finally { setBusy(false); }

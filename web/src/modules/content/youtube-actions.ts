@@ -1,4 +1,10 @@
-﻿import { createServerFn } from "@tanstack/react-start";
-import { registerYoutube } from "./youtube-actions.server";
+import { createServerFn } from "@tanstack/react-start";
+import { registerYoutube as registerYoutubeServer } from "./youtube-actions.server";
 
-export const addYoutube = createServerFn({ method: "POST" }).validator((value: unknown) => value).handler(({ data }) => registerYoutube(data));
+const registerYoutubeFn = createServerFn({ method: "POST" })
+  .validator((value: unknown) => value)
+  .handler(({ data }) => registerYoutubeServer(data));
+
+export async function registerYoutube(value: unknown) {
+  return registerYoutubeFn({ data: value });
+}

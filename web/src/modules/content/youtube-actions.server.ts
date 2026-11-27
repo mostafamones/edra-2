@@ -1,4 +1,4 @@
-﻿import "@tanstack/react-start/server-only";
+import "@tanstack/react-start/server-only";
 import { z } from "zod";
 import { contentCaller, contentError, contentResult } from "./data";
 import { maxYoutubeDuration, youtubeIdFromUrl } from "./youtube";
