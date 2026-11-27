@@ -18,6 +18,8 @@ import { EventButton } from "./event";
 import { calendarHistoryOptions, calendarLiveOptions } from "./queries";
 
 const HOUR = 72;
+// Every desktop view shares one viewport-bound frame and scrolls inside it.
+const FRAME = "max-h-[calc(100svh-15rem)] min-h-96";
 
 export function StaffCalendarPage() {
   return <AcademyGate>{academy => <CalendarContent key={academy.id} academy={academy} />}</AcademyGate>;
@@ -106,7 +108,7 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
           : <div className="rounded-xl bg-card p-8 text-center text-sm text-muted-foreground">{failures.length ? "Calendar unavailable" : "No events"}</div>}
       </div>
       {view === "agenda" && <div className="hidden md:block">
-        {visible.length ? <div className="divide-y divide-border/40 overflow-hidden rounded-xl border border-border/60">{days.map(day => {
+        {visible.length ? <div className={`${FRAME} divide-y divide-border/40 overflow-y-auto rounded-xl border border-border/60`}>{days.map(day => {
           const dayEvents = visible.filter(event => event.day === day);
           return <section key={day} aria-label={dateLabel(day, { weekday: "long", day: "numeric", month: "long" })} className={`grid grid-cols-[7rem_minmax(0,1fr)] gap-4 px-4 py-3 ${day === selected ? "bg-muted/30" : ""}`}>
             <div className="flex items-center gap-2 self-start py-2">
@@ -117,18 +119,18 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
           </section>;
         })}</div> : <div className="rounded-xl bg-card p-8 text-center text-sm text-muted-foreground">{failures.length ? "Calendar unavailable" : "No events this week"}</div>}
       </div>}
-      {view === "month" && <div className="hidden overflow-hidden rounded-xl border border-border/60 md:block">
+      {view === "month" && <div className="hidden h-[calc(100svh-15rem)] min-h-[30rem] flex-col overflow-hidden rounded-xl border border-border/60 md:flex">
         <div className="grid grid-cols-7 border-b border-border/40 bg-muted/20">{days.map(day => <span key={day} className="px-2 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{dateLabel(day, { weekday: "short" })}</span>)}</div>
-        <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(7.5rem, 1fr)" }}>{range.map((day, index) => {
+        <div className="grid min-h-0 flex-1 grid-cols-7 grid-rows-6">{range.map((day, index) => {
           const dayEvents = visible.filter(event => event.day === day), inMonth = day.slice(0, 7) === selected.slice(0, 7);
-          return <div key={day} className={`flex min-w-0 flex-col gap-0.5 border-t border-border/40 p-1.5 ${index % 7 ? "border-l" : ""} ${inMonth ? "" : "bg-muted/20 text-muted-foreground"}`}>
+          return <div key={day} className={`flex min-h-0 min-w-0 flex-col gap-0.5 overflow-hidden border-t border-border/40 p-1.5 ${index % 7 ? "border-l" : ""} ${inMonth ? "" : "bg-muted/20 text-muted-foreground"}`}>
             <button type="button" aria-label={`Show agenda for ${day}`} onClick={() => { setSelected(day); setView("agenda"); }} className={`mb-0.5 flex size-6 items-center justify-center self-start rounded-full text-xs font-medium tabular-nums outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring ${day === today ? "bg-primary text-primary-foreground hover:bg-primary" : ""}`}>{day.slice(-2).replace(/^0/, "")}</button>
             {dayEvents.slice(0, 3).map(event => <EventButton key={event.id} event={event} format={timeFormat} chip today={today} pending={pendingId !== null} onStart={id => void start(id)} />)}
             {dayEvents.length > 3 && <button type="button" className="self-start rounded px-1.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring" onClick={() => { setSelected(day); setView("agenda"); }}>+{dayEvents.length - 3} more</button>}
           </div>;
         })}</div>
       </div>}
-      {view === "week" && <div ref={scroller} className="hidden max-h-[calc(100svh-15rem)] min-h-96 overflow-y-auto rounded-xl border border-border/60 bg-card/30 md:block">
+      {view === "week" && <div ref={scroller} className={`hidden ${FRAME} overflow-y-auto rounded-xl border border-border/60 bg-card/30 md:block`}>
         <div className="sticky top-0 z-20 grid grid-cols-[4.5rem_repeat(7,minmax(0,1fr))] bg-background">
           <div className="bg-muted/20" />{days.map(day => <button key={day} type="button" aria-label={`Show agenda for ${day}`} onClick={() => { setSelected(day); setView("agenda"); }} className={`flex items-center justify-center gap-2 border-l border-border/40 px-2 py-3 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring ${day === today ? "bg-primary/5" : "bg-muted/20"}`}><span className={`text-xs font-medium uppercase tracking-wide ${day === today ? "text-primary" : "text-muted-foreground"}`}>{dateLabel(day, { weekday: "short" })}</span><span className={`flex size-8 items-center justify-center rounded-full text-base font-semibold tabular-nums ${day === today ? "bg-primary text-primary-foreground" : ""}`}>{Number(day.slice(-2))}</span></button>)}
           <span className="border-t border-border/40 bg-muted/20 px-2 py-2 text-[11px] leading-4 text-muted-foreground">Due &<br />windows</span>{days.map(day => <div key={day} className={`min-h-12 space-y-1 border-l border-t border-border/40 p-1.5 ${day === today ? "bg-primary/5" : "bg-muted/20"}`}>{visible.filter(event => (event.deadline || event.window) && event.day === day).map(event => renderEvent(event, true))}</div>)}
