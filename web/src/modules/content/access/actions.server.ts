@@ -59,6 +59,8 @@ export async function openLearningMaterial(value: unknown) {
       return { kind: "video" as const, playbackId: material.playbackId, token: playback.token, expires: playback.expires,
         thumbnailToken: playbackToken(material.playbackId, "t", deadline).token, storyboardToken: playbackToken(material.playbackId, "s", deadline).token };
     }
+    // A ready video without provider media is a placeholder.
+    if (material.kind === "video") return { kind: "placeholder" as const, expires: deadline };
     if (material.kind !== "document" || !material.storagePath) throw new Error("This material is not available.");
     const ttl = Math.min(120, deadline - Math.floor(Date.now() / 1000));
     if (ttl <= 0) throw new Error("Your access has expired.");
