@@ -66,7 +66,7 @@ function Spark({ values }: { values: (number | null)[] }) {
   // Weeks without a value are skipped so the texture spans the tile instead of stopping early.
   const series = values.filter(value => value !== null).map((value, index) => ({ index, value }));
   return <ChartContainer config={{ value: { label: "Trend", color: "var(--muted-foreground)" } }} className="pointer-events-none absolute right-0 bottom-0 -z-10 aspect-auto h-12 w-4/5 [mask-image:linear-gradient(to_right,transparent,black_45%)]" aria-hidden="true">
-    <AreaChart data={series} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+    <AreaChart data={series} margin={{ top: 2, right: 0, bottom: 6, left: 0 }}>
       <defs><linearGradient id={id} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.28} /><stop offset="100%" stopColor="var(--color-value)" stopOpacity={0} /></linearGradient></defs>
       <Area dataKey="value" type="monotone" stroke="var(--color-value)" strokeOpacity={0.7} strokeWidth={1.25} fill={`url(#${id})`} connectNulls dot={false} isAnimationActive={false} />
     </AreaChart>
