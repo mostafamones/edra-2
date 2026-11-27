@@ -1,13 +1,13 @@
 import Link from "@/components/shared/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, PreferenceHorizontalIcon,  } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FilterPopover } from "@/components/shared/filter-popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ToggleBadge, ToggleBadgeGroup } from "@/components/shared/toggle-badge";
 import { AcademyGate } from "@/modules/auth";
 import { formatClock, useTimeFormat } from "@/modules/account";
 import type { AcademyEntry } from "@/modules/academies";
@@ -66,34 +66,37 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
   const visible = events.filter(event => (event.kind === "session" ? sessionsVisible : assessmentsVisible)
     && (level === "all" || event.levelIds.includes(level)) && (track === "all" || event.trackIds?.includes(track)) && (group === "all" || event.groupIds?.includes(group)));
   const timed = visible.filter(event => !event.deadline && !event.window);
-  const firstHour = Math.max(0, Math.min(8, ...timed.map(event => Math.floor(event.start / 60))));
-  const lastHour = Math.min(24, Math.max(20, ...timed.map(event => Math.ceil(event.end / 60))));
+  const firstHour = 0, lastHour = 24;
+  const hourLabel = (hour: number) => `${hour % 12 || 12} ${hour % 24 < 12 ? "AM" : "PM"}`;
+  const scroller = useRef<HTMLDivElement>(null);
+  const weekStart = days[0];
+  // Centre the now line (or 8 AM on other weeks) once the grid exists; the user scrolls freely afterwards.
+  useEffect(() => {
+    const box = scroller.current; if (!box) return;
+    const now = box.querySelector<HTMLElement>("[data-now]");
+    const head = box.firstElementChild?.getBoundingClientRect().height ?? 0;
+    box.scrollTop = now ? now.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - (box.clientHeight + head) / 2 : 8 * HOUR;
+  }, [weekStart, loading, view, year]);
   const height = (lastHour - firstHour) * HOUR;
   const renderEvent = (event: (typeof events)[number], compact = false) => <EventButton key={event.id} event={event} format={timeFormat} compact={compact} today={today} pending={pendingId !== null} onStart={id => void start(id)} />;
   const changeWeek = (delta: number) => setSelected(day => shiftDay(day, delta * 7));
 
   return <main className="page-shell">
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <h1 className="text-2xl font-semibold tracking-tight">{dateLabel(selected, { month: "long", year: "numeric" })}</h1>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="icon" aria-label="Previous week" onClick={() => changeWeek(-1)}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} /></Button>
-        <Button variant="outline" onClick={() => setSelected(today)}>Today</Button>
-        <Button variant="ghost" size="icon" aria-label="Next week" onClick={() => changeWeek(1)}><HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={1.5} /></Button>
-        <div className="hidden md:block"><Select value={view} onValueChange={setView}><SelectTrigger aria-label="Calendar view"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="week">Week</SelectItem><SelectItem value="agenda">Agenda</SelectItem></SelectContent></Select></div>
-        <DropdownMenu><DropdownMenuTrigger asChild><Button>Create<HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={1.5} className="size-3.5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{[["Schedule", "schedules"], ["Assignment", "assignments"], ["Quiz", "quizzes"], ["Exam", "exams"]].map(([label, path]) => <DropdownMenuItem key={path} asChild><Link href={href(`/app/${path}/new`)}>{label}</Link></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
-      </div>
-    </div>
-    <div className="flex flex-wrap items-center gap-3">
-      <span className="mr-auto text-sm font-medium">{dateLabel(days[0], { day: "numeric", month: "short" })} – {dateLabel(days[6], { day: "numeric", month: "short" })}</span>
-      <FilterPopover fields={[
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="mr-auto flex flex-col"><h1 className="text-2xl font-semibold tracking-tight">{dateLabel(selected, { month: "long", year: "numeric" })}</h1><span className="text-sm text-muted-foreground">{dateLabel(days[0], { day: "numeric", month: "short" })} – {dateLabel(days[6], { day: "numeric", month: "short" })} · Cairo</span></div>
+      <FilterPopover iconOnly icon={PreferenceHorizontalIcon} label="View options" sections={[{ id: "show", active: !sessionsVisible || !assessmentsVisible, onReset: () => { setSessionsVisible(true); setAssessmentsVisible(true); },
+        content: <ToggleBadgeGroup legend="Show">{[{ label: "Sessions", checked: sessionsVisible, change: setSessionsVisible }, { label: "Assessments", checked: assessmentsVisible, change: setAssessmentsVisible }].map(toggle => <ToggleBadge key={toggle.label} pressed={toggle.checked} onPressedChange={toggle.change}>{toggle.label}</ToggleBadge>)}</ToggleBadgeGroup> }]} fields={[
         { id: "grade", label: "Grade", value: level, defaultValue: "all", onChange: value => { setLevel(value); setTrack("all"); setGroup("all"); }, options: [{ value: "all", label: "All grades" }, ...(structure.data?.historicalLevels.map(item => ({ value: item.level_id, label: structure.data.levelNames[item.level_id] ?? item.level_id })) ?? [])] },
         { id: "track", label: "Track", value: track, defaultValue: "all", onChange: value => { setTrack(value); setGroup("all"); }, options: [{ value: "all", label: "All tracks" }, ...(structure.data?.historicalTracks.filter(item => level === "all" || item.level_id === level).map(item => ({ value: item.id, label: item.name })) ?? [])] },
         { id: "group", label: "Group", value: group, defaultValue: "all", onChange: setGroup, options: [{ value: "all", label: "All groups" }, ...[...(groups.data?.groups ?? []), ...(archivedGroups.data?.groups ?? [])].filter(item => (level === "all" || item.level_id === level) && (track === "all" || item.track_id === track)).map(item => ({ value: item.id, label: item.name }))] },
       ]} />
-      <div className="flex rounded-lg bg-card p-1">
-        {[{ label: "Sessions", checked: sessionsVisible, change: setSessionsVisible }, { label: "Assessments", checked: assessmentsVisible, change: setAssessmentsVisible }].map(toggle => <Button key={toggle.label} variant="ghost" size="sm" aria-pressed={toggle.checked} onClick={() => toggle.change(!toggle.checked)} className={toggle.checked ? "" : "text-muted-foreground"}>{toggle.checked && <HugeiconsIcon icon={Tick02Icon} strokeWidth={1.5} className="size-3.5" />}{toggle.label}</Button>)}
+      <div className="hidden rounded-lg bg-card p-1 md:flex" role="group" aria-label="Calendar view">{[["week", "Week"], ["agenda", "Agenda"]].map(([value, label]) => <Button key={value} size="sm" variant={view === value ? "secondary" : "ghost"} aria-pressed={view === value} onClick={() => setView(value)}>{label}</Button>)}</div>
+      <div className="flex items-center rounded-lg bg-card p-1">
+        <Button variant="ghost" size="icon-sm" aria-label="Previous week" onClick={() => changeWeek(-1)}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} /></Button>
+        <Button variant="ghost" size="sm" onClick={() => setSelected(today)}>Today</Button>
+        <Button variant="ghost" size="icon-sm" aria-label="Next week" onClick={() => changeWeek(1)}><HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={1.5} /></Button>
       </div>
-      <span className="text-xs text-muted-foreground">Cairo</span>
+      <DropdownMenu><DropdownMenuTrigger asChild><Button>Create<HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={1.5} className="size-3.5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{[["Schedule", "schedules"], ["Assignment", "assignments"], ["Quiz", "quizzes"], ["Exam", "exams"]].map(([label, path]) => <DropdownMenuItem key={path} asChild><Link href={href(`/app/${path}/new`)}>{label}</Link></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
     </div>
     {failures.length > 0 && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 p-4 text-sm"><span>Couldn’t refresh {failures.map(query => query === assessments ? "assessments" : query === live || query === history ? "sessions" : "schedules").filter((name, index, names) => names.indexOf(name) === index).join(" and ")}. Calendar may be incomplete.</span><Button size="sm" variant="outline" onClick={() => failures.forEach(query => void query.refetch())}>Retry</Button></div>}
     {loading && <div role="status" aria-label="Loading calendar"><Skeleton className="h-96 w-full" /></div>}
@@ -105,17 +108,17 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
         {visible.filter(event => event.day === selected).map(event => <div key={event.id} className="min-h-20">{renderEvent(event)}</div>)}
         {!visible.some(event => event.day === selected) && <div className="rounded-xl bg-card p-8 text-center text-sm text-muted-foreground">{failures.length ? "Calendar unavailable" : "No events"}</div>}
       </div>
-      {view === "week" && <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-card/30 md:block">
-        <div className="grid grid-cols-[4.5rem_repeat(7,minmax(0,1fr))]">
+      {view === "week" && <div ref={scroller} className="hidden max-h-[calc(100svh-15rem)] min-h-96 overflow-y-auto rounded-xl border border-border/60 bg-card/30 md:block">
+        <div className="sticky top-0 z-20 grid grid-cols-[4.5rem_repeat(7,minmax(0,1fr))] bg-background">
           <div className="bg-muted/20" />{days.map(day => <button key={day} type="button" aria-label={`Show agenda for ${day}`} onClick={() => { setSelected(day); setView("agenda"); }} className={`flex items-center justify-center gap-2 border-l border-border/40 px-2 py-3 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring ${day === today ? "bg-primary/5" : "bg-muted/20"}`}><span className={`text-xs font-medium uppercase tracking-wide ${day === today ? "text-primary" : "text-muted-foreground"}`}>{dateLabel(day, { weekday: "short" })}</span><span className={`flex size-8 items-center justify-center rounded-full text-base font-semibold tabular-nums ${day === today ? "bg-primary text-primary-foreground" : ""}`}>{Number(day.slice(-2))}</span></button>)}
           <span className="border-t border-border/40 bg-muted/20 px-2 py-2 text-[11px] leading-4 text-muted-foreground">Due &<br />windows</span>{days.map(day => <div key={day} className={`min-h-12 space-y-1 border-l border-t border-border/40 p-1.5 ${day === today ? "bg-primary/5" : "bg-muted/20"}`}>{visible.filter(event => (event.deadline || event.window) && event.day === day).map(event => renderEvent(event, true))}</div>)}
         </div>
         <div className="grid grid-cols-[4.5rem_repeat(7,minmax(0,1fr))]">
-          <div className="relative border-t border-border/50" style={{ height }}>{Array.from({ length: lastHour - firstHour }, (_, index) => <span key={index} className="absolute left-2 text-[11px] tabular-nums text-muted-foreground" style={{ top: index * HOUR + 4 }}>{clock((firstHour + index) * 60)}</span>)}</div>
+          <div className="relative border-t border-border/50" style={{ height }}>{Array.from({ length: lastHour - firstHour }, (_, index) => <span key={index} className="absolute left-2 text-[11px] tabular-nums text-muted-foreground" style={{ top: index * HOUR + 4 }}>{hourLabel(firstHour + index)}</span>)}</div>
           {days.map(day => <div key={day} className={`relative border-l border-border/30 ${day === today ? "bg-primary/5" : ""}`} style={{ height }}>
             {Array.from({ length: lastHour - firstHour }, (_, index) => <div key={index} className="absolute inset-x-0 border-t border-border/40" style={{ top: index * HOUR }} />)}
             {layoutEvents(timed.filter(event => event.day === day)).map(({ event, lane, lanes }) => <div key={event.id} className="absolute z-10 px-1" style={{ top: (event.start / 60 - firstHour) * HOUR + 2, height: Math.max(28, (event.end - event.start) / 60 * HOUR - 4), left: `${lane / lanes * 100}%`, width: `${100 / lanes}%` }}>{renderEvent(event, event.end - event.start < 75 || lanes > 1)}</div>)}
-            {day === today && minutes(wall.slice(11)) >= firstHour * 60 && minutes(wall.slice(11)) < lastHour * 60 && <div aria-label={`Current time ${clock(minutes(wall.slice(11)))}`} className="pointer-events-none absolute inset-x-0 border-t border-destructive before:absolute before:-left-0.5 before:-top-1 before:size-1.5 before:rounded-full before:bg-destructive" style={{ top: (minutes(wall.slice(11)) / 60 - firstHour) * HOUR }} />}
+            {day === today && minutes(wall.slice(11)) >= firstHour * 60 && minutes(wall.slice(11)) < lastHour * 60 && <div data-now aria-label={`Current time ${clock(minutes(wall.slice(11)))}`} className="pointer-events-none absolute inset-x-0 border-t border-destructive before:absolute before:-left-0.5 before:-top-1 before:size-1.5 before:rounded-full before:bg-destructive" style={{ top: (minutes(wall.slice(11)) / 60 - firstHour) * HOUR }} />}
           </div>)}
         </div>
         {!visible.length && <p className="pt-4 text-center text-sm text-muted-foreground">{failures.length ? "Calendar unavailable" : "No events this week"}</p>}
