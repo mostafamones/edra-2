@@ -2,6 +2,8 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { AcademyGate } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
 import { useCanonicalHref } from "@/modules/navigation";
+import { HeaderActions } from "@/components/shared/header-actions";
+import { TodayEvents } from "@/modules/calendar";
 import { homeLiveOptions } from "./queries";
 import { homeOverviewOptions } from "./overview";
 import { HomeView } from "./view";
@@ -14,5 +16,8 @@ function HomeContent({ academy }: { academy: AcademyEntry }) {
   const href = useCanonicalHref();
   const live = useInfiniteQuery(homeLiveOptions(academy.id));
   const overview = useQuery(homeOverviewOptions(academy.id));
-  return <HomeView academyName={academy.name} base={href("/app")} live={{ ...live, data: live.data?.pages.flatMap(page => page.sessions) }} overview={overview} />;
+  return <>
+    <HeaderActions><TodayEvents academy={academy} /></HeaderActions>
+    <HomeView academyName={academy.name} base={href("/app")} live={{ ...live, data: live.data?.pages.flatMap(page => page.sessions) }} overview={overview} />
+  </>;
 }

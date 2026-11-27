@@ -8,7 +8,6 @@ import { AttendanceTrend } from "./components/trend";
 import { HomeAlerts } from "./components/alerts";
 import { StudentsToWatch } from "./components/watch";
 import { RecentSessions } from "./components/recent";
-import { TodayPlan } from "./components/today";
 import { StudentsByGrade } from "./components/grades";
 import { AssignmentPerformance } from "./components/assignments";
 
@@ -28,7 +27,6 @@ export function HomeView({ academyName, base, live, overview }: {
           <div className="min-w-0 xl:col-span-2">{data.attendance ? <AttendanceTrend weeks={data.attendance} /> : <StudentsByGrade data={data} base={base} />}</div>
           <div className="flex min-w-0 flex-col gap-4">
             <HomeAlerts data={data} live={live.data ?? null} base={base} />
-            <TodayPlan items={data.today} base={base} />
           </div>
           {data.assignments && <div className="min-w-0 xl:col-span-2"><AssignmentPerformance items={data.assignments} base={base} /></div>}
           {data.watch && <StudentsToWatch students={data.watch} base={base} />}

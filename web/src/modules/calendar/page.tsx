@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, ArrowRight01Icon, Calendar02Icon, Calendar03Icon, LeftToRightListBulletIcon, PreferenceHorizontalIcon } from "@hugeicons/core-free-icons";
 import { cn } from "cn";
@@ -13,13 +12,11 @@ import { ToggleBadge, ToggleBadgeGroup } from "@/components/shared/toggle-badge"
 import { AcademyGate } from "@/modules/auth";
 import { clockLabel } from "./time";
 import type { AcademyEntry } from "@/modules/academies";
-import { assessmentCalendarOptions } from "@/modules/assessments";
-import { groupListQueryKey, loadGroups, loadStructure, structureQueryKey } from "@/modules/groups";
-import { academyNow, buildAudienceLookup, loadSchedules, scheduleListQueryKey } from "@/modules/schedules";
+import { academyNow } from "@/modules/schedules";
 import { useStartSession } from "@/modules/sessions";
-import { calendarEvents, dateLabel, type CalendarEvent, layoutEvents, minutes, monthGrid, shiftDay, shiftMonth, weekDays } from "./events";
+import { dateLabel, type CalendarEvent, layoutEvents, minutes, monthGrid, shiftDay, shiftMonth, weekDays } from "./events";
 import { EventButton } from "./event";
-import { calendarHistoryOptions, calendarLiveOptions } from "./queries";
+import { useCalendarEvents } from "./use-events";
 
 const HOUR = 72;
 const SHOWN = [
@@ -56,32 +53,8 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
   const today = wall.slice(0, 10), days = weekDays(selected), range = view === "month" ? monthGrid(selected) : days;
   // The period button only offers a tooltip when it would actually move the view.
   const onNow = view === "month" ? selected.slice(0, 7) === today.slice(0, 7) : days.includes(today);
-  const schedules = useQuery({ queryKey: scheduleListQueryKey(academy.id), queryFn: () => loadSchedules(academy.id) });
-  const structure = useQuery({ queryKey: structureQueryKey(academy.id), queryFn: () => loadStructure(academy.id) });
-  const groups = useQuery({ queryKey: groupListQueryKey(academy.id, false), queryFn: () => loadGroups(academy.id) });
-  const archivedGroups = useQuery({ queryKey: groupListQueryKey(academy.id, true), queryFn: () => loadGroups(academy.id, { archived: true }) });
-  const year = schedules.data?.year;
-  const assessments = useQuery({ ...assessmentCalendarOptions(academy.id, year?.id ?? ""), enabled: !!year });
-  const live = useInfiniteQuery(calendarLiveOptions(academy.id));
-  const history = useInfiniteQuery(calendarHistoryOptions(academy.id, shiftDay(range[0], -1), range[range.length - 1]));
+  const { events, failures, loading, year, structure, groups, archivedGroups, assessments, live, history } = useCalendarEvents(academy.id, range, today);
   const { start, pendingId } = useStartSession(academy.id);
-  // Complete the existing paginated queries without changing their cache shape or duplicating endpoints.
-  const { hasNextPage: liveHasMore, isFetching: liveFetching, isError: liveError, fetchNextPage: fetchMoreLive } = live;
-  const { hasNextPage: historyHasMore, isFetching: historyFetching, isError: historyError, fetchNextPage: fetchMoreHistory } = history;
-  useEffect(() => { if (liveHasMore && !liveFetching && !liveError) void fetchMoreLive(); }, [liveHasMore, liveFetching, liveError, fetchMoreLive]);
-  useEffect(() => { if (historyHasMore && !historyFetching && !historyError) void fetchMoreHistory(); }, [historyHasMore, historyFetching, historyError, fetchMoreHistory]);
-  const queries = [schedules, structure, groups, archivedGroups, live, history, ...(year ? [assessments] : [])];
-  const failures = queries.filter(query => query.isError);
-  const loading = queries.some(query => query.isPending) || (live.hasNextPage && !live.isError) || (history.hasNextPage && !history.isError);
-  const events = useMemo(() => {
-    if (!schedules.data || !structure.data || !groups.data || !archivedGroups.data) return [];
-    return calendarEvents({ days: range, today, ...schedules.data,
-      dates: schedules.data.sessions,
-      lookup: buildAudienceLookup({ groups: [...groups.data.groups, ...archivedGroups.data.groups], tracks: structure.data.historicalTracks, levelNames: structure.data.levelNames }),
-      sessions: [...(history.data?.pages.flatMap(page => page.sessions) ?? []), ...(live.data?.pages.flatMap(page => page.sessions) ?? [])].filter(session => session.academicYearId === schedules.data.year?.id),
-      assessments: assessments.data ?? [],
-    });
-  }, [range[0], range.length, today, schedules.data, structure.data, groups.data, archivedGroups.data, live.data, history.data, assessments.data]);
   const visible = events.filter(event => !hidden.has(event.kind)
     && (level === "all" || event.levelIds.includes(level)) && (track === "all" || event.trackIds?.includes(track)) && (group === "all" || event.groupIds?.includes(group)));
   const timed = visible.filter(event => !event.deadline && !event.window);
