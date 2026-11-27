@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, CheckmarkCircle02Icon, LinkSquare02Icon } from "@hugeicons/core-free-icons";
 import { MathText } from "@/components/shared/math-text";
 import Link from "@/components/shared/link";
+import { SectionHeader } from "@/components/shared/section-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -18,7 +19,7 @@ const order: BankCollection["kind"][] = ["source_document", "source_section", "t
 
 function Block({ title, children }: { title: string; children: ReactNode }) {
   return <section className="space-y-2.5" aria-label={title}>
-    <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
+    <SectionHeader title={title} />
     {children}
   </section>;
 }
