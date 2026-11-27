@@ -52,7 +52,7 @@ export function QuestionPreview({ detail, collections, academySlug, onRemove, on
         {payload.choices.map(choice => {
           const correct = choice.key === payload.answer;
           const body = <>
-            <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-md border text-xs font-medium uppercase", correct && "border-primary bg-primary text-primary-foreground")}>{choice.key}</span>
+            <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-md border text-xs font-medium uppercase", correct && "border-primary bg-primary text-primary-foreground")}>{choice.key}</span>
             <MathText value={choice.text} className="min-w-0 flex-1 leading-normal" />
             {correct && <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={1.5} className="size-5 shrink-0 text-primary" aria-label="Correct answer" />}
           </>;
@@ -66,10 +66,13 @@ export function QuestionPreview({ detail, collections, academySlug, onRemove, on
           </li>;
         })}
       </ul>}
-      {payload.choices.length > 0 && !payload.answer && <p role="status" className="text-sm text-muted-foreground">No answer confirmed</p>}
-      {onAnswer && payload.answer && <Button type="button" variant="ghost" size="sm" className="-ms-2 text-muted-foreground" onClick={() => onAnswer(null)}>
-        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.5} />Clear answer
-      </Button>}
+      {payload.choices.length > 0 && <div className="flex h-8 items-center justify-end">
+        {!payload.answer
+          ? <p role="status" className="text-sm text-muted-foreground">No answer confirmed</p>
+          : onAnswer && <Button type="button" variant="ghost" size="sm" className="-me-2 text-muted-foreground" onClick={() => onAnswer(null)}>
+            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.5} />Clear answer
+          </Button>}
+      </div>}
     </div>
 
     {payload.modelAnswer && <Block title="Model answer">
@@ -93,7 +96,7 @@ export function QuestionPreview({ detail, collections, academySlug, onRemove, on
             </div>)}
         </dl>
         {(payload.section || payload.answerSource || (!topics.length && payload.topic) || detail.unitId) && <dl className="divide-y border-t px-3">
-          {payload.section && <Row label="Printed section">{payload.section}</Row>}
+          {payload.section && <Row label="Section">{payload.section}</Row>}
           {payload.answerSource && <Row label="Answer source">{fileTitle(payload.answerSource.file)} · Page {payload.answerSource.page}</Row>}
           {!topics.length && payload.topic && <Row label="Imported topic">{payload.topic}</Row>}
           {detail.unitId && <Row label="Library unit">
