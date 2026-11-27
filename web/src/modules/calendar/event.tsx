@@ -2,7 +2,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Clock01Icon } from "@hugeicons/core-free-icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { AcademyRole } from "@/modules/academies";
-import { formatClock, type TimeFormat } from "@/modules/account";
+import type { TimeFormat } from "@/modules/account";
+import { clockLabel } from "./time";
 import { ACCENTS, EventDetails } from "./details";
 import type { CalendarEvent } from "./events";
 
@@ -20,7 +21,7 @@ export function EventButton({ event, today, now, format, academyId, role, compac
   // Anything already behind the current time reads as history; a live session never does.
   const past = !event.live && (event.day < today || (event.day === today && (event.deadline ? event.start : event.end) <= now));
   const muted = past ? "opacity-60" : "";
-  const clock = (value: number) => formatClock(value, format);
+  const clock = (value: number) => clockLabel(value, format);
   const time = event.deadline ? `Due ${clock(event.start)}` : event.openOnly ? `Opens ${clock(event.start)}` : `${clock(event.start)}–${clock(event.end)}`;
   return <Popover>
     <PopoverTrigger asChild>
@@ -41,7 +42,7 @@ export function EventButton({ event, today, now, format, academyId, role, compac
       </button>}
     </PopoverTrigger>
     <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-5" side="right" align="start">
-      <EventDetails event={event} today={today} past={past} format={format} academyId={academyId} role={role} pending={pending} onStart={onStart} />
+      <EventDetails event={event} today={today} now={now} past={past} format={format} academyId={academyId} role={role} pending={pending} onStart={onStart} />
     </PopoverContent>
   </Popover>;
 }
