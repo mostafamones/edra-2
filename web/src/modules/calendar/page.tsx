@@ -99,13 +99,7 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
 
   return <main className="page-shell">
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <div className="mr-auto flex flex-col"><h1 className="text-2xl font-semibold tracking-tight">{dateLabel(selected, { month: "long", year: "numeric" })}</h1>{view !== "month" && <span className="text-sm text-muted-foreground">{`${dateLabel(days[0], { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short" })}`}</span>}</div>
-      <FilterPopover iconOnly icon={PreferenceHorizontalIcon} label="View options" sections={[{ id: "show", active: hidden.size > 0, onReset: () => setHidden(new Set()),
-        content: <ToggleBadgeGroup legend="Show">{SHOWN.map(item => <ToggleBadge key={item.kind} pressed={!hidden.has(item.kind)} onPressedChange={on => setHidden(current => { const next = new Set(current); if (on) next.delete(item.kind); else next.add(item.kind); return next; })}>{item.label}</ToggleBadge>)}</ToggleBadgeGroup> }]} fields={[
-        { id: "grade", label: "Grade", value: level, defaultValue: "all", onChange: value => { setLevel(value); setTrack("all"); setGroup("all"); }, options: [{ value: "all", label: "All grades" }, ...(structure.data?.historicalLevels.map(item => ({ value: item.level_id, label: structure.data.levelNames[item.level_id] ?? item.level_id })) ?? [])] },
-        { id: "track", label: "Track", value: track, defaultValue: "all", onChange: value => { setTrack(value); setGroup("all"); }, options: [{ value: "all", label: "All tracks" }, ...(structure.data?.historicalTracks.filter(item => level === "all" || item.level_id === level).map(item => ({ value: item.id, label: item.name })) ?? [])] },
-        { id: "group", label: "Group", value: group, defaultValue: "all", onChange: setGroup, options: [{ value: "all", label: "All groups" }, ...[...(groups.data?.groups ?? []), ...(archivedGroups.data?.groups ?? [])].filter(item => (level === "all" || item.level_id === level) && (track === "all" || item.track_id === track)).map(item => ({ value: item.id, label: item.name }))] },
-      ]} />
+      <div className="mr-auto flex flex-col"><h1 className="text-2xl font-semibold tracking-tight">{dateLabel(selected, { month: "long", year: "numeric" })}</h1></div>
       <HeaderActions>
         <div className="hidden max-w-[calc(100vw-10rem)] overflow-x-auto md:block">
           <Segmented label="Calendar view" value={view} className="h-9" hideSelectedHint onChange={setView} options={VIEWS.map(item => ({
@@ -116,9 +110,15 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
       </HeaderActions>
       <div className="flex items-center rounded-lg bg-card p-1">
         <Button variant="ghost" size="icon-sm" aria-label={`Previous ${unit}`} onClick={() => step(-1)}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} /></Button>
-        <Button variant="ghost" size="sm" onClick={() => setSelected(today)}>Today</Button>
+        <Button variant="ghost" size="sm" aria-label="Go to today" onClick={() => setSelected(today)}>{view === "month" ? dateLabel(selected, { month: "short", year: "numeric" }) : `${dateLabel(days[0], { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short" })}`}</Button>
         <Button variant="ghost" size="icon-sm" aria-label={`Next ${unit}`} onClick={() => step(1)}><HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={1.5} /></Button>
       </div>
+      <FilterPopover iconOnly icon={PreferenceHorizontalIcon} label="View options" sections={[{ id: "show", active: hidden.size > 0, onReset: () => setHidden(new Set()),
+        content: <ToggleBadgeGroup legend="Show">{SHOWN.map(item => <ToggleBadge key={item.kind} pressed={!hidden.has(item.kind)} onPressedChange={on => setHidden(current => { const next = new Set(current); if (on) next.delete(item.kind); else next.add(item.kind); return next; })}>{item.label}</ToggleBadge>)}</ToggleBadgeGroup> }]} fields={[
+        { id: "grade", label: "Grade", value: level, defaultValue: "all", onChange: value => { setLevel(value); setTrack("all"); setGroup("all"); }, options: [{ value: "all", label: "All grades" }, ...(structure.data?.historicalLevels.map(item => ({ value: item.level_id, label: structure.data.levelNames[item.level_id] ?? item.level_id })) ?? [])] },
+        { id: "track", label: "Track", value: track, defaultValue: "all", onChange: value => { setTrack(value); setGroup("all"); }, options: [{ value: "all", label: "All tracks" }, ...(structure.data?.historicalTracks.filter(item => level === "all" || item.level_id === level).map(item => ({ value: item.id, label: item.name })) ?? [])] },
+        { id: "group", label: "Group", value: group, defaultValue: "all", onChange: setGroup, options: [{ value: "all", label: "All groups" }, ...[...(groups.data?.groups ?? []), ...(archivedGroups.data?.groups ?? [])].filter(item => (level === "all" || item.level_id === level) && (track === "all" || item.track_id === track)).map(item => ({ value: item.id, label: item.name }))] },
+      ]} />
     </div>
     {failures.length > 0 && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 p-4 text-sm"><span>Couldn’t refresh {failures.map(query => query === assessments ? "assessments" : query === live || query === history ? "sessions" : "schedules").filter((name, index, names) => names.indexOf(name) === index).join(" and ")}. Calendar may be incomplete.</span><Button size="sm" variant="outline" onClick={() => failures.forEach(query => void query.refetch())}>Retry</Button></div>}
     {loading && <div role="status" aria-label="Loading calendar"><Skeleton className="h-96 w-full" /></div>}
