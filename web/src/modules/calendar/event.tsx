@@ -23,7 +23,6 @@ export function EventButton({ event, today, format, compact = false, chip = fals
   const clock = (value: number) => formatClock(value, format);
   const time = event.deadline ? `Due ${clock(event.start)}` : event.openOnly ? `Opens ${clock(event.start)}` : `${clock(event.start)}–${clock(event.end)}`;
   const route = event.kind === "assignment" ? "assignments" : event.kind === "quiz" ? "quizzes" : "exams";
-  const banner = event.deadline || event.window;
   const fullTime = (value: string) => new Intl.DateTimeFormat("en-GB", { timeZone: ACADEMY_TIME_ZONE, day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: format === "12h" }).format(new Date(value));
   return <Popover>
     <PopoverTrigger asChild>
