@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Calendar03Icon, Clock01Icon, Location01Icon, UserGroupIcon, UserMultiple02Icon } from "@hugeicons/core-free-icons";
+import { Calendar03Icon, Location01Icon, UserGroupIcon, UserMultiple02Icon } from "@hugeicons/core-free-icons";
 import Link from "@/components/shared/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,12 +24,13 @@ export function EventDetails({ event, today, past, format, academyId, role, pend
   const route = event.kind === "assignment" ? "assignments" : event.kind === "quiz" ? "quizzes" : "exams";
   const status = event.live ? "Live" : event.kind === "session" ? event.recorded ? "Ended" : past ? "Not started" : "Planned"
     : event.deadline ? "Assignment due" : event.window ? `${event.kind} window` : event.kind;
-  const time = event.window && event.opensAt ? `${fullTime(event.opensAt)} – ${event.closesAt ? fullTime(event.closesAt) : "Open-ended"}`
-    : event.deadline ? `Due ${clock(event.start)}` : event.openOnly ? `Opens ${clock(event.start)}` : `${clock(event.start)} – ${clock(event.end)}`;
+  const day = `${dateLabel(event.day, { weekday: "long" })}, ${dateLabel(event.day, { day: "numeric", month: "short" })}`;
+  const hours = event.deadline ? `Due ${clock(event.start)}` : event.openOnly ? `Opens ${clock(event.start)}` : `${clock(event.start)} — ${clock(event.end)}`;
+  const when = event.window && event.opensAt ? `${fullTime(event.opensAt)} — ${event.closesAt ? fullTime(event.closesAt) : "Open-ended"}`
+    : event.deadline || event.openOnly ? `${day} · ${hours}` : `${day} ${hours}`;
   const canName = event.kind === "session" && !!event.scheduleKind && canEditSchedule(role, { kind: event.scheduleKind, archived_at: null });
   const details = [
-    { icon: Calendar03Icon, text: dateLabel(event.day, { weekday: "long", day: "numeric", month: "long" }) },
-    { icon: Clock01Icon, text: `${time} · Cairo` },
+    { icon: Calendar03Icon, text: when },
     { icon: UserGroupIcon, text: event.audience },
     { icon: Location01Icon, text: event.location },
     { icon: UserMultiple02Icon, text: event.expected !== undefined ? `${event.expected} expected` : null },
@@ -42,7 +43,6 @@ export function EventDetails({ event, today, past, format, academyId, role, pend
       </span>
       {canName ? <NameField key={`${event.title}:${event.named}`} event={event} academyId={academyId} />
         : <h2 className="text-lg font-semibold leading-snug">{event.title}</h2>}
-      {event.named && <span className="text-sm text-muted-foreground">{event.scheduleTitle}</span>}
     </div>
     <ul className="flex flex-col gap-2 text-sm">{details.map(item => <li key={item.text} className="flex items-start gap-2.5">
       <HugeiconsIcon icon={item.icon} strokeWidth={1.5} className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span className="min-w-0 tabular-nums">{item.text}</span>
