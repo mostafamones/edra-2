@@ -5913,6 +5913,51 @@ export type Database = {
           },
         ]
       }
+      schedule_occurrence_names: {
+        Row: {
+          academic_year_id: string
+          academy_id: string
+          name: string
+          occurs_on: string
+          schedule_id: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          academic_year_id: string
+          academy_id: string
+          name: string
+          occurs_on: string
+          schedule_id: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Update: {
+          academic_year_id?: string
+          academy_id?: string
+          name?: string
+          occurs_on?: string
+          schedule_id?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_occurrence_names_academy_id_academic_year_id_schedule_id_fkey"
+            columns: ["academy_id", "academic_year_id", "schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["academy_id", "academic_year_id", "id"]
+          },
+          {
+            foreignKeyName: "schedule_occurrence_names_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedule_sessions: {
         Row: {
           academic_year_id: string
@@ -7796,6 +7841,10 @@ export type Database = {
       }
       can_join_attendance_channel: {
         Args: { p_topic: string }
+        Returns: boolean
+      }
+      can_name_schedule_occurrence: {
+        Args: { target_academy_id: string; target_schedule_id: string }
         Returns: boolean
       }
       can_read_avatar_object: { Args: { p_name: string }; Returns: boolean }

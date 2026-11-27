@@ -99,3 +99,30 @@ export async function archiveSchedule(academyId: string, scheduleId: string): Pr
 
   return { ok: true };
 }
+
+const occurrenceNameSchema = z.object({
+  academyId: z.guid(), scheduleId: z.guid(), occursOn: z.iso.date(),
+  // An empty name clears it; the occurrence then shows the schedule title again.
+  name: z.string().trim().max(120, "Use 120 characters or fewer."),
+});
+
+/** Names one occurrence of a schedule (planned, live or ended). Same authority as editing the schedule. */
+export async function nameOccurrence(value: unknown): Promise<Result> {
+  const parsed = occurrenceNameSchema.safeParse(value);
+  if (!parsed.success) return invalid(parsed.error);
+  const { academyId, scheduleId, occursOn, name } = parsed.data;
+  const actor = await academyMember(academyId);
+  if (!actor) return { ok: false, message: "You do not have permission to name this session." };
+  const { data: schedule } = await actor.db.from("schedules").select("kind,archived_at,academic_year_id")
+    .eq("id", scheduleId).eq("academy_id", academyId).maybeSingle();
+  if (!schedule) return { ok: false, message: "Schedule not found." };
+  if (!canEditSchedule(actor.role, schedule)) return { ok: false, message: "You do not have permission to name this session." };
+  const names = actor.db.from("schedule_occurrence_names");
+  const { error } = name
+    ? await names.upsert({ academy_id: academyId, academic_year_id: schedule.academic_year_id, schedule_id: scheduleId, occurs_on: occursOn, name },
+      { onConflict: "schedule_id,occurs_on" })
+    : await names.delete().eq("academy_id", academyId).eq("schedule_id", scheduleId).eq("occurs_on", occursOn);
+  if (error) return { ok: false, message: error.message };
+
+  return { ok: true };
+}
