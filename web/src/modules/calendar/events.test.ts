@@ -10,7 +10,9 @@ const slot: ScheduleSlot = { id: "slot", academy_id: "a", academic_year_id: "y",
 const input = { days: weekDays("2026-10-30"), today: "2026-10-30", schedules: [schedule], slots: [slot], dates: [], lookup: { groups: new Map(), tracks: new Map(), levelNames: { l: "Grade" } }, sessions: [], assessments: [] as AssessmentListItem[], names: [] as { schedule_id: string; occurs_on: string; name: string }[], year: { starts_on: "2026-09-01", ends_on: "2027-08-31" } };
 describe("calendar projection", () => {
   it("crosses month boundaries without using the machine timezone", () => {
-    expect(weekDays("2026-11-01")).toEqual(["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"]);
+    expect(weekDays("2026-11-01")).toEqual(["2026-11-01", "2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07"]);
+    expect(weekDays("2026-11-07")[0]).toBe("2026-11-01");
+    expect(weekDays("2026-10-30")[0]).toBe("2026-10-25");
   });
   it("projects recurring slots only inside the academic year and retains separate occurrences", () => {
     expect(calendarEvents(input)).toMatchObject([{ day: "2026-10-30", start: 960, end: 1050 }]);
