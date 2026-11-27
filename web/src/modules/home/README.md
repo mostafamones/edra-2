@@ -8,6 +8,8 @@ The daily overview prioritizes actionable work, today's teaching and active enro
 - The queue shows the oldest eight tasks; the count covers all matching tasks. Each row opens its actual session, unit or assignment. No action is performed by opening Home.
 - Students: unarchived annual records in the open year, grouped by grade and participation type. These are enrolled records, not linked-account counts. Online means `online_only`; grade and participation summaries link to the existing student filters.
 - Today: the first twelve planned occurrences in Cairo's current calendar date, including separate times for schedules with multiple slots. Live activity uses the existing Sessions infinite-query contract and opens attendance. Planned times are not actual start times. Schedules remains the complete plan.
+- Layout: live sessions and the needs-attention queue sit at the top as alerts, followed by headline numbers, the attendance trend, students by grade (stacked in-person/online bars that open the grade filter) and today's plan.
+- Attendance by week: the last eight ISO weeks in Cairo time, counting published marks of finalized sheets on unarchived sessions in the open year. Rate is present + late over present, late and absent; excused and unknown are excluded. A week with nothing finalized has no rate rather than 0%. If the server omits the series (migration not yet applied), the chart and headline tile are hidden instead of showing zero.
 - No open year: show the status rather than implying an empty academy. Unknown/failed reads never become zero counters or an all-clear state.
 
 ## Data, authority and freshness

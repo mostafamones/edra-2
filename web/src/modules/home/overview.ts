@@ -7,6 +7,8 @@ export const overviewSchema = z.object({
   students: z.object({ total: z.number(), online: z.number(), levels: z.array(z.object({ id: z.string(), name: z.string(), total: z.number(), online: z.number() })) }),
   attention: z.array(z.object({ kind: z.enum(["attendance", "review", "assignment"]), id: z.string(), title: z.string(), amount: z.number() })),
   today: z.array(z.object({ id: z.string(), title: z.string(), location: z.string().nullable(), startsAt: z.string(), endsAt: z.string() })),
+  // Optional until the trend migration reaches every database; absent means unknown, never zero.
+  attendance: z.array(z.object({ week: z.string(), sessions: z.number(), attended: z.number(), counted: z.number() })).optional(),
 });
 export type Overview = z.infer<typeof overviewSchema>;
 export const homeOverviewOptions = (academyId: string) => queryOptions({

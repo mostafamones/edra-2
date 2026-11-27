@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { HomeView } from "./view";
+import { HomeView, rate } from "./view";
 import type { Overview } from "./overview";
 vi.mock("@/components/shared/link", () => ({ default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => <a href={href} {...props}>{children}</a> }));
 afterEach(cleanup);
@@ -26,4 +26,16 @@ it("does not lose the overview when live sessions fail", () => {
   render(<HomeView academyName="Academy" base="/a" overview={read(data)} live={{...read([]),data:undefined,error:new Error("Connection lost")}} />);
   expect(screen.getByRole("link",{name:/Loops/})).toBeTruthy();
   expect(screen.getByText("Couldn’t load live sessions")).toBeTruthy();
+});
+it("computes attendance from finalized marks and never shows a rate without any", () => {
+  expect(rate([{attended: 3, counted: 4}, {attended: 0, counted: 0}, {attended: 5, counted: 6}])).toBe(80);
+  expect(rate([{attended: 0, counted: 0}])).toBeNull();
+  const weeks = [{week: "2026-11-16", sessions: 0, attended: 0, counted: 0}];
+  render(<HomeView academyName="Academy" base="/a" live={read([])} overview={read({...data, attendance: weeks})} />);
+  expect(screen.getByText("No finalized sessions in the last 8 weeks")).toBeTruthy();
+  expect(screen.getByText("—")).toBeTruthy();
+});
+it("hides the trend when the server does not report attendance", () => {
+  render(<HomeView academyName="Academy" base="/a" live={read([])} overview={read(data)} />);
+  expect(screen.queryByText("Attendance by week")).toBeNull();
 });
