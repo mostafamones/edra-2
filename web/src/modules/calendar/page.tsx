@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FilterPopover } from "@/components/shared/filter-popover";
 import { HeaderActions } from "@/components/shared/header-actions";
 import { Segmented } from "@/components/shared/segmented";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ToggleBadge, ToggleBadgeGroup } from "@/components/shared/toggle-badge";
 import { AcademyGate } from "@/modules/auth";
 import { clockLabel } from "./time";
@@ -112,7 +113,7 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
       </HeaderActions>
       <div className="flex items-center rounded-lg bg-card p-1">
         <Button variant="ghost" size="icon-sm" aria-label={`Previous ${unit}`} onClick={() => step(-1)}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} /></Button>
-        <Button variant="ghost" size="sm" aria-label="Go to today" onClick={() => setSelected(today)}>{view === "month" ? dateLabel(selected, { month: "short", year: "numeric" }) : `${dateLabel(days[0], { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short" })}`}</Button>
+        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="sm" aria-label="Go to today" onClick={() => setSelected(today)}>{view === "month" ? dateLabel(selected, { month: "short", year: "numeric" }) : `${dateLabel(days[0], { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short" })}`}</Button></TooltipTrigger><TooltipContent>Return to now</TooltipContent></Tooltip>
         <Button variant="ghost" size="icon-sm" aria-label={`Next ${unit}`} onClick={() => step(1)}><HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={1.5} /></Button>
       </div>
       <FilterPopover iconOnly icon={PreferenceHorizontalIcon} label="View options" sections={[{ id: "show", active: hidden.size > 0, onReset: () => setHidden(new Set()),
