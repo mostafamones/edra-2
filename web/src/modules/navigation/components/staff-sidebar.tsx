@@ -8,6 +8,7 @@ import { ArrowDown01Icon, ArrowLeft02Icon, AssignmentsIcon, Building03Icon, Cale
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { SearchMenu } from "../search/menu";
 import {
   Sidebar,
@@ -73,6 +74,7 @@ function StaffLink({ item, icon, pathname, closeMobile, also = [] }: {
         <Link href={href(item.href)} onClick={closeMobile} aria-current={pathname === item.href ? "page" : undefined}>
           {icon ? <HugeiconsIcon icon={icon} strokeWidth={1.5} aria-hidden="true" /> : <Icon aria-hidden="true" />}
           <span>{item.label}</span>
+          {item.href === "/app/question-bank" && <Badge variant="secondary" className="ml-auto px-1.5 py-0 text-[10px] group-data-[collapsible=icon]:hidden">BETA</Badge>}
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
