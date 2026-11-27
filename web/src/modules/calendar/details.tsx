@@ -26,8 +26,9 @@ export function EventDetails({ event, today, past, format, academyId, role, pend
     : event.deadline ? "Assignment due" : event.window ? `${event.kind} window` : event.kind;
   const day = `${dateLabel(event.day, { weekday: "long" })}, ${dateLabel(event.day, { day: "numeric", month: "short" })}`;
   const hours = event.deadline ? `Due ${clock(event.start)}` : event.openOnly ? `Opens ${clock(event.start)}` : `${clock(event.start)} — ${clock(event.end)}`;
+  // A quiet rule separates the date from the time; assessment windows already read as a range.
   const when = event.window && event.opensAt ? `${fullTime(event.opensAt)} — ${event.closesAt ? fullTime(event.closesAt) : "Open-ended"}`
-    : event.deadline || event.openOnly ? `${day} · ${hours}` : `${day} ${hours}`;
+    : <>{day}<span aria-hidden="true" className="mx-2 inline-block h-3 w-px translate-y-px bg-border" />{hours}</>;
   const canName = event.kind === "session" && !!event.scheduleKind && canEditSchedule(role, { kind: event.scheduleKind, archived_at: null });
   const details = [
     { icon: Calendar03Icon, text: when },
@@ -44,7 +45,7 @@ export function EventDetails({ event, today, past, format, academyId, role, pend
       {canName ? <NameField key={`${event.title}:${event.named}`} event={event} academyId={academyId} />
         : <h2 className="text-lg font-semibold leading-snug">{event.title}</h2>}
     </div>
-    <ul className="flex flex-col gap-2 text-sm">{details.map(item => <li key={item.text} className="flex items-start gap-2.5">
+    <ul className="flex flex-col gap-2 text-sm">{details.map((item, index) => <li key={index} className="flex items-start gap-2.5">
       <HugeiconsIcon icon={item.icon} strokeWidth={1.5} className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span className="min-w-0 tabular-nums">{item.text}</span>
     </li>)}</ul>
     <div className="flex flex-wrap gap-2 border-t pt-4">
