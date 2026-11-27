@@ -8,18 +8,17 @@ import { weekLabel } from "./shared";
 
 type Range = "4" | "8" | "12";
 const ranges = [{ value: "4", label: "4w" }, { value: "8", label: "8w" }, { value: "12", label: "12w" }] satisfies { value: Range; label: string }[];
-const statuses = ["present", "late", "excused", "absent"] as const;
+const statuses = ["attended", "excused", "absent"] as const;
 const config = {
-  present: { label: "Present", color: "var(--chart-2)" },
-  late: { label: "Late", color: "oklch(0.769 0.188 70.08)" },
+  attended: { label: "Present", color: "var(--chart-2)" },
   excused: { label: "Excused", color: "var(--muted-foreground)" },
   absent: { label: "Absent", color: "var(--destructive)" },
 } satisfies ChartConfig;
 
-/** Official marks per week by status. Range changes only slice the loaded twelve weeks. */
+/** Official marks per week by status, present and late as one series. Range changes only slice the loaded twelve weeks. */
 export function AttendanceTrend({ weeks }: { weeks: Week[] }) {
   const [range, setRange] = useState<Range>("8");
-  const shown = weeks.slice(-Number(range)).map(week => ({ ...week, label: weekLabel.format(new Date(week.week)), rate: rate([week]) }));
+  const shown = weeks.slice(-Number(range)).map(week => ({ ...week, label: weekLabel.format(new Date(week.week)), rate: rate([week]), attended: week.present + week.late }));
   const overall = rate(shown);
   const sessions = shown.reduce((total, week) => total + week.sessions, 0);
   const marked = shown.some(week => week.present + week.late + week.absent + week.excused > 0);
@@ -33,7 +32,7 @@ export function AttendanceTrend({ weeks }: { weeks: Week[] }) {
     </div>
     {marked ? <ChartContainer config={config} className="aspect-auto h-72 w-full px-2" role="img" aria-label={`Weekly attendance: ${shown.map(week => `${week.label}, ${week.rate === null ? "no finalized sessions" : `${week.rate}%, ${week.absent} absent`}`).join("; ")}`}>
       <AreaChart data={shown} accessibilityLayer margin={{ left: 4, right: 16, top: 8, bottom: 0 }}>
-        <defs>{statuses.map(status => <linearGradient key={status} id={`home-fill-${status}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={`var(--color-${status})`} stopOpacity={0.45} /><stop offset="100%" stopColor={`var(--color-${status})`} stopOpacity={0.08} /></linearGradient>)}</defs>
+        <defs>{statuses.map(status => <linearGradient key={status} id={`home-fill-${status}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={`var(--color-${status})`} stopOpacity={0.25} /><stop offset="100%" stopColor={`var(--color-${status})`} stopOpacity={0.02} /></linearGradient>)}</defs>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={32} tick={{ fontSize: 11 }} />
         <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} minTickGap={16} tick={{ fontSize: 11 }} />
@@ -45,7 +44,7 @@ export function AttendanceTrend({ weeks }: { weeks: Week[] }) {
             <span className="mt-1 flex justify-between gap-4 border-t pt-1 text-muted-foreground"><span>{week.sessions} {week.sessions === 1 ? "session" : "sessions"}</span><span className="font-medium text-foreground tabular-nums">{week.rate === null ? "—" : `${week.rate}%`}</span></span>
           </div> : null;
         }} />
-        {statuses.map(status => <Area key={status} dataKey={status} stackId="marks" type="monotone" stroke={`var(--color-${status})`} strokeWidth={1.5} fill={`url(#home-fill-${status})`} isAnimationActive={false} />)}
+        {statuses.map(status => <Area key={status} dataKey={status} type="monotone" stroke={`var(--color-${status})`} strokeWidth={1.5} fill={`url(#home-fill-${status})`} isAnimationActive={false} />)}
         <ChartLegend content={<ChartLegendContent />} />
       </AreaChart>
     </ChartContainer> : <p className="py-24 text-center text-sm text-muted-foreground">No finalized sessions in the last {range} weeks</p>}
