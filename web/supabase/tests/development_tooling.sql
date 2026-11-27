@@ -101,7 +101,7 @@ where id = 'd0e10000-0000-4000-8000-0000000000e2';
 select pg_temp.assert_eq('expanded registry count',
   (select student_count::text from edra_private.dev_runs where id = 'd0e10000-0000-4000-8000-0000000000e2'), '300');
 select pg_temp.expect_error(
-  $q$update edra_private.dev_runs set student_count = 301 where id = 'd0e10000-0000-4000-8000-0000000000e2'$q$,
+  $q$update edra_private.dev_runs set student_count = 321 where id = 'd0e10000-0000-4000-8000-0000000000e2'$q$,
   '%dev_runs_student_count_check%');
 
 insert into edra_private.dev_contacts (phone, run_id, logical_id, purpose) values
