@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon, PreferenceHorizontalIcon,  } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon, Calendar02Icon, Calendar03Icon, LeftToRightListBulletIcon, PreferenceHorizontalIcon } from "@hugeicons/core-free-icons";
+import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterPopover } from "@/components/shared/filter-popover";
+import { HeaderActions } from "@/components/shared/header-actions";
+import { Segmented } from "@/components/shared/segmented";
 import { ToggleBadge, ToggleBadgeGroup } from "@/components/shared/toggle-badge";
 import { AcademyGate } from "@/modules/auth";
 import { formatClock, useTimeFormat } from "@/modules/account";
@@ -18,6 +21,11 @@ import { EventButton } from "./event";
 import { calendarHistoryOptions, calendarLiveOptions } from "./queries";
 
 const HOUR = 72;
+const VIEWS = [
+  { value: "month", label: "Month", icon: Calendar03Icon },
+  { value: "week", label: "Week", icon: Calendar02Icon },
+  { value: "agenda", label: "Agenda", icon: LeftToRightListBulletIcon },
+] as const;
 // Every desktop view shares one viewport-bound frame and scrolls inside it.
 const FRAME = "max-h-[calc(100svh-15rem)] min-h-96";
 
@@ -90,7 +98,14 @@ function CalendarContent({ academy }: { academy: AcademyEntry }) {
         { id: "track", label: "Track", value: track, defaultValue: "all", onChange: value => { setTrack(value); setGroup("all"); }, options: [{ value: "all", label: "All tracks" }, ...(structure.data?.historicalTracks.filter(item => level === "all" || item.level_id === level).map(item => ({ value: item.id, label: item.name })) ?? [])] },
         { id: "group", label: "Group", value: group, defaultValue: "all", onChange: setGroup, options: [{ value: "all", label: "All groups" }, ...[...(groups.data?.groups ?? []), ...(archivedGroups.data?.groups ?? [])].filter(item => (level === "all" || item.level_id === level) && (track === "all" || item.track_id === track)).map(item => ({ value: item.id, label: item.name }))] },
       ]} />
-      <div className="hidden rounded-lg bg-card p-1 md:flex" role="group" aria-label="Calendar view">{[["month", "Month"], ["week", "Week"], ["agenda", "Agenda"]].map(([value, label]) => <Button key={value} size="sm" variant={view === value ? "secondary" : "ghost"} aria-pressed={view === value} onClick={() => setView(value)}>{label}</Button>)}</div>
+      <HeaderActions>
+        <div className="hidden max-w-[calc(100vw-10rem)] overflow-x-auto md:block">
+          <Segmented label="Calendar view" value={view} className="h-9" hideSelectedHint onChange={setView} options={VIEWS.map(item => ({
+            value: item.value, hint: item.label,
+            label: <><HugeiconsIcon icon={item.icon} strokeWidth={1.5} className="size-4" aria-hidden="true" /><span className={cn("grid transition-[grid-template-columns,margin-left] duration-200 ease-out motion-reduce:transition-none", view === item.value ? "ml-1.5 grid-cols-[1fr]" : "grid-cols-[0fr]")}><span className="overflow-hidden">{item.label}</span></span></>,
+          }))} />
+        </div>
+      </HeaderActions>
       <div className="flex items-center rounded-lg bg-card p-1">
         <Button variant="ghost" size="icon-sm" aria-label={`Previous ${unit}`} onClick={() => step(-1)}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} /></Button>
         <Button variant="ghost" size="sm" onClick={() => setSelected(today)}>Today</Button>
