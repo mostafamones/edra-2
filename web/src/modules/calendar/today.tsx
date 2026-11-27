@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Calendar03Icon } from "@hugeicons/core-free-icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { AcademyEntry } from "@/modules/academies";
 import { academyNow } from "@/modules/schedules";
@@ -36,10 +34,9 @@ export function TodayEvents({ academy }: { academy: AcademyEntry }) {
           <span dir="auto" className="max-w-full truncate text-sm font-medium">{event.title}</span>
         </span>
         {/* The pill fills over one turn; its animation end advances the ticker, so pausing it pauses rotation. */}
-        {sessions.length > 1 && <span aria-hidden="true" className="h-6 w-1 shrink-0 overflow-hidden rounded-full bg-foreground/10">
-          <span key={event.id} onAnimationEnd={next} className={`block size-full rounded-full bg-primary/60 duration-[5000ms] ease-linear animate-in slide-in-from-bottom-full ${open || hover ? "[animation-play-state:paused]" : ""}`} />
+        {sessions.length > 1 && <span aria-hidden="true" className="h-6 w-0.5 shrink-0 overflow-hidden rounded-full bg-foreground/10">
+          <span key={event.id} onAnimationEnd={next} className={`block size-full rounded-full bg-foreground/50 duration-[5000ms] ease-linear animate-in slide-in-from-bottom-full ${open || hover ? "[animation-play-state:paused]" : ""}`} />
         </span>}
-        <HugeiconsIcon icon={Calendar03Icon} strokeWidth={1.5} className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
       </button>
     </PopoverTrigger>
     <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-5" align="end">
