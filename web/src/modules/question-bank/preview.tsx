@@ -52,7 +52,7 @@ export function QuestionPreview({ detail, collections, academySlug, onRemove, on
         {payload.choices.map(choice => {
           const correct = choice.key === payload.answer;
           const body = <>
-            <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium", correct && "border-primary bg-primary text-primary-foreground")}>{choice.key}</span>
+            <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-md border text-xs font-medium uppercase", correct && "border-primary bg-primary text-primary-foreground")}>{choice.key}</span>
             <MathText value={choice.text} className="min-w-0 flex-1 leading-normal" />
             {correct && <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={1.5} className="size-5 shrink-0 text-primary" aria-label="Correct answer" />}
           </>;

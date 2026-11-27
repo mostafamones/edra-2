@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -25,7 +25,7 @@ import { QuestionEditor } from "./editor";
 import { AddToCollection, useMembership } from "./membership";
 import { QuestionPreview } from "./preview";
 import { BankSearch, QuestionList } from "./question-list";
-import { bankDetailOptions, collectionLabel, collectionsOptions, fileTitle, questionTitle, type BankScope } from "./queries";
+import { bankDetailOptions, bankKeys, collectionLabel, collectionsOptions, fileTitle, questionTitle, type BankScope } from "./queries";
 
 const plural = (count: number) => count === 1 ? "question" : `${count} questions`;
 // Open a dialog only after the context menu has closed, so its dismissal cannot close the dialog.
@@ -46,6 +46,7 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
   const [deleting, setDeleting] = useState<string[] | null>(null);
   const update = useMembership(scope);
   const actions = useQuestionActions(scope);
+  const client = useQueryClient();
   const detail = useQuery({ ...bankDetailOptions(scope, active?.id ?? ""), enabled: !!active });
   const list = collections.data?.collections ?? [];
   const current = list.find(collection => collection.id === browse.collectionId);
@@ -106,10 +107,16 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
     setEditing(false);
   }
 
-  const answer = (question: BankDetail, key: string | null) => {
+  // Optimistic: the choice shows at once and rolls back if the save fails.
+  async function answer(question: BankDetail, key: string | null) {
     const { prompt, choices, modelAnswer } = question.payload;
-    void save(question, { prompt, choices, answer: key, modelAnswer: modelAnswer ?? "" });
-  };
+    const cacheKey = bankKeys.detail(scope, question.id);
+    client.setQueryData(cacheKey, { ...question, payload: { ...question.payload, answer: key } });
+    const message = await actions.update(question.id, { prompt, choices, answer: key, modelAnswer: modelAnswer ?? "" });
+    if (message === undefined) return;
+    client.setQueryData(cacheKey, question);
+    if (message) toast.error(message);
+  }
 
   const menu = (row: BankSummary) => <>
     <ContextMenuItem onSelect={() => open(row)}><HugeiconsIcon icon={ViewIcon} strokeWidth={1.5} />Open</ContextMenuItem>
@@ -177,7 +184,7 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
             {data => editing
               ? <QuestionEditor key={data.id} detail={data} formId="qb-edit" error={editError} pending={pending} onSubmit={changes => void save(data, changes)} />
               : <QuestionPreview detail={data} collections={list} academySlug={scope.academySlug}
-                  onAnswer={pending ? undefined : key => answer(data, key)}
+                  onAnswer={pending ? undefined : key => void answer(data, key)}
                   onRemove={collection => void remove(collection, [data.id])} />}
           </QueryContent>}
         </div>
