@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy01Icon, Notification01Icon, NotificationOff01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
@@ -165,10 +165,10 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
       {thread.data?.hasMore && <div className="p-2 text-center"><Button size="sm" variant="ghost" disabled={thread.loadingOlder || jumping} onClick={() => void thread.loadOlder()}>{thread.loadingOlder ? "Loading…" : "Load older messages"}</Button></div>}
       {!!thread.olderError && <ConcernFeedback retry={() => void thread.loadOlder()}>Could not load older messages</ConcernFeedback>}
       {!messages.length && !thread.isLoading && <ConcernFeedback>No messages</ConcernFeedback>}
-      {shown.map((message, index) => { const pending = outgoing.find((entry) => entry.message.id === message.id);
-        return <ConcernMessageItem key={message.id} message={message} first={!sameRun(shown[index - 1], message)} last={!sameRun(message, shown[index + 1])} academyId={scope.academyId} userId={scope.userId} settled={settled || detail.isError} commands={commands} onReply={(item) => { setReplyId(item.id); }} participants={participants}
+      {shown.map((message, index) => { const pending = outgoing.find((entry) => entry.message.id === message.id); const first = !sameRun(shown[index - 1], message);
+        return <Fragment key={message.id}>{first && index > 0 && <div aria-hidden="true" className="mx-auto mt-2 h-px w-1/2 bg-border/60" />}<ConcernMessageItem message={message} first={first} academyId={scope.academyId} userId={scope.userId} settled={settled || detail.isError} commands={commands} onReply={(item) => { setReplyId(item.id); }} participants={participants}
           receipts={pending ? [] : participants.filter((participant) => participant.lastReadSeq === message.seq && participant.userId !== scope.userId && participant.userId !== message.authorId)} avatarUrls={avatars.data ?? {}}
-          outgoing={pending && { failure: pending.failure, onRetry: () => void deliver(pending), onDiscard: () => setOutgoing((list) => list.filter((entry) => entry !== pending)) }} />; })}
+          outgoing={pending && { failure: pending.failure, onRetry: () => void deliver(pending), onDiscard: () => setOutgoing((list) => list.filter((entry) => entry !== pending)) }} /></Fragment>; })}
     </div>
     {readError && reading && <div role="alert" className="flex items-center gap-2 px-4 text-xs"><span>Could not update read receipt</span><Button size="sm" variant="ghost" onClick={() => setReadRetry((value) => value + 1)}>Retry receipt</Button></div>}
     {decision && <ConcernLifecycleForm key={decision} mode={decision} detail={detail.data} lifecycle={lifecycle} onClose={() => setDeciding(null)} />}

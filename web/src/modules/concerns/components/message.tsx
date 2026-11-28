@@ -20,8 +20,8 @@ import { ConcernReceipts } from "./receipts";
 import { browserScopeGeneration } from "@/lib/browser-scope";
 
 type Commands = ReturnType<typeof useConcernCommands>;
-export function ConcernMessageItem({ message, outgoing, first = true, last = true, academyId, userId, settled, commands, onReply, participants, receipts, avatarUrls }: {
-  message: ConcernMessage; first?: boolean; last?: boolean;
+export function ConcernMessageItem({ message, outgoing, first = true, academyId, userId, settled, commands, onReply, participants, receipts, avatarUrls }: {
+  message: ConcernMessage; first?: boolean;
   /** Set while this is a local, not yet confirmed send. */
   outgoing?: { failure: ConcernFailure | null; onRetry: () => void; onDiscard: () => void }; academyId: string; userId: string; settled: boolean; commands: Commands; onReply: (message: ConcernMessage) => void;
   participants: ConcernParticipant[]; receipts: ConcernParticipant[]; avatarUrls: Record<string, string>;
@@ -67,11 +67,14 @@ export function ConcernMessageItem({ message, outgoing, first = true, last = tru
   const name = message.authorName ?? "Staff";
   const time = <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()} className="text-xs text-muted-foreground">{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>;
   const mentioned = participants.filter((participant) => message.mentions.includes(participant.userId)).map((participant) => ({ userId: participant.userId, name: participant.name, avatarUrl: avatarUrls[participant.avatarPath ?? ""] }));
+  const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return <article data-concern-seq={outgoing ? undefined : message.seq} data-concern-message={message.id} tabIndex={-1}
-    className={cn("group/message flex min-w-0 gap-2 rounded-lg ps-3 pe-1 py-px focus-visible:outline-2 focus-visible:outline-ring target:bg-muted", first && "mt-3")}>
-    {!own && <div className="w-8 shrink-0 self-start">{first && <Avatar aria-hidden="true"><AvatarImage src={avatarUrls[author?.avatarPath ?? ""]} alt="" /><AvatarFallback className="text-xs">{name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</AvatarFallback></Avatar>}</div>}
-    <div className={cn("flex min-w-0 flex-col", editing ? "flex-1" : "max-w-[80%]", own ? "ms-auto items-end" : "items-start")}>
-      {first && <div className="mb-1 flex items-baseline gap-2 px-1">{!own && <span className="text-xs font-medium break-words" dir="auto">{name}</span>}{time}</div>}
+    className={cn("group/message relative flex min-w-0 gap-3 rounded-md ps-3 pe-1 py-0.5 hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring target:bg-muted", first && "mt-1 pt-1.5")}>
+    <div className="flex w-8 shrink-0 justify-center">{first
+      ? <Avatar aria-hidden="true" className="mt-0.5"><AvatarImage src={avatarUrls[author?.avatarPath ?? ""]} alt="" /><AvatarFallback className="text-xs">{initials}</AvatarFallback></Avatar>
+      : <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()} className="invisible pt-0.5 text-[10px] tabular-nums text-muted-foreground group-hover/message:visible">{new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>}</div>
+    <div className="flex min-w-0 flex-1 flex-col">
+      {first && <div className="flex items-baseline gap-2"><span className="text-sm font-semibold break-words" dir="auto">{name}</span>{time}</div>}
       {editing && !settled && !deleted ? <form className="w-full" onSubmit={(event) => { event.preventDefault(); if (body.trim() || hasMedia) { setEditing(false); void run(() => commands.edit(message.id, { body: body.trim() ? body : null, mentions: body.trim() ? mentionIds(body, mentions) : [] }), undefined, () => setEditing(true)); } }}>
         <ConcernMessageInput id={`edit-${message.id}`} label="Edit message" value={body} onChange={setBody} disabled={pending} participants={participants}
           onMention={(participant) => setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant])}>
@@ -79,31 +82,11 @@ export function ConcernMessageItem({ message, outgoing, first = true, last = tru
           <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setEditing(false)}>Cancel</Button>
           <Button size="sm" type="submit" disabled={pending || (!body.trim() && !hasMedia)}>{pending ? "Saving…" : "Save"}</Button>
         </ConcernMessageInput>
-      </form> : <div className={cn("relative flex items-center gap-1", own && "flex-row-reverse")}>
-        <div className={cn("min-w-0 rounded-2xl px-3 py-2 text-sm transition-opacity",
-          // Square the corners that face the rest of the run, on the author's side.
-          !first && (own ? "rounded-se-md" : "rounded-ss-md"), !last && (own ? "rounded-ee-md" : "rounded-es-md"), outgoing && !outgoing.failure && "opacity-70", deleted ? "border italic text-muted-foreground" : own ? "bg-primary text-primary-foreground" : "bg-muted")}>
-          {message.replyTo && <blockquote className="mb-1.5 rounded-md border-s-2 border-current/40 bg-background/15 px-2 py-1 text-xs opacity-80"><span className="block font-medium" dir="auto">{message.replyTo.authorName ?? "Staff"}</span><span className="line-clamp-2 break-words" dir="auto">{message.replyTo.deleted ? "Message deleted" : message.replyTo.body ?? concernMediaLabel(message.replyTo.media)}</span></blockquote>}
-          {deleted ? "Message deleted" : message.body !== null && <ConcernBody body={message.body} scope={{ academyId, userId }} mentions={mentioned} />}
-          {!deleted && <ConcernAttachments attachments={message.attachments} academyId={academyId} concernId={message.concernId} />}
-          {!deleted && message.editedAt && <span className="text-[11px] opacity-70">Edited</span>}
-        </div>
-        {!settled && !deleted && !outgoing && <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/message:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100">
-          <Popover open={reactionOpen} onOpenChange={setReactionOpen}><PopoverTrigger asChild><ConcernIconButton label="Add reaction" icon={SmileIcon} disabled={pending} /></PopoverTrigger><PopoverContent className="w-60" side="top">
-            <div className="flex flex-wrap gap-1">{["👍", "❤️", "✅", "👀", "🙏", "🎉"].map((value) => <Button key={value} type="button" variant="ghost" size="icon-sm" aria-label={`React ${value}`} disabled={pending} onClick={() => react(value)}>{value}</Button>)}</div>
-            <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); react(emoji); }}><Input aria-label="Emoji" value={emoji} maxLength={16} onChange={(event) => setEmoji(event.target.value)} /><Button type="submit" size="sm" disabled={pending || !emoji}>Add</Button></form>
-          </PopoverContent></Popover>
-          <DropdownMenu><DropdownMenuTrigger asChild><ConcernIconButton label="Message actions" icon={MoreHorizontalIcon} disabled={pending} /></DropdownMenuTrigger><DropdownMenuContent align={own ? "end" : "start"} onCloseAutoFocus={(event) => {
-            if (!menuFocus.current) return;
-            event.preventDefault();
-            document.getElementById(menuFocus.current === "reply" ? "concern-message" : `edit-${message.id}`)?.focus();
-            menuFocus.current = null;
-          }}>
-            <DropdownMenuItem onSelect={() => { menuFocus.current = "reply"; onReply(message); }}>Reply</DropdownMenuItem>
-            {editable && <DropdownMenuItem onSelect={() => { menuFocus.current = "edit"; setBody(message.body ?? ""); setMentions(participants.filter((participant) => message.mentions.includes(participant.userId))); setEditing(true); }}>Edit</DropdownMenuItem>}
-            {own && <DropdownMenuItem variant="destructive" onSelect={() => void run(() => commands.remove(message.id))}>Delete</DropdownMenuItem>}
-          </DropdownMenuContent></DropdownMenu>
-        </div>}
+      </form> : <div className={cn("min-w-0 text-sm transition-opacity", outgoing && !outgoing.failure && "opacity-70", deleted && "italic text-muted-foreground")}>
+        {message.replyTo && <blockquote className="mb-1 rounded-md border-s-2 bg-muted/50 px-2 py-1 text-xs text-muted-foreground"><span className="block font-medium text-foreground" dir="auto">{message.replyTo.authorName ?? "Staff"}</span><span className="line-clamp-2 break-words" dir="auto">{message.replyTo.deleted ? "Message deleted" : message.replyTo.body ?? concernMediaLabel(message.replyTo.media)}</span></blockquote>}
+        {deleted ? "Message deleted" : message.body !== null && <ConcernBody body={message.body} scope={{ academyId, userId }} mentions={mentioned} />}
+        {!deleted && <ConcernAttachments attachments={message.attachments} academyId={academyId} concernId={message.concernId} />}
+        {!deleted && message.editedAt && <span className="text-[11px] text-muted-foreground">(edited)</span>}
       </div>}
       {!deleted && message.reactions.length > 0 && <div className="mt-1 flex flex-wrap gap-1">
         {message.reactions.map((reaction) => {
@@ -126,6 +109,22 @@ export function ConcernMessageItem({ message, outgoing, first = true, last = tru
       </div>}
       {error && <p role="alert" className="px-1 text-sm text-destructive">{error}</p>}
     </div>
-    <div className={cn("w-4 shrink-0 self-end", !own && "ms-auto")}><ConcernReceipts participants={receipts} avatarUrls={avatarUrls} /></div>
+    {!settled && !deleted && !outgoing && !editing && <div className="absolute end-6 top-0 flex -translate-y-1/2 items-center rounded-md border bg-popover shadow-xs opacity-0 transition-opacity group-hover/message:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100">
+      <Popover open={reactionOpen} onOpenChange={setReactionOpen}><PopoverTrigger asChild><ConcernIconButton label="Add reaction" icon={SmileIcon} disabled={pending} /></PopoverTrigger><PopoverContent className="w-60" side="top">
+        <div className="flex flex-wrap gap-1">{["👍", "❤️", "✅", "👀", "🙏", "🎉"].map((value) => <Button key={value} type="button" variant="ghost" size="icon-sm" aria-label={`React ${value}`} disabled={pending} onClick={() => react(value)}>{value}</Button>)}</div>
+        <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); react(emoji); }}><Input aria-label="Emoji" value={emoji} maxLength={16} onChange={(event) => setEmoji(event.target.value)} /><Button type="submit" size="sm" disabled={pending || !emoji}>Add</Button></form>
+      </PopoverContent></Popover>
+      <DropdownMenu><DropdownMenuTrigger asChild><ConcernIconButton label="Message actions" icon={MoreHorizontalIcon} disabled={pending} /></DropdownMenuTrigger><DropdownMenuContent align="end" onCloseAutoFocus={(event) => {
+        if (!menuFocus.current) return;
+        event.preventDefault();
+        document.getElementById(menuFocus.current === "reply" ? "concern-message" : `edit-${message.id}`)?.focus();
+        menuFocus.current = null;
+      }}>
+        <DropdownMenuItem onSelect={() => { menuFocus.current = "reply"; onReply(message); }}>Reply</DropdownMenuItem>
+        {editable && <DropdownMenuItem onSelect={() => { menuFocus.current = "edit"; setBody(message.body ?? ""); setMentions(participants.filter((participant) => message.mentions.includes(participant.userId))); setEditing(true); }}>Edit</DropdownMenuItem>}
+        {own && <DropdownMenuItem variant="destructive" onSelect={() => void run(() => commands.remove(message.id))}>Delete</DropdownMenuItem>}
+      </DropdownMenuContent></DropdownMenu>
+    </div>}
+    <div className="w-4 shrink-0 self-end"><ConcernReceipts participants={receipts} avatarUrls={avatarUrls} /></div>
   </article>;
 }
