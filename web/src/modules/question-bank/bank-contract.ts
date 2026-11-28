@@ -53,10 +53,10 @@ export const bankPageSchema = z.object({
   rows: z.array(z.object({
     id: z.guid(), unitId: z.guid().nullable(), prompt: z.string().nullable().transform(v => v ?? ""), printedNumber: z.string().nullable(),
     file: z.string().nullable(), page: z.number().nullable(), choice: z.boolean(),
-    answered: z.boolean(), figures: z.boolean(), collections: z.array(z.guid()),
+    answered: z.boolean(), figures: z.boolean(), collections: z.array(z.guid()), labels: z.array(z.guid()),
   })),
 });
-export const bankDetailSchema = z.object({ id: z.guid(), unitId: z.guid().nullable(), payload: bankPayload, archived: z.boolean(), collections: z.array(z.guid()) });
+export const bankDetailSchema = z.object({ id: z.guid(), unitId: z.guid().nullable(), payload: bankPayload, archived: z.boolean(), collections: z.array(z.guid()), labels: z.array(z.guid()) });
 export const bankFilters = z.object({
   collectionId: z.guid().nullable(), query: z.string().max(200), offset: z.number().int().min(0).max(100_000), archived: z.boolean(),
 });

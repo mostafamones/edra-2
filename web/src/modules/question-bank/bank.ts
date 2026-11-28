@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { archiveQuestions, createCollection, deleteQuestions, listBank, loadBankCatalog, loadCollections, readBank, renameCollection, saveBank, setMembership, updateQuestion } from "./bank.server";
+import { archiveQuestions, createCollection, deleteQuestions, listBank, loadBankCatalog, loadCollections, readBank, renameCollection, saveBank, setLabel, setMembership, updateQuestion } from "./bank.server";
 import { bankFilters, collectionName, questionEdit, questionIds } from "./bank-contract";
 
 const academy = z.object({ academyId: z.guid() });
@@ -28,3 +28,6 @@ export const archiveQuestionBankQuestions = createServerFn({ method: "POST" })
   .validator(academy.extend({ questionIds, archived: z.boolean() })).handler(({ data }) => archiveQuestions(data.academyId, data.questionIds, data.archived));
 export const deleteQuestionBankQuestions = createServerFn({ method: "POST" })
   .validator(academy.extend({ questionIds })).handler(({ data }) => deleteQuestions(data.academyId, data.questionIds));
+export const setQuestionBankLabel = createServerFn({ method: "POST" })
+  .validator(academy.extend({ questionIds, labelId: z.guid(), applied: z.boolean() }))
+  .handler(({ data }) => setLabel(data.academyId, data.questionIds, data.labelId, data.applied));

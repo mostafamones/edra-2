@@ -121,3 +121,11 @@ export async function deleteQuestions(academyId: string, questionIds: string[]):
   const { data, error } = await db.rpc("delete_question_bank_questions", { p_academy_id: academyId, p_question_ids: questionIds });
   return error ? { ok: false, message: "Couldn’t delete. Try again." } : { ok: true, data };
 }
+
+export async function setLabel(academyId: string, questionIds: string[], labelId: string, applied: boolean): Promise<BankResult<number>> {
+  const db = await manager(academyId);
+  if (!db) return denied;
+  const { data, error } = await db.rpc("set_question_bank_label", { p_academy_id: academyId, p_question_ids: questionIds, p_label_id: labelId, p_applied: applied });
+  return error ? { ok: false, message: error.message === "label_not_found" ? "This label no longer exists."
+    : error.message === "not_found" ? "One or more questions are no longer available. Reload and try again." : "Couldn’t update labels. Try again." } : { ok: true, data };
+}

@@ -1,11 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useAcademyScope } from "@/modules/auth";
-import { archiveQuestionBankQuestions, deleteQuestionBankQuestions, updateQuestionBankQuestion } from "./bank";
+import { archiveQuestionBankQuestions, deleteQuestionBankQuestions, setQuestionBankLabel, updateQuestionBankQuestion } from "./bank";
 import type { BankResult, QuestionEdit } from "./bank-contract";
 import { invalidateQuestions, type BankScope } from "./queries";
 
 /**
- * Edit, archive/restore and delete commands. Each resolves to undefined on success, a message on failure,
+ * Edit, archive/restore, delete and label commands. Each resolves to undefined on success, a message on failure,
  * or null when the academy changed meanwhile (the result no longer belongs on screen).
  */
 export function useQuestionActions(scope: BankScope) {
@@ -31,5 +31,7 @@ export function useQuestionActions(scope: BankScope) {
       run(questionIds, () => archiveQuestionBankQuestions({ data: { academyId, questionIds, archived } }), "Couldn’t update the question. Try again."),
     remove: (questionIds: string[]) =>
       run(questionIds, () => deleteQuestionBankQuestions({ data: { academyId, questionIds } }), "Couldn’t delete. Try again."),
+    label: (questionIds: string[], labelId: string, applied: boolean) =>
+      run(questionIds, () => setQuestionBankLabel({ data: { academyId, questionIds, labelId, applied } }), "Couldn’t update labels. Try again."),
   };
 }

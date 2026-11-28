@@ -11,6 +11,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@/component
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { LabelOverflow, type Label } from "@/modules/labels";
 import type { BankCollection, BankSummary } from "./bank-contract";
 import type { useBankBrowse } from "./browse";
 import { fileTitle, questionNumber } from "./queries";
@@ -49,7 +50,7 @@ function groupRows(rows: BankSummary[]) {
 }
 
 /** Paginated question rows grouped by source page, with loading, empty, no-match and failure states kept apart. */
-export function QuestionList({ browse, activeId, onOpen, selected, onSelect, emptyAction, collections, menu }: {
+export function QuestionList({ browse, activeId, onOpen, selected, onSelect, emptyAction, collections, labels, menu }: {
   browse: Browse;
   activeId?: string;
   onOpen: (row: BankSummary) => void;
@@ -58,6 +59,8 @@ export function QuestionList({ browse, activeId, onOpen, selected, onSelect, emp
   emptyAction?: ReactNode;
   /** Shows each row's topics and collections by name. */
   collections?: BankCollection[];
+  /** The academy's question label catalog, to show each row's labels. */
+  labels?: readonly Label[];
   /** Context-menu items for a row. */
   menu?: (row: BankSummary) => ReactNode;
 }) {
@@ -72,6 +75,7 @@ export function QuestionList({ browse, activeId, onOpen, selected, onSelect, emp
   const row = (item: BankSummary) => {
     const number = questionNumber(item.printedNumber);
     const chips = item.collections.map(id => names.get(id)).filter(name => !!name);
+    const tags = labels?.filter(label => item.labels.includes(label.id)) ?? [];
     const content = <li className={cn("flex items-center gap-3 px-4 transition-colors hover:bg-muted/50", item.id === activeId && "bg-muted/70")}>
       {onSelect && <Checkbox checked={selected?.has(item.id) ?? false}
         aria-label={`Select ${number ? `question ${number}` : "question"}`} onCheckedChange={checked => onSelect(item.id, checked === true)} />}
@@ -81,6 +85,7 @@ export function QuestionList({ browse, activeId, onOpen, selected, onSelect, emp
         <span className="w-7 shrink-0 text-sm text-muted-foreground tabular-nums">{number}</span>
         <span className="min-w-0 flex-1 space-y-1.5">
           <MathText value={item.prompt} className="line-clamp-2 text-sm leading-6 text-foreground" />
+          {tags.length > 0 && <LabelOverflow labels={tags} />}
           {chips.length > 0 && <span className="flex flex-wrap gap-1">
             {chips.slice(0, 3).map(name => <Badge key={name} variant="secondary" className="max-w-48 font-normal"><span dir="auto" className="truncate">{name}</span></Badge>)}
             {chips.length > 3 && <Badge variant="outline" className="font-normal">+{chips.length - 3}</Badge>}

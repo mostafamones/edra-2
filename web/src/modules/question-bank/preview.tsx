@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { staffAcademyHref } from "@/lib/routing";
 import { cn } from "@/lib/utils";
+import { LabelBadges, type Label } from "@/modules/labels";
 import type { BankCollection, BankDetail } from "./bank-contract";
 import { collectionLabel, fileTitle, questionTitle } from "./queries";
 
@@ -32,9 +33,11 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** The full saved question with its source evidence and memberships. */
-export function QuestionPreview({ detail, collections, academySlug, onRemove, onAnswer, actions }: {
+export function QuestionPreview({ detail, collections, labels = [], academySlug, onRemove, onAnswer, actions }: {
   detail: BankDetail;
   collections: BankCollection[];
+  /** The academy's question label catalog. */
+  labels?: readonly Label[];
   academySlug: string;
   onRemove?: (collection: BankCollection) => void;
   /** Makes each choice a control that confirms it as the answer. */
@@ -45,6 +48,7 @@ export function QuestionPreview({ detail, collections, academySlug, onRemove, on
   const byId = new Map(collections.map(collection => [collection.id, collection]));
   const memberships = detail.collections.map(id => byId.get(id)).filter(collection => !!collection);
   const topics = memberships.filter(collection => collection.kind === "topic");
+  const applied = labels.filter(label => detail.labels.includes(label.id));
   const pages = [payload.source.page, ...payload.source.continuationPages];
   return <article className="space-y-7" aria-label={questionTitle(payload.printedNumber)}>
     <div className="space-y-4">
@@ -108,6 +112,7 @@ export function QuestionPreview({ detail, collections, academySlug, onRemove, on
         </dl>}
       </div>
     </Block>
+    {applied.length > 0 && <Block title="Labels"><LabelBadges labels={applied} /></Block>}
     {memberships.length > 0 && <Block title="Belongs to">
       <dl className="space-y-2 text-sm">
         {order.map(kind => {

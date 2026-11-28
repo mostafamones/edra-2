@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 import {
-  archiveQuestionBankQuestions, deleteQuestionBankQuestions, listQuestionBank, loadQuestionBankCollections, readQuestionBank, setQuestionBankMembership, updateQuestionBankQuestion,
+  archiveQuestionBankQuestions, deleteQuestionBankQuestions, listQuestionBank, loadQuestionBankCollections, readQuestionBank, setQuestionBankLabel, setQuestionBankMembership, updateQuestionBankQuestion,
 } from "./bank";
 import type { BankCollections, BankPage } from "./bank-contract";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,11 +12,16 @@ import { QuestionLibraryPage } from "./library";
 vi.mock("./bank", () => ({
   listQuestionBank: vi.fn(), loadQuestionBankCollections: vi.fn(), readQuestionBank: vi.fn(), setQuestionBankMembership: vi.fn(),
   createQuestionBankCollection: vi.fn(), renameQuestionBankCollection: vi.fn(),
-  updateQuestionBankQuestion: vi.fn(), archiveQuestionBankQuestions: vi.fn(), deleteQuestionBankQuestions: vi.fn(),
+  updateQuestionBankQuestion: vi.fn(), archiveQuestionBankQuestions: vi.fn(), deleteQuestionBankQuestions: vi.fn(), setQuestionBankLabel: vi.fn(),
+}));
+const labelId = "30000000-0000-4000-8000-000000000001";
+vi.mock("@/modules/labels/queries", () => ({
+  labelsQueryKey: (academyId: string, domain: string) => ["labels", academyId, domain],
+  useLabels: () => ({ data: [{ id: labelId, name: "Hard", color: "red" }], isPending: false, isError: false }),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/modules/auth", () => ({ useAcademyScope: () => () => true }));
-vi.mock("@/lib/routing", () => ({ staffAcademyHref: (slug: string, path: string) => `/${slug}${path}` }));
+vi.mock("@/lib/routing", async original => ({ ...await original<object>(), staffAcademyHref: (slug: string, path: string) => `/${slug}${path}` }));
 vi.mock("@/components/shared/link", () => ({ default: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props} /> }));
 
 Element.prototype.scrollIntoView ??= () => {};
@@ -32,7 +37,7 @@ const collections: BankCollections = { total: 2, archived: 0, collections: [
   { id: ids.section, kind: "source_section", name: "Exercises", parentId: ids.doc, firstPage: 4, count: 1 },
   { id: ids.review, kind: "custom", name: "Revision", parentId: null, firstPage: null, count: 1 },
 ] };
-const row = (id: string, prompt: string) => ({ id, unitId: null, prompt, printedNumber: "1", file: "book.pdf", page: 4, choice: false, answered: true, figures: false, collections: [] });
+const row = (id: string, prompt: string) => ({ id, unitId: null, prompt, printedNumber: "1", file: "book.pdf", page: 4, choice: false, answered: true, figures: false, collections: [], labels: [] });
 const page = (rows: BankPage["rows"], total = rows.length): { ok: true; data: BankPage } => ({ ok: true, data: { total, rows } });
 
 function mount(scope = scopeA, client = new QueryClient()) {
@@ -73,7 +78,7 @@ it("shows an empty library separately from a failed read, and retries", async ()
 it("previews a question in several collections and removes one membership without removing the question", async () => {
   vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: collections });
   vi.mocked(listQuestionBank).mockResolvedValue(page([row(ids.q1, "Solve for x")]));
-  vi.mocked(readQuestionBank).mockResolvedValue({ ok: true, data: { id: ids.q1, unitId: null, archived: false, collections: [ids.doc, ids.section, ids.algebra, ids.review], payload: {
+  vi.mocked(readQuestionBank).mockResolvedValue({ ok: true, data: { id: ids.q1, unitId: null, archived: false, collections: [ids.doc, ids.section, ids.algebra, ids.review], labels: [], payload: {
     prompt: "Solve for x", choices: [], answer: null, modelAnswer: "x = 2", topic: null, section: "Exercises", printedNumber: "1",
     source: { file: "book.pdf", page: 4, continuationPages: [5] }, visuals: [],
   } } });
@@ -146,7 +151,7 @@ it("never shows a late response from the previous account or academy", async () 
 it("confirms an answer by clicking a choice, and lists source groups without file extensions", async () => {
   vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: collections });
   vi.mocked(listQuestionBank).mockResolvedValue(page([{ ...row(ids.q1, "Pick one"), printedNumber: "First Question", choice: true, answered: false, collections: [ids.algebra] }]));
-  vi.mocked(readQuestionBank).mockResolvedValue({ ok: true, data: { id: ids.q1, unitId: null, archived: false, collections: [], payload: {
+  vi.mocked(readQuestionBank).mockResolvedValue({ ok: true, data: { id: ids.q1, unitId: null, archived: false, collections: [], labels: [], payload: {
     prompt: "Pick one", choices: [{ key: "a", text: "R" }, { key: "b", text: "{-4}" }], answer: null, topic: null, section: null, printedNumber: "First Question",
     source: { file: "book.pdf", page: 4, continuationPages: [] }, visuals: [],
   } } });
@@ -165,7 +170,7 @@ it("confirms an answer by clicking a choice, and lists source groups without fil
 it("clears a confirmed answer from the preview", async () => {
   vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: collections });
   vi.mocked(listQuestionBank).mockResolvedValue(page([{ ...row(ids.q1, "Pick one"), choice: true }]));
-  vi.mocked(readQuestionBank).mockResolvedValue({ ok: true, data: { id: ids.q1, unitId: null, archived: false, collections: [], payload: {
+  vi.mocked(readQuestionBank).mockResolvedValue({ ok: true, data: { id: ids.q1, unitId: null, archived: false, collections: [], labels: [], payload: {
     prompt: "Pick one", choices: [{ key: "a", text: "R" }, { key: "b", text: "S" }], answer: "a", topic: null, section: null, printedNumber: "1",
     source: { file: "book.pdf", page: 4, continuationPages: [] }, visuals: [],
   } } });
@@ -194,4 +199,22 @@ it("archives selected questions and deletes only after confirmation", async () =
   fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Delete" }));
   await waitFor(() => expect(deleteQuestionBankQuestions).toHaveBeenCalledWith({ data: { academyId: scopeA.academyId, questionIds: [ids.q1] } }));
   await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+});
+
+it("shows a question's labels and applies a label to the selected questions at once", async () => {
+  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: collections });
+  vi.mocked(listQuestionBank).mockResolvedValue(page([row(ids.q1, "First"), { ...row(ids.q2, "Second"), labels: [labelId] }]));
+  // Held open so the check sees the optimistic row before the refresh.
+  vi.mocked(setQuestionBankLabel).mockReturnValue(new Promise(() => {}));
+  mount();
+  await screen.findByText("First");
+  // Only the second row has the label until it is applied to the first.
+  const shown = () => within(screen.getByRole("list", { name: "Questions", hidden: true })).queryAllByText("Hard").length;
+  const before = shown();
+  expect(before).toBeGreaterThan(0);
+  fireEvent.click(screen.getAllByRole("checkbox", { name: "Select question 1" })[0]);
+  fireEvent.keyDown(screen.getByRole("button", { name: "Labels" }), { key: "Enter" });
+  fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Hard" }));
+  await waitFor(() => expect(vi.mocked(setQuestionBankLabel).mock.lastCall![0]!.data).toEqual({ academyId: scopeA.academyId, questionIds: [ids.q1], labelId, applied: true }));
+  expect(shown()).toBe(before * 2);
 });

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Archive02Icon, ArchiveRestoreIcon, Cancel01Icon, Delete02Icon, FileUploadIcon, FolderAddIcon, FolderLibraryIcon, FolderRemoveIcon, PencilEdit01Icon, ViewIcon,
+  Archive02Icon, ArchiveRestoreIcon, Cancel01Icon, LabelIcon, Delete02Icon, FileUploadIcon, FolderAddIcon, FolderLibraryIcon, FolderRemoveIcon, PencilEdit01Icon, ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { HeaderActions } from "@/components/shared/header-actions";
 import Link from "@/components/shared/link";
@@ -16,10 +16,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FloatingSheet, FloatingSheetContent, FloatingSheetFooter, FloatingSheetHeader, FloatingSheetTitle } from "@/components/ui/floating-sheet";
 import { staffAcademyHref } from "@/lib/routing";
+import { LabelManager, LabelsMenuItems, LabelsSubmenu, labelsQueryKey, useLabels } from "@/modules/labels";
 import { useQuestionActions } from "./actions";
-import type { BankCollection, BankDetail, BankSummary, QuestionEdit } from "./bank-contract";
+import type { BankCollection, BankDetail, BankPage, BankSummary, QuestionEdit } from "./bank-contract";
 import { useBankBrowse } from "./browse";
 import { CollectionBrowser } from "./collections";
 import { QuestionEditor } from "./editor";
@@ -49,6 +51,8 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
   const actions = useQuestionActions(scope);
   const client = useQueryClient();
   const detail = useQuery({ ...bankDetailOptions(scope, active?.id ?? ""), enabled: !!active });
+  const labels = useLabels(scope.academyId, "questions").data ?? [];
+  const [managing, setManaging] = useState(false);
   const list = collections.data?.collections ?? [];
   const current = list.find(collection => collection.id === browse.collectionId);
   const removable = current && (current.kind === "topic" || current.kind === "custom") ? current : undefined;
@@ -119,12 +123,30 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
     if (message) toast.error(message);
   }
 
+  // Optimistic: rows and the open preview show the change at once; the command's refresh settles it.
+  async function label(ids: string[], labelId: string, applied: boolean) {
+    const change = (current: string[]) => applied ? [...new Set([...current, labelId])] : current.filter(id => id !== labelId);
+    client.setQueriesData<BankPage>({ queryKey: bankKeys.lists(scope) }, page => page && {
+      ...page, rows: page.rows.map(row => ids.includes(row.id) ? { ...row, labels: change(row.labels) } : row),
+    });
+    for (const id of ids) client.setQueryData<BankDetail>(bankKeys.detail(scope, id), question => question && { ...question, labels: change(question.labels) });
+    const message = await actions.label(ids, labelId, applied);
+    if (message === "This label no longer exists.") void client.invalidateQueries({ queryKey: labelsQueryKey(scope.academyId, "questions") });
+    if (message) toast.error(message);
+  }
+  const manage = () => afterMenu(() => setManaging(true));
+  // Shown as applied only when every selected question on this page has it.
+  const pageRows = browse.page.data?.rows.filter(row => selected.has(row.id)) ?? [];
+  const common = labels.filter(item => pageRows.length > 0 && pageRows.every(row => row.labels.includes(item.id))).map(item => item.id);
+
   const select = (id: string, on: boolean) => setSelected(previous => { const next = new Set(previous); if (on && next.size < 100) next.add(id); else next.delete(id); return next; });
 
   const menu = (row: BankSummary) => <>
     <ContextMenuItem onSelect={() => open(row)}><HugeiconsIcon icon={ViewIcon} strokeWidth={1.5} />Open</ContextMenuItem>
     <ContextMenuItem onSelect={() => { open(row); setEditing(true); }}><HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={1.5} />Edit</ContextMenuItem>
     <ContextMenuItem onSelect={() => afterMenu(() => setAdding([row.id]))}><HugeiconsIcon icon={FolderAddIcon} strokeWidth={1.5} />Add to collection</ContextMenuItem>
+    <LabelsSubmenu menu="context" academyId={scope.academyId} domain="questions" applied={row.labels}
+      onApply={(labelId, on) => void label([row.id], labelId, on)} onManage={manage} />
     {removable && <ContextMenuItem onSelect={() => void remove(removable, [row.id])}>
       <HugeiconsIcon icon={FolderRemoveIcon} strokeWidth={1.5} />Remove from {removable.kind === "topic" ? "topic" : "collection"}
     </ContextMenuItem>}
@@ -140,6 +162,8 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
   const ids = [...selected];
   return <main className="page-shell">
     <HeaderActions>
+      <LabelManager academyId={scope.academyId} domain="questions" open={managing} onOpenChange={setManaging} opener={null}
+        onChanged={() => void client.invalidateQueries({ queryKey: bankKeys.root(scope) })} />
       <Button asChild size="sm"><Link href={importHref}><HugeiconsIcon icon={FileUploadIcon} strokeWidth={1.5} />Import PDF</Link></Button>
     </HeaderActions>
     <div className="grid min-w-0 gap-8 lg:grid-cols-[15rem_minmax(0,1fr)]">
@@ -157,7 +181,7 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
           {browse.page.data && <span className="text-sm text-muted-foreground tabular-nums">{browse.total}</span>}
           <div className="w-full sm:ms-auto sm:w-72"><BankSearch browse={browse} id="qb-library-search" /></div>
         </div>
-        <QuestionList browse={browse} activeId={active?.id} selected={selected} collections={list} menu={menu}
+        <QuestionList browse={browse} activeId={active?.id} selected={selected} collections={list} labels={labels} menu={menu}
           onSelect={select}
           onOpen={row => selected.size ? select(row.id, !selected.has(row.id)) : open(row)}
           emptyAction={<Button asChild size="sm"><Link href={importHref}>Import PDF</Link></Button>} />
@@ -189,7 +213,7 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
           {active && <QueryContent query={detail} label="question" isEmpty={() => false} emptyTitle="">
             {data => editing
               ? <QuestionEditor key={data.id} detail={data} formId="qb-edit" error={editError} pending={pending} onSubmit={changes => void save(data, changes)} />
-              : <QuestionPreview detail={data} collections={list} academySlug={scope.academySlug}
+              : <QuestionPreview detail={data} collections={list} labels={labels} academySlug={scope.academySlug}
                   onAnswer={pending ? undefined : key => void answer(data, key)}
                   onRemove={collection => void remove(collection, [data.id])} />}
           </QueryContent>}
@@ -245,6 +269,13 @@ export function QuestionLibraryPage({ scope }: { scope: BankScope }) {
       <span role="status" className="px-2 font-medium tabular-nums">{selected.size} selected</span>
       <ActionBarSeparator />
       <AddToCollection scope={scope} collections={list} questionIds={ids} variant="ghost" label="Collection" onDone={() => setSelected(new Set())} />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild><Button size="sm" variant="ghost"><HugeiconsIcon icon={LabelIcon} strokeWidth={1.5} />Labels</Button></DropdownMenuTrigger>
+        <DropdownMenuContent className="max-h-80 min-w-44 overflow-y-auto">
+          <LabelsMenuItems menu="dropdown" academyId={scope.academyId} domain="questions" applied={common}
+            onApply={(labelId, on) => void label(ids, labelId, on)} onManage={manage} />
+        </DropdownMenuContent>
+      </DropdownMenu>
       {removable && <Button size="sm" variant="ghost" onClick={() => void remove(removable, ids)}>
         <HugeiconsIcon icon={FolderRemoveIcon} strokeWidth={1.5} />Remove from {removable.kind === "topic" ? "topic" : "collection"}
       </Button>}
