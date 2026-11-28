@@ -13,7 +13,7 @@ const data: Overview = { year: 2026, asOf: "2026-10-29T12:00:00Z", attentionCoun
   attention: [{kind: "review", id: "u", title: "Loops", amount: 1}], today: [] };
 const dashboard: Overview = { ...data,
   attendance: Array.from({ length: 12 }, (_, index) => week(`2026-09-${String(index + 1).padStart(2, "0")}`, index < 8 ? { sessions: 1, attended: 3, counted: 4, present: 3, absent: 1 } : { sessions: 2, attended: 9, counted: 10, present: 8, late: 1, absent: 1, added: 1 })),
-  watch: [{ id: "r1", name: "Nour Ali", level: "Secondary", absent: 3, counted: 5 }],
+  watch: [{ id: "r1", name: "Nour Ali", level: "Secondary", score: 42, change: -18, trend: [{ week: "2026-10-18", score: 60, attendance: 70, assignment: 50 }, { week: "2026-10-25", score: 42, attendance: 50, assignment: 34 }] }],
   assignments: [{ id: "a1", title: "Fractions", at: "2026-10-08T20:59:00Z", recipients: 5, marked: 4, average: 40, below: 3 }, { id: "a2", title: "Decimals", at: "2026-10-15T20:59:00Z", recipients: 5, marked: 1, average: 90, below: 0 }],
   recent: [{ id: "s1", title: "Algebra", startedAt: "2026-10-29T10:00:00Z", finalized: false, attended: 4, counted: 5 }] };
 
@@ -39,6 +39,9 @@ it("compares the last four weeks with the four before and links students to watc
   expect(screen.getByText("90%")).toBeTruthy();
   expect(screen.getByText("+15 pts")).toBeTruthy();
   expect(screen.getByText("+4 new")).toBeTruthy();
+  expect(screen.getByRole("img", { name: /Weekly combined performance: 60%, 42%/ })).toBeTruthy();
+  expect(screen.getByText("42%")).toBeTruthy();
+  expect(screen.getByText("-18 pts")).toBeTruthy();
   expect(screen.getByRole("link", { name: /Nour Ali/ }).getAttribute("href")).toBe("/a/students/r1");
   expect(screen.getByRole("link", { name: /Algebra/ }).getAttribute("href")).toBe("/a/attendance/s1");
   expect(screen.getByText("Draft")).toBeTruthy();

@@ -10,7 +10,7 @@ export const overviewSchema = z.object({
   // Optional until the dashboard migration reaches every database; absent means unknown, never zero.
   attendance: z.array(z.object({ week: z.string(), sessions: z.number(), attended: z.number(), counted: z.number(),
     present: z.number(), late: z.number(), absent: z.number(), excused: z.number(), added: z.number() })).optional(),
-  watch: z.array(z.object({ id: z.string(), name: z.string(), level: z.string(), absent: z.number(), counted: z.number() })).optional(),
+  watch: z.array(z.object({ id: z.string(), name: z.string(), level: z.string(), score: z.number(), change: z.number().nullable(), trend: z.array(z.object({ week: z.string(), score: z.number().nullable(), attendance: z.number().nullable(), assignment: z.number().nullable() })) })).optional(),
   assignments: z.array(z.object({ id: z.string(), title: z.string(), at: z.string(), recipients: z.number(), marked: z.number(), average: z.number(), below: z.number() })).optional(),
   recent: z.array(z.object({ id: z.string(), title: z.string(), startedAt: z.string(), finalized: z.boolean(), attended: z.number(), counted: z.number() })).optional(),
 });

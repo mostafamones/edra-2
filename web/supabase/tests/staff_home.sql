@@ -67,6 +67,28 @@ select pg_temp.expect_error(format('select public.staff_home(%L)',pg_temp.id('ac
 select set_config('request.jwt.claim.sub','',true);
 select pg_temp.expect_error(format('select public.staff_home(%L)',pg_temp.id('academy')),'forbidden');
 reset role;
+-- Assignment-only evidence must flag low performance even with no attendance.
+insert into label_ids(name) values ('watch-a'),('watch-b'),('watch-part-a'),('watch-part-b');
+insert into public.assignments(id,academy_id,academic_year_id,title,audience,level_id,due_at,created_by,updated_by)
+select pg_temp.id(n),pg_temp.id('academy'),pg_temp.id('year'),'Watch fixture','level','preparatory-3',now()-d*interval '1 day',pg_temp.id('owner'),pg_temp.id('owner')
+from (values ('watch-a',8),('watch-b',15)) v(n,d);
+insert into public.assignment_parts(id,academy_id,assignment_id,position,title,max_score)
+select pg_temp.id(p),pg_temp.id('academy'),pg_temp.id(a),1,'Part',100
+from (values ('watch-a','watch-part-a'),('watch-b','watch-part-b')) v(a,p);
+insert into public.assignment_recipients(assignment_id,annual_student_record_id,academy_id,academic_year_id)
+select pg_temp.id(a),r.id,pg_temp.id('academy'),pg_temp.id('year') from (values ('watch-a'),('watch-b')) v(a)
+cross join public.annual_student_records r where r.academy_id=pg_temp.id('academy');
+insert into public.assignment_marks(assignment_id,annual_student_record_id,part_id,academy_id,kind,score,updated_by)
+select pg_temp.id(a),r.id,pg_temp.id(p),pg_temp.id('academy'),'mark',case when r.full_name='Home online student' then 30 else 90 end,pg_temp.id('owner')
+from (values ('watch-a','watch-part-a'),('watch-b','watch-part-b')) v(a,p)
+cross join public.annual_student_records r where r.academy_id=pg_temp.id('academy');
+select pg_temp.act('owner');
+set local role authenticated;
+select pg_temp.check(jsonb_array_length(public.staff_home(pg_temp.id('academy'))->'watch')=1,'low assignment marks qualify without absences; strong marks do not');
+select pg_temp.check(public.staff_home(pg_temp.id('academy'))#>>'{watch,0,score}'='30.0','assignment-only score does not treat missing attendance as zero');
+select pg_temp.check(jsonb_array_length(public.staff_home(pg_temp.id('academy'))#>'{watch,0,trend}')=8,'eight weekly points preserve gaps');
+select pg_temp.check(public.staff_home(pg_temp.id('academy'))#>'{watch,0,change}'='null'::jsonb,'missing prior evidence is unknown');
+reset role;
 -- The staff student projection reuses real unit progress and never accepts a foreign record.
 update public.content_units set state='published',published_revision=1,published_version=version where id=pg_temp.id('unit');
 insert into public.content_revisions(unit_id,academy_id,revision,document,published_by)
