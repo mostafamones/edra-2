@@ -19,6 +19,7 @@ import { ConcernIconButton } from "./icon-button";
 import { ConcernInbox } from "./inbox";
 import { useConcernFence } from "./use-fence";
 import { RecoverConcern } from "./recover";
+import { ConcernTitle } from "./title";
 
 export type OpenConcernResult = "opened" | "different_academy" | "unavailable" | "superseded";
 type PanelContext = { openConcern: (target: ConcernTarget) => Promise<OpenConcernResult> };
@@ -98,10 +99,12 @@ function ScopedConcernPanel({ academyId, userId, manager, owner, children }: Con
     <FloatingSheet open onOpenChange={setOpen}>
       <FloatingSheetContent ref={content} data-concern-panel="" aria-modal aria-describedby={undefined} showCloseButton={false} className="w-2xl max-w-[calc(100vw-2rem)] gap-0"
         onOpenAutoFocus={(event) => { event.preventDefault(); const input = content.current?.querySelector<HTMLElement>("input:not([disabled]),textarea:not([disabled])") ?? content.current?.querySelector<HTMLElement>("button"); input?.focus(); }}
-        onCloseAutoFocus={(event) => { event.preventDefault(); launcher.current?.focus(); }}>
+        onCloseAutoFocus={(event) => { event.preventDefault(); launcher.current?.focus(); }}
+        onEscapeKeyDown={(event) => { if (event.target instanceof Element && event.target.closest("[data-concern-title-edit]")) event.preventDefault(); }}>
         <header className="flex shrink-0 items-center gap-2 px-3 py-3">
           {view !== "list" && <ConcernIconButton label="Back to concerns" icon={ArrowLeft01Icon} onClick={back} />}
-          <FloatingSheetTitle className="min-w-0 flex-1 truncate" title={title} dir="auto">{title}</FloatingSheetTitle>
+          {view === "chat" && selected ? <ConcernTitle key={selected.id} scope={scope} concernId={selected.id} fallback={selected.title} active={open} onDenied={denied} />
+            : <FloatingSheetTitle className="min-w-0 flex-1 truncate" title={title} dir="auto">{title}</FloatingSheetTitle>}
           {view === "list" && owner && <ConcernIconButton label="Recover concern" icon={SquareUnlock02Icon} onClick={() => setView("recover")} />}
           {view === "list" && manager && <ConcernIconButton label="New concern" icon={PlusSignIcon} onClick={() => setView("create")} />}
           <ConcernIconButton label="Close concerns" icon={Cancel01Icon} onClick={() => setOpen(false)} />

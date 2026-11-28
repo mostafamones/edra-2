@@ -14,14 +14,14 @@ const state = vi.hoisted(() => ({
   academyId: "academy-a", userId: "user-a", role: "admin", mobile: false,
   rpc: vi.fn(), members: vi.fn(), avatars: vi.fn(), live: vi.fn(), inboxLive: vi.fn(),
   createConcern: vi.fn(), sendConcernMessage: vi.fn(), editConcernMessage: vi.fn(), deleteConcernMessage: vi.fn(), setConcernReaction: vi.fn(), markConcernRead: vi.fn(),
-  addConcernParticipants: vi.fn(), removeConcernParticipant: vi.fn(), settleConcern: vi.fn(), reopenConcern: vi.fn(), recoverConcern: vi.fn(), setConcernMuted: vi.fn(),
+  addConcernParticipants: vi.fn(), removeConcernParticipant: vi.fn(), settleConcern: vi.fn(), reopenConcern: vi.fn(), recoverConcern: vi.fn(), setConcernMuted: vi.fn(), renameConcern: vi.fn(),
 }));
 vi.mock("@/modules/auth", () => ({ useAuth: () => ({ user: { id: state.userId }, activeAcademy: { id: state.academyId, role: state.role } }) }));
 vi.mock("@/modules/account/browser", () => ({ accountName: (profile: { full_name: string }) => profile.full_name, resolveProfileAvatars: state.avatars }));
 vi.mock("@/modules/staff", () => ({ fetchTeamMembers: state.members, staffQueryKeys: { members: (user: string, academy: string) => ["staff", user, academy, "members"] } }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ rpc: state.rpc }) }));
 vi.mock("../actions", () => ({ createConcern: state.createConcern, sendConcernMessage: state.sendConcernMessage, editConcernMessage: state.editConcernMessage, deleteConcernMessage: state.deleteConcernMessage, setConcernReaction: state.setConcernReaction, markConcernRead: state.markConcernRead,
-  addConcernParticipants: state.addConcernParticipants, removeConcernParticipant: state.removeConcernParticipant, settleConcern: state.settleConcern, reopenConcern: state.reopenConcern, recoverConcern: state.recoverConcern, setConcernMuted: state.setConcernMuted }));
+  addConcernParticipants: state.addConcernParticipants, removeConcernParticipant: state.removeConcernParticipant, settleConcern: state.settleConcern, reopenConcern: state.reopenConcern, recoverConcern: state.recoverConcern, setConcernMuted: state.setConcernMuted, renameConcern: state.renameConcern }));
 vi.mock("../live", () => ({ useConcernLive: (args: unknown) => { state.live(args); return { status: "live", typers: ["untrusted"], reconnect: vi.fn() }; }, useConcernInboxLive: (scope: unknown) => { state.inboxLive(scope); return { status: "live" }; } }));
 
 const stamp = new Date().toISOString();
@@ -247,6 +247,31 @@ describe("floating concern panel consumers", () => {
     fireEvent.keyDown(dialog, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open concerns" }));
+  });
+
+  it("renames an ongoing concern inline from the header and cancels on Escape without closing", async () => {
+    mount(); await openChat();
+    state.renameConcern.mockImplementation(async () => { currentDetail = { ...currentDetail, title: "Attendance escalation" }; return { ok: true, state: { concernId: "concern-1", status: "ongoing", version: 1 } }; });
+    const heading = screen.getByRole("heading", { name: "Attendance follow-up" });
+    fireEvent.doubleClick(heading);
+    fireEvent.keyDown(screen.getByLabelText("Concern title"), { key: "Escape" });
+    expect(screen.queryByLabelText("Concern title")).toBeNull();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    fireEvent.doubleClick(screen.getByRole("heading", { name: "Attendance follow-up" }));
+    fireEvent.change(screen.getByLabelText("Concern title"), { target: { value: "  Attendance escalation " } });
+    fireEvent.keyDown(screen.getByLabelText("Concern title"), { key: "Enter" });
+    await screen.findByRole("heading", { name: "Attendance escalation" });
+    expect(state.renameConcern).toHaveBeenCalledTimes(1);
+    expect(state.renameConcern.mock.calls[0][0]).toMatchObject({ academyId: state.academyId, concernId: "concern-1", title: "Attendance escalation" });
+  });
+
+  it("does not offer rename on a settled concern", async () => {
+    currentDetail = detail({ status: "settled", outcome: "Attendance corrected", settledAt: stamp }); mount();
+    fireEvent.click(screen.getByRole("button", { name: "Open concerns" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Attendance follow-up/ }));
+    await screen.findByText("Attendance corrected");
+    fireEvent.doubleClick(screen.getByRole("heading", { name: "Attendance follow-up" }));
+    expect(screen.queryByLabelText("Concern title")).toBeNull();
   });
 
   it("omits manager creation for instructors and keeps list empty/error/search states distinct", async () => {
