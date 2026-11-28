@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FloatingSheet, FloatingSheetContent, FloatingSheetTitle } from "@/components/ui/floating-sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { browserScopeGeneration } from "@/lib/browser-scope";
 import { useAuth } from "@/modules/auth";
 import { isAcademyManager } from "@/modules/academies";
@@ -40,7 +39,6 @@ function ScopedConcernPanel({ academyId, userId, manager, owner, children }: Con
   const scope = useMemo(() => ({ academyId, userId }), [academyId, userId]);
   const client = useQueryClient();
   const current = useConcernFence();
-  const mobile = useIsMobile();
   const unread = useConcernUnread(scope);
   useConcernInboxLive(scope);
   const [open, setOpenState] = useState(false);
@@ -97,11 +95,8 @@ function ScopedConcernPanel({ academyId, userId, manager, owner, children }: Con
     </Button>
     </TooltipTrigger><TooltipContent side="left">Concerns</TooltipContent></Tooltip>
     {(open || everOpened) && <Activity mode={open ? "visible" : "hidden"}>
-    <FloatingSheet open modal={mobile} onOpenChange={setOpen}>
-      <FloatingSheetContent ref={content} data-concern-panel="" aria-modal={mobile || undefined} aria-describedby={undefined} showCloseButton={false}
-        className={mobile ? "gap-0 rounded-none border-0" : "gap-0"}
-        style={mobile ? { top: 0, bottom: 0, right: 0, width: "100%", height: "100dvh", maxWidth: "100%" } : undefined}
-        onInteractOutside={(event) => { if (!mobile) event.preventDefault(); }}
+    <FloatingSheet open onOpenChange={setOpen}>
+      <FloatingSheetContent ref={content} data-concern-panel="" aria-modal aria-describedby={undefined} showCloseButton={false} className="gap-0"
         onOpenAutoFocus={(event) => { event.preventDefault(); const input = content.current?.querySelector<HTMLElement>("input:not([disabled]),textarea:not([disabled])") ?? content.current?.querySelector<HTMLElement>("button"); input?.focus(); }}
         onCloseAutoFocus={(event) => { event.preventDefault(); launcher.current?.focus(); }}>
         <header className="flex shrink-0 items-center gap-2 px-3 py-3">

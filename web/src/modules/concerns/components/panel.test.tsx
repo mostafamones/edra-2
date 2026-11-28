@@ -111,15 +111,14 @@ async function menu(seq = 1) {
 }
 
 describe("floating concern panel consumers", () => {
-  it("loads server unread totals collapsed, opens modeless, and persists chat/draft across academy page navigation and close", async () => {
+  it("loads server unread totals collapsed, opens, and persists chat/draft across academy page navigation and close", async () => {
     mount();
     await screen.findByLabelText("91 unread messages");
     expect(state.rpc.mock.calls.map(([name]) => name)).toEqual(["concern_unread"]);
     await openChat();
-    expect(screen.getByRole("dialog").getAttribute("aria-modal")).not.toBe("true");
     typeMessage(screen.getByLabelText("Message"), "Keep my draft");
-    fireEvent.click(screen.getByRole("button", { name: "Navigate within academy" }));
-    expect(screen.getByRole("heading", { name: "Team" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Navigate within academy", hidden: true }));
+    expect(screen.getByRole("heading", { name: "Team", hidden: true })).toBeTruthy();
     expect(messageText(screen.getByLabelText("Message"))).toBe("Keep my draft");
     fireEvent.click(screen.getByRole("button", { name: "Close concerns" }));
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open concerns" })));
@@ -226,10 +225,6 @@ describe("floating concern panel consumers", () => {
     act(() => emit(1));
     await waitFor(() => expect(state.markConcernRead).toHaveBeenCalledWith({ academyId: "academy-a", concernId: "concern-1", seq: 1 }));
     expect(state.markConcernRead.mock.calls.some(([input]) => input.seq === 2)).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "Navigate within academy" }));
-    screen.getByRole("button", { name: "Navigate within academy" }).focus();
-    act(() => emit(2));
-    expect(state.markConcernRead).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "Close concerns" }));
     act(() => emit(2));
     expect(state.markConcernRead).toHaveBeenCalledTimes(1);
@@ -240,7 +235,6 @@ describe("floating concern panel consumers", () => {
     mount(); await openChat();
     const dialog = screen.getByRole("dialog");
     expect(dialog.getAttribute("aria-modal")).toBe("true");
-    expect(dialog.style.width).toBe("100%"); expect(dialog.style.height).toBe("100dvh");
     (document.querySelector("main button") as HTMLButtonElement).focus();
     expect(dialog.contains(document.activeElement)).toBe(true);
     expect(screen.getByText("Typing activity")).toBeTruthy();
