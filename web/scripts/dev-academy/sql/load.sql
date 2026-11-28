@@ -136,11 +136,18 @@ begin
   from fx_students;
 
   -- Recurring group schedules; upcoming activity is derived from these, never from future sessions.
-  insert into public.schedules (id, academy_id, academic_year_id, title, kind, audience, group_id, mandatory, location,
+  -- From edra-dev-v7 a schedule may also be a one-off (make-up or level revision) with dated sessions.
+  insert into public.schedules (id, academy_id, academic_year_id, title, kind, audience, group_id, level_id, mandatory, location,
     created_by, created_at, updated_at)
-  select pg_temp.rid(sc->>'id'), academy, year_id, g->>'name', 'recurring', 'group', pg_temp.rid(g->>'id'), true,
-    'Main hall', owner_id, year_start, year_start
-  from jsonb_array_elements(s->'schedules') sc join jsonb_array_elements(s->'groups') g on g->>'id' = sc->>'groupId';
+  select pg_temp.rid(sc->>'id'), academy, year_id, coalesce(sc->>'title', g->>'name'),
+    coalesce(sc->>'kind', 'recurring')::public.schedule_kind, coalesce(sc->>'audience', 'group')::public.schedule_audience,
+    pg_temp.rid(sc->>'groupId'), case when sc->>'audience' = 'level' then sc->>'levelKey' end, coalesce((sc->>'mandatory')::boolean, true),
+    'Main hall', owner_id, coalesce((sc->>'createdAt')::timestamptz, year_start), coalesce((sc->>'createdAt')::timestamptz, year_start)
+  from jsonb_array_elements(s->'schedules') sc left join jsonb_array_elements(s->'groups') g on g->>'id' = sc->>'groupId';
+  insert into public.schedule_sessions (academy_id, academic_year_id, schedule_id, occurs_on, starts_at, ends_at)
+  select academy, year_id, pg_temp.rid(sc->>'id'), (o->>'date')::date, (o->>'startTime')::time,
+    (o->>'startTime')::time + make_interval(mins => (o->>'durationMinutes')::integer)
+  from jsonb_array_elements(s->'schedules') sc, jsonb_array_elements(coalesce(sc->'occurrences', '[]'::jsonb)) o;
   insert into public.schedule_slots (id, academy_id, academic_year_id, schedule_id, weekday, starts_at, ends_at)
   select pg_temp.rid((sc->>'id') || ':slot:' || (sl->>'weekday')), academy, year_id, pg_temp.rid(sc->>'id'),
     (sl->>'weekday')::smallint, (sl->>'startTime')::time,
@@ -149,7 +156,7 @@ begin
 
   -- Ended historical sessions with their snapshots, expected rosters and one initial publication.
   create temp table fx_sessions on commit drop as
-  select x->>'id' as sid, pg_temp.rid(x->>'id') as id, pg_temp.rid(x->>'groupId') as group_id,
+  select x->>'id' as sid, pg_temp.rid(x->>'id') as id, pg_temp.rid(x->>'groupId') as group_id, pg_temp.rid(x->>'scheduleId') as schedule_id,
     (x->>'startsAt')::timestamptz as starts_at, (x->>'endsAt')::timestamptz as ends_at, p.user_id as starter, p.name as starter_name
   from jsonb_array_elements(s->'sessions') x join fx_people p on p.sid = x->>'startedById';
   if (select count(*) from fx_sessions) <> jsonb_array_length(s->'sessions') then
@@ -162,11 +169,16 @@ begin
   select se.id, academy, year_id, sch.id, 'ended', se.starts_at, se.starter, se.starter_name,
     pg_temp.rid(se.sid || ':start-key'), se.ends_at, se.starter, se.starter_name, 'manual',
     greatest(se.ends_at, se.starts_at + interval '90 minutes'), sch.title, sch.kind, sch.audience,
-    g.id, g.name, g.level_id, g.track_id, t.name, sch.mandatory, sch.location
+    g.id, g.name, coalesce(g.level_id, sch.level_id), g.track_id, t.name, sch.mandatory, sch.location
   from fx_sessions se
-  join public.schedules sch on sch.academy_id = academy and sch.group_id = se.group_id
-  join public.groups g on g.id = se.group_id
+  -- Sessions name their schedule from edra-dev-v7; earlier recipes have one schedule per group.
+  join public.schedules sch on sch.academy_id = academy
+    and case when se.schedule_id is null then sch.group_id = se.group_id else sch.id = se.schedule_id end
+  left join public.groups g on g.id = se.group_id
   left join public.academy_tracks t on t.id = g.track_id;
+  if (select count(*) from public.sessions x where x.academy_id = academy) <> jsonb_array_length(s->'sessions') then
+    raise exception 'dev-academy: a session did not match its schedule';
+  end if;
 
   insert into public.session_roster_entries (academy_id, academic_year_id, session_id, annual_student_record_id, origin,
     level_id, track_id, primary_group_id, participation_type, created_at)

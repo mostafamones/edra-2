@@ -2,7 +2,8 @@
 
 import { validateLearningScenario } from "./learning-validation.mjs";
 import { validateAnswers } from "./answers-validation.mjs";
-import { cairoToUtcMs } from "./time.mjs";
+import { FRIDAY } from "./calendar.mjs";
+import { cairoToUtcMs, cairoWeekday } from "./time.mjs";
 
 // Mirrors web/src/lib/phone.ts (EGYPTIAN_MOBILE_PATTERN and normalizeEgyptianPhone). Keep in sync.
 const EGYPTIAN_MOBILE_PATTERN = /^\+201[0125]\d{8}$/;
@@ -27,6 +28,8 @@ const ATTENDANCE = new Set(["present", "late", "excused", "absent"]);
 const RESULT_STATES = new Set(["missing", "received_unmarked", "marked_private", "announced", "late_announced", "partially_marked"]);
 const MARKED = new Set(["marked_private", "announced", "late_announced", "partially_marked"]);
 const ANNOUNCED = new Set(["announced", "late_announced"]);
+const LEARNING = new Set(["edra-dev-v6", "edra-dev-v7"]);
+const ANSWERS = new Set(["edra-dev-v5", "edra-dev-v6", "edra-dev-v7"]);
 
 export function validateScenario(scenario) {
   const errors = [];
@@ -81,13 +84,13 @@ export function validateScenario(scenario) {
   for (const placement of scenario.placements) {
     const group = groups.get(placement.groupId);
     if (!students.has(placement.studentId)) fail(`${placement.key} references an unknown student`);
-    if (!group && !(scenario.config.recipeVersion === "edra-dev-v6" && placement.mode === "online-only" && placement.groupId === null)) fail(`${placement.key} references an unknown group`);
+    if (!group && !(LEARNING.has(scenario.config.recipeVersion) && placement.mode === "online-only" && placement.groupId === null)) fail(`${placement.key} references an unknown group`);
     if (placementOf.has(placement.studentId)) fail(`${placement.key} duplicates the student placement`);
     placementOf.set(placement.studentId, placement);
     if (group && (group.levelKey !== placement.levelKey || group.track !== placement.track)) {
       fail(`${placement.key} is incompatible with ${group.key}`);
     }
-    if (placement.mode !== "in-person" && !(scenario.config.recipeVersion === "edra-dev-v6" && placement.mode === "online-only")) fail(`${placement.key} must be in-person`);
+    if (placement.mode !== "in-person" && !(LEARNING.has(scenario.config.recipeVersion) && placement.mode === "online-only")) fail(`${placement.key} must be in-person`);
     inYear(placement.enrolledAt, `${placement.key} enrollment`);
   }
   for (const student of students.values()) {
@@ -95,21 +98,37 @@ export function validateScenario(scenario) {
   }
   for (const group of groups.values()) {
     const size = scenario.placements.filter((p) => p.groupId === group.id).length;
-    if (scenario.config.recipeVersion === "edra-dev-v6" ? size < 1 : ["edra-dev-v4", "edra-dev-v5"].includes(scenario.config.recipeVersion) ? ![20, 25, 30].includes(size) : size !== 5) fail(`${group.key} has ${size} students, unexpected group size`);
+    if (LEARNING.has(scenario.config.recipeVersion) ? size < 1 : ["edra-dev-v4", "edra-dev-v5"].includes(scenario.config.recipeVersion) ? ![20, 25, 30].includes(size) : size !== 5) fail(`${group.key} has ${size} students, unexpected group size`);
   }
   const afterEnrollment = (studentId, value, label) => {
     const placement = placementOf.get(studentId);
     if (placement && ms(value) < ms(placement.enrolledAt)) fail(`${label} precedes enrollment`);
   };
 
+  // v7 calendars: groups meet once or twice a week (never on Friday); one-offs are dated make-ups or level revisions.
+  const calendar = scenario.config.recipeVersion === "edra-dev-v7";
+  const levels = new Set([...groups.values()].map((g) => g.levelKey));
+  const schedules = byId(scenario.schedules, "schedule");
   for (const schedule of scenario.schedules) {
-    if (!groups.has(schedule.groupId) || schedule.slots.length !== 2) {
-      fail(`${schedule.key} must reference a group and have two slots`);
+    if (!calendar) {
+      if (!groups.has(schedule.groupId) || schedule.slots.length !== 2) fail(`${schedule.key} must reference a group and have two slots`);
+    } else if (schedule.kind === "recurring") {
+      if (!groups.has(schedule.groupId) || ![1, 2].includes(schedule.slots.length)) fail(`${schedule.key} must reference a group and have one or two slots`);
+      if (schedule.slots.some((slot) => slot.weekday === FRIDAY)) fail(`${schedule.key} meets on a Friday`);
+    } else if (schedule.kind !== "one_off" || schedule.slots.length || schedule.occurrences?.length !== 1
+      || (schedule.audience === "group" ? !groups.has(schedule.groupId) : schedule.audience !== "level" || schedule.groupId !== null || !levels.has(schedule.levelKey))) {
+      fail(`${schedule.key} must be a one-off group or level schedule with one dated session`);
     }
   }
 
   for (const session of scenario.sessions) {
-    if (!groups.has(session.groupId)) fail(`${session.key} references an unknown group`);
+    if (calendar) {
+      const schedule = schedules.get(session.scheduleId);
+      if (!schedule) fail(`${session.key} references an unknown schedule`);
+      else if (schedule.groupId !== session.groupId || (session.audience === "level" && schedule.levelKey !== session.levelKey)) fail(`${session.key} does not match its schedule audience`);
+      if (schedule?.kind === "recurring" && cairoWeekday(session.startsAt) === FRIDAY) fail(`${session.key} is a recurring session on a Friday`);
+    }
+    if (session.groupId === null ? !(calendar && levels.has(session.levelKey)) : !groups.has(session.groupId)) fail(`${session.key} references an unknown group`);
     if (!staff.has(session.startedById)) fail(`${session.key} references an unknown starter`);
     if (session.status !== "ended") fail(`${session.key} must be ended`);
     if (ms(session.endsAt) - ms(session.startsAt) !== 90 * MIN_MS) fail(`${session.key} must last 90 minutes`);
@@ -124,7 +143,7 @@ export function validateScenario(scenario) {
     const placement = placementOf.get(entry.studentId);
     if (!session) fail(`${entry.key} references an unknown session`);
     if (!students.has(entry.studentId)) fail(`${entry.key} references an unknown student`);
-    if (session && placement && placement.groupId !== session.groupId) {
+    if (session && placement && (session.groupId === null ? placement.levelKey !== session.levelKey || placement.mode !== "in-person" : placement.groupId !== session.groupId)) {
       fail(`${entry.key} places a student outside the session group`);
     }
     const pair = `${entry.sessionId}:${entry.studentId}`;
@@ -171,7 +190,7 @@ export function validateScenario(scenario) {
 
   // Work timeline and state consistency for assignment and exam results.
   const checkResult = (label, r, start, end) => {
-    if (r.state === "partially_marked" && !["edra-dev-v5", "edra-dev-v6"].includes(scenario.config.recipeVersion)) fail(`${label} partial marking requires the answer-level recipe`);
+    if (r.state === "partially_marked" && !ANSWERS.has(scenario.config.recipeVersion)) fail(`${label} partial marking requires the answer-level recipe`);
     if (!RESULT_STATES.has(r.state)) fail(`${label} has an unknown state`);
     if (r.gradedById !== null && !staff.has(r.gradedById)) fail(`${label} references an unknown grader`);
     for (const [field, value] of [["receivedAt", r.receivedAt], ["gradedAt", r.gradedAt], ["announcedAt", r.announcedAt]]) {
@@ -215,7 +234,7 @@ export function validateScenario(scenario) {
       if (!part.questions) continue;
       text(part.title, 200, `${part.key} title`, { trimmed: true });
       text(part.instructions, 5000, `${part.key} instructions`, { required: false });
-      if (part.kind !== "file_upload" && !(["edra-dev-v5", "edra-dev-v6"].includes(scenario.config.recipeVersion) && part.kind === "online_questions")) fail(`${part.key} must be a Written Work part: no per-question answers are seeded`);
+      if (part.kind !== "file_upload" && !(ANSWERS.has(scenario.config.recipeVersion) && part.kind === "online_questions")) fail(`${part.key} must be a Written Work part: no per-question answers are seeded`);
       if (!part.questions.length) fail(`${part.key} has no questions`);
       positions(part.questions, part.key);
       for (const q of part.questions) {
@@ -309,7 +328,7 @@ export function validateScenario(scenario) {
     else if (r.components !== null) fail(`${r.key} has components without a marked state`);
   }
 
-  if (["edra-dev-v5", "edra-dev-v6"].includes(scenario.config.recipeVersion)) errors.push(...validateAnswers(scenario));
-  if (scenario.config.recipeVersion === "edra-dev-v6") errors.push(...validateLearningScenario(scenario));
+  if (ANSWERS.has(scenario.config.recipeVersion)) errors.push(...validateAnswers(scenario));
+  if (LEARNING.has(scenario.config.recipeVersion)) errors.push(...validateLearningScenario(scenario));
   return { valid: errors.length === 0, errors };
 }

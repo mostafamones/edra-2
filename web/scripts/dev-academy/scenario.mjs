@@ -3,6 +3,7 @@
 // edra-dev-v3 adds programming assessments; v4 adds 300 students, enrollment waves and denser history.
 import { createHash } from "node:crypto";
 
+import { calendarProblems, planCalendar, sundayWeeks } from "./calendar.mjs";
 import { populateLearningContent } from "./learning-content.mjs";
 import { addOnlineAssessments, learningGroupSizes } from "./learning-scenario.mjs";
 import { answerContent, populateAnswers } from "./answers.mjs";
@@ -10,7 +11,7 @@ import { programmingContent } from "./assessments.mjs";
 import { profileModel } from "./profiles.mjs";
 import { FAMILY_NAMES, FATHER_NAMES, FIRST_NAMES } from "./names.mjs";
 import { normalizeEgyptianPhone, validateScenario } from "./validate.mjs";
-import { TIMEZONE, addDays, cairoToUtcMs, iso, isCalendarDate, weekdayOf } from "./time.mjs";
+import { TIMEZONE, addDays, cairoDate, cairoToUtcMs, cairoWeekday, iso, isCalendarDate, weekdayOf } from "./time.mjs";
 
 export { validateScenario };
 
@@ -123,15 +124,17 @@ function patternModel(rand, weeks) {
 }
 
 // A registered run is rebuilt with its own recipe; unknown versions are refused, never approximated.
-const RECIPES = { "edra-dev-v1": patternModel, "edra-dev-v2": profileModel, "edra-dev-v3": profileModel, "edra-dev-v4": (rand, weeks) => profileModel(rand, weeks, { repeat: true }), "edra-dev-v5": (rand, weeks) => profileModel(rand, weeks, { repeat: true }), "edra-dev-v6": (rand, weeks) => profileModel(rand, weeks, { repeat: true }) };
+const RECIPES = { "edra-dev-v1": patternModel, "edra-dev-v2": profileModel, "edra-dev-v3": profileModel, "edra-dev-v4": (rand, weeks) => profileModel(rand, weeks, { repeat: true }), "edra-dev-v5": (rand, weeks) => profileModel(rand, weeks, { repeat: true }), "edra-dev-v6": (rand, weeks) => profileModel(rand, weeks, { repeat: true }), "edra-dev-v7": (rand, weeks) => profileModel(rand, weeks, { repeat: true }) };
 // Recipes without content keep the generic placeholder assessments of v1 and v2.
-const CONTENT = { "edra-dev-v6": answerContent, "edra-dev-v5": answerContent, "edra-dev-v4": programmingContent, "edra-dev-v3": programmingContent };
+const CONTENT = { "edra-dev-v7": answerContent, "edra-dev-v6": answerContent, "edra-dev-v5": answerContent, "edra-dev-v4": programmingContent, "edra-dev-v3": programmingContent };
 export const RECIPE_VERSIONS = Object.freeze(Object.keys(RECIPES));
 
 export function buildScenario(options = {}) {
   const { recipeVersion, seed, referenceDate } = { ...DEFAULTS, ...options };
-  const learning = recipeVersion === "edra-dev-v6";
-  const rich = ["edra-dev-v4", "edra-dev-v5", "edra-dev-v6"].includes(recipeVersion);
+  const learning = ["edra-dev-v6", "edra-dev-v7"].includes(recipeVersion);
+  const rich = ["edra-dev-v4", "edra-dev-v5", "edra-dev-v6", "edra-dev-v7"].includes(recipeVersion);
+  // v7: Sunday-Saturday weeks through the day before the reference date, one hall, make-ups and revisions.
+  const calendar = recipeVersion === "edra-dev-v7";
   const studentCount = options.students ?? (learning ? 280 + Math.floor(keyedRandom(recipeVersion, seed).unit("student-count") * 41) : rich ? 300 : STUDENT_COUNT);
   const physicalCount = learning ? studentCount - 60 : studentCount;
   const groupDefs = rich ? GROUPS.flatMap((group) => [20, 25, 30].map((size, i) => ({
@@ -163,10 +166,12 @@ export function buildScenario(options = {}) {
   };
 
   // Complete Monday-Sunday weeks inside the academic year that end before the reference date.
-  const weeks = [];
-  for (let start = addDays(startsOn, (8 - weekdayOf(startsOn)) % 7); addDays(start, 6) < referenceDate; start = addDays(start, 7)) {
+  const weeks = calendar ? sundayWeeks(startsOn, referenceDate) : [];
+  for (let start = addDays(startsOn, (8 - weekdayOf(startsOn)) % 7); !calendar && addDays(start, 6) < referenceDate; start = addDays(start, 7)) {
     weeks.push(start);
   }
+  // v7 sets work only in weeks whose results can be received, marked and announced before the reference date.
+  const assessmentWeeks = calendar ? weeks.filter((start) => addDays(start, 11) < referenceDate) : weeks;
   if (weeks.length === 0) {
     throw new Error(
       `Insufficient history: reference date ${referenceDate} has no complete teaching week in academic year ${startsOn} to ${endsOn}. Choose a later reference date.`,
@@ -205,12 +210,26 @@ export function buildScenario(options = {}) {
   const academy = { id: rand.uuid("academy:edra-dev"), key: "academy:edra-dev", name: "Edra Dev Academy", ...(content && { subject: content.subject }) };
 
   const groups = groupDefs.map(({ key, name, levelKey, track }) => ({ id: rand.uuid(key), key, name, levelKey, track }));
+  const plan = calendar ? planCalendar(rand, groupDefs, weeks, referenceDate, startsOn) : null;
   const schedules = groupDefs.map((def, gi) => ({
     id: rand.uuid(`schedule:${def.key}`),
     key: `schedule:${def.key}`,
     groupId: groups[gi].id,
-    slots: def.weekdays.map((weekday) => ({ weekday, startTime: def.startTime, durationMinutes: 90 })),
+    slots: plan ? plan.slotsOf[gi] : def.weekdays.map((weekday) => ({ weekday, startTime: def.startTime, durationMinutes: 90 })),
+    ...(plan && { kind: "recurring", audience: "group", title: def.name, mandatory: true }),
   }));
+  const groupByKey = new Map(groupDefs.map((def, gi) => [def.key, groups[gi]]));
+  for (const one of plan?.oneOffs ?? []) {
+    const { date, startTime } = one.occurrence;
+    schedules.push({
+      id: rand.uuid(one.key), key: one.key, kind: "one_off", audience: one.audience, title: one.title, mandatory: one.mandatory,
+      groupId: one.groupKey ? groupByKey.get(one.groupKey).id : null, levelKey: one.levelKey,
+      // Make-ups are arranged when the teacher excuses the skipped session; revisions are announced a week ahead.
+      createdAt: utc(addDays(one.skipped ?? date, one.skipped ? -1 : -7), "12:00"),
+      ...(one.skipped && { skippedOn: one.skipped }),
+      slots: [], occurrences: [{ date, startTime, durationMinutes: plan.durationMinutes }],
+    });
+  }
 
   const model = RECIPES[recipeVersion](rand, weeks.length);
   const studentKeys = Array.from({ length: studentCount }, (_, i) => `student:${pad2(i + 1)}`);
@@ -239,10 +258,25 @@ export function buildScenario(options = {}) {
   const groupOf = new Map(placements.map((p) => [p.studentId, p.groupId]));
   const enrollmentOf = new Map(placements.map((p) => [p.studentId, p.enrolledAt]));
   const membersOf = (groupId, at = null) => students.filter((s) => groupOf.get(s.id) === groupId && (!at || enrollmentOf.get(s.id) <= at));
+  const placementOf = new Map(placements.map((p) => [p.studentId, p]));
+  // Level sessions (v7 revisions) expect every in-person student of the level.
+  const sessionMembers = (session) => (session.groupId ? membersOf(session.groupId, session.startsAt)
+    : students.filter((s) => placementOf.get(s.id).levelKey === session.levelKey && placementOf.get(s.id).mode === "in-person" && enrollmentOf.get(s.id) <= session.startsAt));
 
   // Sessions: two per group per week, sorted by start, starters distributed round-robin.
   const sessions = [];
-  weeks.forEach((weekStart, w) => {
+  const scheduleByKey = new Map(schedules.map((sc) => [sc.key, sc]));
+  for (const o of plan?.occurrences ?? []) {
+    const startMs = cairoToUtcMs(o.date, o.startTime);
+    const recurring = o.scheduleKey === `schedule:${o.groupKey}`;
+    const key = recurring ? `session:${o.groupKey}:w${pad2(o.week + 1)}:d${o.weekday}` : `session:${o.scheduleKey.slice("schedule:".length)}`;
+    sessions.push({
+      id: rand.uuid(key), key, scheduleId: scheduleByKey.get(o.scheduleKey).id, audience: o.groupKey ? "group" : "level",
+      groupId: o.groupKey ? groupByKey.get(o.groupKey).id : null, ...(!o.groupKey && { levelKey: o.levelKey }),
+      week: o.week + 1, startsAt: iso(startMs), endsAt: iso(startMs + SESSION_MS), status: "ended", startedById: null,
+    });
+  }
+  (calendar ? [] : weeks).forEach((weekStart, w) => {
     groupDefs.forEach((def, gi) => {
       for (const slot of schedules[gi].slots) {
         const startMs = cairoToUtcMs(addDays(weekStart, slot.weekday - 1), slot.startTime);
@@ -271,7 +305,7 @@ export function buildScenario(options = {}) {
   const attendancePublications = [];
   for (const session of sessions) {
     const w = session.week - 1;
-    const items = membersOf(session.groupId, session.startsAt).map((student) => {
+    const items = sessionMembers(session).map((student) => {
       const entry = {
         id: rand.uuid(`roster:${session.key}:${student.key}`),
         key: `roster:${session.key}:${student.key}`,
@@ -320,10 +354,10 @@ export function buildScenario(options = {}) {
   const assignments = [];
   groups.forEach((group) => {
     let ordinal = 0;
-    weeks.forEach((weekStart, w) => {
+    assessmentWeeks.forEach((weekStart, w) => {
       const kinds = [];
       if (rich || w % 2 === 1) kinds.push("historical");
-      if (w === weeks.length - 1) kinds.push("current");
+      if (w === assessmentWeeks.length - 1) kinds.push("current");
       for (const kind of kinds) {
         const key = `assignment:${group.key}:w${pad2(w + 1)}:${kind}`;
         assignments.push({
@@ -334,7 +368,8 @@ export function buildScenario(options = {}) {
           week: w + 1,
           deliveryMode: "physical",
           assignedAt: at(firstSessionMs(group.id, w)),
-          dueAt: utc(addDays(weekStart, 3), "23:59"),
+          // v7 groups meet on any teaching day, so work is due three days after the session that set it.
+          dueAt: calendar ? utc(addDays(cairoDate(firstSessionMs(group.id, w)), 3), "23:59") : utc(addDays(weekStart, 3), "23:59"),
           ...(content
             ? content.assignment({ key, levelKey: group.levelKey, ordinal: ordinal++ })
             : { parts: [1, 2].map((n) => ({ id: rand.uuid(`${key}:part${n}`), key: `${key}:part${n}`, title: `Written Work ${n}`, maxScore: 50 })) }),
@@ -380,7 +415,7 @@ export function buildScenario(options = {}) {
   const examResults = [];
   groups.forEach((group, gi) => {
     let ordinal = 0;
-    weeks.forEach((_, w) => {
+    assessmentWeeks.forEach((_, w) => {
       if (rich ? w % 2 !== 1 : w % 4 !== 3) return;
       const key = `exam:${groupDefs[gi].key}:w${pad2(w + 1)}`;
       const record = examRecord({ key, kind: "historical", format: "paper", groupIds: [group.id], week: w + 1, opensMs: firstSessionMs(group.id, w) });
@@ -416,7 +451,7 @@ export function buildScenario(options = {}) {
       timezone: TIMEZONE,
       studentCount,
       academicYear,
-      teachingWeeks: { count: weeks.length, firstStartsOn: weeks[0], lastEndsOn: addDays(weeks.at(-1), 6) },
+      teachingWeeks: { count: weeks.length, firstStartsOn: weeks[0], lastEndsOn: calendar ? [addDays(weeks.at(-1), 6), addDays(referenceDate, -1)].sort()[0] : addDays(weeks.at(-1), 6) },
       sessionMinutes: 90,
       examTimerMinutes: 60,
       examGraceMinutes: 2,
@@ -436,9 +471,14 @@ export function buildScenario(options = {}) {
     examResults,
   };
 
-  if (learning) addOnlineAssessments(scenario, rand, weeks, content);
-  if (["edra-dev-v5", "edra-dev-v6"].includes(recipeVersion)) populateAnswers(scenario, rand);
+  if (learning) addOnlineAssessments(scenario, rand, assessmentWeeks, content);
+  if (["edra-dev-v5", "edra-dev-v6", "edra-dev-v7"].includes(recipeVersion)) populateAnswers(scenario, rand);
   if (learning) populateLearningContent(scenario, rand);
+  if (calendar) {
+    const kindOf = new Map(schedules.map((sc) => [sc.id, sc.kind]));
+    const problems = calendarProblems(sessions.map((x) => ({ ...x, recurring: kindOf.get(x.scheduleId) === "recurring" })), cairoWeekday);
+    if (problems.length) throw new Error(`Generated calendar has conflicts: ${problems.slice(0, 5).join("; ")}`);
+  }
   const validation = validateScenario(scenario);
   if (!validation.valid) throw new Error(`Generated scenario failed validation: ${validation.errors.slice(0, 5).join("; ")}`);
   return scenario;

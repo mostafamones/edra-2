@@ -1,5 +1,6 @@
 // v6 learning library: per level ten units with a placeholder explanation video (no Mux asset), online-only
 // attached assignments, varied staff states, and per-student access grants and video progress.
+// v7 covers a full term: every topic has a lesson and a practice unit (17 per level), published about every six days.
 // Watch progress is synthetic activity in the normal progress tables; nobody played a video.
 import { COURSES } from "./assessments.mjs";
 import { foundations } from "./bank/foundations.mjs";
@@ -10,10 +11,13 @@ const ACCESS_DAYS = 14;
 const EXTRA = ["Mini project", "Exam revision", "Challenge problems"];
 // Unit index -> staff state: 0-5 published, 6 published with newer draft edits, then review, draft, archived.
 const STATE = ["published", "published", "published", "published", "published", "published", "published_edited", "review", "draft", "archived"];
+// v7: the newest unit is a draft, the one before it is in review, one early practice unit was archived and one edited.
+const termState = (index, count) => (index === count - 1 ? "draft" : index === count - 2 ? "review" : index === 5 ? "archived" : index === 8 ? "published_edited" : "published");
 const round2 = (n) => Math.round(n * 100) / 100;
 const iso = (ms) => new Date(ms).toISOString();
 
 export function populateLearningContent(scenario, rand) {
+  const term = scenario.config.recipeVersion === "edra-dev-v7";
   const startMs = Date.parse(scenario.config.academicYear.startsAt);
   const refMs = cairoToUtcMs(scenario.config.referenceDate, "00:00");
   const instructors = scenario.staff.filter((s) => s.role === "instructor" && !s.placeholder);
@@ -21,17 +25,20 @@ export function populateLearningContent(scenario, rand) {
   const units = [], assets = [], grants = [], progress = [];
 
   for (const levelKey of [...new Set(scenario.groups.map((g) => g.levelKey))]) {
-    const titles = [...Object.entries(foundations.units), ...Object.entries(COURSES[levelKey].units)].map(([id, title]) => ({ id, title }));
+    const topics = [...Object.entries(foundations.units), ...Object.entries(COURSES[levelKey].units)].map(([id, title]) => ({ id, title }));
+    // The lesson keeps the topic title, so assignments attach to it exactly as in v6.
+    const titles = term ? topics.flatMap((t) => [t, { id: `${t.id}-practice`, title: `${t.title}: practice` }]) : topics;
     EXTRA.forEach((title, i) => titles.push({ id: `extra-${i}`, title }));
+    const stateOf = (index) => (term ? termState(index, titles.length) : STATE[index]);
     const attach = new Map();
     for (const a of scenario.assignments.filter((x) => x.audience === "level" && x.levelKey === levelKey)) {
       const index = titles.findIndex((t) => t.title === a.unit);
-      if (index >= 0 && STATE[index] !== "draft" && !attach.has(index)) attach.set(index, a);
+      if (index >= 0 && stateOf(index) !== "draft" && !attach.has(index)) attach.set(index, a);
     }
     titles.forEach(({ title }, index) => {
       const key = `unit:${levelKey}:${index + 1}`;
-      const state = STATE[index];
-      const publishedAt = startMs + (7 + index * 8) * DAY;
+      const state = stateOf(index);
+      const publishedAt = startMs + (term ? 5 + index * 6 : 7 + index * 8) * DAY;
       const asset = { id: rand.uuid(`${key}:video`), key: `${key}:video`, name: `${title} video`, durationSeconds: 420 + Math.floor(rand.unit(`${key}:duration`) * 1080) };
       assets.push({ ...asset, unitKey: key });
       const items = [{ id: rand.uuid(`${key}:explanation`), kind: "explanation", title: `${title} explained`, assetId: asset.id }];

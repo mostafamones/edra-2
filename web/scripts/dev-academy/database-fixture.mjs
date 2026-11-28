@@ -11,7 +11,7 @@ if (process.env.GITHUB_ACTIONS !== "true" || process.env.RUNNER_ENVIRONMENT !== 
   throw new Error("Development academy database fixture is restricted to the disposable GitHub Actions database job.");
 }
 const recipe = process.argv[2];
-if (!["edra-dev-v3", "edra-dev-v4", "edra-dev-v5", "edra-dev-v6"].includes(recipe)) throw new Error("Specify a supported fixture recipe.");
+if (!["edra-dev-v3", "edra-dev-v4", "edra-dev-v5", "edra-dev-v6", "edra-dev-v7"].includes(recipe)) throw new Error("Specify a supported fixture recipe.");
 const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Africa/Cairo" }).format(new Date());
 const year = Number(today.slice(0, 4)) - (today.slice(5) < "08-16" ? 1 : 0);
 const scenario = buildScenario({ recipeVersion: recipe, referenceDate: `${year}-11-27` });

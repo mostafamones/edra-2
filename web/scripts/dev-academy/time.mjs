@@ -38,3 +38,12 @@ export function cairoToUtcMs(date, hhmm) {
   const wall = dateMs(date) + (hours * 60 + minutes) * MIN_MS;
   return wall - cairoOffsetMs(wall - cairoOffsetMs(wall));
 }
+
+const cairoDay = new Intl.DateTimeFormat("sv-SE", { timeZone: TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit" });
+const ISO_WEEKDAY = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+const cairoShortDay = new Intl.DateTimeFormat("en-US", { timeZone: TIMEZONE, weekday: "short" });
+
+/** Cairo calendar date (YYYY-MM-DD) of a UTC instant given in ms or ISO text. */
+export const cairoDate = (value) => cairoDay.format(new Date(value));
+/** ISO weekday (1 = Monday ... 7 = Sunday) of a UTC instant on the Cairo calendar. */
+export const cairoWeekday = (value) => ISO_WEEKDAY[cairoShortDay.format(new Date(value))];

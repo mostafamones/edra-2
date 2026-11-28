@@ -218,14 +218,14 @@ function summarize(scenario, validation, now) {
     ...scenario.exams.filter((e) => e.kind !== "historical" && e.parts).map((e) => `  ${e.kind}: ${e.title} | ${e.questions.length} questions | ${e.parts.map((p) => p.kind).join(" + ")}`),
     `Patterns: ${tally((s) => s.pattern)}`,
     ...(scenario.students[0].profile ? [`Tiers: ${tally((s) => s.profile.tier)}`] : []),
-    ...(["edra-dev-v4", "edra-dev-v5", "edra-dev-v6"].includes(config.recipeVersion) ? [
+    ...(["edra-dev-v4", "edra-dev-v5", "edra-dev-v6", "edra-dev-v7"].includes(config.recipeVersion) ? [
       `Enrollment months: ${tally2(scenario.placements, (p) => new Intl.DateTimeFormat("sv-SE", { timeZone: config.timezone, year: "numeric", month: "2-digit" }).format(new Date(p.enrolledAt)))}`,
       `Group sizes: ${scenario.groups.map((g) => `${g.name}: ${scenario.placements.filter((p) => p.groupId === g.id).length}`).join(", ")}`,
       `Attendance states: ${tally2(scenario.attendancePublications.flatMap((p) => p.items), (i) => i.status)}`,
       `Assignment states: ${tally2(scenario.assignmentResults, (r) => r.state)}`,
       `Exam states: ${tally2(scenario.examResults, (r) => r.state)}`,
     ] : []),
-    ...(["edra-dev-v5", "edra-dev-v6"].includes(config.recipeVersion) ? [
+    ...(["edra-dev-v5", "edra-dev-v6", "edra-dev-v7"].includes(config.recipeVersion) ? [
       `Choice answers: ${tally2([...scenario.assignmentResults, ...scenario.examResults].flatMap((r) => r.answers ?? []).filter((a) => !a.quality), (a) => a.choice === null ? "blank" : a.score > 0 ? "correct" : "incorrect")}`,
       `Assignment question answers: ${scenario.assignmentResults.reduce((n, r) => n + r.answers.length, 0)}`,
       `Online exam attempts: ${scenario.examResults.filter((r) => r.attempt).length} | answers: ${scenario.examResults.reduce((n, r) => n + (r.answers?.length ?? 0), 0)}`,

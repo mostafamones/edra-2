@@ -177,7 +177,7 @@ describe("recipe of an existing run", () => {
   });
 
   it("refuses a registered recipe this version does not know", () => {
-    assert.throws(() => buildChecked(defaults, { recipe_version: "edra-dev-v7" }), /Unknown recipe "edra-dev-v7"/);
+    assert.throws(() => buildChecked(defaults, { recipe_version: "edra-dev-v8" }), /Unknown recipe "edra-dev-v8"/);
   });
 });
 
