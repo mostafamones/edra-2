@@ -89,7 +89,9 @@ describe("concern media consumers", () => {
     expect(within(first).getByRole("img", { name: "board.png" }).getAttribute("src")).toBe("/api/concerns/academy-a/concern-1/img-1");
     expect(within(first).getByRole("link", { name: "Download page.html" }).getAttribute("href")).toBe("/api/concerns/academy-a/concern-1/zip-1?download=1");
     expect(within(document.querySelector('[data-concern-seq="2"]') as HTMLElement).getByText("Voice note and 3 more")).toBeTruthy();
-    expect(screen.getAllByText("Message deleted")).toHaveLength(1);
+    expect(screen.queryByText("Message deleted")).toBeNull();
+    expect(document.querySelector('[data-concern-seq="3"]')).toBeNull();
+    expect((document.querySelector('[data-concern-seq="2"]') as HTMLElement).dataset.concernReadSeq).toBe("3");
     // Voice playback speed cycles 1× → 1.5× → 2× on the real media element.
     fireEvent.click(within(first).getByRole("button", { name: "Playback speed 1×" }));
     fireEvent.click(within(first).getByRole("button", { name: "Playback speed 1.5×" }));

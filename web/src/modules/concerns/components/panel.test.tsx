@@ -209,8 +209,8 @@ describe("floating concern panel consumers", () => {
     await screen.findByText("(edited)");
     expect(screen.getByText("Corrected")).toBeTruthy();
     await menu(); fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
-    await screen.findByText("Message deleted");
-    expect(screen.queryByText("Corrected")).toBeNull();
+    await waitFor(() => expect(screen.queryByText("Corrected")).toBeNull());
+    expect(screen.queryByText("Message deleted")).toBeNull();
   });
 
   it("shows settled outcome, disables conversation writes, and still records only visible/focused receipts", async () => {

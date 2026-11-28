@@ -20,8 +20,8 @@ import { ConcernReceipts } from "./receipts";
 import { browserScopeGeneration } from "@/lib/browser-scope";
 
 type Commands = ReturnType<typeof useConcernCommands>;
-export function ConcernMessageItem({ message, outgoing, first = true, academyId, userId, settled, commands, onReply, participants, receipts, avatarUrls }: {
-  message: ConcernMessage; first?: boolean;
+export function ConcernMessageItem({ message, outgoing, first = true, readSeq, academyId, userId, settled, commands, onReply, participants, receipts, avatarUrls }: {
+  message: ConcernMessage; first?: boolean; readSeq?: number;
   /** Set while this is a local, not yet confirmed send. */
   outgoing?: { failure: ConcernFailure | null; onRetry: () => void; onDiscard: () => void }; academyId: string; userId: string; settled: boolean; commands: Commands; onReply: (message: ConcernMessage) => void;
   participants: ConcernParticipant[]; receipts: ConcernParticipant[]; avatarUrls: Record<string, string>;
@@ -68,11 +68,11 @@ export function ConcernMessageItem({ message, outgoing, first = true, academyId,
   const time = <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()} className="text-xs text-muted-foreground">{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>;
   const mentioned = participants.filter((participant) => message.mentions.includes(participant.userId)).map((participant) => ({ userId: participant.userId, name: participant.name, avatarUrl: avatarUrls[participant.avatarPath ?? ""] }));
   const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-  return <article data-concern-seq={outgoing ? undefined : message.seq} data-concern-message={message.id} tabIndex={-1}
-    className={cn("group/message relative flex min-w-0 gap-3 rounded-md ps-3 pe-1 py-0.5 hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring target:bg-muted", first && "mt-1 pt-1.5")}>
+  return <article data-concern-seq={outgoing ? undefined : message.seq} data-concern-read-seq={outgoing ? undefined : readSeq} data-concern-message={message.id} tabIndex={-1}
+    className={cn("group/message relative flex min-w-0 gap-3 rounded-md ps-3 pe-1 py-0.5 hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring target:bg-muted", first && "mt-2 py-1", message.mentions.includes(userId) && "bg-primary/10 shadow-[inset_2px_0_0_var(--color-primary)] hover:bg-primary/15")}>
     <div className="flex w-12 shrink-0 justify-center">{first
-      ? <Avatar aria-hidden="true" size="lg" className="mt-0.5"><AvatarImage src={avatarUrls[author?.avatarPath ?? ""]} alt="" /><AvatarFallback className="text-xs">{initials}</AvatarFallback></Avatar>
-      : <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()} className="invisible pt-0.5 text-[10px] whitespace-nowrap tabular-nums text-muted-foreground group-hover/message:visible">{new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>}</div>
+      ? <Avatar aria-hidden="true" size="lg"><AvatarImage src={avatarUrls[author?.avatarPath ?? ""]} alt="" /><AvatarFallback className="text-xs">{initials}</AvatarFallback></Avatar>
+      : <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()} className="invisible flex h-5 items-center text-[10px] leading-none whitespace-nowrap tabular-nums text-muted-foreground group-hover/message:visible">{new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>}</div>
     <div className="flex min-w-0 flex-1 flex-col">
       {first && <div className="flex items-baseline gap-2"><span className="text-sm font-semibold break-words" dir="auto">{name}</span>{time}</div>}
       {editing && !settled && !deleted ? <form className="w-full" onSubmit={(event) => { event.preventDefault(); if (body.trim() || hasMedia) { setEditing(false); void run(() => commands.edit(message.id, { body: body.trim() ? body : null, mentions: body.trim() ? mentionIds(body, mentions) : [] }), undefined, () => setEditing(true)); } }}>
@@ -93,7 +93,7 @@ export function ConcernMessageItem({ message, outgoing, first = true, academyId,
           const mine = reaction.userIds.includes(userId);
           const people = reaction.userIds.map((id) => participants.find((participant) => participant.userId === id));
           return <Tooltip key={reaction.emoji}><TooltipTrigger asChild><button type="button"
-            className={cn("inline-flex h-6 items-center gap-1 rounded-full border ps-1.5 pe-1 text-xs disabled:opacity-60", mine ? "border-primary/50 bg-primary/10" : "bg-background hover:bg-muted")}
+            className={cn("inline-flex h-6 items-center gap-1 rounded-md border ps-1.5 pe-1 text-xs disabled:opacity-60", mine ? "border-foreground/30 bg-muted" : "bg-background hover:bg-muted")}
             aria-label={`${reaction.emoji}, ${reaction.userIds.length} reactions`} aria-pressed={mine} disabled={settled || pending} onClick={() => react(reaction.emoji)}>
             <span aria-hidden="true">{reaction.emoji}</span>
             <span className="flex -space-x-1" aria-hidden="true">{people.slice(0, 3).map((person, index) => <Avatar key={person?.userId ?? index} className="size-4 ring-1 ring-background"><AvatarImage src={avatarUrls[person?.avatarPath ?? ""]} alt="" /><AvatarFallback className="text-[8px]">{(person?.name ?? "S").slice(0, 1)}</AvatarFallback></Avatar>)}</span>

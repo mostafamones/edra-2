@@ -14,7 +14,8 @@ export function useViewedConcernMessages({ root, active, messageVersion, onViewe
     const acknowledge = () => { if (focused() && visible.size) report(Math.max(...visible.values())); };
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        const seq = Number((entry.target as HTMLElement).dataset.concernSeq);
+        const { concernSeq, concernReadSeq } = (entry.target as HTMLElement).dataset;
+        const seq = Number(concernReadSeq ?? concernSeq);
         // A small intersection is enough for tall messages; zero-size or hidden nodes never count.
         if (entry.isIntersecting && entry.intersectionRect.height > 0) visible.set(entry.target, seq);
         else visible.delete(entry.target);
