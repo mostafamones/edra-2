@@ -30,7 +30,7 @@ export function AttendanceTrend({ weeks }: { weeks: Week[] }) {
       </div>
       <Segmented label="Range" value={range} options={ranges} onChange={setRange} />
     </div>
-    {marked ? <ChartContainer config={config} className="aspect-auto h-72 w-full px-2" role="img" aria-label={`Weekly attendance: ${shown.map(week => `${week.label}, ${week.rate === null ? "no finalized sessions" : `${week.rate}%, ${week.absent} absent`}`).join("; ")}`}>
+    {marked ? <ChartContainer config={config} className="aspect-auto h-72 w-full px-2 xl:h-auto xl:min-h-72 xl:flex-1" role="img" aria-label={`Weekly attendance: ${shown.map(week => `${week.label}, ${week.rate === null ? "no finalized sessions" : `${week.rate}%, ${week.absent} absent`}`).join("; ")}`}>
       <AreaChart data={shown} accessibilityLayer margin={{ left: 4, right: 16, top: 8, bottom: 0 }}>
         <defs>{statuses.map(status => <linearGradient key={status} id={`home-fill-${status}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={`var(--color-${status})`} stopOpacity={0.25} /><stop offset="100%" stopColor={`var(--color-${status})`} stopOpacity={0.02} /></linearGradient>)}</defs>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />

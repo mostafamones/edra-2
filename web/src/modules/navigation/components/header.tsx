@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/shared/sidebar-trigger";
 import { useBreadcrumbOverride, useBreadcrumbParent } from "@/components/shared/breadcrumb-title";
 import { HEADER_ACTIONS_ID } from "@/components/shared/header-actions";
+import { SearchMenu } from "../search/menu";
 
 import { findStaffItem, findStudentItem, parentHref } from "../manifest";
 import { studentBreadcrumbs } from "../student-breadcrumbs";
@@ -45,7 +46,8 @@ export function PortalHeader({ portal, academies = [] }: { portal: "staff" | "st
         className={`h-6 rounded-full mr-2 ${portal === "student" ? "hidden md:block" : ""}`}
         style={{ alignSelf: "center" }}
       />
-      <Breadcrumb className="min-w-0 font-heading">
+      {/* Staff Home has no trail, so search takes its place; the sidebar hides its copy there to keep one shortcut owner. */}
+      {portal === "staff" && pathname === homeHref ? <div className="flex min-w-0 flex-1 md:max-w-sm"><SearchMenu platform="staff" /></div> : <Breadcrumb className="min-w-0 font-heading">
         <BreadcrumbList className="flex-nowrap overflow-hidden">
           {portal === "student" ? studentCrumbs.map((crumb, index) => (
             <Fragment key={`${index}-${crumb.label}`}>
@@ -73,7 +75,7 @@ export function PortalHeader({ portal, academies = [] }: { portal: "staff" | "st
           <BreadcrumbItem><BreadcrumbPage className="font-semibold">{title}</BreadcrumbPage></BreadcrumbItem>
           </>}
         </BreadcrumbList>
-      </Breadcrumb>
+      </Breadcrumb>}
       <div id={HEADER_ACTIONS_ID} className="ml-auto flex items-center gap-2" />
     </header>
   );

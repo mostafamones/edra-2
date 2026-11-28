@@ -18,7 +18,8 @@ const dashboard: Overview = { ...data,
   recent: [{ id: "s1", title: "Algebra", startedAt: "2026-10-29T10:00:00Z", finalized: false, attended: 4, counted: 5 }] };
 
 it("opens the actual work", () => {
-  render(<HomeView academyName="Academy" base="/a" live={read([])} overview={read(data)} />);
+  render(<HomeView name="Mostafa Mones" academyName="Academy" base="/a" live={read([])} overview={read(data)} />);
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Welcome back, Mostafa");
   expect(screen.getByRole("link", { name: /Loops/ }).getAttribute("href")).toBe("/a/content/u");
   expect(screen.queryByRole("button", { name: /Start session/ })).toBeNull();
 });
@@ -53,4 +54,7 @@ it("never shows a rate without finalized marks, and hides sections the server di
   cleanup();
   render(<HomeView academyName="Academy" base="/a" live={read([])} overview={read(data)} />);
   expect(screen.queryByText("Attendance")).toBeNull();
+  cleanup();
+  render(<HomeView academyName="Academy" base="/a" live={read([])} overview={read({ ...data, attentionCount: 0, attention: [] })} />);
+  expect(screen.queryByText("Alerts")).toBeNull();
 });

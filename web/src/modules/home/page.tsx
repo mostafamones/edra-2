@@ -2,6 +2,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { AcademyGate } from "@/modules/auth";
 import type { AcademyEntry } from "@/modules/academies";
 import { useCanonicalHref } from "@/modules/navigation";
+import { useAccountProfile } from "@/modules/account";
 import { HeaderActions } from "@/components/shared/header-actions";
 import { TodayEvents } from "@/modules/calendar";
 import { homeLiveOptions } from "./queries";
@@ -14,10 +15,11 @@ export function StaffHomePage() {
 
 function HomeContent({ academy }: { academy: AcademyEntry }) {
   const href = useCanonicalHref();
+  const account = useAccountProfile();
   const live = useInfiniteQuery(homeLiveOptions(academy.id));
   const overview = useQuery(homeOverviewOptions(academy.id));
   return <>
     <HeaderActions><TodayEvents academy={academy} /></HeaderActions>
-    <HomeView academyName={academy.name} base={href("/app")} live={{ ...live, data: live.data?.pages.flatMap(page => page.sessions) }} overview={overview} />
+    <HomeView name={account.name} academyName={academy.name} base={href("/app")} live={{ ...live, data: live.data?.pages.flatMap(page => page.sessions) }} overview={overview} />
   </>;
 }
