@@ -1,5 +1,5 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
-import { readdir, rm } from "node:fs/promises";
+import { readFile, readdir, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { validDevelopmentTunnelHost } from "./src/lib/routing/development";
@@ -57,6 +57,21 @@ export default defineConfig(async ({ mode, command }) => {
       cloudflare({ viteEnvironment: { name: "ssr" } }),
       tanstackStart({ srcDirectory: "src", router: { routeFileIgnorePattern: "\\.test\\.[^.]+$" }, importProtection: { behavior: "error" } }),
       react(),
+      {
+        name: "include-tesseract-worker-map",
+        enforce: "post",
+        apply: "build",
+        async generateBundle(_options, bundle) {
+          if (this.environment.name !== "ssr") return;
+          for (const fileName of Object.keys(bundle)) {
+            if (!/(?:^|\/)worker\.min-[\w-]+\.js$/.test(fileName)) continue;
+            // Vite copies this third-party URL asset without its referenced source map.
+            // Wrangler validates that reference when packaging server modules.
+            const source = await readFile(join(process.cwd(), "node_modules/tesseract.js/dist/worker.min.js.map"));
+            this.emitFile({ type: "asset", fileName: fileName.replace(/worker\.min-[\w-]+\.js$/, "worker.min.js.map"), source });
+          }
+        },
+      } satisfies Plugin,
       {
         name: "exclude-local-secret-artifacts",
         enforce: "post",
