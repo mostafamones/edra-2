@@ -118,24 +118,24 @@ describe("schedule form", () => {
   });
   const formPaths = (value: ScheduleFormValues) => paths(value, scheduleFormSchema(ACADEMY, YEAR) as never);
 
-  it("starts managers on recurring with one blank Saturday slot, a group audience, and mandatory attendance", () => {
+  it("starts managers on recurring with one blank Sunday slot, a group audience, and mandatory attendance", () => {
     const defaults = scheduleFormDefaults("recurring");
     expect(defaults).toMatchObject({ kind: "recurring", audience: "group", mandatory: true, location: "" });
-    expect(defaults.slots).toEqual([{ weekday: 6, startsAt: "", endsAt: "" }]);
+    expect(defaults.slots).toEqual([{ weekday: 7, startsAt: "", endsAt: "" }]);
     expect(scheduleFormDefaults("one_off").kind).toBe("one_off");
   });
 
-  it("loads an existing schedule with HH:mm times and Saturday-first slots", () => {
+  it("loads an existing schedule with HH:mm times and Sunday-first slots", () => {
     const defaults = scheduleFormDefaults("recurring", {
       title: "Weekly", location: null, kind: "recurring", audience: "program", group_id: null, level_id: "secondary-1",
       track_id: TRACK, mandatory: false,
     }, [
-      { weekday: 1, starts_at: "09:00:00", ends_at: "10:00:00" },
       { weekday: 6, starts_at: "16:00:00", ends_at: "17:30:00" },
+      { weekday: 1, starts_at: "09:00:00", ends_at: "10:00:00" },
     ]);
     expect(defaults.slots).toEqual([
-      { weekday: 6, startsAt: "16:00", endsAt: "17:30" },
       { weekday: 1, startsAt: "09:00", endsAt: "10:00" },
+      { weekday: 6, startsAt: "16:00", endsAt: "17:30" },
     ]);
     expect(defaults).toMatchObject({ location: "", trackId: TRACK, mandatory: false });
   });

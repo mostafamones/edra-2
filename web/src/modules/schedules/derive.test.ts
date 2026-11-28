@@ -62,20 +62,20 @@ const derive = (filters: Partial<ScheduleFilters> = {}) =>
   deriveScheduleList(schedules, slots, sessions, lookup, { ...DEFAULT_FILTERS, ...filters }, NOW);
 
 describe("schedule list derivation", () => {
-  it("groups slots under Saturday-first weekday sections, showing only nonempty days", () => {
+  it("groups slots under Sunday-first weekday sections, showing only nonempty days", () => {
     const list = derive();
-    expect(list.weekdays.map((section) => section.weekday)).toEqual([6, 7, 1, 5]);
-    expect(list.weekdays.map((section) => section.rows.length)).toEqual([3, 1, 1, 1]);
+    expect(list.weekdays.map((section) => section.weekday)).toEqual([7, 1, 5, 6]);
+    expect(list.weekdays.map((section) => section.rows.length)).toEqual([1, 1, 1, 3]);
   });
 
   it("gives every slot of a multi-slot schedule its own row with the schedule's slot count", () => {
     const rows = derive().weekdays.flatMap((section) => section.rows).filter((row) => row.schedule.id === "Math");
-    expect(rows.map((row) => row.slot.id)).toEqual(["s2", "s1"]);
+    expect(rows.map((row) => row.slot.id)).toEqual(["s1", "s2"]);
     expect(rows.every((row) => row.slotCount === 2)).toBe(true);
   });
 
   it("sorts rows by start, then end, then name", () => {
-    const saturday = derive().weekdays[0].rows.map((row) => row.schedule.title);
+    const saturday = derive().weekdays.find((section) => section.weekday === 6)!.rows.map((row) => row.schedule.title);
     expect(saturday).toEqual(["Algebra", "Physics", "Math"]);
   });
 

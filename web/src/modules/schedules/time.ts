@@ -3,8 +3,8 @@ import { format, parseISO } from "date-fns";
 /** Edra academies operate on Cairo time; one-off end times are judged against it. */
 export const ACADEMY_TIME_ZONE = "Africa/Cairo";
 
-/** ISO weekdays (1 = Monday … 7 = Sunday), listed in the academy week order Saturday–Friday. */
-export const WEEK_ORDER = [6, 7, 1, 2, 3, 4, 5] as const;
+/** ISO weekdays (1 = Monday … 7 = Sunday), listed in the academy week order Sunday–Saturday. */
+export const WEEK_ORDER = [7, 1, 2, 3, 4, 5, 6] as const;
 const WEEKDAY_NAMES: Record<number, string> = {
   1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Saturday", 7: "Sunday",
 };

@@ -20,6 +20,6 @@ describe("describeGroupSchedule", () => {
     expect(describeGroupSchedule([
       { weekday: 6, startsAt: "10:00", location: "Lab" },
       { weekday: 1, startsAt: "16:30", location: null },
-    ])).toBe("Saturdays and Mondays");
+    ])).toBe("Mondays and Saturdays");
   });
 });

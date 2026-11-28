@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { WEEK_ORDER } from "./time";
 
 export const MAX_WEEKLY_SLOTS = 20;
 export const MAX_SESSIONS = 50;
@@ -147,9 +148,9 @@ export function scheduleFormSchema(academyId: string, year: { starts_on: string;
     }));
 }
 
-const BLANK_SLOT = { weekday: 6, startsAt: "", endsAt: "" };
+const BLANK_SLOT = { weekday: 7, startsAt: "", endsAt: "" };
 const BLANK_SESSION = { date: "", startsAt: "", endsAt: "" };
-const WEEK_POSITION: Record<number, number> = { 6: 0, 7: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6 };
+const WEEK_POSITION: Record<number, number> = Object.fromEntries(WEEK_ORDER.map((day, index) => [day, index]));
 
 type ExistingSchedule = {
   title: string; location: string | null; kind: ScheduleKind; audience: ScheduleAudience;

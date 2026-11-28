@@ -84,7 +84,7 @@ export type ScheduleList = {
 const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 /**
- * Splits schedules into Saturday-first weekday sections (one row per weekly slot) and one row
+ * Splits schedules into Sunday-first weekday sections (one row per weekly slot) and one row
  * per one-off session, upcoming or past. `now` decides which sessions have ended on the Cairo clock.
  */
 export function deriveScheduleList(

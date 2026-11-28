@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { academyNow, academyToday, formatDate, formatTime, isPastOneOff, parseTimeInput, TIME_OPTIONS, WEEK_ORDER, weekdayName } from "./time";
 
 describe("schedule time helpers", () => {
-  it("orders the week Saturday to Friday", () => {
-    expect(WEEK_ORDER.map(weekdayName)).toEqual(["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]);
+  it("orders the week Sunday to Saturday", () => {
+    expect(WEEK_ORDER.map(weekdayName)).toEqual(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]);
   });
 
   it("formats 24-hour values in 12-hour time", () => {
