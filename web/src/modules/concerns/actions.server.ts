@@ -4,7 +4,7 @@ import type { ConcernFailure } from "./errors";
 import { concernFailure } from "./errors";
 import { runConcernCommand } from "./server";
 import {
-  addParticipantsInput, concernStateSchema, muteInput, recoverInput, removeParticipantInput, reopenInput, settleInput, type ConcernState,
+  addParticipantsInput, concernStateSchema, muteInput, recoverInput, removeParticipantInput, renameInput, reopenInput, settleInput, type ConcernState,
   concernMessageSchema, createConcernInput, deleteMessageInput, editMessageInput, markReadInput, reactionInput, sendMessageInput,
   type ConcernMessage,
 } from "./validation";
@@ -125,6 +125,16 @@ export async function reopenConcern(value: unknown): Promise<ConcernStateResult>
   return runConcernCommand((db) => db.rpc("reopen_concern", {
     p_academy_id: v.academyId, p_concern_id: v.concernId, p_reason: v.reason, p_expected_version: v.expectedVersion, p_request_id: v.requestId,
   }), toState, true);
+}
+
+/** Participating leadership, ongoing only. Renaming to the current title changes nothing. */
+export async function renameConcern(value: unknown): Promise<ConcernStateResult> {
+  const parsed = renameInput.safeParse(value);
+  if (!parsed.success) return concernFailure("validation");
+  const v = parsed.data;
+  return runConcernCommand((db) => db.rpc("rename_concern", {
+    p_academy_id: v.academyId, p_concern_id: v.concernId, p_title: v.title, p_request_id: v.requestId,
+  }), toState);
 }
 
 /** Academy Owner only: joins a concern by its id, audited, even when settled. */

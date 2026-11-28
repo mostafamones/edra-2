@@ -9705,6 +9705,15 @@ export type Database = {
         Args: { p_academy_id: string; p_exam_id: string; p_token: string }
         Returns: Json
       }
+      rename_concern: {
+        Args: {
+          p_academy_id: string
+          p_concern_id: string
+          p_request_id: string
+          p_title: string
+        }
+        Returns: Json
+      }
       reopen_concern: {
         Args: {
           p_academy_id: string

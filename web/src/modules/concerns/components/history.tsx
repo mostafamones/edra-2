@@ -12,6 +12,7 @@ function describe(entry: ConcernHistoryEntry) {
     case "owner_recovered": return `${actor} recovered access as Owner`;
     case "settled": return `${actor} settled the concern`;
     case "reopened": return `${actor} reopened the concern`;
+    case "renamed": return `${actor} renamed the concern`;
   }
 }
 

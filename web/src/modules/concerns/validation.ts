@@ -84,10 +84,10 @@ export const concernSearchSchema = z.array(z.object({
 }));
 export type ConcernSearchHit = z.infer<typeof concernSearchSchema>[number];
 
-/** Lifecycle and membership history; `note` is the settlement outcome or reopening reason. */
+/** Lifecycle and membership history; `note` is the settlement outcome, reopening reason or new title. */
 export const concernHistorySchema = z.array(z.object({
   id: z.string(),
-  kind: z.enum(["created", "participant_added", "participant_removed", "owner_recovered", "settled", "reopened"]),
+  kind: z.enum(["created", "participant_added", "participant_removed", "owner_recovered", "settled", "reopened", "renamed"]),
   occurredAt: timestamp, actorId: z.string(), actorName: z.string().nullable(),
   subjectId: z.string().nullable(), subjectName: z.string().nullable(), note: z.string().nullable(),
 }));
@@ -119,6 +119,7 @@ export const addParticipantsInput = target.extend({ ...request, userIds: z.array
 export const removeParticipantInput = target.extend({ ...request, userId: z.guid() });
 export const settleInput = target.extend({ ...request, outcome: concernNoteSchema, expectedVersion: z.number().int().min(1) });
 export const reopenInput = target.extend({ ...request, reason: concernNoteSchema, expectedVersion: z.number().int().min(1) });
+export const renameInput = target.extend({ ...request, title: concernTitleSchema });
 export const recoverInput = target.extend(request);
 /** The caller's own notification preference; allowed when settled. */
 export const muteInput = target.extend({ muted: z.boolean() });
