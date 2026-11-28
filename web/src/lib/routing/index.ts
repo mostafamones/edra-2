@@ -122,9 +122,9 @@ export function safeRelativePath(value: unknown): string | null {
     for (let i = 0; i < 3; i++) { const next = decodeURIComponent(decoded); if (next === decoded) break; decoded = next; }
     if (decoded.startsWith("//") || /[\\\u0000-\u001f\u007f]/.test(decoded) || /%[0-9a-f]{2}/i.test(decoded)) return null;
     const decodedUrl = new URL(decoded, "https://routing.invalid");
-    if (decodedUrl.origin !== "https://routing.invalid" || /^(?:\/auth|\/api|\/_next|\/_serverFn|\/_build|\/invite)(?:\/|$)/.test(decodedUrl.pathname)) return null;
+    if (decodedUrl.origin !== "https://routing.invalid" || (decodedUrl.pathname !== "/auth/chatgpt" && /^(?:\/auth|\/api|\/_next|\/_serverFn|\/_build|\/invite)(?:\/|$)/.test(decodedUrl.pathname))) return null;
     const url = new URL(value, "https://routing.invalid");
-    if (url.origin !== "https://routing.invalid" || url.hash || /^(?:\/auth|\/api|\/_next|\/_serverFn|\/_build|\/invite)(?:\/|$)/.test(url.pathname)) return null;
+    if (url.origin !== "https://routing.invalid" || url.hash || (url.pathname !== "/auth/chatgpt" && /^(?:\/auth|\/api|\/_next|\/_serverFn|\/_build|\/invite)(?:\/|$)/.test(url.pathname))) return null;
     return url.pathname + url.search;
   } catch { return null; }
 }

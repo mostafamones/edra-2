@@ -4,6 +4,9 @@ import { tmpdir } from "node:os";
 import { resolve, relative, join, extname } from "node:path";
 
 const root = process.cwd();
+const runWorkerd = (args, options) => process.platform === "win32"
+  ? spawnSync(process.execPath, [resolve("node_modules/workerd/bin/workerd"), ...args], options)
+  : spawnSync(resolve("node_modules/.bin/workerd"), args, options);
 const fake = { VITE_SUPABASE_URL: "https://supabase.invalid", VITE_SUPABASE_PUBLISHABLE_KEY: "fixture", VITE_EDRA_MARKETING_ORIGIN: "https://edra.test", VITE_EDRA_APP_ORIGIN: "https://app.edra.test", VITE_EDRA_LEARN_ORIGIN: "https://learn.edra.test", VITE_EDRA_COOKIE_DOMAIN: "edra.test" };
 const built = process.argv.slice(2);
 if (built.length && (built.length !== 1 || built[0] !== "--built")) throw new Error("Usage: node workers-test/run.mjs [--built]");
@@ -64,15 +67,15 @@ try {
   if (sharpFound) throw new Error("Server bundle contains sharp or a native addon");
   await copyFile(resolve(root, "workers-test/runtime.mjs"), join(temp, "test.mjs"));
   if (!entries.some((entry) => entry.startsWith('(name = "index.mjs"'))) throw new Error("Missing Worker entry dist/server/index.mjs");
-  const bindings = Object.entries({ ...fake, TEST_RPC_IDS: JSON.stringify(ids) }).map(([name, value]) => `(name = ${JSON.stringify(name)}, text = ${JSON.stringify(value)})`).join(", ");
-  const config = `using Workerd = import "/workerd/workerd.capnp";\nconst config :Workerd.Config = (services = [(name = "test", worker = (compatibilityDate = "2026-10-30", compatibilityFlags = ["nodejs_compat"], globalOutbound = "blocked", bindings = [${bindings}], modules = [(name = "test.mjs", esModule = embed ${JSON.stringify("test.mjs")}), ${entries.join(", ")}])) , (name = "blocked", network = (allow = []))]);\n`;
+  const bindings = Object.entries({ ...fake, TEST_RPC_IDS: JSON.stringify(ids), EDRA_MCP_CLIENT_ID: "https://chatgpt.com/oauth/client.json", EDRA_MCP_REDIRECT_URI: "https://chatgpt.com/connector_platform_oauth_redirect", EDRA_MCP_GRANT_KEY: "11".repeat(32) }).map(([name, value]) => `(name = ${JSON.stringify(name)}, text = ${JSON.stringify(value)})`).join(", ");
+  const config = `using Workerd = import "/workerd/workerd.capnp";\nconst config :Workerd.Config = (services = [(name = "test", worker = (compatibilityDate = "2026-10-30", compatibilityFlags = ["nodejs_compat"], globalOutbound = "blocked", durableObjectStorage = (inMemory = void), durableObjectNamespaces = [(className = "McpGrantStore", uniqueKey = "edra-mcp-tests", enableSql = true)], bindings = [${bindings}, (name = "EDRA_MCP_GRANTS", durableObjectNamespace = "McpGrantStore")], modules = [(name = "test.mjs", esModule = embed ${JSON.stringify("test.mjs")}), ${entries.join(", ")}])) , (name = "blocked", network = (allow = []))]);\n`;
   const path = join(temp, "config.capnp");
   await writeFile(path, config);
-  const result = spawnSync(resolve("node_modules/.bin/workerd"), ["test", path], { stdio: "inherit" });
+  const result = runWorkerd(["test", path], { stdio: "inherit" });
   if (result.status !== 0) process.exitCode = result.status ?? 1;
 } finally { await rm(temp, { recursive: true, force: true }); }
 // Codec and dependency suites bundle their own modules; no sockets, network or secrets.
 if (!built.length) for (const script of ["workers-test/image-build.mjs", "workers-test/mux.deps-build.mjs"]) {
   if (spawnSync(process.execPath, [script], { stdio: "inherit" }).status !== 0) process.exitCode = 1;
 }
-if (!built.length && spawnSync(resolve("node_modules/.bin/workerd"), ["test", "mux.capnp"], { stdio: "inherit", cwd: "workers-test" }).status !== 0) process.exitCode = 1;
+if (!built.length && runWorkerd(["test", "mux.capnp"], { stdio: "inherit", cwd: "workers-test" }).status !== 0) process.exitCode = 1;

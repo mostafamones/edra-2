@@ -1,4 +1,5 @@
 import worker from "./index.mjs";
+export { McpGrantStore } from "./index.mjs";
 
 const origins = ["https://edra.test", "https://app.edra.test", "https://learn.edra.test"];
 function assert(ok, message) { if (!ok) throw new Error(message); }
@@ -20,6 +21,24 @@ export default {
       assert(response.status !== 404 && response.status !== 421 && response.status < 500, "API server route must be reached on every host");
     }
     const send = (url, method, headers = {}, body) => worker.fetch(new Request(url, { method, headers: { host: new URL(url).host, ...headers }, body, duplex: body ? "half" : undefined }), env, ctx);
+    // MCP discovery reaches the Worker, and real storage spends a code exactly once.
+    const mcp = `${origins[1]}/api/mcp`;
+    const challenge = await send(mcp, "POST");
+    assert(challenge.status === 401 && challenge.headers.has("www-authenticate"), "MCP must challenge a signed-out client");
+    assert((await send(origins[2] + "/api/mcp", "POST")).status === 404, "MCP must stay on the staff origin");
+    const discovery = await send(origins[1] + "/.well-known/oauth-protected-resource/api/mcp", "GET");
+    assert(discovery.ok && (await discovery.json()).resource === mcp, "MCP resource must be bound to the staff endpoint");
+    const store = env.EDRA_MCP_GRANTS;
+    const grant = store.get(store.newUniqueId());
+    const record = { resource: mcp, scope: "fixture", codeHash: "code", challenge: "challenge", redirectUri: "fixture", sessionExpires: Date.now() + 60_000, codeExpires: Date.now() + 30_000, academyId: "academy", sealedSession: [42] };
+    const call = (path, data) => grant.fetch("https://grant.internal/" + path, { method: "POST", body: JSON.stringify(data) });
+    assert((await call("create", { grant: record })).status === 204, "The Worker must persist and schedule cleanup of an OAuth grant");
+    const exchange = (accessHash) => call("exchange", { hash: record.codeHash, challenge: record.challenge, resource: mcp, redirectUri: record.redirectUri, accessHash });
+    const responses = await Promise.all([exchange("first"), exchange("second")]);
+    assert(responses.filter(response => response.ok).length === 1, "A grant can be redeemed only once in real Worker storage");
+    const hash = responses[0].ok ? "first" : "second";
+    assert((await call("read", { hash })).ok, "Redeeming a grant must allow token lookup");
+    assert((await call("revoke", { hash })).ok && !(await call("read", { hash })).ok, "Revoked MCP tokens must stop working");
     // Legacy matrix: a submitted request never crosses origins; navigations keep their query.
     assert((await send(`${origins[0]}/app`, "POST")).status === 409, "Cross-host legacy POST must be 409");
     const studentLegacy = await send(`${origins[2]}/learn/courses?a=b%20c`, "GET");
