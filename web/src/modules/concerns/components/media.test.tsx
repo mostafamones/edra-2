@@ -99,31 +99,62 @@ describe("concern media consumers", () => {
     expect(first.querySelector("audio")!.playbackRate).toBe(2);
   });
 
-  it("uploads with progress, sends a media-only message and retries the uncertain send with the same ids", async () => {
+  const send = () => fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+  const sent = (input: { messageId: string; attachmentIds: string[] }) => ({ ok: true, message: message(2, { id: input.messageId, body: null, attachments: input.attachmentIds.map((id) => ({ ...pdf, id })) }) });
+
+  it("keeps files local until send, uploads with progress, then sends the whole message and retries the uncertain send with the same ids", async () => {
     await openChat();
     const transfer = deferred<"uploaded">();
     state.upload.mockImplementationOnce(async (_url: string, _blob: Blob, _signal: AbortSignal, progress: (value: number) => void) => { progress(0.5); return transfer.promise; });
     choose(new File(["%PDF-1.7"], "plan.pdf", { type: "application/pdf" }));
+    expect(await screen.findByRole("list", { name: "Attachments to send" })).toBeTruthy();
+    expect(state.start).not.toHaveBeenCalled();
+    send();
     expect(await screen.findByText("Uploading 50%")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Send message" }) as HTMLButtonElement).disabled).toBe(true);
-    await act(async () => transfer.resolve("uploaded"));
-    await screen.findByText("8 B");
-    const attachmentId = state.start.mock.calls[0][0].attachmentId;
-    expect(state.finish).toHaveBeenCalledWith(expect.objectContaining({ attachmentId }));
+    expect(screen.queryByRole("list", { name: "Attachments to send" })).toBeNull();
+    expect(state.send).not.toHaveBeenCalled();
     state.send.mockResolvedValue({ ok: false, code: "unavailable", message: "Could not reach the server. Check your connection and try again." });
-    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await act(async () => transfer.resolve("uploaded"));
+    const attachmentId = state.start.mock.calls[0][0].attachmentId;
     const retry = await screen.findByRole("button", { name: "Retry send" }, { timeout: 5000 });
-    expect(screen.queryByRole("button", { name: "Remove attachment" })).toBeNull();
-    state.send.mockImplementation(async (input) => ({ ok: true, message: message(2, { id: input.messageId, body: null, attachments: [{ ...pdf, id: attachmentId }] }) }));
+    expect(state.finish).toHaveBeenCalledWith(expect.objectContaining({ attachmentId }));
+    expect(screen.queryByRole("button", { name: "Discard" })).toBeNull();
+    state.send.mockImplementation(async (input) => sent(input));
     fireEvent.click(retry);
-    await waitFor(() => expect(screen.queryByRole("list", { name: "Attachments to send" })).toBeNull());
-    const ids = new Set(state.send.mock.calls.map(([input]) => input.messageId));
-    expect(ids.size).toBe(1);
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Retry send" })).toBeNull());
+    expect(new Set(state.send.mock.calls.map(([input]) => input.messageId)).size).toBe(1);
     expect(state.send.mock.calls.every(([input]) => input.body === null && input.attachmentIds.length === 1 && input.attachmentIds[0] === attachmentId)).toBe(true);
+    expect(state.start).toHaveBeenCalledTimes(1);
     expect(state.discard).not.toHaveBeenCalled();
   }, 10000);
 
-  it("checks limits, retries failed uploads with the same id and discards canceled uploads", async () => {
+  it("shows an image preview at once and a progress overlay while it uploads", async () => {
+    URL.createObjectURL = vi.fn(() => "blob:photo"); URL.revokeObjectURL = vi.fn();
+    await openChat();
+    const transfer = deferred<"uploaded">();
+    state.upload.mockImplementationOnce(async (_url: string, _blob: Blob, _signal: AbortSignal, progress: (value: number) => void) => { progress(0.25); return transfer.promise; });
+    choose(new File(["png"], "photo.png", { type: "image/png" }));
+    expect((await screen.findByRole("img", { name: "photo.png" })).getAttribute("src")).toBe("blob:photo");
+    send();
+    expect(await screen.findByRole("status", { name: "Uploading photo.png 25%" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "photo.png" }).getAttribute("src")).toBe("blob:photo");
+    state.send.mockImplementation(async (input) => sent(input));
+    await act(async () => transfer.resolve("uploaded"));
+    await waitFor(() => expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo"));
+    expect(state.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens an image in a viewer instead of a new tab", async () => {
+    messages = [message(1, { body: null, attachments: [image] })];
+    await openChat();
+    fireEvent.click(screen.getByRole("button", { name: "board.png" }));
+    const dialog = await screen.findByRole("dialog", { name: "board.png" });
+    expect(within(dialog).getByRole("img", { name: "board.png" }).getAttribute("src")).toBe("/api/concerns/academy-a/concern-1/img-1");
+    expect(within(dialog).getByRole("link", { name: "Download" }).getAttribute("href")).toBe("/api/concerns/academy-a/concern-1/img-1?download=1");
+    expect(document.querySelector('a[target="_blank"]')).toBeNull();
+  });
+
+  it("checks limits when picking, retries failed uploads with the same id, renews it after a refusal and discards", async () => {
     await openChat();
     choose(...Array.from({ length: 11 }, (_, index) => new File(["x"], `f${index}.txt`)));
     expect((await screen.findByRole("alert")).textContent).toBe("Up to 10 attachments per message.");
@@ -131,32 +162,47 @@ describe("concern media consumers", () => {
     Object.defineProperty(big, "size", { value: 25 * 1024 * 1024 + 1 });
     choose(big);
     expect(await screen.findByText("video.mov is larger than 25 MB.")).toBeTruthy();
+    choose(new File(["data"], "removed.txt"));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove attachment" }));
+    expect(screen.queryByRole("list", { name: "Attachments to send" })).toBeNull();
     expect(state.start).not.toHaveBeenCalled();
 
     state.upload.mockResolvedValueOnce("failed");
     choose(new File(["data"], "notes.txt"));
-    fireEvent.click(await screen.findByRole("button", { name: "Retry upload" }));
+    send();
+    fireEvent.click(await screen.findByRole("button", { name: "Retry send" }));
+    state.send.mockImplementation(async (input) => sent(input));
     await waitFor(() => expect(state.finish).toHaveBeenCalledTimes(1));
     expect(state.start.mock.calls[1][0].attachmentId).toBe(state.start.mock.calls[0][0].attachmentId);
-    fireEvent.click(await screen.findByRole("button", { name: "Remove attachment" }));
-    expect(state.discard).toHaveBeenCalledWith(expect.objectContaining({ attachmentId: state.start.mock.calls[0][0].attachmentId }));
+    await waitFor(() => expect(state.send).toHaveBeenCalledTimes(1));
 
     // A definite refusal renews the id on retry instead of reusing a removed reservation.
     state.finish.mockResolvedValueOnce({ ok: false, code: "attachment_unavailable", message: "This attachment is no longer available. Remove it and try again." });
     choose(new File(["data"], "again.txt"));
-    fireEvent.click(await screen.findByRole("button", { name: "Retry upload" }));
+    send();
+    const retry = await screen.findByRole("button", { name: "Retry send" });
+    fireEvent.click(retry);
     await waitFor(() => expect(state.start).toHaveBeenCalledTimes(4));
     expect(state.start.mock.calls[3][0].attachmentId).not.toBe(state.start.mock.calls[2][0].attachmentId);
+
+    // Discarding a failed send releases its reservations.
+    state.upload.mockResolvedValueOnce("failed");
+    choose(new File(["data"], "dropped.txt"));
+    send();
+    fireEvent.click(await screen.findByRole("button", { name: "Discard" }));
+    expect(state.discard).toHaveBeenCalledWith(expect.objectContaining({ attachmentId: state.start.mock.calls[4][0].attachmentId }));
   });
 
   it("verifies already stored bytes on a retried upload without sending them again", async () => {
     await openChat();
     state.upload.mockResolvedValueOnce("failed");
+    state.send.mockImplementation(async (input) => sent(input));
     choose(new File(["data"], "stored.txt"));
-    const retry = await screen.findByRole("button", { name: "Retry upload" });
+    send();
+    const retry = await screen.findByRole("button", { name: "Retry send" });
     state.start.mockResolvedValueOnce({ ok: true, url: null });
     fireEvent.click(retry);
-    await screen.findByRole("button", { name: "Remove attachment" });
+    await waitFor(() => expect(state.send).toHaveBeenCalledTimes(1));
     expect(state.upload).toHaveBeenCalledTimes(1);
     const id = state.start.mock.calls[0][0].attachmentId;
     expect(state.start.mock.calls[1][0].attachmentId).toBe(id);
@@ -168,11 +214,13 @@ describe("concern media consumers", () => {
     const started = deferred<{ ok: true; url: string }>();
     state.start.mockReturnValueOnce(started.promise);
     choose(new File(["data"], "late.txt"));
+    send();
     await waitFor(() => expect(state.start).toHaveBeenCalled());
     act(() => advanceBrowserScope());
     await act(async () => started.resolve({ ok: true, url: "https://upload.test/late" }));
     expect(state.upload).not.toHaveBeenCalled();
     expect(state.finish).not.toHaveBeenCalled();
+    expect(state.send).not.toHaveBeenCalled();
   });
 });
 
@@ -221,9 +269,12 @@ describe("voice recorder", () => {
     expect(track.stop).toHaveBeenCalled();
     expect(await screen.findByRole("button", { name: "Play voice note" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Attach" }));
-    await waitFor(() => expect(state.start).toHaveBeenCalledWith(expect.objectContaining({ kind: "voice", name: expect.stringMatching(/^Voice note .*\.webm$/) })));
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:take");
     expect(await screen.findByRole("list", { name: "Attachments to send" })).toBeTruthy();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:take");
+    expect(state.start).not.toHaveBeenCalled();
+    state.send.mockImplementation(async (input) => ({ ok: true, message: message(2, { id: input.messageId, body: null, attachments: [{ ...voice, id: input.attachmentIds[0] }] }) }));
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await waitFor(() => expect(state.start).toHaveBeenCalledWith(expect.objectContaining({ kind: "voice", name: expect.stringMatching(/^Voice note .*\.webm$/) })));
   });
 
   it("releases a microphone granted after the recorder was canceled", async () => {

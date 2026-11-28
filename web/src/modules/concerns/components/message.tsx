@@ -14,6 +14,8 @@ import { CONCERN_LIMITS } from "../contracts";
 import { concernEmojiSchema, type ConcernMessage, type ConcernParticipant } from "../validation";
 import { concernMediaLabel } from "../media";
 import { ConcernAttachments } from "./attachments";
+import { ConcernLocalFiles } from "./local";
+import type { ConcernUpload } from "./uploads";
 import { ConcernBody } from "./body";
 import { ConcernIconButton } from "./icon-button";
 import { ConcernMessageInput, mentionIds, type MentionChoice } from "./mentions";
@@ -24,7 +26,7 @@ type Commands = ReturnType<typeof useConcernCommands>;
 export function ConcernMessageItem({ message, outgoing, first = true, readSeq, academyId, userId, settled, commands, onReply, participants, receipts, avatarUrls }: {
   message: ConcernMessage; first?: boolean; readSeq?: number;
   /** Set while this is a local, not yet confirmed send. */
-  outgoing?: { failure: ConcernFailure | null; onRetry: () => void; onDiscard: () => void }; academyId: string; userId: string; settled: boolean; commands: Commands; onReply: (message: ConcernMessage) => void;
+  outgoing?: { failure: ConcernFailure | null; files: ConcernUpload[]; onRetry: () => void; onDiscard: () => void }; academyId: string; userId: string; settled: boolean; commands: Commands; onReply: (message: ConcernMessage) => void;
   participants: ConcernParticipant[]; receipts: ConcernParticipant[]; avatarUrls: Record<string, string>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -100,7 +102,7 @@ export function ConcernMessageItem({ message, outgoing, first = true, readSeq, a
       </form> : <div className={cn("min-w-0 text-sm transition-opacity", outgoing && !outgoing.failure && "opacity-70", deleted && "italic text-muted-foreground")}>
         {message.replyTo && <blockquote className="mb-1 rounded-md border-s-2 bg-muted/50 px-2 py-1 text-xs text-muted-foreground"><span className="block font-medium text-foreground" dir="auto">{message.replyTo.authorName ?? "Staff"}</span><span className="line-clamp-2 break-words" dir="auto">{message.replyTo.deleted ? "Message deleted" : message.replyTo.body ?? concernMediaLabel(message.replyTo.media)}</span></blockquote>}
         {deleted ? "Message deleted" : message.body !== null && <ConcernBody body={message.body} scope={{ academyId, userId }} mentions={mentioned} suffix={status} />}
-        {!deleted && <ConcernAttachments attachments={message.attachments} academyId={academyId} concernId={message.concernId} />}
+        {!deleted && (outgoing ? <ConcernLocalFiles label="Attachments" files={outgoing.files} /> : <ConcernAttachments attachments={message.attachments} academyId={academyId} concernId={message.concernId} />)}
         {!deleted && message.body === null && status}
         {!deleted && message.editedAt && <span className="text-[11px] text-muted-foreground">(edited)</span>}
       </div>}

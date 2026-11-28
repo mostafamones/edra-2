@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Download01Icon, File01Icon, Pdf01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { ConcernAttachment } from "../contracts";
 import { concernMediaUrl, formatBytes } from "../media";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -22,9 +23,16 @@ function ConcernAttachmentItem({ attachment, url, download }: { attachment: Conc
   if (attachment.kind === "voice") return <ConcernVoicePlayer src={url} durationSeconds={attachment.durationSeconds} downloadUrl={download} />;
   // The server labels a file image/* only after proving the bytes are a safe inline image type.
   if (attachment.contentType.startsWith("image/") && !broken) {
-    return <a href={url} target="_blank" rel="noopener noreferrer" className="inline-block max-w-full rounded-md focus-visible:outline-2 focus-visible:outline-ring">
-      <img src={url} alt={attachment.name} loading="lazy" decoding="async" className="max-h-56 max-w-full rounded-md border object-contain" onError={() => setBroken(true)} />
-    </a>;
+    return <Dialog>
+      <DialogTrigger asChild><button type="button" className="inline-block max-w-full cursor-zoom-in rounded-md focus-visible:outline-2 focus-visible:outline-ring">
+        <img src={url} alt={attachment.name} loading="lazy" decoding="async" className="max-h-56 max-w-full rounded-md border object-contain" onError={() => setBroken(true)} />
+      </button></DialogTrigger>
+      <DialogContent aria-describedby={undefined} className="w-auto max-w-[calc(100vw-2rem)] gap-3 p-3 sm:max-w-[calc(100vw-4rem)]">
+        <DialogTitle className="truncate pe-10 text-sm" dir="auto">{attachment.name}</DialogTitle>
+        <img src={url} alt={attachment.name} decoding="async" className="mx-auto max-h-[78vh] max-w-full rounded-md object-contain" />
+        <Button asChild size="sm" variant="outline" className="justify-self-end"><a href={download}>Download</a></Button>
+      </DialogContent>
+    </Dialog>;
   }
   const pdf = attachment.contentType === "application/pdf";
   return <div className="flex min-w-0 items-center gap-2 rounded-lg border px-2 py-1.5">

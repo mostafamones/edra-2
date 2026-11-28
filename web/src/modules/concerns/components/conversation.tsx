@@ -10,12 +10,14 @@ import { concernKeys, isConcernDenied, loadConcernTarget, syncConcernThread, use
 import type { ConcernMessage } from "../validation";
 import { ConcernFeedback } from "./feedback";
 import { ConcernComposer, type ConcernSendPayload } from "./composer";
-import type { ConcernAttachment } from "../contracts";
 import type { ConcernFailure } from "../errors";
 import { concernMediaSummary } from "../media";
 import { browserScopeGeneration } from "@/lib/browser-scope";
 import { ConcernMessageItem } from "./message";
 import { ConcernHistory } from "./history";
+import { newUuid } from "@/lib/uuid";
+import { concernFailure } from "../errors";
+import { releasePreviews, transferUpload, type ConcernUpload } from "./uploads";
 import { ConcernIconButton } from "./icon-button";
 import { ConcernLifecycleForm } from "./lifecycle";
 import { ConcernPeople } from "./people";
@@ -48,14 +50,44 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
   const [muteError, setMuteError] = useState(false);
   // Sends show at once; each stays here until the server's copy is in the thread or it is discarded.
   const [outgoing, setOutgoing] = useState<Outgoing[]>([]);
+  const transfers = useRef(new Map<string, AbortController>());
+  /** Uploads the message's files, then sends the whole message once every file has landed. */
   async function deliver(item: Outgoing) {
-    setOutgoing((list) => list.some((entry) => entry.message.id === item.message.id)
-      ? list.map((entry) => entry.message.id === item.message.id ? { ...item, failure: null } : entry) : [...list, { ...item, failure: null }]);
+    const key = item.message.id;
+    transfers.current.get(key)?.abort();
+    const controller = new AbortController();
+    transfers.current.set(key, controller);
     const generation = browserScopeGeneration();
-    const result = await commands.send(item.payload);
+    const edit = (change: (entry: Outgoing) => Outgoing) => setOutgoing((list) => list.map((entry) => entry.message.id === key ? change(entry) : entry));
+    // A definite refusal renews the id; an uncertain failure reuses it so stored bytes are verified, not sent again.
+    let files = item.files.map((file) => file.status === "failed" && !file.reuseId ? { ...file, id: newUuid() } : file);
+    const next = { ...item, files, failure: null };
+    setOutgoing((list) => list.some((entry) => entry.message.id === key) ? list.map((entry) => entry.message.id === key ? next : entry) : [...list, next]);
+    const todo = files.filter((file) => file.status !== "ready");
+    if (todo.length) {
+      const latest = new Map(files.map((file) => [file.id, file]));
+      await Promise.all(todo.map((file) => transferUpload(media, file, controller.signal, (change) => {
+        latest.set(file.id, { ...latest.get(file.id)!, ...change });
+        if (!controller.signal.aborted && generation === browserScopeGeneration()) edit((entry) => ({ ...entry, files: entry.files.map((current) => current.id === file.id ? latest.get(file.id)! : current) }));
+      })));
+      if (controller.signal.aborted || generation !== browserScopeGeneration()) return;
+      files = files.map((file) => latest.get(file.id)!);
+      const failed = files.find((file) => file.status === "failed");
+      if (failed) { edit((entry) => ({ ...entry, failure: { ...concernFailure("attachment_unavailable"), message: failed.error ?? "Upload failed. Check your connection and retry." } })); return; }
+    }
+    const result = await commands.send({ ...item.payload, attachmentIds: files.map((file) => file.id) });
     if (generation !== browserScopeGeneration()) return;
-    setOutgoing((list) => result.ok ? list.filter((entry) => entry.message.id !== item.message.id)
-      : list.map((entry) => entry.message.id === item.message.id ? { ...entry, failure: result } : entry));
+    transfers.current.delete(key);
+    if (result.ok) { setOutgoing((list) => list.filter((entry) => entry.message.id !== key)); releasePreviews(files); return; }
+    // The server no longer has an attachment: the files upload again under new ids on retry.
+    edit((entry) => ({ ...entry, failure: result, files: result.code === "attachment_unavailable" ? files.map((file) => ({ ...file, status: "failed" as const, reuseId: false, error: result.message })) : files }));
+  }
+  function discard(item: Outgoing) {
+    transfers.current.get(item.message.id)?.abort();
+    transfers.current.delete(item.message.id);
+    setOutgoing((list) => list.filter((entry) => entry !== item));
+    releasePreviews(item.files);
+    for (const file of item.files) void media.discard(file.id);
   }
   const reading = section === "messages";
   useConcernFocusSignal(scope, concernId, active && !!detail.data && !detail.isError);
@@ -171,14 +203,14 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
       {shown.map((message, index) => { const pending = outgoing.find((entry) => entry.message.id === message.id);
         return <ConcernMessageItem key={message.id} message={message} first={!sameRun(shown[index - 1], message)} readSeq={readSeq(message)} academyId={scope.academyId} userId={scope.userId} settled={settled || detail.isError} commands={commands} onReply={(item) => { setReplyId(item.id); }} participants={participants}
           receipts={pending ? [] : participants.filter((participant) => participant.lastReadSeq >= message.seq && participant.lastReadSeq <= readSeq(message) && participant.userId !== scope.userId && participant.userId !== message.authorId)} avatarUrls={avatars.data ?? {}}
-          outgoing={pending && { failure: pending.failure, onRetry: () => void deliver(pending), onDiscard: () => setOutgoing((list) => list.filter((entry) => entry !== pending)) }} />; })}
+          outgoing={pending && { failure: pending.failure, onRetry: () => void deliver(pending), files: pending.files, onDiscard: () => discard(pending) }} />; })}
     </div>
     {readError && reading && <div role="alert" className="flex items-center gap-2 px-4 text-xs"><span>Could not update read receipt</span><Button size="sm" variant="ghost" onClick={() => setReadRetry((value) => value + 1)}>Retry receipt</Button></div>}
     {decision && <ConcernLifecycleForm key={decision} mode={decision} detail={detail.data} lifecycle={lifecycle} onClose={() => setDeciding(null)} />}
-    {reading && !decision && !settled && !detail.isError && <ConcernComposer media={media} participants={participants} reply={reply} onReplyChange={(message) => setReplyId(message?.id ?? null)} onTyping={setTyping}
+    {reading && !decision && !settled && !detail.isError && <ConcernComposer participants={participants} reply={reply} onReplyChange={(message) => setReplyId(message?.id ?? null)} onTyping={setTyping}
       onSend={(payload, preview) => {
         pinned.current = true;
-        void deliver({ payload, failure: null, message: outgoingMessage(payload, preview, concernId, scope.userId, participants.find((participant) => participant.userId === scope.userId)?.name ?? null) });
+        void deliver({ payload, failure: null, files: preview.files, message: outgoingMessage(payload, preview, concernId, scope.userId, participants.find((participant) => participant.userId === scope.userId)?.name ?? null) });
         requestAnimationFrame(() => scroll.current?.scrollTo({ top: scroll.current.scrollHeight }));
       }} />}
   </div>;
@@ -189,13 +221,13 @@ function sameRun(previous: ConcernMessage | undefined, next: ConcernMessage | un
   return !!previous && !!next && previous.authorId === next.authorId && Date.parse(next.createdAt) - Date.parse(previous.createdAt) < 60 * 60_000;
 }
 
-type Outgoing = { payload: ConcernSendPayload; message: ConcernMessage; failure: ConcernFailure | null };
+type Outgoing = { payload: ConcernSendPayload; message: ConcernMessage; failure: ConcernFailure | null; files: ConcernUpload[] };
 /** The local stand-in shown while a message is on its way; the server's copy replaces it by id. */
-function outgoingMessage(payload: ConcernSendPayload, preview: { reply: ConcernMessage | null; attachments: ConcernAttachment[] }, concernId: string, userId: string, name: string | null): ConcernMessage {
+function outgoingMessage(payload: ConcernSendPayload, preview: { reply: ConcernMessage | null }, concernId: string, userId: string, name: string | null): ConcernMessage {
   const reply = preview.reply;
   return {
     id: payload.messageId, concernId, seq: -1, revision: 0, authorId: userId, authorName: name, body: payload.body, mentions: payload.mentions,
-    createdAt: new Date().toISOString(), editedAt: null, deletedAt: null, reactions: [], attachments: preview.attachments,
+    createdAt: new Date().toISOString(), editedAt: null, deletedAt: null, reactions: [], attachments: [],
     replyTo: reply && { id: reply.id, seq: reply.seq, authorId: reply.authorId, authorName: reply.authorName, body: reply.body, deleted: !!reply.deletedAt, media: concernMediaSummary(reply.attachments) },
   };
 }
