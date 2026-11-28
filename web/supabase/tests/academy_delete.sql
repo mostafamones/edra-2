@@ -66,6 +66,12 @@ begin
     'refused calls change nothing');
 end $$;
 
+-- A Developer mode run for P: the registry must survive so a live preview can switch or exit.
+insert into edra_private.dev_runs (id, project_ref, recipe_version, seed, reference_date, student_count, scenario_hash,
+  developer_id, academy_id, state, ready_at) values
+  ('dededede-0000-4000-8000-0000000000e1', 'abcdefghijklmnopqrst', 'edra-dev-v1', 'd', '2026-10-21', 20, repeat('a', 64),
+    'de111111-1111-4111-8111-111111111111', 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'ready', now());
+
 insert into storage.objects (bucket_id, name) values
   ('assignment-images', 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa/image'),
   ('assignment-work', 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa/record/work'),
@@ -86,6 +92,8 @@ do $$ begin
     jsonb_build_object('bucket_id', 'assignment-work', 'name', 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa/record/work'),
     jsonb_build_object('bucket_id', 'content-documents', 'name', 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa/unit/document')),
     'only this academy''s uploads are returned; avatars and other academies are left');
+  perform pg_temp.check(exists (select 1 from edra_private.dev_runs where id = 'dededede-0000-4000-8000-0000000000e1'
+    and academy_id = 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa'), 'Developer mode registry kept');
   perform pg_temp.check((select count(*) = 3 from public.profiles where id::text like 'de%'), 'accounts kept');
 end $$;
 

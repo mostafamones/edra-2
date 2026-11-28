@@ -19,6 +19,7 @@ begin
 
   for t in select c.oid::regclass as rel from pg_class c join pg_attribute a on a.attrelid = c.oid and a.attname = 'academy_id'
     where c.relkind in ('r', 'p') and c.relnamespace in ('public'::regnamespace, 'edra_private'::regnamespace, 'edra_auth'::regnamespace)
+      and not (c.relnamespace = 'edra_private'::regnamespace and c.relname like 'dev\_%')
   loop
     execute format('select count(*) from %s where academy_id = %L', t.rel, p_academy) into n;
     if n > 0 then problems := problems || format('%s keeps %s rows', t.rel, n); end if;
