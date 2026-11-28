@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { createClient } from "@supabase/supabase-js";
 
-import { jsonLiteral } from "./connection.mjs";
+import { sqlLiteral } from "./connection.mjs";
 import { decryptSecret, encryptSecret, randomPassword } from "./credentials.mjs";
 import {
   lockRunSql, markCreatedSql, preflightSql, registerRunSql, reserveSql, scenarioAccounts, setStateSql, storeCredentialSql,
@@ -85,14 +85,68 @@ async function provision(ctx, accounts) {
   }
 }
 
-function loadSql(ctx) {
+// The SQL API refuses large request bodies (a 300-student scenario is ~7 MB), so the load document is staged
+// in pieces of at most this many UTF-16 units and reassembled inside the one load transaction.
+export const LOAD_PART_CHARS = 256_000;
+
+/** Splits text into ordered pieces without cutting a surrogate pair. */
+export function splitParts(text, size = LOAD_PART_CHARS) {
+  const parts = [];
+  for (let start = 0; start < text.length;) {
+    let end = Math.min(start + size, text.length);
+    const last = text.charCodeAt(end - 1);
+    if (end < text.length && last >= 0xd800 && last <= 0xdbff) end -= 1;
+    parts.push(text.slice(start, end));
+    start = end;
+  }
+  return parts;
+}
+
+// Staging writes succeed only for the lock holder of a run in the loading state.
+const loadingLock = (ctx) => `select 1 from edra_private.dev_runs where id = '${ctx.runId}' and state = 'loading'
+    and lock_token = '${ctx.lockToken}' and lock_expires_at > now()`;
+
+export function clearPartsSql(ctx) {
+  return `with gate as (${loadingLock(ctx)}), cleared as (
+  delete from edra_private.dev_load_parts where run_id = '${ctx.runId}' and exists (select 1 from gate) returning 1)
+select jsonb_build_object('locked', exists (select 1 from gate), 'cleared', (select count(*) from cleared)) as result;`;
+}
+
+export function stagePartSql(ctx, seq, part) {
+  return `insert into edra_private.dev_load_parts (run_id, seq, part)
+select '${ctx.runId}', ${Number(seq)}, ${sqlLiteral(part)} where exists (${loadingLock(ctx)})
+returning jsonb_build_object('seq', seq) as result;`;
+}
+
+export function loadDocument(ctx) {
+  return JSON.stringify({ lockToken: ctx.lockToken, scenarioHash: ctx.hash, academySlug: ctx.slug, scenario: ctx.scenario });
+}
+
+/** One transaction: reassemble exactly `count` staged pieces, load, then delete the pieces. */
+export function loadSql(ctx, count) {
   return `begin;
 select set_config('edra.dev_run', '${ctx.runId}', true);
-create temp table fx on commit drop as select ${jsonLiteral({
-    lockToken: ctx.lockToken, scenarioHash: ctx.hash, academySlug: ctx.slug, scenario: ctx.scenario,
-  })} as doc;
+do $$ begin
+  if (select count(*) <> ${Number(count)} or coalesce(max(seq), -1) <> ${Number(count) - 1}
+      from edra_private.dev_load_parts where run_id = '${ctx.runId}') then
+    raise exception 'dev-academy: staged load document is incomplete';
+  end if;
+end $$;
+create temp table fx on commit drop as
+  select string_agg(part, '' order by seq)::jsonb as doc from edra_private.dev_load_parts where run_id = '${ctx.runId}';
 ${readFileSync(join(HERE, "sql/load.sql"), "utf8")}
+delete from edra_private.dev_load_parts where run_id = '${ctx.runId}';
 commit;`;
+}
+
+async function load(ctx) {
+  const cleared = await one(ctx.runSql, clearPartsSql(ctx));
+  if (!cleared?.locked) throw new Error("Run lock was lost before loading.");
+  const parts = splitParts(loadDocument(ctx), ctx.partChars);
+  for (const [seq, part] of parts.entries()) {
+    if (!(await one(ctx.runSql, stagePartSql(ctx, seq, part)))) throw new Error(`Run lock was lost while staging part ${seq}.`);
+  }
+  await ctx.runSql(loadSql(ctx, parts.length));
 }
 
 /** Runs create for a validated configuration; returns the verification report of the ready run. */
@@ -127,7 +181,7 @@ export async function createRun(ctx, log = console.log) {
     await provision(ctx, accounts);
     stage = "load";
     await one(ctx.runSql, setStateSql(ctx.runId, ctx.lockToken, "loading"));
-    await ctx.runSql(loadSql(ctx));
+    await load(ctx);
     stage = "verify";
     const report = await verifyRun(ctx, "baseline");
     if (!report.ok) throw new Error(`Baseline verification failed: ${report.problems.join("; ")}`);
