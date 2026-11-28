@@ -47,15 +47,24 @@ export function managementToken(env = process.env, readFile = fs.readFileSync) {
 }
 
 /** Returns runSql(query) that posts SQL to the project's Management API and resolves to the row array. */
-export function createSqlRunner(projectRef, { token, fetcher = fetch }) {
+// HTTP 429 comes from the API throttler before the query runs, so the same request is retried after these waits.
+export const THROTTLE_WAITS_MS = Object.freeze([5_000, 10_000, 20_000, 40_000, 60_000, 60_000]);
+
+export function createSqlRunner(projectRef, { token, fetcher = fetch, waits = THROTTLE_WAITS_MS, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   const endpoint = `https://api.supabase.com/v1/projects/${projectRef}/database/query`;
   return async function runSql(query) {
-    const response = await fetcher(endpoint, {
+    const send = () => fetcher(endpoint, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({ query }),
       signal: AbortSignal.timeout(SQL_TIMEOUT_MS),
     });
+    let response = await send();
+    for (const wait of waits) {
+      if (response.status !== 429) break;
+      await sleep(wait);
+      response = await send();
+    }
     if (!response.ok) {
       const text = await response.text();
       let message = text;

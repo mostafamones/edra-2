@@ -108,6 +108,36 @@ describe("createSqlRunner", () => {
     });
   });
 
+  it("retries throttled requests after each wait and returns the first success", async () => {
+    const statuses = [429, 429, 200];
+    const calls = [];
+    const fetcher = async (url, init) => {
+      calls.push(init.body);
+      const status = statuses.shift();
+      return { ok: status === 200, status, text: async () => "[]", json: async () => [{ n: 1 }] };
+    };
+    const slept = [];
+    const runSql = createSqlRunner(DEV, { token: "tok-123", fetcher, waits: [1, 2, 3], sleep: async (ms) => slept.push(ms) });
+    assert.deepEqual(await runSql("select 1"), [{ n: 1 }]);
+    assert.deepEqual(slept, [1, 2]);
+    assert.equal(calls.length, 3);
+    assert.ok(calls.every((body) => body === calls[0]));
+  });
+
+  it("gives up with the HTTP 429 error once the waits are spent", async () => {
+    const { fetcher, calls } = fakeFetcher(429, JSON.stringify({ message: "Too Many Requests" }));
+    const runSql = createSqlRunner(DEV, { token: "tok-123", fetcher, waits: [1, 1], sleep: async () => {} });
+    await assert.rejects(runSql("select 1"), { message: "SQL failed (HTTP 429): Too Many Requests" });
+    assert.equal(calls.length, 3);
+  });
+
+  it("does not retry other errors", async () => {
+    const { fetcher, calls } = fakeFetcher(413, "request entity too large");
+    const runSql = createSqlRunner(DEV, { token: "tok-123", fetcher, waits: [1], sleep: async () => {} });
+    await assert.rejects(runSql("select 1"), { message: "SQL failed (HTTP 413): request entity too large" });
+    assert.equal(calls.length, 1);
+  });
+
   it("shows non-JSON error bodies as text", async () => {
     const { fetcher } = fakeFetcher(500, "upstream down");
     const runSql = createSqlRunner(DEV, { token: "tok-123", fetcher });
