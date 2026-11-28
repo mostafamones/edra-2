@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { MoreHorizontalIcon, SmileIcon } from "@hugeicons/core-free-icons";
+import { Loading03Icon, MoreHorizontalIcon, SmileIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "cn";
@@ -67,6 +68,20 @@ export function ConcernMessageItem({ message, outgoing, first = true, readSeq, a
   const name = message.authorName ?? "Staff";
   const time = <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()} className="text-xs text-muted-foreground">{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>;
   const mentioned = participants.filter((participant) => message.mentions.includes(participant.userId)).map((participant) => ({ userId: participant.userId, name: participant.name, avatarUrl: avatarUrls[participant.avatarPath ?? ""] }));
+  // A send shows a spinner, then a brief check once the server confirms it.
+  const sending = !!outgoing && !outgoing.failure;
+  const [confirmed, setConfirmed] = useState(false);
+  const wasSending = useRef(sending);
+  useEffect(() => {
+    const finished = wasSending.current && !outgoing;
+    wasSending.current = sending;
+    if (!finished) return;
+    setConfirmed(true);
+    const timer = setTimeout(() => setConfirmed(false), 1500);
+    return () => clearTimeout(timer);
+  }, [sending, outgoing]);
+  const status = !deleted && (sending || confirmed) ? <span role="status" aria-label={outgoing ? "Sending…" : "Sent"} className="ms-1 inline-flex align-[-3px] text-muted-foreground">
+    <HugeiconsIcon icon={outgoing ? Loading03Icon : Tick02Icon} strokeWidth={1.5} aria-hidden="true" className={cn("size-3.5", outgoing && "animate-spin")} /></span> : null;
   const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return <article data-concern-seq={outgoing ? undefined : message.seq} data-concern-read-seq={outgoing ? undefined : readSeq} data-concern-message={message.id} tabIndex={-1}
     className={cn("group/message relative flex min-w-0 gap-3 rounded-md ps-3 pe-1 py-0.5 hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring target:bg-muted", first && "mt-2 py-1", message.mentions.includes(userId) && "bg-primary/10 hover:bg-primary/15")}>
@@ -84,8 +99,9 @@ export function ConcernMessageItem({ message, outgoing, first = true, readSeq, a
         </ConcernMessageInput>
       </form> : <div className={cn("min-w-0 text-sm transition-opacity", outgoing && !outgoing.failure && "opacity-70", deleted && "italic text-muted-foreground")}>
         {message.replyTo && <blockquote className="mb-1 rounded-md border-s-2 bg-muted/50 px-2 py-1 text-xs text-muted-foreground"><span className="block font-medium text-foreground" dir="auto">{message.replyTo.authorName ?? "Staff"}</span><span className="line-clamp-2 break-words" dir="auto">{message.replyTo.deleted ? "Message deleted" : message.replyTo.body ?? concernMediaLabel(message.replyTo.media)}</span></blockquote>}
-        {deleted ? "Message deleted" : message.body !== null && <ConcernBody body={message.body} scope={{ academyId, userId }} mentions={mentioned} />}
+        {deleted ? "Message deleted" : message.body !== null && <ConcernBody body={message.body} scope={{ academyId, userId }} mentions={mentioned} suffix={status} />}
         {!deleted && <ConcernAttachments attachments={message.attachments} academyId={academyId} concernId={message.concernId} />}
+        {!deleted && message.body === null && status}
         {!deleted && message.editedAt && <span className="text-[11px] text-muted-foreground">(edited)</span>}
       </div>}
       {!deleted && message.reactions.length > 0 && <div className="mt-1 flex flex-wrap gap-1">
@@ -101,7 +117,6 @@ export function ConcernMessageItem({ message, outgoing, first = true, readSeq, a
           </button></TooltipTrigger><TooltipContent>{people.map((person) => person?.name ?? "Staff").join(", ")}</TooltipContent></Tooltip>;
         })}
       </div>}
-      {outgoing && !outgoing.failure && <span role="status" className="px-1 text-[11px] text-muted-foreground">Sending…</span>}
       {outgoing?.failure && <div role="alert" className="flex flex-wrap items-center gap-1 px-1 text-xs text-destructive">
         <span>{outgoing.failure.message}</span>
         <Button type="button" size="xs" variant="ghost" onClick={outgoing.onRetry}>Retry send</Button>

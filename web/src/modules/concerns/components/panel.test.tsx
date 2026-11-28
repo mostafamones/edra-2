@@ -191,6 +191,7 @@ describe("floating concern panel consumers", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
     fireEvent.click(await screen.findByRole("button", { name: "Retry send" }));
     await screen.findByRole("link", { name: "https://example.com" });
+    await screen.findByRole("status", { name: "Sent" });
     expect(state.sendConcernMessage.mock.calls[1][0]).toEqual(state.sendConcernMessage.mock.calls[0][0]);
     expect(document.querySelector('[data-concern-seq="1"]')).toBe(first);
     expect(messageText(screen.getByLabelText("Message"))).toBe("");
@@ -323,7 +324,7 @@ describe("floating concern panel consumers", () => {
     state.sendConcernMessage.mockReturnValueOnce(waiting.promise);
     typeMessage(screen.getByLabelText("Message"), "Finish while closed");
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
-    await screen.findByText("Sending…");
+    await screen.findByRole("status", { name: "Sending…" });
     expect(screen.getByText("Finish while closed")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Close concerns" }));
     const sentId = state.sendConcernMessage.mock.calls[0][0].messageId;
@@ -332,7 +333,7 @@ describe("floating concern panel consumers", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open concerns" }));
     await screen.findByText("Finish while closed");
     expect(messageText(screen.getByLabelText("Message"))).toBe("");
-    expect(screen.queryByText("Sending…")).toBeNull();
+    expect(screen.queryByRole("status", { name: "Sending…" })).toBeNull();
     expect(state.sendConcernMessage).toHaveBeenCalledTimes(1);
   });
 

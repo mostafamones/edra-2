@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -44,9 +44,9 @@ function Mention({ person, scope }: { person: MentionPerson; scope: ConcernScope
 }
 
 /** Text stays text. Only explicit HTTP(S) URLs become links and recorded mentions become badges; no HTML or metadata is fetched. */
-export function ConcernBody({ body, mentions = [], scope }: { body: string; mentions?: MentionPerson[]; scope?: ConcernScope }) {
+export function ConcernBody({ body, mentions = [], scope, suffix }: { body: string; mentions?: MentionPerson[]; scope?: ConcernScope; suffix?: ReactNode }) {
   return <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]" dir="auto">{splitMentions(body, scope ? mentions : []).map((part, index) => typeof part !== "string"
     ? <Mention key={index} person={part} scope={scope!} />
     : part.split(/(https?:\/\/[^\s<>]+)/gi).map((piece, inner) => /^https?:\/\//i.test(piece)
-      ? <a key={`${index}-${inner}`} href={piece} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{piece}</a> : piece))}</p>;
+      ? <a key={`${index}-${inner}`} href={piece} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{piece}</a> : piece))}{suffix}</p>;
 }
