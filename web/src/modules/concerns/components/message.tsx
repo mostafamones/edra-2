@@ -84,6 +84,17 @@ export function ConcernMessageItem({ message, outgoing, first = true, readSeq, a
   }, [sending, outgoing]);
   const status = !deleted && (sending || confirmed) ? <span role="status" aria-label={outgoing ? "Sending…" : "Sent"} className="ms-1 inline-flex align-[-3px] text-muted-foreground">
     <HugeiconsIcon icon={outgoing ? Loading03Icon : Tick02Icon} strokeWidth={1.5} aria-hidden="true" className={cn("size-3.5", outgoing && "animate-spin")} /></span> : null;
+  // A one-line message centres its seen heads on that line; anything taller keeps them at the bottom.
+  const text = useRef<HTMLDivElement>(null);
+  const [oneLine, setOneLine] = useState(false);
+  useEffect(() => {
+    const element = text.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setOneLine(element.clientHeight <= 24));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [editing, deleted]);
+  const centered = oneLine && !editing && message.reactions.length === 0 && !outgoing?.failure && !error;
   const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return <article data-concern-seq={outgoing ? undefined : message.seq} data-concern-read-seq={outgoing ? undefined : readSeq} data-concern-message={message.id} tabIndex={-1}
     className={cn("group/message relative flex min-w-0 gap-3 rounded-md ps-3 pe-1 py-0.5 hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring target:bg-muted", first && "mt-2 py-1", message.mentions.includes(userId) && "bg-primary/10 hover:bg-primary/15")}>
@@ -99,7 +110,7 @@ export function ConcernMessageItem({ message, outgoing, first = true, readSeq, a
           <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setEditing(false)}>Cancel</Button>
           <Button size="sm" type="submit" disabled={pending || (!body.trim() && !hasMedia)}>{pending ? "Saving…" : "Save"}</Button>
         </ConcernMessageInput>
-      </form> : <div className={cn("min-w-0 text-sm transition-opacity", outgoing && !outgoing.failure && "opacity-70", deleted && "italic text-muted-foreground")}>
+      </form> : <div ref={text} className={cn("min-w-0 text-sm transition-opacity", outgoing && !outgoing.failure && "opacity-70", deleted && "italic text-muted-foreground")}>
         {message.replyTo && <blockquote className="mb-1 rounded-md border-s-2 bg-muted/50 px-2 py-1 text-xs text-muted-foreground"><span className="block font-medium text-foreground" dir="auto">{message.replyTo.authorName ?? "Staff"}</span><span className="line-clamp-2 break-words" dir="auto">{message.replyTo.deleted ? "Message deleted" : message.replyTo.body ?? concernMediaLabel(message.replyTo.media)}</span></blockquote>}
         {deleted ? "Message deleted" : message.body !== null && <ConcernBody body={message.body} scope={{ academyId, userId }} mentions={mentioned} suffix={status} />}
         {!deleted && (outgoing ? <ConcernLocalFiles label="Attachments" files={outgoing.files} /> : <ConcernAttachments attachments={message.attachments} academyId={academyId} concernId={message.concernId} />)}
@@ -142,6 +153,6 @@ export function ConcernMessageItem({ message, outgoing, first = true, readSeq, a
         {own && <DropdownMenuItem variant="destructive" onSelect={() => void run(() => commands.remove(message.id))}>Delete</DropdownMenuItem>}
       </DropdownMenuContent></DropdownMenu>
     </div>}
-    <div className="w-4 shrink-0 self-end"><ConcernReceipts participants={receipts} avatarUrls={avatarUrls} /></div>
+    <div className={cn("w-4 shrink-0 self-end", centered && "flex h-5 items-center")}><ConcernReceipts participants={receipts} avatarUrls={avatarUrls} /></div>
   </article>;
 }
