@@ -14,7 +14,7 @@ export function toAcademyProfile(row: ProfileRow, role: AcademyRole): AcademyPro
   // The database constraint already limits icons to this list.
   const icon = row.icon as (typeof ACADEMY_ICON_IDS)[number];
   return { id: row.id, slug: row.slug, name: row.name, icon, subject: row.subject, phone: row.phone, whatsapp: row.whatsapp,
-    updatedAt: row.updated_at, canEdit: isAcademyProfileEditor(role) };
+    updatedAt: row.updated_at, canEdit: isAcademyProfileEditor(role), canDelete: role === "owner" };
 }
 
 /** Session-bound read for the caller's active membership; null when the academy is unknown or inaccessible. Throws on load failure. */

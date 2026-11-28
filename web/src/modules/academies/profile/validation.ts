@@ -33,6 +33,8 @@ export type AcademyProfile = AcademyProfileInput & {
   /** Compare-and-update baseline for the next save. */
   updatedAt: string;
   canEdit: boolean;
+  /** Only the Owner may permanently delete the academy. */
+  canDelete: boolean;
 };
 
 export function sameProfileValues(a: AcademyProfileInput, b: AcademyProfileInput) {

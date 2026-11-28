@@ -64,3 +64,29 @@ export async function loadAcademyProfile(academySlug: string): Promise<AcademyPr
   if (typeof academySlug !== "string") return null;
   return getAcademyProfile(academySlug);
 }
+
+export type DeleteAcademyResult = { ok: true } | { ok: false; code: "sessionExpired" | "forbidden" | "nameMismatch" | "deleteFailed" };
+
+/**
+ * Permanently deletes the academy and everything it owns. The database requires the caller to be its active
+ * Owner and `confirmName` to equal the current name exactly; the slug is only a selector.
+ */
+export async function deleteAcademy(academySlug: string, confirmName: string): Promise<DeleteAcademyResult> {
+  if (typeof academySlug !== "string" || typeof confirmName !== "string") return { ok: false, code: "deleteFailed" };
+  try {
+    const db = await createClient();
+    const { data: auth } = await db.auth.getClaims();
+    if (!auth?.claims) return { ok: false, code: "sessionExpired" };
+    const academy = await resolveStaffAcademy(academySlug);
+    if (!academy || academy.role !== "owner") return { ok: false, code: "forbidden" };
+    const { error } = await db.rpc("delete_academy", { p_academy_id: academy.id, p_confirm_name: confirmName });
+    if (!error) return { ok: true };
+    if (error.message.includes("academy_name_mismatch")) return { ok: false, code: "nameMismatch" };
+    if (error.message.includes("forbidden")) return { ok: false, code: "forbidden" };
+    console.error("Academy delete failed", { code: error.code, message: error.message });
+    return { ok: false, code: "deleteFailed" };
+  } catch (error) {
+    console.error("Academy delete failed", error);
+    return { ok: false, code: "deleteFailed" };
+  }
+}

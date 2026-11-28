@@ -4,8 +4,9 @@ import { z } from "zod";
 import {
   saveAcademyProfile as saveAcademyProfileServer,
   loadAcademyProfile as loadAcademyProfileServer,
+  deleteAcademy as deleteAcademyServer,
 } from "./actions.server";
-export type { AcademyProfileResult } from "./actions.server";
+export type { AcademyProfileResult, DeleteAcademyResult } from "./actions.server";
 
 const saveAcademyProfileFn = createServerFn({ method: "POST", strict: false })
   .validator(z.object({ academySlug: z.unknown(), expectedUpdatedAt: z.unknown(), input: z.unknown() }))
@@ -21,4 +22,12 @@ const loadAcademyProfileFn = createServerFn({ method: "POST", strict: false })
 
 export async function loadAcademyProfile(academySlug: Parameters<typeof loadAcademyProfileServer>[0]): Promise<Awaited<ReturnType<typeof loadAcademyProfileServer>>> {
   return loadAcademyProfileFn({ data: { academySlug } });
+}
+
+const deleteAcademyFn = createServerFn({ method: "POST", strict: false })
+  .validator(z.object({ academySlug: z.unknown(), confirmName: z.unknown() }))
+  .handler(({ data }) => deleteAcademyServer(data.academySlug as string, data.confirmName as string));
+
+export async function deleteAcademy(academySlug: string, confirmName: string): Promise<Awaited<ReturnType<typeof deleteAcademyServer>>> {
+  return deleteAcademyFn({ data: { academySlug, confirmName } });
 }
