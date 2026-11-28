@@ -1,5 +1,7 @@
 // Invariant checks for a dev-academy scenario. Pure: no I/O.
 
+import { validateLearningScenario } from "./learning-validation.mjs";
+import { validateAnswers } from "./answers-validation.mjs";
 import { cairoToUtcMs } from "./time.mjs";
 
 // Mirrors web/src/lib/phone.ts (EGYPTIAN_MOBILE_PATTERN and normalizeEgyptianPhone). Keep in sync.
@@ -22,8 +24,8 @@ export function normalizeEgyptianPhone(value) {
 const MIN_MS = 60_000;
 const DAY_MS = 86_400_000;
 const ATTENDANCE = new Set(["present", "late", "excused", "absent"]);
-const RESULT_STATES = new Set(["missing", "received_unmarked", "marked_private", "announced", "late_announced"]);
-const MARKED = new Set(["marked_private", "announced", "late_announced"]);
+const RESULT_STATES = new Set(["missing", "received_unmarked", "marked_private", "announced", "late_announced", "partially_marked"]);
+const MARKED = new Set(["marked_private", "announced", "late_announced", "partially_marked"]);
 const ANNOUNCED = new Set(["announced", "late_announced"]);
 
 export function validateScenario(scenario) {
@@ -79,13 +81,13 @@ export function validateScenario(scenario) {
   for (const placement of scenario.placements) {
     const group = groups.get(placement.groupId);
     if (!students.has(placement.studentId)) fail(`${placement.key} references an unknown student`);
-    if (!group) fail(`${placement.key} references an unknown group`);
+    if (!group && !(scenario.config.recipeVersion === "edra-dev-v6" && placement.mode === "online-only" && placement.groupId === null)) fail(`${placement.key} references an unknown group`);
     if (placementOf.has(placement.studentId)) fail(`${placement.key} duplicates the student placement`);
     placementOf.set(placement.studentId, placement);
     if (group && (group.levelKey !== placement.levelKey || group.track !== placement.track)) {
       fail(`${placement.key} is incompatible with ${group.key}`);
     }
-    if (placement.mode !== "in-person") fail(`${placement.key} must be in-person`);
+    if (placement.mode !== "in-person" && !(scenario.config.recipeVersion === "edra-dev-v6" && placement.mode === "online-only")) fail(`${placement.key} must be in-person`);
     inYear(placement.enrolledAt, `${placement.key} enrollment`);
   }
   for (const student of students.values()) {
@@ -93,7 +95,7 @@ export function validateScenario(scenario) {
   }
   for (const group of groups.values()) {
     const size = scenario.placements.filter((p) => p.groupId === group.id).length;
-    if (size !== 5) fail(`${group.key} has ${size} students, expected 5`);
+    if (scenario.config.recipeVersion === "edra-dev-v6" ? size < 1 : ["edra-dev-v4", "edra-dev-v5"].includes(scenario.config.recipeVersion) ? ![20, 25, 30].includes(size) : size !== 5) fail(`${group.key} has ${size} students, unexpected group size`);
   }
   const afterEnrollment = (studentId, value, label) => {
     const placement = placementOf.get(studentId);
@@ -169,6 +171,7 @@ export function validateScenario(scenario) {
 
   // Work timeline and state consistency for assignment and exam results.
   const checkResult = (label, r, start, end) => {
+    if (r.state === "partially_marked" && !["edra-dev-v5", "edra-dev-v6"].includes(scenario.config.recipeVersion)) fail(`${label} partial marking requires the answer-level recipe`);
     if (!RESULT_STATES.has(r.state)) fail(`${label} has an unknown state`);
     if (r.gradedById !== null && !staff.has(r.gradedById)) fail(`${label} references an unknown grader`);
     for (const [field, value] of [["receivedAt", r.receivedAt], ["gradedAt", r.gradedAt], ["announcedAt", r.announcedAt]]) {
@@ -190,7 +193,7 @@ export function validateScenario(scenario) {
     if (received < ms(start) || (end !== null && received > ms(end))) fail(`${label} receivedAt is outside its window`);
     if (MARKED.has(r.state) !== (r.gradedAt !== null)) fail(`${label} grading time does not match its state`);
     if (ANNOUNCED.has(r.state) !== (r.announcedAt !== null)) fail(`${label} announcement time does not match its state`);
-    if (MARKED.has(r.state) !== (r.total !== null)) fail(`${label} total does not match its state`);
+    if ((MARKED.has(r.state) && r.state !== "partially_marked") !== (r.total !== null)) fail(`${label} total does not match its state`);
     if (r.gradedAt && ms(r.gradedAt) < received) fail(`${label} is graded before it is received`);
     if (r.announcedAt && ms(r.announcedAt) < ms(r.gradedAt)) fail(`${label} is announced before it is graded`);
   };
@@ -212,7 +215,7 @@ export function validateScenario(scenario) {
       if (!part.questions) continue;
       text(part.title, 200, `${part.key} title`, { trimmed: true });
       text(part.instructions, 5000, `${part.key} instructions`, { required: false });
-      if (part.kind !== "file_upload") fail(`${part.key} must be a Written Work part: no per-question answers are seeded`);
+      if (part.kind !== "file_upload" && !(["edra-dev-v5", "edra-dev-v6"].includes(scenario.config.recipeVersion) && part.kind === "online_questions")) fail(`${part.key} must be a Written Work part: no per-question answers are seeded`);
       if (!part.questions.length) fail(`${part.key} has no questions`);
       positions(part.questions, part.key);
       for (const q of part.questions) {
@@ -234,7 +237,7 @@ export function validateScenario(scenario) {
       const questions = e.questions.filter((q) => q.partId === part.id);
       if (!questions.length) fail(`${part.key} has no questions`);
       positions(questions, part.key);
-      if (e.kind === "historical" && part.kind !== "written_work") fail(`${part.key}: paper exams have no seeded answers, so only Written Work`);
+      if (e.kind === "historical" && e.format === "paper" && part.kind !== "written_work") fail(`${part.key}: paper exams have no seeded answers, so only Written Work`);
       for (const q of questions) {
         text(q.prompt, 5000, `${q.key} prompt`);
         text(q.modelAnswer, 10000, `${q.key} model answer`, { required: false });
@@ -255,7 +258,7 @@ export function validateScenario(scenario) {
   }
 
   for (const a of scenario.assignments) {
-    if (!groups.has(a.groupId)) fail(`${a.key} references an unknown group`);
+    if (!groups.has(a.groupId) && !(a.audience === "level" && a.levelKey)) fail(`${a.key} references an unknown group`);
     inYear(a.assignedAt, a.key);
     beforeRef(a.assignedAt, a.key);
     beforeRef(a.dueAt, a.key);
@@ -265,14 +268,15 @@ export function validateScenario(scenario) {
     const a = assignments.get(r.assignmentId);
     if (!a) fail(`${r.key} references an unknown assignment`);
     if (!students.has(r.studentId)) fail(`${r.key} references an unknown student`);
-    if (a && placementOf.get(r.studentId)?.groupId !== a.groupId) fail(`${r.key} student is not in the assignment group`);
+    if (a && (a.audience === "level" ? placementOf.get(r.studentId)?.levelKey !== a.levelKey : placementOf.get(r.studentId)?.groupId !== a.groupId)) fail(`${r.key} student is not in the assignment group`);
     if (!a) continue;
     afterEnrollment(r.studentId, a.assignedAt, r.key);
     checkResult(r.key, r, a.assignedAt, null);
     if (r.receivedAt && (ms(r.receivedAt) > ms(a.dueAt)) !== (r.state === "late_announced")) {
       fail(`${r.key} lateness does not match its receipt time`);
     }
-    if (MARKED.has(r.state)) checkScores(r.key, a.parts, r.components, r.total);
+    if (r.state === "partially_marked") { /* Answer-level validation checks partial components below. */ }
+    else if (MARKED.has(r.state)) checkScores(r.key, a.parts, r.components, r.total);
     else if (r.components !== null) fail(`${r.key} has components without a marked state`);
   }
 
@@ -296,12 +300,16 @@ export function validateScenario(scenario) {
     const e = exams.get(r.examId);
     if (!e) fail(`${r.key} references an unknown exam`);
     if (!students.has(r.studentId)) fail(`${r.key} references an unknown student`);
-    if (e && !e.groupIds.includes(placementOf.get(r.studentId)?.groupId)) fail(`${r.key} student is not in the exam group`);
+    if (e && (e.audience === "level" ? placementOf.get(r.studentId)?.levelKey !== e.levelKey : !e.groupIds.includes(placementOf.get(r.studentId)?.groupId))) fail(`${r.key} student is not in the exam group`);
     if (!e) continue;
+    afterEnrollment(r.studentId, e.opensAt, r.key);
     checkResult(r.key, r, e.opensAt, e.closesAt);
-    if (MARKED.has(r.state)) checkScores(r.key, e.questions, r.components, r.total);
+    if (r.attempt) { /* Choice scores and partial manual marks are checked below. */ }
+    else if (MARKED.has(r.state)) checkScores(r.key, e.questions, r.components, r.total);
     else if (r.components !== null) fail(`${r.key} has components without a marked state`);
   }
 
+  if (["edra-dev-v5", "edra-dev-v6"].includes(scenario.config.recipeVersion)) errors.push(...validateAnswers(scenario));
+  if (scenario.config.recipeVersion === "edra-dev-v6") errors.push(...validateLearningScenario(scenario));
   return { valid: errors.length === 0, errors };
 }

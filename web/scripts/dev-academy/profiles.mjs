@@ -41,7 +41,7 @@ const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 const round1 = (n) => Math.round(n * 10) / 10;
 const halfMarks = (n) => Math.round(n * 2) / 2; // teachers mark in half points
 
-export function profileModel(rand, weeks) {
+export function profileModel(rand, weeks, { repeat = false } = {}) {
   const signed = (key) => rand.unit(key) * 2 - 1;
   const profiles = new Map();
 
@@ -65,7 +65,7 @@ export function profileModel(rand, weeks) {
     traits(studentKeys) {
       const order = [...studentKeys].sort((a, b) => rand.unit(`profile:${a}`) - rand.unit(`profile:${b}`));
       order.forEach((key, i) => {
-        const [tier, attendance, submission, trajectory] = TEMPLATES[i];
+        const [tier, attendance, submission, trajectory] = TEMPLATES[repeat ? i % TEMPLATES.length : i];
         const [lo, hi] = TIERS[tier].range;
         profiles.set(key, {
           tier,

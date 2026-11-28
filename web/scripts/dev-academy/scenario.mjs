@@ -1,8 +1,11 @@
 // Pure, deterministic dev-academy scenario builder: no I/O, network, environment or credentials.
 // Recipes: edra-dev-v1 follows web/planning/development-tools/01-scenario.md; edra-dev-v2 adds profiles.mjs;
-// edra-dev-v3 adds the programming assessments of assessments.mjs (see README "Recipes").
+// edra-dev-v3 adds programming assessments; v4 adds 300 students, enrollment waves and denser history.
 import { createHash } from "node:crypto";
 
+import { populateLearningContent } from "./learning-content.mjs";
+import { addOnlineAssessments, learningGroupSizes } from "./learning-scenario.mjs";
+import { answerContent, populateAnswers } from "./answers.mjs";
 import { programmingContent } from "./assessments.mjs";
 import { profileModel } from "./profiles.mjs";
 import { FAMILY_NAMES, FATHER_NAMES, FIRST_NAMES } from "./names.mjs";
@@ -120,23 +123,31 @@ function patternModel(rand, weeks) {
 }
 
 // A registered run is rebuilt with its own recipe; unknown versions are refused, never approximated.
-const RECIPES = { "edra-dev-v1": patternModel, "edra-dev-v2": profileModel, "edra-dev-v3": profileModel };
+const RECIPES = { "edra-dev-v1": patternModel, "edra-dev-v2": profileModel, "edra-dev-v3": profileModel, "edra-dev-v4": (rand, weeks) => profileModel(rand, weeks, { repeat: true }), "edra-dev-v5": (rand, weeks) => profileModel(rand, weeks, { repeat: true }), "edra-dev-v6": (rand, weeks) => profileModel(rand, weeks, { repeat: true }) };
 // Recipes without content keep the generic placeholder assessments of v1 and v2.
-const CONTENT = { "edra-dev-v3": programmingContent };
+const CONTENT = { "edra-dev-v6": answerContent, "edra-dev-v5": answerContent, "edra-dev-v4": programmingContent, "edra-dev-v3": programmingContent };
 export const RECIPE_VERSIONS = Object.freeze(Object.keys(RECIPES));
 
 export function buildScenario(options = {}) {
-  const { recipeVersion, seed, referenceDate, students: studentCount } = { ...DEFAULTS, ...options };
+  const { recipeVersion, seed, referenceDate } = { ...DEFAULTS, ...options };
+  const learning = recipeVersion === "edra-dev-v6";
+  const rich = ["edra-dev-v4", "edra-dev-v5", "edra-dev-v6"].includes(recipeVersion);
+  const studentCount = options.students ?? (learning ? 280 + Math.floor(keyedRandom(recipeVersion, seed).unit("student-count") * 41) : rich ? 300 : STUDENT_COUNT);
+  const physicalCount = learning ? studentCount - 60 : studentCount;
+  const groupDefs = rich ? GROUPS.flatMap((group) => [20, 25, 30].map((size, i) => ({
+    ...group, key: `${group.key}-${i + 1}`, name: `${group.name} ${i + 1}`, size,
+  }))) : GROUPS;
   if (typeof recipeVersion !== "string" || !recipeVersion || typeof seed !== "string" || !seed) {
     throw new TypeError("recipeVersion and seed must be non-empty strings");
   }
   if (!Object.hasOwn(RECIPES, recipeVersion)) {
     throw new RangeError(`Unknown recipe "${recipeVersion}"; supported recipes: ${RECIPE_VERSIONS.join(", ")}`);
   }
-  if (studentCount !== STUDENT_COUNT) throw new RangeError(`Only ${STUDENT_COUNT} students are supported, got ${studentCount}`);
+  if (learning ? !Number.isInteger(studentCount) || studentCount < 280 || studentCount > 320 : studentCount !== (rich ? 300 : STUDENT_COUNT)) throw new RangeError(`Recipe ${recipeVersion} requires ${rich ? 300 : STUDENT_COUNT} students, got ${studentCount}`);
   if (!isCalendarDate(referenceDate)) throw new RangeError(`Reference date must be a real YYYY-MM-DD date, got ${referenceDate}`);
 
   const rand = keyedRandom(recipeVersion, seed);
+  if (learning) learningGroupSizes(rand, physicalCount).forEach((size, i) => { groupDefs[i].size = size; });
   const utc = (date, hhmm) => iso(cairoToUtcMs(date, hhmm));
 
   // Academic year starts on Aug 16 and holds current-year history only (owner decision).
@@ -193,8 +204,8 @@ export function buildScenario(options = {}) {
   const content = CONTENT[recipeVersion]?.(rand) ?? null;
   const academy = { id: rand.uuid("academy:edra-dev"), key: "academy:edra-dev", name: "Edra Dev Academy", ...(content && { subject: content.subject }) };
 
-  const groups = GROUPS.map(({ key, name, levelKey, track }) => ({ id: rand.uuid(key), key, name, levelKey, track }));
-  const schedules = GROUPS.map((def, gi) => ({
+  const groups = groupDefs.map(({ key, name, levelKey, track }) => ({ id: rand.uuid(key), key, name, levelKey, track }));
+  const schedules = groupDefs.map((def, gi) => ({
     id: rand.uuid(`schedule:${def.key}`),
     key: `schedule:${def.key}`,
     groupId: groups[gi].id,
@@ -202,31 +213,37 @@ export function buildScenario(options = {}) {
   }));
 
   const model = RECIPES[recipeVersion](rand, weeks.length);
-  const studentKeys = Array.from({ length: STUDENT_COUNT }, (_, i) => `student:${pad2(i + 1)}`);
+  const studentKeys = Array.from({ length: studentCount }, (_, i) => `student:${pad2(i + 1)}`);
   const traitsOf = model.traits(studentKeys);
   const students = studentKeys.map((key) => ({ id: rand.uuid(key), key, ...contact(key), synthetic: true, accountKey: `account:${key}`, ...traitsOf.get(key) }));
   // Parent contacts are drawn after every person's own phone, so adding them left earlier output unchanged.
   for (const student of students) student.parentPhone = contact(`${student.key}:parent`).phone;
   const placements = studentKeys.map((key, i) => {
-    const group = groups[Math.floor(i / GROUP_SIZE)];
+    const online = learning && i >= physicalCount;
+    const groupIndex = online ? ((i - physicalCount) % 4) * 3 : rich ? groupDefs.findIndex((_, gi) => i < groupDefs.slice(0, gi + 1).reduce((n, g) => n + g.size, 0)) : Math.floor(i / GROUP_SIZE);
+    const group = groups[groupIndex];
+    // Half start with the year; the rest join in waves, including the reference week.
+    const joinWeek = rich && i % 2 ? 1 + Math.floor(rand.unit(`enrollment:${key}`) * weeks.length) : 0;
+    const enrolledAt = joinWeek === 0 ? academicYear.startsAt : utc(addDays(weeks[0], joinWeek * 7), "00:00");
     return {
       id: rand.uuid(`placement:${key}`),
       key: `placement:${key}`,
       studentId: rand.uuid(key),
-      groupId: group.id,
+      groupId: online ? null : group.id,
       levelKey: group.levelKey,
       track: group.track,
-      mode: "in-person",
-      enrolledAt: academicYear.startsAt,
+      mode: online ? "online-only" : "in-person",
+      enrolledAt,
     };
   });
   const groupOf = new Map(placements.map((p) => [p.studentId, p.groupId]));
-  const membersOf = (groupId) => students.filter((s) => groupOf.get(s.id) === groupId);
+  const enrollmentOf = new Map(placements.map((p) => [p.studentId, p.enrolledAt]));
+  const membersOf = (groupId, at = null) => students.filter((s) => groupOf.get(s.id) === groupId && (!at || enrollmentOf.get(s.id) <= at));
 
   // Sessions: two per group per week, sorted by start, starters distributed round-robin.
   const sessions = [];
   weeks.forEach((weekStart, w) => {
-    GROUPS.forEach((def, gi) => {
+    groupDefs.forEach((def, gi) => {
       for (const slot of schedules[gi].slots) {
         const startMs = cairoToUtcMs(addDays(weekStart, slot.weekday - 1), slot.startTime);
         sessions.push({
@@ -254,7 +271,7 @@ export function buildScenario(options = {}) {
   const attendancePublications = [];
   for (const session of sessions) {
     const w = session.week - 1;
-    const items = membersOf(session.groupId).map((student) => {
+    const items = membersOf(session.groupId, session.startsAt).map((student) => {
       const entry = {
         id: rand.uuid(`roster:${session.key}:${student.key}`),
         key: `roster:${session.key}:${student.key}`,
@@ -305,7 +322,7 @@ export function buildScenario(options = {}) {
     let ordinal = 0;
     weeks.forEach((weekStart, w) => {
       const kinds = [];
-      if (w % 2 === 1) kinds.push("historical");
+      if (rich || w % 2 === 1) kinds.push("historical");
       if (w === weeks.length - 1) kinds.push("current");
       for (const kind of kinds) {
         const key = `assignment:${group.key}:w${pad2(w + 1)}:${kind}`;
@@ -329,7 +346,7 @@ export function buildScenario(options = {}) {
   const assignmentResults = [];
   for (const a of assignments) {
     const gi = groups.findIndex((g) => g.id === a.groupId);
-    membersOf(a.groupId).forEach((student, j) => {
+    membersOf(a.groupId, a.assignedAt).forEach((student, j) => {
       const state =
         a.kind === "current"
           ? CURRENT_STATES[(j + gi) % CURRENT_STATES.length]
@@ -364,14 +381,14 @@ export function buildScenario(options = {}) {
   groups.forEach((group, gi) => {
     let ordinal = 0;
     weeks.forEach((_, w) => {
-      if (w % 4 !== 3) return;
-      const key = `exam:${GROUPS[gi].key}:w${pad2(w + 1)}`;
+      if (rich ? w % 2 !== 1 : w % 4 !== 3) return;
+      const key = `exam:${groupDefs[gi].key}:w${pad2(w + 1)}`;
       const record = examRecord({ key, kind: "historical", format: "paper", groupIds: [group.id], week: w + 1, opensMs: firstSessionMs(group.id, w) });
       const exam = content ? { ...record, ...content.paperExam({ key, levelKey: group.levelKey, ordinal: ordinal++ }) } : record;
       exams.push(exam);
       const closesMs = Date.parse(exam.closesAt);
       const examSession = sessions.find((s) => s.groupId === group.id && s.startsAt === exam.opensAt);
-      for (const student of membersOf(group.id)) {
+      for (const student of membersOf(group.id, exam.opensAt)) {
         const key = `exam-result:${exam.key}:${student.key}`;
         const received = model.satExam(statusOf.get(`${examSession.id}:${student.id}`), student, exam.key);
         const marks = received
@@ -397,7 +414,7 @@ export function buildScenario(options = {}) {
       seed,
       referenceDate,
       timezone: TIMEZONE,
-      studentCount: STUDENT_COUNT,
+      studentCount,
       academicYear,
       teachingWeeks: { count: weeks.length, firstStartsOn: weeks[0], lastEndsOn: addDays(weeks.at(-1), 6) },
       sessionMinutes: 90,
@@ -419,6 +436,9 @@ export function buildScenario(options = {}) {
     examResults,
   };
 
+  if (learning) addOnlineAssessments(scenario, rand, weeks, content);
+  if (["edra-dev-v5", "edra-dev-v6"].includes(recipeVersion)) populateAnswers(scenario, rand);
+  if (learning) populateLearningContent(scenario, rand);
   const validation = validateScenario(scenario);
   if (!validation.valid) throw new Error(`Generated scenario failed validation: ${validation.errors.slice(0, 5).join("; ")}`);
   return scenario;

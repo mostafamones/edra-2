@@ -72,6 +72,7 @@ export async function previewAsset(academyId: string, assetId: string) {
   if (!data || data.status !== "ready" || data.deletion_token) throw new Error("This material is not available for preview.");
   if (data.kind === "video" && data.youtube_id) return { kind: "youtube" as const, youtubeId: data.youtube_id };
   if (data.kind === "video" && data.playback_id) return { kind: "video" as const, playbackId: data.playback_id, ...playbackToken(data.playback_id), thumbnailToken: playbackToken(data.playback_id, "t").token, storyboardToken: playbackToken(data.playback_id, "s").token };
+  if (data.kind === "video" && data.placeholder) return { kind: "placeholder" as const };
   if (!data.storage_path) throw new Error("Document unavailable.");
   const signed = await db.storage.from("content-documents").createSignedUrl(data.storage_path, 120);
   contentError(signed.error);

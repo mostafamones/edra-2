@@ -2533,6 +2533,7 @@ export type Database = {
           kind: string
           mime_type: string
           name: string
+          placeholder: boolean
           playback_id: string | null
           provider_asset_id: string | null
           provider_upload_id: string | null
@@ -2551,6 +2552,7 @@ export type Database = {
           kind: string
           mime_type: string
           name: string
+          placeholder: boolean
           playback_id?: string | null
           provider_asset_id?: string | null
           provider_upload_id?: string | null
@@ -2569,6 +2571,7 @@ export type Database = {
           kind?: string
           mime_type?: string
           name?: string
+          placeholder?: boolean
           playback_id?: string | null
           provider_asset_id?: string | null
           provider_upload_id?: string | null
@@ -9156,6 +9159,16 @@ export type Database = {
           p_id: string
           p_kind: string
           p_mime: string
+          p_name: string
+          p_unit_id: string
+        }
+        Returns: string
+      }
+      register_placeholder_video: {
+        Args: {
+          p_academy_id: string
+          p_duration_seconds: number
+          p_id: string
           p_name: string
           p_unit_id: string
         }

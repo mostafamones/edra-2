@@ -77,3 +77,12 @@ fi
 phase "running database suites"
 EDRA_DB_TEST_URL="$conn" EDRA_DB_TEST_TARGET="$project" bash scripts/db-test.sh
 phase "database suites passed"
+phase "verifying development academy loaders (legacy, expanded, answer-level)"
+for recipe in edra-dev-v3 edra-dev-v4 edra-dev-v5 edra-dev-v6; do
+  node scripts/dev-academy/database-fixture.mjs "$recipe" >"$work/dev-academy.sql"
+  psql "$conn" -X -q -tA -v ON_ERROR_STOP=1 -f "$work/dev-academy.sql" >"$work/dev-academy.log" 2>&1 || {
+    tail -40 "$work/dev-academy.log"
+    exit 1
+  }
+  echo "db-ci: $recipe loader and baseline passed (rolled back)"
+done

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { openLearningMaterial } from "../access/actions";
 import { unwrapContent } from "../types";
+import { PlaceholderVideo } from "../components/placeholder";
 
 type OpenMaterial = Extract<Awaited<ReturnType<typeof openLearningMaterial>>, { ok: true }>["value"];
 type MaterialProps = { academyId: string; unitId: string; itemId: string; title: string; expiresAt: string | null; resumePosition?: number };
@@ -50,6 +51,7 @@ export function StudentMaterialViewer({ academyId, unitId, itemId, title, expire
   }, [material, expiresAt, load]);
   if (error) return <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive"><p>{error}</p><Button variant="outline" onClick={() => { setError(""); setAttempt(n => n + 1); }}><HugeiconsIcon icon={RefreshIcon} strokeWidth={1.5} />Retry access</Button></div>;
   if (!material) return <p role="status" className="p-4 text-sm text-muted-foreground">Opening…</p>;
+  if (material.kind === "placeholder") return <PlaceholderVideo title={title} />;
   if (material.kind === "youtube") return <LearningVideo academyId={academyId} unitId={unitId} itemId={itemId} title={title} youtubeId={material.youtubeId} />;
   return material.kind === "video"
     ? <LearningVideo academyId={academyId} unitId={unitId} itemId={itemId} title={title} playbackId={material.playbackId} tokens={{ playback: material.token, thumbnail: material.thumbnailToken, storyboard: material.storyboardToken }} />

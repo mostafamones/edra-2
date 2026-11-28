@@ -95,6 +95,15 @@ insert into edra_private.dev_runs (id, project_ref, recipe_version, seed, refere
     'd0e10000-0000-4000-8000-000000000001', 'd0e10000-0000-4000-8000-0000000000f1', 'ready', now()),
   ('d0e10000-0000-4000-8000-0000000000e2', 'abcdefghijklmnopqrst', 'edra-dev-v1', 't2', '2026-10-21', 20, repeat('a', 64),
     'd0e10000-0000-4000-8000-000000000001', null, 'failed', null);
+-- Both supported dataset sizes remain valid; arbitrary counts remain refused.
+update edra_private.dev_runs set student_count = 300, recipe_version = 'edra-dev-v4'
+where id = 'd0e10000-0000-4000-8000-0000000000e2';
+select pg_temp.assert_eq('expanded registry count',
+  (select student_count::text from edra_private.dev_runs where id = 'd0e10000-0000-4000-8000-0000000000e2'), '300');
+select pg_temp.expect_error(
+  $q$update edra_private.dev_runs set student_count = 321 where id = 'd0e10000-0000-4000-8000-0000000000e2'$q$,
+  '%dev_runs_student_count_check%');
+
 insert into edra_private.dev_contacts (phone, run_id, logical_id, purpose) values
   ('+201099000001', 'd0e10000-0000-4000-8000-0000000000e1', 'account:staff:owner', 'login'),
   ('+201099000002', 'd0e10000-0000-4000-8000-0000000000e1', 'account:staff:instructor-1', 'login'),
@@ -408,6 +417,10 @@ do $$ begin
   if not exists (select 1 from pg_trigger t where t.tgrelid = 'public.exam_result_effects'::regclass::oid
     and t.tgname = 'dev_synthetic_effect_suppression' and not t.tgisinternal) then
     raise exception 'D3: dev_synthetic_effect_suppression is missing on exam_result_effects';
+  end if;
+  -- Placeholder videos: a placeholder cannot carry provider media, so replacing one clears the flag in the same update.
+  if not exists (select 1 from pg_constraint where conrelid = 'public.content_assets'::regclass and conname = 'content_assets_placeholder_shape') then
+    raise exception 'D4: content_assets_placeholder_shape is missing';
   end if;
 end $$;
 

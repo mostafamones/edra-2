@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { previewAsset } from "../media-actions";
 import { unwrapContent } from "../types";
+import { PlaceholderVideo } from "./placeholder";
 
 /** The muted ghost style shared by material row actions. */
 export const ACTION = "text-foreground/70 hover:text-foreground";
@@ -29,7 +30,7 @@ export function MaterialPreview({ academyId, assetId, title, document, startSeco
   }
   return <><Button variant="ghost" size="sm" className={ACTION} disabled={busy} aria-label={label ? `Play ${title} at ${label}` : undefined} onClick={open}><HugeiconsIcon icon={document ? LinkSquare02Icon : PlayIcon} strokeWidth={1.5} aria-hidden="true" />{busy ? "Opening…" : label ?? (document ? "Open" : "Preview")}</Button>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     <Dialog open={video !== null} onOpenChange={open => { if (!open) setVideo(null); }}><DialogContent className="sm:max-w-3xl"><DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription className="sr-only">Staff preview</DialogDescription></DialogHeader>
-      {video?.kind === "video" ? <MuxPlayer playbackId={video.playbackId} tokens={{ playback: video.token, thumbnail: video.thumbnailToken, storyboard: video.storyboardToken }} metadata={{ video_title: title }} streamType="on-demand" autoPlay={false} startTime={startSeconds} className="block max-h-[70dvh]" /> : video?.kind === "youtube" ? <YoutubePlayer id={video.youtubeId} title={title} start={startSeconds} /> : video?.kind === "document" ? <Button asChild><a href={video.url} target="_blank" rel="noopener noreferrer"><HugeiconsIcon icon={LinkSquare02Icon} aria-hidden="true" />Open document</a></Button> : null}
+      {video?.kind === "placeholder" ? <PlaceholderVideo title={title} /> : video?.kind === "video" ? <MuxPlayer playbackId={video.playbackId} tokens={{ playback: video.token, thumbnail: video.thumbnailToken, storyboard: video.storyboardToken }} metadata={{ video_title: title }} streamType="on-demand" autoPlay={false} startTime={startSeconds} className="block max-h-[70dvh]" /> : video?.kind === "youtube" ? <YoutubePlayer id={video.youtubeId} title={title} start={startSeconds} /> : video?.kind === "document" ? <Button asChild><a href={video.url} target="_blank" rel="noopener noreferrer"><HugeiconsIcon icon={LinkSquare02Icon} aria-hidden="true" />Open document</a></Button> : null}
     </DialogContent></Dialog>
   </>;
 }
