@@ -33,11 +33,11 @@ function Mention({ person, scope }: { person: MentionPerson; scope: ConcernScope
     <PopoverTrigger asChild>
       <button type="button" className="rounded-md bg-current/15 px-1 font-semibold hover:bg-current/25">@{person.name}</button>
     </PopoverTrigger>
-    <PopoverContent className="flex w-64 items-center gap-3" align="start">
-      <Avatar size="lg" aria-hidden="true"><AvatarImage src={person.avatarUrl} alt="" /><AvatarFallback>{initials(person.name)}</AvatarFallback></Avatar>
-      <div className="min-w-0">
-        <p className="truncate font-medium" dir="auto">{person.name ?? "Staff"}</p>
-        {role && <p className="text-sm text-muted-foreground">{ROLE_LABELS[role]}</p>}
+    <PopoverContent className="flex w-auto max-w-56 items-center gap-2 p-2 pe-3" align="start">
+      <Avatar aria-hidden="true"><AvatarImage src={person.avatarUrl} alt="" /><AvatarFallback className="text-xs">{initials(person.name)}</AvatarFallback></Avatar>
+      <div className="min-w-0 leading-tight">
+        <p className="truncate text-sm font-medium" dir="auto">{person.name ?? "Staff"}</p>
+        {role && <p className="text-xs text-muted-foreground">{ROLE_LABELS[role]}</p>}
       </div>
     </PopoverContent>
   </Popover>;
