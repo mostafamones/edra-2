@@ -18,7 +18,7 @@ function merge(response: Response, session: Headers, mutations: string[]) {
   const unique = new Map<string, string>()
   for (const cookie of cookies) unique.set(cookieKey(cookie), cookie)
   for (const cookie of unique.values()) headers.append('set-cookie', cookie)
-  for (const name of ['cache-control', 'pragma', 'expires']) {
+  for (const name of ['cache-control', 'pragma', 'expires', 'content-security-policy', 'referrer-policy']) {
     const value = session.get(name)
     if (value && (name !== 'cache-control' || !/(?:^|,)\s*no-store\s*(?:,|$)/i.test(headers.get(name) ?? ''))) headers.set(name, value)
   }
@@ -34,11 +34,23 @@ export async function gateway(request: Request, downstream: (request: Request) =
   try { decodeURIComponent(url.pathname) } catch { return new Response('Bad Request', { status: 400 }) }
   const canonicalPath = url.pathname.replace(/\/{2,}/g, '/').replace(/(?<=.)\/$/, '')
   if (canonicalPath !== url.pathname) { url.pathname = canonicalPath; return Response.redirect(url, 308) }
+  const isMcp = /^\/api\/mcp(?:\/(?:authorize|token|revoke))?$/.test(url.pathname)
+    || /^\/\.well-known\/(?:oauth-authorization-server|oauth-protected-resource(?:\/api\/mcp)?)$/.test(url.pathname)
   const publicPath = url.pathname + url.search
   const descriptor = describeRoute(platform, publicPath)
   const legacyPlatform = /^\/app(?:\/|$)/.test(url.pathname) ? 'staff' : /^\/learn(?:\/|$)/.test(url.pathname) ? 'student' : null
   if (legacyPlatform && platform !== legacyPlatform && !readMethods.has(request.method)) return new Response('Use the canonical platform URL', { status: 409 })
+  // Machine requests never use browser cookies. Only the explicit consent POST needs a web session.
+  if (isMcp && url.pathname !== '/api/mcp/authorize') {
+    const { handleMcp } = await import('../mcp/handler.server')
+    return handleMcp(new Request(url, request))
+  }
   const session = await updateSession(request, descriptor)
+  if (url.pathname === '/auth/chatgpt') {
+    if (platform !== 'staff') return new Response(null, { status: 404 })
+    session.responseHeaders.set('content-security-policy', "frame-ancestors 'none'; form-action 'self' https://chatgpt.com; base-uri 'none'")
+    session.responseHeaders.set('referrer-policy', 'no-referrer')
+  }
   if (legacyPlatform && platform !== legacyPlatform) return merge(Response.redirect(new URL(publicPath, platformOrigin(legacyPlatform)), 307), session.responseHeaders, [])
   if (session.redirect) return merge(session.redirect, session.responseHeaders, [])
   if (!infrastructure.test(url.pathname) && descriptor.legacy) {
@@ -76,7 +88,7 @@ export async function gateway(request: Request, downstream: (request: Request) =
   } else forwarded = new Request(url, new Request(request, { headers }))
   return runWithRequestContext(forwarded, async () => {
     let response: Response
-    try { response = await downstream(forwarded) } catch (error) { if (!exceeded) console.error(error); response = new Response(exceeded ? 'Payload Too Large' : 'Internal Server Error', { status: exceeded ? 413 : 500 }) }
+    try { response = isMcp ? await (await import('../mcp/handler.server')).handleMcp(forwarded) : await downstream(forwarded) } catch (error) { if (!exceeded) console.error(error); response = new Response(exceeded ? 'Payload Too Large' : 'Internal Server Error', { status: exceeded ? 413 : 500 }) }
     if (exceeded && response.status !== 413) response = new Response('Payload Too Large', { status: 413 })
     return merge(response, session.responseHeaders, collectResponseCookies())
   })

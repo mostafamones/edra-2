@@ -5,5 +5,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
   "assets": { "directory": "./dist/client" },
+  "durable_objects": { "bindings": [{ "name": "EDRA_MCP_GRANTS", "class_name": "McpGrantStore" }] },
+  "migrations": [{ "tag": "mcp-grants-v1", "new_sqlite_classes": ["McpGrantStore"] }],
   "observability": { "enabled": true }
 }

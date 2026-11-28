@@ -19,6 +19,7 @@ import { Route as ApiSessionsRouteImport } from './routes/api/sessions'
 import { Route as ApiStudentsRouteImport } from './routes/api/students'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppAcademySlugRouteRouteImport } from './routes/app/$academySlug/route'
+import { Route as AuthChatgptRouteImport } from './routes/auth/chatgpt'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthRecoverRouteImport } from './routes/auth/recover'
@@ -182,6 +183,11 @@ const AppAcademySlugRouteRoute = AppAcademySlugRouteRouteImport.update({
   id: '/$academySlug',
   path: '/$academySlug',
   getParentRoute: () => AppRouteRoute,
+} as any)
+const AuthChatgptRoute = AuthChatgptRouteImport.update({
+  id: '/chatgpt',
+  path: '/chatgpt',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   id: '/forgot-password',
@@ -826,6 +832,7 @@ export interface FileRoutesByFullPath {
   '/app/$academySlug': typeof AppAcademySlugRouteRouteWithChildren
   '/api/sessions': typeof ApiSessionsRouteWithChildren
   '/api/students': typeof ApiStudentsRouteWithChildren
+  '/auth/chatgpt': typeof AuthChatgptRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/recover': typeof AuthRecoverRouteWithChildren
@@ -948,6 +955,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/api/sessions': typeof ApiSessionsRouteWithChildren
   '/api/students': typeof ApiStudentsRouteWithChildren
+  '/auth/chatgpt': typeof AuthChatgptRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/recover': typeof AuthRecoverRouteWithChildren
@@ -1073,6 +1081,7 @@ export interface FileRoutesById {
   '/app/$academySlug': typeof AppAcademySlugRouteRouteWithChildren
   '/api/sessions': typeof ApiSessionsRouteWithChildren
   '/api/students': typeof ApiStudentsRouteWithChildren
+  '/auth/chatgpt': typeof AuthChatgptRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/recover': typeof AuthRecoverRouteWithChildren
@@ -1200,6 +1209,7 @@ export interface FileRouteTypes {
     | '/app/$academySlug'
     | '/api/sessions'
     | '/api/students'
+    | '/auth/chatgpt'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/recover'
@@ -1322,6 +1332,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/api/sessions'
     | '/api/students'
+    | '/auth/chatgpt'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/recover'
@@ -1446,6 +1457,7 @@ export interface FileRouteTypes {
     | '/app/$academySlug'
     | '/api/sessions'
     | '/api/students'
+    | '/auth/chatgpt'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/recover'
@@ -1668,6 +1680,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/$academySlug'
       preLoaderRoute: typeof AppAcademySlugRouteRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/auth/chatgpt': {
+      id: '/auth/chatgpt'
+      path: '/chatgpt'
+      fullPath: '/auth/chatgpt'
+      preLoaderRoute: typeof AuthChatgptRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/auth/forgot-password': {
       id: '/auth/forgot-password'
@@ -2604,6 +2623,7 @@ const AuthRecoverRouteWithChildren = AuthRecoverRoute._addFileChildren(
 )
 
 interface AuthRouteRouteChildren {
+  AuthChatgptRoute: typeof AuthChatgptRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRecoverRoute: typeof AuthRecoverRouteWithChildren
@@ -2615,6 +2635,7 @@ interface AuthRouteRouteChildren {
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
+  AuthChatgptRoute: AuthChatgptRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRecoverRoute: AuthRecoverRouteWithChildren,

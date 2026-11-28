@@ -1,5 +1,6 @@
 # Current staff HTTP API
 
+- [Edra MCP for ChatGPT](chatgpt-mcp.md).
 - [Sessions and attendance OpenAPI](sessions-attendance.openapi.yaml).
 - [Assignments OpenAPI](assignments.openapi.yaml).
 - [Quizzes OpenAPI](quizzes.openapi.yaml).
