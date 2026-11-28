@@ -267,18 +267,9 @@ export const STAFF_GROUPS: readonly NavGroup[] = [
     items: [
       {
         label: "Manage",
+        // No page of its own: /app/manage redirects to General.
         href: "/app/manage",
         icon: "settings",
-        preview: {
-          title: "Manage academy",
-          purpose: "The administration workspace for intake, access, communication, and academy setup.",
-          sections: [
-            "Booking form settings and registrations for student intake.",
-            "Student access, coupons, and parent message delivery.",
-            "Academy profile, structure, booking form, team, notifications, and integrations.",
-            "Personal account and security settings.",
-          ],
-        },
         children: [
           {
             label: "General",

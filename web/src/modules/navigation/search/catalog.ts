@@ -8,7 +8,8 @@ export function commandEntries(platform: "staff" | "student", slug: string | und
   const pages = STAFF_GROUPS.flatMap(group => group.items.flatMap(item => [item, ...(item.children ?? [])]));
   return [
     ...(slug ? pages.filter(item => canViewStaffItem(item, role)).map(item => ({
-      title: item.label, href: publicHref(item.href, slug), group: "Pages", icon: item.icon,
+      // Manage has no page of its own; it opens General.
+      title: item.label, href: publicHref(item.href === "/app/manage" ? "/app/manage/academy" : item.href, slug), group: "Pages", icon: item.icon,
       ...(item.href === "/app/assessments" ? { keywords: "assignments quizzes exams homework" } : {}),
     })) : []),
     { title: STAFF_ACCOUNT.label, href: publicHref(STAFF_ACCOUNT.href, slug), group: "Pages", icon: STAFF_ACCOUNT.icon },
