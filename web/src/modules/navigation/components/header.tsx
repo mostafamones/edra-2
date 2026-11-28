@@ -47,7 +47,7 @@ export function PortalHeader({ portal, academies = [] }: { portal: "staff" | "st
         style={{ alignSelf: "center" }}
       />
       {/* Staff Home has no trail, so search takes its place; the sidebar hides its copy there to keep one shortcut owner. */}
-      {portal === "staff" && pathname === homeHref ? <div className="flex min-w-0 flex-1 md:max-w-sm"><SearchMenu platform="staff" /></div> : <Breadcrumb className="min-w-0 font-heading">
+      {portal === "staff" && pathname === homeHref ? <div className="flex min-w-0 flex-1 md:max-w-lg"><SearchMenu platform="staff" className="h-9 px-3" /></div> : <Breadcrumb className="min-w-0 font-heading">
         <BreadcrumbList className="flex-nowrap overflow-hidden">
           {portal === "student" ? studentCrumbs.map((crumb, index) => (
             <Fragment key={`${index}-${crumb.label}`}>

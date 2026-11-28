@@ -264,7 +264,7 @@ export function StaffSidebar() {
         {!management && (
           <div className="flex items-center gap-1 px-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:px-0 mt-2">
             {pathname !== "/app" && <SearchMenu platform="staff" className="group-data-[collapsible=icon]:hidden" />}
-            <QuickCreate />
+            <QuickCreate labeled={pathname === "/app"} />
           </div>
         )}
       </SidebarHeader>
