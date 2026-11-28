@@ -28,7 +28,7 @@ export function ConcernTitle({ scope, concernId, fallback, active, onDenied }: {
   return <div className="min-w-0 flex-1">
     <FloatingSheetTitle className="sr-only">{title}</FloatingSheetTitle>
     <div className="flex items-center gap-2">
-      <Input data-concern-title-edit="" aria-label="Concern title" autoFocus value={draft} maxLength={CONCERN_TITLE_MAX} dir="auto" className="h-8 font-semibold"
+      <Input variant="line" data-concern-title-edit="" aria-label="Concern title" autoFocus value={draft} maxLength={CONCERN_TITLE_MAX} dir="auto" className="h-8 border-input px-0 text-base font-semibold md:text-base"
         disabled={attempt.pending || attempt.uncertain} aria-invalid={!!attempt.failure || undefined}
         aria-describedby={attempt.failure ? `${concernId}-title-error` : undefined}
         onFocus={(event) => event.currentTarget.select()} onChange={(event) => setDraft(event.target.value)} onBlur={() => { if (!attempt.failure) save(); }}
