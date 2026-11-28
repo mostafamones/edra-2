@@ -14,7 +14,7 @@ const revision = z.number().int().min(0).max(1_000_000);
 const returnTo = z.string().max(1200).nullable();
 const bodies = {
   enter: z.object({ runId: z.guid(), studentLogicalId: logicalId.nullable(), returnTo }).strict(),
-  switch: z.object({ runId: z.guid(), logicalId, expectedRevision: revision, commandId: z.guid(), returnTo }).strict(),
+  switch: z.object({ targetRunId: z.guid().optional(), runId: z.guid(), logicalId, expectedRevision: revision, commandId: z.guid(), returnTo }).strict(),
   return: z.object({ runId: z.guid(), expectedRevision: revision, commandId: z.guid() }).strict(),
   exit: z.object({ runId: z.guid().nullable() }).strict(),
 };

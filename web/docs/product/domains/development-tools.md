@@ -69,3 +69,5 @@ No quizzes, replacement matching, prior/closed-year fixtures, content units, vid
 - Implementation briefs: [development tools plan](../../../planning/development-tools/README.md).
 - [Academic-year rules](academic-structure.md#academic-years).
 - [Staff/student permissions](../permissions.md).
+
+Developer mode's **Preview academy** selector lists every registered ready synthetic academy belonging to the original developer, including older runs. Selecting one enters its generated Owner and loads only that run's identities. Existing academies remain intact. Academy changes share the control's revision/lease and original two-hour expiry; they never renew authority. Exit preview restores the original developer session and entry destination across all switches. Cross-developer, unregistered, non-ready, expired and stale selections are rejected. Successful transitions clear browser query data, failure overrides and exam identity state before navigation.

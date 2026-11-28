@@ -21,6 +21,7 @@ begin
     'public.dev_control_open(uuid,text,uuid,uuid,uuid,text,text)', 'public.dev_control_state(text)',
     'public.dev_control_original(uuid)', 'public.dev_command_begin(uuid,uuid,integer,text,text,uuid)',
     'public.dev_command_complete(uuid,uuid,uuid,uuid,text,boolean,text,text,text)',
+    'public.dev_academy_command_begin(uuid,uuid,integer,text,text,uuid,uuid)',
     'public.dev_control_end(uuid,text)', 'public.dev_control_sessions(uuid,uuid[])',
     'public.dev_session_revoked(uuid,uuid)'] loop
     if has_function_privilege('anon', f, 'execute') or has_function_privilege('authenticated', f, 'execute') then
@@ -354,6 +355,40 @@ select pg_temp.assert_eq('A3 final switch complete',
   'completed');
 select pg_temp.assert_eq('A3 final instructor session', pg_temp.allowed('d0e10000-0000-4000-8000-0000000000a6',
   'd0e10000-0000-4000-8000-000000000003'), 'true');
+
+-- Multi-run changes retain the original control, ciphertext binding and deadline.
+savepoint academy_switch;
+insert into public.academies(id,name,slug,icon,subject,created_by) values
+ ('d0e10000-0000-4000-8000-0000000000f2','Older DEV','older-dev-test','school','Math','d0e10000-0000-4000-8000-000000000001');
+update edra_private.dev_runs set state='ready',academy_id='d0e10000-0000-4000-8000-0000000000f2',ready_at=now()-interval '1 day' where id='d0e10000-0000-4000-8000-0000000000e2';
+insert into edra_private.dev_contacts(phone,run_id,logical_id,purpose) values
+ ('+201099000005','d0e10000-0000-4000-8000-0000000000e2','account:staff:owner','login');
+insert into edra_private.dev_accounts(run_id,logical_id,kind,display_name,phone,user_id,credential_ciphertext,state) values
+ ('d0e10000-0000-4000-8000-0000000000e2','account:staff:owner','owner','Older Owner','+201099000005','d0e10000-0000-4000-8000-000000000005','v1.a.b.c','loaded');
+do $$ declare c edra_private.dev_controls%rowtype; j jsonb; begin
+ select * into c from edra_private.dev_controls where id='d0e10000-0000-4000-8000-0000000000c1';
+ if jsonb_array_length(public.dev_preview_context(c.developer_id)->'runs') <> 2 then raise exception 'missing older ready academy'; end if;
+ update edra_private.dev_runs set developer_id='d0e10000-0000-4000-8000-000000000005' where id='d0e10000-0000-4000-8000-0000000000e2';
+ j:=public.dev_academy_command_begin(c.id,'d0e10000-0000-4000-8000-0000000000b9',c.revision,'switch','account:staff:owner',c.current_session_id,'d0e10000-0000-4000-8000-0000000000e2');
+ if j->>'result' <> 'run_unavailable' then raise exception 'cross-developer allowed: %',j; end if;
+ update edra_private.dev_runs set developer_id=c.developer_id where id='d0e10000-0000-4000-8000-0000000000e2';
+ j:=public.dev_academy_command_begin(c.id,'d0e10000-0000-4000-8000-0000000000b9',c.revision,'switch','account:staff:owner',c.current_session_id,'d0e10000-0000-4000-8000-0000000000e2');
+ if j->>'result' <> 'begun' then raise exception 'older academy refused: %',j; end if;
+ if public.dev_command_complete(c.id,'d0e10000-0000-4000-8000-0000000000b9','d0e10000-0000-4000-8000-0000000000a5','d0e10000-0000-4000-8000-000000000005','receipt',true,null,null,null) <> 'completed' then raise exception 'academy completion failed'; end if;
+ if pg_temp.allowed(c.current_session_id::text,'d0e10000-0000-4000-8000-000000000003') <> 'false' or pg_temp.allowed('d0e10000-0000-4000-8000-0000000000a5','d0e10000-0000-4000-8000-000000000005') <> 'true' then raise exception 'cross-run session authority incorrect'; end if;
+ if not exists(select 1 from edra_private.dev_controls where id=c.id and run_id='d0e10000-0000-4000-8000-0000000000e2' and original_run_id=c.original_run_id and original_tokens=c.original_tokens and return_path=c.return_path and expires_at=c.expires_at) then raise exception 'original context or expiry changed'; end if;
+ j:=public.dev_academy_command_begin(c.id,'d0e10000-0000-4000-8000-0000000000b9',c.revision,'switch','account:staff:owner',c.current_session_id,'d0e10000-0000-4000-8000-0000000000e2');
+ if j->>'result' <> 'replay' then raise exception 'academy replay failed: %',j; end if;
+ j:=public.dev_academy_command_begin(c.id,'d0e10000-0000-4000-8000-0000000000ba',c.revision,'switch','account:staff:owner','d0e10000-0000-4000-8000-0000000000a5',c.run_id);
+ if j->>'result' <> 'conflict' then raise exception 'stale academy control accepted'; end if;
+ j:=public.dev_academy_command_begin(c.id,'d0e10000-0000-4000-8000-0000000000bb',c.revision+1,'return',null,'d0e10000-0000-4000-8000-0000000000a5','d0e10000-0000-4000-8000-0000000000e2');
+ if j->>'result' <> 'begun' then raise exception 'original return failed: %',j; end if;
+ if public.dev_command_complete(c.id,'d0e10000-0000-4000-8000-0000000000bb',null,null,null,true,null,null,null) <> 'completed' then raise exception 'original restoration failed'; end if;
+ if public.dev_control_original(c.id) is distinct from c.original_tokens then raise exception 'lost original restoration tokens'; end if;
+ perform public.dev_control_end(c.id,'exit');
+ if pg_temp.allowed('d0e10000-0000-4000-8000-0000000000a5','d0e10000-0000-4000-8000-000000000005') <> 'false' or pg_temp.allowed(c.original_session_id::text,c.developer_id::text) <> 'true' then raise exception 'exit session authority incorrect'; end if;
+end $$;
+rollback to academy_switch;
 
 update edra_private.dev_controls set expires_at = now() - interval '1 second'
   where id = 'd0e10000-0000-4000-8000-0000000000c1';

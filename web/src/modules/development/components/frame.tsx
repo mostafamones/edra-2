@@ -46,8 +46,16 @@ export function DeveloperPreviewFrame({ children }: { children: ReactNode }) {
     <>
       {preview && (
         <>
-          <div ref={bar} role="region" aria-label="Developer preview" className="sticky top-1 z-50 mx-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-t-xl border-b bg-background px-3 h-12 text-sm sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-            <span className="hidden text-muted-foreground sm:block">Viewing academy as</span>
+          <div ref={bar} role="region" aria-label="Developer preview" className="sticky top-1 z-50 mx-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-t-xl border-b bg-background px-3 min-h-12 py-1 text-sm sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+            <Select value={preview.run.id} disabled={pending} onOpenChange={(open) => { if (open) void status.refetch(); }}
+              onValueChange={(value) => {
+                if (value !== preview.run.id) void run("switch", { runId: preview.run.id, targetRunId: value,
+                  logicalId: "account:staff:owner", expectedRevision: preview.revision, returnTo: null });
+              }}>
+              <SelectTrigger size="sm" aria-label="Preview academy" className="w-auto max-w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>{(preview.academies ?? [preview.run]).map(academy =>
+                <SelectItem key={academy.id} value={academy.id}>{academy.academySlug}</SelectItem>)}</SelectContent>
+            </Select>
             <div className="flex min-w-0 items-center justify-center gap-2">
               <Select
                 value={preview.current.logicalId ?? "original"}

@@ -19,6 +19,7 @@ export type PreviewStatus =
     available: true;
     active: true;
     run: { id: string; academySlug: string };
+    academies?: { id: string; academySlug: string }[];
     revision: number;
     expiresAt: string;
     current: PreviewIdentity;

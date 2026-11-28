@@ -22,7 +22,7 @@ const STUDENT_ID = /^account:student:[a-z0-9-]+$/;
 
 type Pair = { access_token: string; refresh_token: string };
 type Control = {
-  id: string; run_id: string; academy_slug: string; developer_id: string; original_session_id: string; return_path: string;
+  id: string; run_id: string; original_run_id?: string; academy_slug: string; developer_id: string; original_session_id: string; return_path: string;
   current_logical_id: string | null; current_session_id: string | null; prior_logical_id: string | null;
   prior_return_path: string | null; revision: number; expires_at: string; ended_at: string | null; live: boolean;
   replay_session_id: string | null;
@@ -83,8 +83,8 @@ function sessionOfControl(control: Control, claims: Claims | null) {
   return claims.session_id === control.current_session_id || claims.session_id === control.replay_session_id;
 }
 
-const originalContext = (config: DevelopmentConfig, control: { id: string; run_id: string }) =>
-  ({ purpose: "original-session", projectRef: config.projectRef, runId: control.run_id, subject: control.id });
+const originalContext = (config: DevelopmentConfig, control: { id: string; run_id: string; original_run_id?: string }) =>
+  ({ purpose: "original-session", projectRef: config.projectRef, runId: control.original_run_id ?? control.run_id, subject: control.id });
 const receiptContext = (config: DevelopmentConfig, runId: string, commandId: string) =>
   ({ purpose: "issued-session", projectRef: config.projectRef, runId, subject: commandId });
 const pairOf = (session: Pick<Session, "access_token" | "refresh_token">): Pair =>
@@ -105,13 +105,13 @@ async function revokeSession(config: DevelopmentConfig, pair: Pair, scope: "loca
 
 /** Revokes this control's issued sessions except the kept ones; failures stay retryable. */
 async function revokeIssued(config: DevelopmentConfig, control: { id: string; run_id: string }, keep: (string | null)[]) {
-  const sessions = await rpc<{ session_id: string; receipt: string }[]>(config, "dev_control_sessions", {
+  const sessions = await rpc<{ session_id: string; receipt: string; run_id: string }[]>(config, "dev_control_sessions", {
     p_control_id: control.id, p_keep: keep.filter(Boolean),
   });
   let failed = false;
   for (const issued of sessions) {
     try {
-      await revokeSession(config, JSON.parse(openReceipt(config, control.run_id, issued.receipt)) as Pair);
+      await revokeSession(config, JSON.parse(openReceipt(config, issued.run_id, issued.receipt)) as Pair);
       await rpc(config, "dev_session_revoked", { p_control_id: control.id, p_session_id: issued.session_id });
     } catch {
       failed = true;
@@ -138,7 +138,7 @@ type SwitchPlan = {
   config: DevelopmentConfig; control: Control; claims: Claims; db: Awaited<ReturnType<typeof createClient>>;
   kind: "enter" | "switch" | "return"; target: string | null; commandId: string; expectedRevision: number;
   prior?: { logicalId: string | null; returnPath: string | null } | null;
-  staffPath?: string | null;
+  staffPath?: string | null; targetRun?: { id: string; academy_slug: string };
 };
 
 /**
@@ -148,19 +148,21 @@ type SwitchPlan = {
  */
 async function performSwitch(plan: SwitchPlan): Promise<PreviewResult> {
   const { config, control, claims, db, target } = plan;
+  const runId = plan.targetRun?.id ?? control.run_id;
+  const slug = plan.targetRun?.academy_slug ?? control.academy_slug;
   const begun = await rpc<{ result: string; revision?: number; receipt?: string | null; target_logical_id?: string | null }>(
-    config, "dev_command_begin", {
+    config, "dev_academy_command_begin", {
       p_control_id: control.id, p_command_id: plan.commandId, p_expected_revision: plan.expectedRevision, p_kind: plan.kind,
-      p_target_logical_id: target, p_previous_session_id: claims.session_id,
+      p_target_run_id: runId, p_target_logical_id: target, p_previous_session_id: claims.session_id,
     });
 
   if (begun.result === "replay") {
     const pair = begun.receipt
-      ? JSON.parse(openReceipt(config, control.run_id, begun.receipt)) as Pair
+      ? JSON.parse(openReceipt(config, runId, begun.receipt)) as Pair
       : JSON.parse(open(config.key, await rpc<string>(config, "dev_control_original", { p_control_id: control.id }), originalContext(config, control))) as Pair;
     const { error } = await db.auth.setSession(pair);
     if (error) return fail("session_inactive");
-    return { ok: true, revision: begun.revision, destination: destinationFor(control.academy_slug, begun.target_logical_id ?? null, plan.staffPath) };
+    return { ok: true, revision: begun.revision, destination: destinationFor(slug, begun.target_logical_id ?? null, plan.staffPath) };
   }
   if (begun.result !== "begun") return fail(begun.result as PreviewErrorCode);
 
@@ -189,11 +191,11 @@ async function performSwitch(plan: SwitchPlan): Promise<PreviewResult> {
     if (await complete(null, null, null, refreshed) !== "completed") return fail("conflict");
   } else {
     const account = await rpc<{ user_id: string; phone: string; credential: string } | null>(config, "dev_account", {
-      p_run_id: control.run_id, p_logical_id: target,
+      p_run_id: runId, p_logical_id: target,
     });
     if (!account) return fail("invalid_target");
     const password = open(config.key, account.credential, {
-      purpose: "account-password", projectRef: config.projectRef, runId: control.run_id, subject: account.user_id,
+      purpose: "account-password", projectRef: config.projectRef, runId, subject: account.user_id,
     });
     const transient = createSupabaseClient(config.url, config.publishableKey, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
@@ -203,7 +205,7 @@ async function performSwitch(plan: SwitchPlan): Promise<PreviewResult> {
     const pair = pairOf(data.session);
     const sessionId = sessionIdOf(pair.access_token);
     // Durable before the browser sees it, so a lost response can be replayed.
-    if (await complete(sessionId, account.user_id, sealReceipt(config, control.run_id, plan.commandId, pair), originalTokens) !== "completed") {
+    if (await complete(sessionId, account.user_id, sealReceipt(config, runId, plan.commandId, pair), originalTokens) !== "completed") {
       await revokeSession(config, pair).catch(() => {});
       return fail("conflict");
     }
@@ -213,7 +215,7 @@ async function performSwitch(plan: SwitchPlan): Promise<PreviewResult> {
   // Keep the new session and the replay binding of this command; revoke older issued sessions.
   const currentSession = target === null ? null : (await db.auth.getSession()).data.session;
   await revokeIssued(config, control, [currentSession ? sessionIdOf(currentSession.access_token) : null, claims.session_id]);
-  return { ok: true, revision: begun.revision, destination: destinationFor(control.academy_slug, target, plan.staffPath) };
+  return { ok: true, revision: begun.revision, destination: destinationFor(slug, target, plan.staffPath) };
 }
 
 async function activeContext() {
@@ -238,6 +240,11 @@ export async function previewLive(): Promise<boolean> {
   return Boolean(context?.control?.live && sessionOfControl(context.control, context.claims));
 }
 
+type Run = { id: string; academy_slug: string };
+async function registeredRuns(config: DevelopmentConfig, developerId: string) {
+  const result = await rpc<{ allowlisted: boolean; runs: Run[] }>(config, "dev_preview_context", { p_developer_id: developerId });
+  return result.allowlisted ? result.runs : [];
+}
 export async function previewStatus(): Promise<PreviewStatus> {
   const context = await activeContext();
   if (!context?.claims) return { available: false };
@@ -252,6 +259,7 @@ export async function previewStatus(): Promise<PreviewStatus> {
     return {
       available: true, active: true, run: { id: control.run_id, academySlug: control.academy_slug }, revision: control.revision,
       expiresAt: control.expires_at, current,
+      academies: (await registeredRuns(config, control.developer_id)).map(r => ({ id: r.id, academySlug: r.academy_slug })),
       priorStaff: current.kind === "student" ? identity(control.prior_logical_id, targets, developerName) : null,
       staffTargets: targets.staff.map((entry) => ({ logicalId: entry.logical_id, displayName: entry.display_name, role: entry.role })),
       students: targets.students.map((entry) => ({ logicalId: entry.logical_id, displayName: entry.display_name, recordId: entry.annual_student_record_id, participationType: entry.participation_type })),
@@ -283,8 +291,9 @@ export async function enterPreview(input: { runId: string; studentLogicalId: str
     p_developer_id: claims.sub,
   });
   if (!preview.allowlisted) return fail("forbidden");
-  if (preview.run?.id !== input.runId) return fail("run_unavailable");
-  const slug = preview.run.academy_slug;
+  const selected = (await registeredRuns(config, claims.sub)).find(r => r.id === input.runId);
+  if (!selected) return fail("run_unavailable");
+  const slug = selected.academy_slug;
   const directory = input.studentLogicalId ? studentsDirectoryPath(slug, input.returnTo) : null;
   if (input.studentLogicalId && !directory) return fail("invalid_request");
 
@@ -311,15 +320,22 @@ export async function enterPreview(input: { runId: string; studentLogicalId: str
   });
 }
 
-/** Switches to another generated staff or student target of the same run. */
+/** Switches identities, or enters the generated Owner of another authorized ready run. */
 export async function switchPreview(input: {
-  runId: string; logicalId: string; expectedRevision: number; commandId: string; returnTo: string | null;
+  runId: string; logicalId: string; expectedRevision: number; commandId: string; returnTo: string | null; targetRunId?: string;
 }): Promise<PreviewResult> {
   const context = await activeContext();
   if (!context) return fail("unavailable");
   const { config, db, claims, control } = context;
-  if (!control || !control.live || control.run_id !== input.runId) return fail("inactive");
+  if (!control || !control.live || (control.run_id !== input.runId && control.run_id !== input.targetRunId)) return fail("inactive");
   if (!claims || !sessionOfControl(control, claims)) return fail("session_mismatch");
+  if (input.targetRunId) {
+    if (!config.developerIds.has(control.developer_id)) return fail("forbidden");
+    const selected = (await registeredRuns(config, control.developer_id)).find(r => r.id === input.targetRunId);
+    if (!selected) return fail("run_unavailable");
+    return performSwitch({ config, control, claims, db, kind: "switch", target: STAFF_ENTRY,
+      targetRun: selected, commandId: input.commandId, expectedRevision: input.expectedRevision, prior: null });
+  }
   const toStudent = STUDENT_ID.test(input.logicalId);
   const fromStudent = control.current_logical_id !== null && STUDENT_ID.test(control.current_logical_id);
   // Entering student view remembers the current staff identity and its validated directory context;
