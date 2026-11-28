@@ -70,6 +70,8 @@ export async function leaveForIdentity(destination: string) {
 
 export function previewErrorMessage(error: PreviewErrorCode): string {
   switch (error) {
+    case "run_unavailable":
+      return "Academy is no longer available. Choose another academy.";
     case "stale":
     case "conflict":
     case "busy":

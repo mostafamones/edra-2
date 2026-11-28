@@ -8328,6 +8328,18 @@ export type Database = {
         Args: { p_logical_id: string; p_run_id: string }
         Returns: Json
       }
+      dev_academy_command_begin: {
+        Args: {
+          p_command_id: string
+          p_control_id: string
+          p_expected_revision: number
+          p_kind: string
+          p_previous_session_id: string
+          p_target_logical_id: string
+          p_target_run_id: string
+        }
+        Returns: Json
+      }
       dev_command_begin: {
         Args: {
           p_command_id: string

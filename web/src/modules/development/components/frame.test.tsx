@@ -26,6 +26,15 @@ afterEach(() => { cleanup(); vi.useRealTimers(); });
 const mount = (status: unknown) => { api.status.mockReturnValue(status); return render(<DeveloperPreviewFrame><p>App content</p></DeveloperPreviewFrame>); };
 
 describe("DeveloperPreviewFrame", () => {
+  it("selects an older academy with the current revision and resets to its Owner", async () => {
+    const older = "22345678-1234-4123-8123-123456789012";
+    mount({ ...base, current: original, academies: [base.run, { id: older, academySlug: "older-dev" }] });
+    fireEvent.click(screen.getByRole("combobox", { name: "Preview academy" }));
+    fireEvent.click(await screen.findByRole("option", { name: "older-dev" }));
+    expect(api.run).toHaveBeenCalledWith("switch", { runId, targetRunId: older,
+      logicalId: "account:staff:owner", expectedRevision: 7, returnTo: null });
+  });
+
   it("recovers when a generated identity reaches its trusted preview expiry", async () => {
     vi.useFakeTimers();
     mount({ ...base, current: studentIdentity, expiresAt: new Date(Date.now() + 1000).toISOString() });

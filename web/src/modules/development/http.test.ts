@@ -114,6 +114,12 @@ describe("previewPost body validation", () => {
 });
 
 describe("previewPost service calls", () => {
+  it("passes a selected academy through the strict switch contract", async () => {
+    api.switchPreview.mockResolvedValue({ ok: true, destination: "/", revision: 4 });
+    await previewPost(post({ ...bodies.switch, targetRunId: runId }), "switch");
+    expect(api.switchPreview).toHaveBeenCalledWith({ ...bodies.switch, targetRunId: runId });
+  });
+
   it("passes parsed data to the enter service", async () => {
     api.enterPreview.mockResolvedValue({ ok: true, destination: "/edra-dev-abc/students" });
     const response = await previewPost(post({ ...bodies.enter, studentLogicalId: logicalId }), "enter");

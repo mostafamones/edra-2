@@ -91,3 +91,5 @@ An unregistered run or a run belonging to another project is refused. A destruct
 - On `edra-1`, no control has been opened, because that needs your real password session.
 - BroadcastChannel only reaches tabs on the same origin. Staff and student tabs pick up identity changes through the existing focus and navigation revalidation.
 - Expansion to 300–500 students and reset execution are outside this scope.
+
+Developer mode's **Preview academy** selector lists every registered ready synthetic academy belonging to the original developer, including older runs. Selecting one enters its generated Owner and loads only that run's identities. Existing academies remain intact. Academy changes share the control's revision/lease and original two-hour expiry; they never renew authority. Exit preview restores the original developer session and entry destination across all switches. Cross-developer, unregistered, non-ready, expired and stale selections are rejected. Successful transitions clear browser query data, failure overrides and exam identity state before navigation.
