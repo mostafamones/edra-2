@@ -70,9 +70,9 @@ export function ConcernMessageItem({ message, outgoing, first = true, academyId,
   const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return <article data-concern-seq={outgoing ? undefined : message.seq} data-concern-message={message.id} tabIndex={-1}
     className={cn("group/message relative flex min-w-0 gap-3 rounded-md ps-3 pe-1 py-0.5 hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring target:bg-muted", first && "mt-1 pt-1.5")}>
-    <div className="flex w-8 shrink-0 justify-center">{first
-      ? <Avatar aria-hidden="true" className="mt-0.5"><AvatarImage src={avatarUrls[author?.avatarPath ?? ""]} alt="" /><AvatarFallback className="text-xs">{initials}</AvatarFallback></Avatar>
-      : <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()} className="invisible pt-0.5 text-[10px] tabular-nums text-muted-foreground group-hover/message:visible">{new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>}</div>
+    <div className="flex w-12 shrink-0 justify-center">{first
+      ? <Avatar aria-hidden="true" size="lg" className="mt-0.5"><AvatarImage src={avatarUrls[author?.avatarPath ?? ""]} alt="" /><AvatarFallback className="text-xs">{initials}</AvatarFallback></Avatar>
+      : <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()} className="invisible pt-0.5 text-[10px] whitespace-nowrap tabular-nums text-muted-foreground group-hover/message:visible">{new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>}</div>
     <div className="flex min-w-0 flex-1 flex-col">
       {first && <div className="flex items-baseline gap-2"><span className="text-sm font-semibold break-words" dir="auto">{name}</span>{time}</div>}
       {editing && !settled && !deleted ? <form className="w-full" onSubmit={(event) => { event.preventDefault(); if (body.trim() || hasMedia) { setEditing(false); void run(() => commands.edit(message.id, { body: body.trim() ? body : null, mentions: body.trim() ? mentionIds(body, mentions) : [] }), undefined, () => setEditing(true)); } }}>

@@ -206,7 +206,7 @@ describe("floating concern panel consumers", () => {
     await screen.findByText("Messages can only be edited within five minutes of sending.");
     expect(messageText(screen.getByLabelText("Edit message"))).toBe("Corrected");
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    await screen.findByText("Edited");
+    await screen.findByText("(edited)");
     expect(screen.getByText("Corrected")).toBeTruthy();
     await menu(); fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
     await screen.findByText("Message deleted");

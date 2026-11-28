@@ -96,7 +96,7 @@ function ScopedConcernPanel({ academyId, userId, manager, owner, children }: Con
     </TooltipTrigger><TooltipContent side="left">Concerns</TooltipContent></Tooltip>
     {(open || everOpened) && <Activity mode={open ? "visible" : "hidden"}>
     <FloatingSheet open onOpenChange={setOpen}>
-      <FloatingSheetContent ref={content} data-concern-panel="" aria-modal aria-describedby={undefined} showCloseButton={false} className="gap-0"
+      <FloatingSheetContent ref={content} data-concern-panel="" aria-modal aria-describedby={undefined} showCloseButton={false} className="w-2xl max-w-[calc(100vw-2rem)] gap-0"
         onOpenAutoFocus={(event) => { event.preventDefault(); const input = content.current?.querySelector<HTMLElement>("input:not([disabled]),textarea:not([disabled])") ?? content.current?.querySelector<HTMLElement>("button"); input?.focus(); }}
         onCloseAutoFocus={(event) => { event.preventDefault(); launcher.current?.focus(); }}>
         <header className="flex shrink-0 items-center gap-2 px-3 py-3">
