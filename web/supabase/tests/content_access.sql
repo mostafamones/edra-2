@@ -188,5 +188,11 @@ set local role authenticated;
 select pg_temp.lact('second');
 select pg_temp.lerror(format('select public.list_my_content_units(%L)',pg_temp.lid('academy')),'student_unavailable');
 reset role;
+
+-- Deleting the academy removes all of the history built above without leaving orphans.
+reset role;
+\ir helpers/academy_delete.sql
+select pg_temp.delete_and_check(pg_temp.lid('academy'), pg_temp.lid('owner'));
+
 rollback;
 select 'Learning access: grants, codes, redemption, expiry, annual extensions, history and isolation passed' as result;

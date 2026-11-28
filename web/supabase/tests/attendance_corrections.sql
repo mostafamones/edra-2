@@ -429,4 +429,10 @@ do $$ declare result jsonb; begin
   if not (result->>'replayed')::boolean then raise exception 'Receipt did not replay after archival: %', result; end if;
 end $$;
 
+
+-- Deleting the academy removes all of the history built above without leaving orphans.
+reset role;
+\ir helpers/academy_delete.sql
+select pg_temp.delete_and_check('c5555555-5555-4555-8555-555555555555', 'c1111111-1111-4111-8111-111111111111');
+
 rollback;

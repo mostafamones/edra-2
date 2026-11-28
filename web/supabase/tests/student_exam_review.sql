@@ -438,4 +438,10 @@ select pg_temp.expect_error(format('select public.get_my_exam_review(%L, %L)', p
 select pg_temp.expect_error(format('select public.authorize_my_exam_review_images(%L, %L, array[%L]::uuid[])', pg_temp.id('academy'), pg_temp.id('main'), pg_temp.id('img-prompt')), 'student_link_unavailable');
 reset role;
 
+
+-- Deleting the academy removes all of the history built above without leaving orphans.
+reset role;
+\ir helpers/academy_delete.sql
+select pg_temp.delete_and_check(pg_temp.id('academy'), pg_temp.id('owner'));
+
 rollback;

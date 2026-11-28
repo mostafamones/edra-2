@@ -479,5 +479,11 @@ select pg_temp.expect_error(format($s$ select public.publish_assignment_results(
 
 set local request.jwt.claim.sub = 'a1111111-1111-4111-8111-111111111111';
 select pg_temp.expect_error($s$ select public.exclude_assignment_question('a5555555-5555-4555-8555-555555555555','a9999999-0000-4000-8000-000000000003',current_setting('test.correction_question')::uuid,4,gen_random_uuid()) $s$,'year_unavailable');
+
+-- Deleting the academy removes all of the history built above without leaving orphans.
+reset role;
+\ir helpers/academy_delete.sql
+select pg_temp.delete_and_check('a5555555-5555-4555-8555-555555555555', 'a1111111-1111-4111-8111-111111111111');
+
 rollback;
 select 'assignment marks checks passed';
