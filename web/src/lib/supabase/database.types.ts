@@ -4848,6 +4848,45 @@ export type Database = {
           },
         ]
       }
+      question_bank_question_labels: {
+        Row: {
+          academy_id: string
+          created_at: string
+          domain: string
+          label_id: string
+          question_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          domain?: never
+          label_id: string
+          question_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          domain?: never
+          label_id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_bank_question_labels_label_fkey"
+            columns: ["academy_id", "domain", "label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["academy_id", "domain", "id"]
+          },
+          {
+            foreignKeyName: "question_bank_question_labels_question_fkey"
+            columns: ["academy_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "question_bank_questions"
+            referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
       question_bank_questions: {
         Row: {
           academy_id: string
@@ -9703,6 +9742,15 @@ export type Database = {
       set_my_avatar: {
         Args: { p_expected: string; p_path: string }
         Returns: Json
+      }
+      set_question_bank_label: {
+        Args: {
+          p_academy_id: string
+          p_applied: boolean
+          p_label_id: string
+          p_question_ids: string[]
+        }
+        Returns: number
       }
       set_question_bank_memberships: {
         Args: {

@@ -34,7 +34,7 @@ insert into public.question_bank_questions(academy_id,id,created_by,payload)
     'topic','Old label','source',jsonb_build_object('file','book.pdf','page',3)) from bank_context;
 create temp table bank_ids(name text primary key, id uuid);
 grant select, insert on bank_ids to authenticated;
-insert into bank_ids select n, gen_random_uuid() from unnest(array['doc','doc_same_name','q2','q3','q4','q5','custom']) n;
+insert into bank_ids select n, gen_random_uuid() from unnest(array['doc','doc_same_name','q2','q3','q4','q5','custom','hard']) n;
 
 create function pg_temp.question(p_id uuid, p_page integer, p_section jsonb, p_topics jsonb, p_unit uuid default null) returns jsonb language sql as $q$
   select jsonb_build_object('id',p_id,'unitId',p_unit,'section',p_section,'topics',p_topics,'payload',jsonb_build_object(
@@ -161,6 +161,22 @@ begin
   end;
   if not rejected then raise exception 'Choice keys changed by an edit'; end if;
 
+  -- Labels: the questions catalog applies to saved questions; another catalog's label is rejected; retries change nothing.
+  perform public.create_label(c.academy,pg_temp.id('hard'),'Hard','red','questions');
+  if public.set_question_bank_label(c.academy,array[pg_temp.id('q2'),pg_temp.id('q2')],pg_temp.id('hard'),true) <> 1
+    or public.set_question_bank_label(c.academy,array[pg_temp.id('q2')],pg_temp.id('hard'),true) <> 0
+    or public.get_question_bank_question(c.academy,pg_temp.id('q2'))->'labels' <> jsonb_build_array(pg_temp.id('hard'))
+    or not exists(select 1 from jsonb_array_elements(public.list_question_bank_questions(c.academy,null,'',0,24)->'rows') r
+      where r->>'id'=pg_temp.id('q2')::text and r->'labels' = jsonb_build_array(pg_temp.id('hard')))
+    then raise exception 'Question label not applied or listed'; end if;
+  rejected := false;
+  begin perform public.set_question_bank_label(c.academy,array[pg_temp.id('q2')],
+    (select id from public.labels where academy_id=c.academy and domain='assessments' limit 1),true);
+  exception when raise_exception then if sqlerrm='label_not_found' then rejected := true; else raise; end if;
+  end;
+  if not rejected then raise exception 'Assessment label applied to a question'; end if;
+  if public.delete_label(c.academy,pg_temp.id('hard'),false)->>'status' <> 'confirm' then raise exception 'Used question label deleted without confirmation'; end if;
+
   -- Archive hides a question from lists and counts; restore returns it; delete removes it and its memberships.
   listed := public.get_question_bank_collections(c.academy);
   if public.set_question_bank_archived(c.academy,array[pg_temp.id('q2')],true) <> 1 then raise exception 'Archive failed'; end if;
@@ -173,7 +189,8 @@ begin
   if (public.list_question_bank_questions(c.academy,topic_id,'',0,24)->>'total')::int <> 1 then raise exception 'Restore failed'; end if;
   if public.delete_question_bank_questions(c.academy,array[pg_temp.id('q2')]) <> 1
     or exists(select 1 from public.question_bank_questions where id=pg_temp.id('q2'))
-    or exists(select 1 from public.question_bank_memberships where question_id=pg_temp.id('q2')) then raise exception 'Delete failed'; end if;
+    or exists(select 1 from public.question_bank_memberships where question_id=pg_temp.id('q2'))
+    or exists(select 1 from public.question_bank_question_labels where question_id=pg_temp.id('q2')) then raise exception 'Delete failed'; end if;
 end $$;
 
 select set_config('request.jwt.claim.sub',instructor_id::text,true) from bank_context;
@@ -199,6 +216,11 @@ begin
   exception when raise_exception then if sqlerrm='forbidden' then rejected := true; else raise; end if;
   end;
   if not rejected then raise exception 'Instructor can delete questions'; end if;
+  rejected := false;
+  begin perform public.set_question_bank_label(c.academy,array[c.question_id],gen_random_uuid(),true);
+  exception when raise_exception then if sqlerrm='forbidden' then rejected := true; else raise; end if;
+  end;
+  if not rejected then raise exception 'Instructor can label questions'; end if;
 end $$;
 select set_config('request.jwt.claim.sub',outsider_id::text,true) from bank_context;
 do $$
