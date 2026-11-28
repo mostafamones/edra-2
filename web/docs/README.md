@@ -10,6 +10,7 @@
 - [Teaching and attendance](product/domains/teaching.md).
 - [Content and learning access](product/domains/learning.md).
 - [Assessments and results](product/domains/assessments.md).
+- [Question bank](product/domains/question-bank.md): saved-question library, separate import page and overlapping collections.
 - [Labels](product/domains/labels.md): shared academy feature, initially integrated with assessments.
 - [Concern threads](product/domains/concerns.md): agreed shared staff conversation rules and first web delivery scope.
 - [Reports, notes and messages](product/domains/family.md).

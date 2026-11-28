@@ -1484,6 +1484,20 @@ expect_rejected p7b "a reschedule crossed an execution" schedule_conflict
 [ "$(pub_doc "$U")" = "Live,Candidate" ] || fail "execution did not stand beside a reschedule: $(pub_doc "$U")"
 grep -qi deadlock "$OUT"/p[1-7]* && fail "a scheduled publication race deadlocked"
 
+# QB. Two identical question-bank import saves race (an uncertain retry): the second waits on the first and
+#     reuses its question, document, section, topic and memberships instead of duplicating or failing.
+QB_Q="$(uuid)"; QB_DOC="$(uuid)"
+qb_save="$as_admin select public.save_question_bank_import('$ACADEMY','[{\"id\":\"$QB_Q\",\"unitId\":null,\"section\":{\"name\":\"Race\",\"firstPage\":2,\"continues\":false},\"topics\":[\"Race topic\"],\"payload\":{\"prompt\":\"Race\",\"choices\":[],\"visuals\":[],\"source\":{\"file\":\"race.pdf\",\"page\":2}}}]','{\"id\":\"$QB_DOC\",\"name\":\"Race book\"}');"
+hold qb1 qb2 "$qb_save"
+start qb2 "$qb_save"
+wait
+expect_ok qb1 "the question-bank save holding the question failed"
+expect_ok qb2 "an identical concurrent question-bank retry failed"
+[ "$(psqlx -tA -c "select count(*) from public.question_bank_memberships where question_id = '$QB_Q'")" = 3 ] \
+  || fail "a concurrent retry duplicated or lost question-bank memberships"
+[ "$(psqlx -tA -c "select count(*) from public.question_bank_collections where academy_id = '$ACADEMY'")" = 3 ] \
+  || fail "a concurrent retry duplicated question-bank collections"
+
 # 26. Year closure holds the year row and, through its triggers, the quiz and exam rows; a concurrent worker
 #     settlement and a staff command both queue behind it (year share lock first, then the quiz) and
 #     neither deadlocks. After the commit the worker finds a closed year and the command is refused.

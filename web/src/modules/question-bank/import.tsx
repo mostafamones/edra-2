@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { normalizeMathSource, mathIssue } from "@/lib/math";
 import { normalizePrompt } from "./prompt";
 import { QuestionTextField } from "./text-field";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiMagicIcon, Alert02Icon, BookOpen01Icon, Download01Icon, File01Icon, FileUploadIcon, RefreshIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { AiMagicIcon, Alert02Icon, ArrowLeft01Icon, BookOpen01Icon, Download01Icon, File01Icon, FileUploadIcon, RefreshIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import Link from "@/components/shared/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empt
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { staffAcademyHref } from "@/lib/routing";
 import { newUuid } from "@/lib/uuid";
 import { parseImport, type PageIssue, type Question, type SourceCrop, type SourcePage, type SourceRegion } from "./parser";
 import { inspectPdf, readPdf, retryPage } from "./pdf";
@@ -23,15 +25,18 @@ import { CropDialog } from "./crop-dialog";
 import { sampleBook, sampleKey } from "./sample";
 import { useImageBlob } from "./use-image";
 import { extractWithGemini, mergeExtraction, ScanResultCache, type GeminiImport } from "./extract";
-import { groupTopics, type TopicAssignment, type TopicEdits } from "./topics";
+import { changeTopics, groupTopics, type TopicAssignment, type TopicEdits } from "./topics";
 import { TopicsDialog } from "./topics-dialog";
 import { AssignUnits, type LinkSelection } from "./assign-units";
-import { SavedBank, savedBankKey, type BankScope } from "./saved-bank";
 import { saveQuestionBank } from "./bank";
+import { bankKeys, collectionsOptions, type BankScope } from "./queries";
+import { sectionRuns } from "./sections";
+import { LeaveGuard } from "./leave-guard";
 import { maxSaveBytes, type SaveBankInput } from "./bank-contract";
 
 type Source = { name: string; pages: SourcePage[] };
-type Batch = { book: Source; key?: Source; extracted?: GeminiImport; file?: File; range?: PageRange; partial?: boolean };
+type SourceDocument = { id: string; name: string };
+type Batch = { book: Source; document: SourceDocument; key?: Source; extracted?: GeminiImport; file?: File; range?: PageRange; partial?: boolean };
 type Attachment = QuestionVisual & { id: number };
 type Edit = { prompt: string; choices: Question["choices"]; visuals: Attachment[]; answer: string | null; answerSource?: { file: string; page: number }; modelAnswer: string; reviewed: boolean };
 type Selection = { question: string } | { issue: PageIssue };
@@ -66,11 +71,14 @@ function AttachmentPreview({ image, description }: Pick<QuestionVisual, "image" 
 }
 
 const initialEdit = (q: Question): Edit => ({ prompt: normalizePrompt(q.prompt, q.number), choices: q.choices.map(c => ({ ...c, text: normalizeMathSource(c.text) })), visuals: [], answer: null, modelAnswer: normalizeMathSource(q.modelAnswer ?? ""), reviewed: false });
+const newDocument = "new";
+const noScope: BankScope = { academyId: "", academySlug: "", accountId: "" };
+const documentTitle = (file: File) => file.name.replace(/\.pdf$/iu, "").trim().slice(0, 255) || file.name.slice(0, 255);
 const sourceName = (issue: PageIssue) => issue.source === "Book" ? "book" : "key";
 const pdfError = (cause: unknown) => cause instanceof Error && cause.message.startsWith("Choose a PDF")
   ? cause.message : "Couldn’t open the PDF. Choose a readable PDF without a password.";
 
-async function download(batch: Batch, records: Question[], edits: Record<string, Edit>, topics: Map<string, TopicAssignment>) {
+async function download(batch: Batch, records: Question[], edits: Record<string, Edit>, topics: Map<string, TopicAssignment[]>) {
   const assets = new Map<number, Promise<string>>();
   function evidence(region: SourceRegion) {
     const image = batch.book.pages.find(page => page.number === region.page)?.image;
@@ -85,7 +93,7 @@ async function download(batch: Batch, records: Question[], edits: Record<string,
     })));
     return {
       section: q.section, printedNumber: q.number, prompt: e.prompt, choices: e.choices,
-      topic: topics.get(q.id) ?? null,
+      topic: topics.get(q.id)?.[0] ?? null, topics: topics.get(q.id) ?? [],
       answer: e.answer ? { choiceKey: e.answer, verification: "human", source: e.answerSource } : null,
       ...(!e.choices.length && e.modelAnswer.trim() ? { modelAnswer: e.modelAnswer.trim() } : {}),
       source, visuals,
@@ -101,7 +109,7 @@ async function download(batch: Batch, records: Question[], edits: Record<string,
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademyId?: string; bankScope?: BankScope } = {}) {
+export function QuestionImportPage({ geminiAcademyId, bankScope }: { geminiAcademyId?: string; bankScope?: BankScope } = {}) {
   const [bookFiles, setBookFiles] = useState<File[]>([]);
   const [fileIndex, setFileIndex] = useState(0);
   const bookFile = bookFiles[fileIndex];
@@ -113,6 +121,14 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
   const largeBook = totalPages > maxBatchPages;
   const partialRange = range.first !== 1 || range.last !== totalPages;
   const readyToImport = !!bookFile && validPageRange(range, totalPages);
+  function sourceDocument(file: File): SourceDocument | undefined {
+    if (existingDocument) return { id: existingDocument.id, name: existingDocument.name };
+    const name = choice?.name.trim();
+    if (!name) return;
+    let id = documentIds.current.get(file);
+    if (!id) { id = newUuid(); documentIds.current.set(file, id); }
+    return { id, name };
+  }
   useEffect(() => {
     if (!bookFile) return;
     let active = true;
@@ -124,6 +140,14 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
     return () => { active = false; };
   }, [bookFile]);
   const [keyFile, setKeyFile] = useState<File>();
+  const collections = useQuery({ ...collectionsOptions(bankScope ?? noScope), enabled: !!bankScope });
+  const libraryDocuments = collections.data?.collections.filter(item => item.kind === "source_document") ?? [];
+  // One identity per selected PDF for this import, reused across page ranges and save batches.
+  const documentIds = useRef(new WeakMap<File, string>());
+  const sampleDocument = useRef<SourceDocument>(null);
+  const [documentChoice, setDocumentChoice] = useState<{ file: File; existing: string; name: string }>();
+  const choice = documentChoice?.file === bookFile ? documentChoice : bookFile ? { file: bookFile, existing: newDocument, name: documentTitle(bookFile) } : undefined;
+  const existingDocument = libraryDocuments.find(item => item.id === choice?.existing);
   const [batch, setBatch] = useState<Batch>();
   const [status, setStatus] = useState("");
   const [importState, setImportState] = useState<"idle" | "running" | "stopping">("idle");
@@ -156,10 +180,12 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
   const choiceMathErrors = e?.choices.map(choice => mathIssue(choice.text)) ?? [];
   const invalidMath = !!(promptMathError || answerMathError || choiceMathErrors.some(Boolean));
   const included = report?.questions.filter(q => !excluded.has(q.id)) ?? [];
-  const { groups, assignments } = groupTopics(included, topicEdits);
+  const { groups, primary, assignments } = groupTopics(included, topicEdits);
+  const libraryTopics = collections.data?.collections.filter(item => item.kind === "topic").map(item => item.name) ?? [];
+  const customCollections = collections.data?.collections.filter(item => item.kind === "custom") ?? [];
   const filteredTopic = groups.find(group => group.key === topicFilter);
   const reviewed = included.filter(q => edits[q.id]?.reviewed);
-  const saveGroups = groups.map(group => ({ ...group, questions: group.questions.filter(question => edits[question.id]?.reviewed && !savedIds.has(question.id)) }))
+  const saveGroups = primary.map(group => ({ ...group, questions: group.questions.filter(question => edits[question.id]?.reviewed && !savedIds.has(question.id)) }))
     .filter(group => group.questions.length > 0);
   const flagged = included.filter(q => q.issues.length && !edits[q.id]?.reviewed).length;
   const pageIssues = report?.issues.length ?? 0;
@@ -202,7 +228,8 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
   function openSample() {
     if (savingBank.current) return;
     setError("");
-    open({ book: { name: "Sample question book", pages: sampleBook }, key: { name: "Sample answer key", pages: sampleKey } });
+    sampleDocument.current ??= { id: newUuid(), name: "Sample question book" };
+    open({ book: { name: "Sample question book", pages: sampleBook }, document: sampleDocument.current, key: { name: "Sample answer key", pages: sampleKey } });
   }
 
   function select(next?: Selection) {
@@ -228,7 +255,8 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
   }
 
   async function importFiles(mode: "local" | "gemini" = "local") {
-    if (!bookFile || !readyToImport || status || importRun.current || savingBank.current || (mode === "gemini" && !geminiAcademyId)) return;
+    const identity = bookFile && sourceDocument(bookFile);
+    if (!bookFile || !identity || !readyToImport || status || importRun.current || savingBank.current || (mode === "gemini" && !geminiAcademyId)) return;
     const run = new AbortController();
     importRun.current = run;
     setImportState("running");
@@ -254,7 +282,7 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
           setError(`Page ${extracted.issues[0].page}: ${extracted.issues[0].reason}. Your current review is still open.`);
           return;
         }
-        open({ book, key, extracted, file: bookFile, range, partial: partialRange });
+        open({ book, document: identity, key, extracted, file: bookFile, range, partial: partialRange });
       }
     } catch (cause) {
       if (run.signal.aborted) return;
@@ -341,22 +369,24 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
     if (selection.links.some(link => !byId.has(link.questionId))) return "The review changed. Check the selected questions again.";
     savingBank.current = true;
     try {
+      const sections = sectionRuns(report?.questions ?? [], batch.range);
       const questions: SaveBankInput["questions"] = await Promise.all(selection.links.map(async ({ questionId, unitId }) => {
         const question = byId.get(questionId)!;
         const edit = edits[questionId];
         const id = bankIds.current.get(questionId) ?? newUuid();
         bankIds.current.set(questionId, id);
-        return { id, unitId, payload: {
+        // Only topics staff confirmed become memberships; suggestions are not saved.
+        return { id, unitId, topics: topicEdits[questionId]?.confirmed ?? [], section: sections.get(questionId) ?? null, payload: {
           prompt: edit.prompt, choices: edit.choices, answer: edit.answer, ...(edit.answerSource ? { answerSource: edit.answerSource } : {}),
           ...(!edit.choices.length && edit.modelAnswer.trim() ? { modelAnswer: edit.modelAnswer.trim() } : {}),
-          topic: assignments.get(questionId)?.label ?? null, section: question.section, printedNumber: question.number,
+          topic: null, section: question.section, printedNumber: question.number,
           source: { file: batch.book.name, page: question.page, continuationPages: question.continuations?.map(region => region.page) ?? [] },
           visuals: await Promise.all(edit.visuals.map(async visual => ({
             description: visual.description, bounds: visual.bounds, page: visual.page, image: await sourceDataUrl(visual.image),
           }))),
         } };
       }));
-      const data: SaveBankInput = { academyId: bankScope.academyId, programId: selection.programId, questions };
+      const data: SaveBankInput = { academyId: bankScope.academyId, programId: selection.programId, document: batch.document, collectionId: selection.collectionId, questions };
       if (new TextEncoder().encode(JSON.stringify(data)).length > maxSaveBytes) return "This selection is too large. Save fewer questions at a time.";
       const result = await saveQuestionBank({ data });
       if (!result.ok) return result.message;
@@ -384,11 +414,15 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
     select(nextQuestion ? { question: nextQuestion.id } : undefined);
   }
 
+  const libraryHref = bankScope && staffAcademyHref(bankScope.academySlug, "/question-bank");
   return <main className="page-shell space-y-4">
+    <LeaveGuard when={importState !== "idle" || (!!batch && unsaved)} />
     <header className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap items-center gap-3"><h1 className="font-heading text-2xl font-semibold">Question bank</h1><Badge variant="secondary">Import beta</Badge></div>
+      <div className="flex flex-wrap items-center gap-3">
+        {libraryHref && <Button asChild size="sm" variant="ghost"><Link href={libraryHref}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} />Library</Link></Button>}
+        <h1 className="font-heading text-2xl font-semibold">Import PDF</h1><Badge variant="secondary">Beta</Badge>
+      </div>
       <div className="flex flex-wrap gap-2">
-        {bankScope && <SavedBank scope={bankScope} />}
         {batch && report && <>
         <Button variant="outline" disabled={!!status} aria-expanded={importOpen} aria-controls="qb-import" onClick={() => setImportOpen(open => !open)}>{importOpen ? "Hide import" : "Import PDF"}</Button>
         {geminiAcademyId && failedPages.length > 0 && <Button variant="outline" disabled={!!status} onClick={() => void retryGemini()}>
@@ -399,7 +433,7 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
           setImportOpen(true);
         }}>Next pages: {nextRange.first}–{nextRange.last}</Button>}
         <Button variant="outline" disabled={!reviewed.length || !!status} onClick={() => void exportReviewed()}><HugeiconsIcon icon={Download01Icon} strokeWidth={1.5} />Export reviewed ({reviewed.length})</Button>
-        {bankScope && <BankSave scope={bankScope} groups={saveGroups} disabled={!!status} onSave={saveToBank} />}
+        {bankScope && <BankSave scope={bankScope} groups={saveGroups} collections={customCollections} disabled={!!status} onSave={saveToBank} />}
         </>}
       </div>
     </header>
@@ -422,11 +456,25 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
             <SelectContent>{bookFiles.map((file, index) => <SelectItem key={index} value={String(index)}>{index + 1}. {file.name}</SelectItem>)}</SelectContent>
           </Select>
         </Field>}
+        {bookFile && choice && <Field className="min-w-48 flex-1"><FieldLabel htmlFor="qb-document">Source document</FieldLabel>
+          <Select value={existingDocument ? choice.existing : newDocument} disabled={!!status || !libraryDocuments.length}
+            onValueChange={existing => setDocumentChoice({ ...choice, existing })}>
+            <SelectTrigger id="qb-document" className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={newDocument}>New document</SelectItem>
+              {libraryDocuments.map(item => <SelectItem key={item.id} value={item.id}><span dir="auto">{item.name}</span></SelectItem>)}
+            </SelectContent>
+          </Select>
+        </Field>}
+        {bookFile && choice && !existingDocument && <Field className="min-w-48 flex-1"><FieldLabel htmlFor="qb-document-name">Document name</FieldLabel>
+          <Input id="qb-document-name" dir="auto" maxLength={255} value={choice.name} disabled={!!status} aria-invalid={!choice.name.trim() || undefined}
+            onChange={event => setDocumentChoice({ ...choice, name: event.target.value })} />
+        </Field>}
         {!largeBook && (!totalPages || !partialRange) && <Field className="min-w-48 flex-1"><FieldLabel htmlFor="qb-key">Answer key (optional PDF)</FieldLabel><Input key={`${fileIndex}:${bookFile?.name}:${bookFile?.lastModified}`} id="qb-key" type="file" accept=".pdf,application/pdf" disabled={!!status} onChange={e => setKeyFile(e.target.files?.[0])} /></Field>}
       </div>
       {bookFile && !inspected && <p role="status" className="text-sm">Opening PDF…</p>}
       {inspected && "error" in inspected && <Alert variant="destructive"><AlertTitle>{inspected.error}</AlertTitle></Alert>}
-      {(largeBook || (chosenRange && chosenRange.file === bookFile)) && <fieldset className="flex flex-wrap items-end gap-3" disabled={!!status}>
+      {totalPages > 0 && <fieldset className="flex flex-wrap items-end gap-3" disabled={!!status}>
         <legend className="mb-2 text-sm font-medium">Page range · {totalPages} pages</legend>
         <Field className="w-28"><FieldLabel htmlFor="qb-first">First page</FieldLabel><Input id="qb-first" type="number" min={1} max={totalPages} value={range.first || ""} onChange={e => setChosenRange({
           file: bookFile, range: nextPageRange(Number(e.target.value), totalPages),
@@ -437,9 +485,9 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
         {!readyToImport && <p role="status" className="text-sm text-destructive">Choose up to {maxBatchPages} consecutive pages.</p>}
       </fieldset>}
         <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={!!status} onClick={() => unsaved ? setReplaceWith("sample") : openSample()}>Try sample</Button>
-          <Button type="submit" variant={geminiAcademyId ? "outline" : "default"} disabled={!readyToImport || !!status}><HugeiconsIcon icon={FileUploadIcon} strokeWidth={1.5} />{geminiAcademyId ? "Extract locally" : "Extract questions"}</Button>
+          <Button type="submit" variant={geminiAcademyId ? "outline" : "default"} disabled={!readyToImport || !choice?.name.trim() || !!status}><HugeiconsIcon icon={FileUploadIcon} strokeWidth={1.5} />{geminiAcademyId ? "Extract locally" : "Extract questions"}</Button>
           {geminiAcademyId && <AlertDialog>
-            <AlertDialogTrigger asChild><Button type="button" disabled={!readyToImport || !!status}><HugeiconsIcon icon={AiMagicIcon} strokeWidth={1.5} />Extract with Gemini</Button></AlertDialogTrigger>
+            <AlertDialogTrigger asChild><Button type="button" disabled={!readyToImport || !choice?.name.trim() || !!status}><HugeiconsIcon icon={AiMagicIcon} strokeWidth={1.5} />Extract with Gemini</Button></AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader><AlertDialogTitle>Send pages to Gemini?</AlertDialogTitle>
                 <AlertDialogDescription>Google receives the text or images of pages {range.first}–{range.last} from {bookFile?.name}. The separate answer key stays in Edra. Use test material approved for sharing.{unsaved && " A new review replaces your unsaved questions."}</AlertDialogDescription>
@@ -469,17 +517,23 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
         setStatus("Stopping import…");
       }}>Cancel import</Button>}
     </div>}
-    {saveNotice && <p role="status" className="text-sm text-muted-foreground">{saveNotice}</p>}
+    {saveNotice && <p role="status" className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">{saveNotice}
+      {libraryHref && <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={libraryHref}>Open library</Link>}
+    </p>}
     {error && <Alert variant="destructive"><HugeiconsIcon icon={Alert02Icon} strokeWidth={1.5} /><AlertTitle>{error}</AlertTitle></Alert>}
     {!batch || !report ? <Empty className="rounded-xl border"><EmptyHeader><EmptyMedia variant="icon"><HugeiconsIcon icon={BookOpen01Icon} strokeWidth={1.5} /></EmptyMedia><EmptyTitle>No import open</EmptyTitle></EmptyHeader></Empty> : <>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="max-w-full break-all pr-2 font-semibold">{batch.book.name}</span>
+        <span className="max-w-full break-all pr-2 font-semibold" dir="auto">{batch.document.name}</span>
         {batch.range && <Badge variant="outline">Pages {batch.range.first}–{batch.range.last}</Badge>}
         {report.sections.length > 0 && <Badge variant="outline">{report.sections.length} sections</Badge>}
         <Badge variant="outline">{included.length} questions</Badge>
-        <TopicsDialog groups={groups} assignments={assignments} prompt={question => edits[question.id]?.prompt ?? question.prompt}
-          disabled={!!status} apply={(ids, label) => {
-            setTopicEdits(previous => ({ ...previous, ...Object.fromEntries(ids.map(id => [id, label])) }));
+        <TopicsDialog groups={groups} assignments={assignments} existing={libraryTopics} prompt={question => edits[question.id]?.prompt ?? question.prompt}
+          disabled={!!status} apply={(ids, change) => {
+            const byId = new Map(included.map(question => [question.id, question]));
+            setTopicEdits(previous => ({ ...previous, ...Object.fromEntries(ids.flatMap(id => {
+              const question = byId.get(id);
+              return question ? [[id, changeTopics(question, previous[id], change)]] : [];
+            })) }));
             setTopicFilter(undefined);
           }} showInQueue={key => {
             const first = groups.find(group => group.key === key)?.questions[0];
@@ -534,8 +588,10 @@ export function QuestionBankPage({ geminiAcademyId, bankScope }: { geminiAcademy
             <div className="flex min-h-14 flex-wrap items-center justify-between gap-2 border-b px-4 py-2"><h2 className="font-heading text-base font-semibold">Question {q.number}</h2><Badge variant={e.reviewed && !excluded.has(q.id) ? "default" : "secondary"}>{excluded.has(q.id) ? "Excluded" : e.reviewed ? "Reviewed" : "Draft"}</Badge></div>
             <div key={q.id} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
             {assignments.has(q.id) && <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span>{assignments.get(q.id)?.verification === "suggested" ? "Suggested topic" : "Topic"}</span>
-              <Badge variant="outline" dir="auto">{assignments.get(q.id)?.label}</Badge>
+              <span>Topics</span>
+              {assignments.get(q.id)!.map(topic => <Badge key={topic.label} variant={topic.verification === "suggested" ? "outline" : "secondary"} dir="auto">
+                {topic.label}{topic.verification === "suggested" && " · Suggested"}
+              </Badge>)}
             </div>}
             {q.issues.length > 0 && !e.reviewed && <Alert><HugeiconsIcon icon={Alert02Icon} strokeWidth={1.5} /><AlertTitle>Needs a check</AlertTitle><AlertDescription><ul className="list-disc pl-4">{q.issues.map(reason => <li key={reason}>{reason}</li>)}</ul></AlertDescription></Alert>}
             <QuestionTextField id="qb-prompt" label="Prompt" multiline value={e.prompt} error={promptMathError}
@@ -609,7 +665,11 @@ function BankSave({ scope, ...props }: Omit<Parameters<typeof AssignUnits>[0], "
   const queryClient = useQueryClient();
   return <AssignUnits {...props} academyId={scope.academyId} accountId={scope.accountId} onSave={async selection => {
     const error = await props.onSave(selection);
-    if (!error) void queryClient.invalidateQueries({ queryKey: savedBankKey(scope) });
+    // New questions change counts and lists; existing details are unaffected.
+    if (!error) {
+      void queryClient.invalidateQueries({ queryKey: bankKeys.collections(scope) });
+      void queryClient.invalidateQueries({ queryKey: bankKeys.lists(scope) });
+    }
     return error;
   }} />;
 }

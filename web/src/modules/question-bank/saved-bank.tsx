@@ -1,97 +1,65 @@
 import { useState, type ReactNode } from "react";
-import { MathText } from "@/components/shared/math-text";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
+import { QueryContent } from "@/components/shared/query-content";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import { staffAcademyHref } from "@/lib/routing";
-import { listQuestionBank, readQuestionBank } from "./bank";
-import type { BankPayload, BankSummary } from "./bank-contract";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { BankCollection, BankPayload, BankSummary } from "./bank-contract";
+import { useBankBrowse } from "./browse";
+import { QuestionPreview } from "./preview";
+import { BankSearch, QuestionList } from "./question-list";
+import { bankDetailOptions, collectionLabel, collectionsOptions, type BankScope } from "./queries";
 
-export type BankScope = { academyId: string; academySlug: string; accountId: string };
-export const savedBankKey = (scope: BankScope) => ["question-bank", scope.accountId, scope.academyId, "saved"] as const;
+export type { BankScope } from "./queries";
+const all = "all";
+const groups: [BankCollection["kind"], string][] = [["topic", "Topics"], ["source_document", "Source documents"], ["source_section", "Source sections"], ["custom", "Collections"]];
 
+/** Saved-question selection for an assessment part. */
 export function SavedBank({ scope, disabled, onPick }: {
-  scope: BankScope; disabled?: boolean; onPick?: (question: BankPayload, close: () => void) => ReactNode;
+  scope: BankScope; disabled?: boolean; onPick: (question: BankPayload, close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   return <Dialog open={open} onOpenChange={setOpen}>
-    <DialogTrigger asChild><Button type="button" variant="outline" disabled={disabled}>{onPick ? "Add from Question Bank" : "Saved questions"}</Button></DialogTrigger>
-    <DialogContent className="max-h-[90svh] w-[calc(100%-1rem)] overflow-y-auto sm:max-w-2xl">
-      <DialogHeader><DialogTitle>Saved questions</DialogTitle>
-        <DialogDescription className="sr-only">Open questions saved in this academy’s question bank.</DialogDescription>
+    <DialogTrigger asChild><Button type="button" variant="outline" disabled={disabled}>Add from Question Bank</Button></DialogTrigger>
+    <DialogContent className="flex max-h-[90svh] w-[calc(100%-1rem)] flex-col overflow-y-auto sm:max-w-2xl">
+      <DialogHeader><DialogTitle>Question bank</DialogTitle>
+        <DialogDescription className="sr-only">Choose a saved question to copy into this part.</DialogDescription>
       </DialogHeader>
       {open && <SavedQuestions scope={scope} onPick={onPick} close={() => setOpen(false)} />}
     </DialogContent>
   </Dialog>;
 }
 
-function SavedQuestions({ scope, onPick, close }: { scope: BankScope; onPick?: (question: BankPayload, close: () => void) => ReactNode; close: () => void }) {
-  const [offset, setOffset] = useState(0);
+function SavedQuestions({ scope, onPick, close }: { scope: BankScope; onPick: (question: BankPayload, close: () => void) => ReactNode; close: () => void }) {
+  const browse = useBankBrowse(scope);
+  const collections = useQuery(collectionsOptions(scope));
   const [active, setActive] = useState<BankSummary>();
-  const page = useQuery({
-    queryKey: [...savedBankKey(scope), offset],
-    queryFn: async ({ signal }) => {
-      const result = await listQuestionBank({ data: { academyId: scope.academyId, offset }, signal });
-      if (!result.ok) throw new Error(result.message);
-      return result.data;
-    }, retry: false,
-  });
-  const detail = useQuery({
-    queryKey: [...savedBankKey(scope), "detail", active?.id],
-    queryFn: async ({ signal }) => {
-      const result = await readQuestionBank({ data: { academyId: scope.academyId, id: active!.id }, signal });
-      if (!result.ok) throw new Error(result.message);
-      return result.data;
-    }, enabled: !!active, retry: false,
-  });
-  if (active) return <>
-    <div className="flex flex-wrap items-center gap-2">
-      <Button size="sm" variant="outline" onClick={() => setActive(undefined)}>Back to saved questions</Button>
-      {active.unitId && <Button asChild size="sm" variant="outline"><a href={staffAcademyHref(scope.academySlug, `/content/${active.unitId}`)}>Open linked unit</a></Button>}
-      {active.topic && <Badge variant="secondary" dir="auto">{active.topic}</Badge>}
+  const detail = useQuery({ ...bankDetailOptions(scope, active?.id ?? ""), enabled: !!active });
+  const list = collections.data?.collections ?? [];
+  if (active) return <div className="space-y-3">
+    <Button size="sm" variant="ghost" onClick={() => setActive(undefined)}><HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.5} />Back to questions</Button>
+    <QueryContent query={detail} label="question" isEmpty={() => false} emptyTitle="">
+      {data => <QuestionPreview detail={data} collections={list} academySlug={scope.academySlug} actions={onPick(data.payload, close)} />}
+    </QueryContent>
+  </div>;
+  return <div className="flex min-h-0 flex-col gap-3">
+    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_14rem]">
+      <BankSearch browse={browse} id="qb-picker-search" />
+      <Select value={browse.collectionId ?? all} onValueChange={value => browse.setCollection(value === all ? null : value)} disabled={!list.length}>
+        <SelectTrigger aria-label="Collection" className="w-full"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={all}>All questions</SelectItem>
+          {groups.map(([kind, label]) => {
+            const items = list.filter(collection => collection.kind === kind);
+            return items.length > 0 && <SelectGroup key={kind}><SelectLabel>{label}</SelectLabel>
+              {items.map(collection => <SelectItem key={collection.id} value={collection.id}><span dir="auto">{collectionLabel(collection)}</span></SelectItem>)}
+            </SelectGroup>;
+          })}
+        </SelectContent>
+      </Select>
     </div>
-    {detail.isPending && <p role="status" className="text-sm text-muted-foreground">Loading question…</p>}
-    {detail.isError && <Alert variant="destructive"><AlertTitle>{detail.error.message}</AlertTitle><Button size="sm" variant="outline" onClick={() => void detail.refetch()}>Retry</Button></Alert>}
-    {detail.data && <div className="space-y-3">
-      <p className="text-xs text-muted-foreground break-words">{detail.data.source.file} · Page {detail.data.source.page} · Question {detail.data.printedNumber}</p>
-      <MathText value={detail.data.prompt} className="block" />
-      {detail.data.choices.length > 0 && <ul className="space-y-1">
-        {detail.data.choices.map(choice => <li key={choice.key} className="flex items-start gap-2">
-          <Badge variant={choice.key === detail.data.answer ? "default" : "outline"}>{choice.key}</Badge>
-          <MathText value={choice.text} />
-        </li>)}
-      </ul>}
-      {detail.data.modelAnswer && <section className="space-y-2 border-t pt-3" aria-label="Model answer">
-        <h3 className="text-sm font-semibold">Model answer</h3>
-        <MathText value={detail.data.modelAnswer} className="block" />
-      </section>}
-      {detail.data.visuals.map((visual, index) => <figure key={index} className="space-y-2 rounded-lg border p-2">
-        <img className="mx-auto max-h-72 max-w-full object-contain" src={visual.image} alt={visual.description} />
-        <figcaption dir="auto" className="text-sm text-muted-foreground">{visual.description}</figcaption>
-      </figure>)}
-      {onPick?.(detail.data, close)}
-    </div>}
-  </>;
-  if (page.isPending) return <p role="status" className="text-sm text-muted-foreground">Loading saved questions…</p>;
-  if (page.isError) return <Alert variant="destructive"><AlertTitle>{page.error.message}</AlertTitle><Button size="sm" variant="outline" onClick={() => void page.refetch()}>Retry</Button></Alert>;
-  return <>
-    {!page.data.rows.length ? <Empty><EmptyHeader><EmptyTitle>No saved questions</EmptyTitle></EmptyHeader></Empty> :
-      <ul className="max-h-[60svh] divide-y overflow-y-auto rounded-lg border">
-        {page.data.rows.map(row => <li key={row.id}>
-          <Button variant="ghost" className="h-auto min-h-12 w-full justify-start p-3 whitespace-normal" onClick={() => setActive(row)}>
-            <span className="min-w-0 text-start">
-              <MathText value={row.prompt} className="line-clamp-2" />
-              {(row.topic || row.unitId) && <span className="block text-xs text-muted-foreground">{row.topic}{row.topic && row.unitId ? " · " : ""}{row.unitId ? "Linked to a unit" : ""}</span>}
-            </span>
-          </Button>
-        </li>)}
-      </ul>}
-    {(offset > 0 || page.data.more) && <div className="flex justify-between">
-      <Button variant="outline" disabled={!offset} onClick={() => setOffset(value => value - 24)}>Previous</Button>
-      <Button variant="outline" disabled={!page.data.more} onClick={() => setOffset(value => value + 24)}>Next</Button>
-    </div>}
-  </>;
+    <div className="flex max-h-[60svh] min-h-0 flex-col"><QuestionList browse={browse} onOpen={setActive} /></div>
+  </div>;
 }

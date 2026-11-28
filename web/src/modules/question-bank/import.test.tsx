@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render as baseRender, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactElement, ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { QuestionBankPage } from "./page";
+import { loadQuestionBankCatalog, loadQuestionBankCollections, saveQuestionBank } from "./bank";
+import type { SaveBankInput } from "./bank-contract";
+import { QuestionImportPage as QuestionBankPage } from "./import";
 import { cropSource } from "./evidence";
 import { inspectPdf, readPdf } from "./pdf";
 import { reviewQuestionPage } from "./review";
@@ -9,7 +13,15 @@ import { reviewQuestionPage } from "./review";
 vi.mock("./pdf", () => ({ inspectPdf: vi.fn(), readPdf: vi.fn(), retryPage: vi.fn() }));
 vi.mock("./evidence", async importOriginal => ({ ...await importOriginal<typeof import("./evidence")>(), cropSource: vi.fn(), assessSuggestedCrop: vi.fn() }));
 vi.mock("./review", () => ({ reviewQuestionPage: vi.fn() }));
+vi.mock("./leave-guard", () => ({ LeaveGuard: () => null }));
+vi.mock("./bank", () => ({ saveQuestionBank: vi.fn(), loadQuestionBankCollections: vi.fn(), loadQuestionBankCatalog: vi.fn(), listQuestionBank: vi.fn(), readQuestionBank: vi.fn() }));
 
+function render(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return baseRender(ui, { wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider> });
+}
+
+Element.prototype.scrollIntoView ??= () => {};
 beforeEach(() => { vi.mocked(inspectPdf).mockResolvedValue(4); });
 
 afterEach(() => {
@@ -376,4 +388,48 @@ it("attaches a labelled crop and exports its image and source bounds with the re
   fireEvent.click(adjustment.getByRole("button", { name: "Save crop" }));
   await screen.findByRole("img", { name: "Grouped frequency table" });
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Export reviewed (0)" }).disabled).toBe(true);
+});
+
+it("saves confirmed topics and automatic source grouping, keeping one document identity across save batches", async () => {
+  vi.mocked(loadQuestionBankCollections).mockResolvedValue({ ok: true, data: { total: 0, archived: 0, collections: [] } });
+  vi.mocked(loadQuestionBankCatalog).mockResolvedValue({ ok: true, data: [] });
+  vi.mocked(saveQuestionBank).mockResolvedValue({ ok: true, data: 1 });
+  render(<QuestionBankPage bankScope={{ academyId: "a0000000-0000-4000-8000-000000000001", academySlug: "science", accountId: "staff" }} />);
+  fireEvent.click(screen.getByRole("button", { name: "Try sample" }));
+  fireEvent.click(screen.getByRole("button", { name: "Review topics" }));
+  let dialog = within(screen.getByRole("dialog"));
+  fireEvent.click(dialog.getByRole("button", { name: /Reading comprehension/ }));
+  fireEvent.click(dialog.getByRole("checkbox", { name: "Select all" }));
+  fireEvent.click(dialog.getByRole("button", { name: "Confirm topic" }));
+  fireEvent.click(dialog.getByRole("checkbox", { name: "Select all" }));
+  fireEvent.click(dialog.getByRole("combobox", { name: "Topic" }));
+  fireEvent.click(await screen.findByRole("option", { name: "New topic" }));
+  dialog = within(screen.getByRole("dialog"));
+  fireEvent.change(dialog.getByLabelText("Topic name"), { target: { value: "Lighting" } });
+  fireEvent.click(dialog.getByRole("button", { name: "Add topic" }));
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  async function save(number: string) {
+    fireEvent.click(screen.getByRole("button", { name: `Question ${number}, Reading comprehension, page 4` }));
+    expect(screen.getByText("Lighting")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Mark reviewed" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save to bank" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Save 1 question" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    return vi.mocked(saveQuestionBank).mock.lastCall![0]!.data as SaveBankInput;
+  }
+  const first = await save("1");
+  expect(first.document.name).toBe("Sample question book");
+  expect(first.questions).toHaveLength(1);
+  expect(first.questions[0]).toMatchObject({
+    topics: ["Reading comprehension", "Lighting"],
+    section: { name: "Reading comprehension", firstPage: 4, continues: false },
+    payload: { topic: null, section: "Reading comprehension", printedNumber: "1", source: { page: 4 } },
+  });
+  expect(screen.getByRole("link", { name: "Open library" })).toBeTruthy();
+  const second = await save("2");
+  expect(second.document).toEqual(first.document);
+  expect(second.questions[0].section).toEqual(first.questions[0].section);
+  expect(second.questions[0].id).not.toBe(first.questions[0].id);
 });
