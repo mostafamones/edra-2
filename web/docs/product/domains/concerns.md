@@ -44,6 +44,8 @@ Allow up to 10 attachments per message, each up to 25 MB. Provide image previews
 
 A concern has a required title, opening message and selected participants. The creator is automatically included. Links belong in messages rather than only on the whole concern. Staff can include arbitrary URLs, including links to academy records. Do not require a thread-level record association. Linked records retain their own access permissions.
 
+Participating leadership can rename an ongoing concern; on the web, double-clicking the title in the open concern's header edits it inline. Settled concerns cannot be renamed. Each rename is recorded in concern history with the new title.
+
 ## Web surface
 
 Use a floating chat panel accessible across web pages. It contains the conversation list and chat experience, Ongoing/Settled filters, unread indicators and search across permitted concerns/messages. A dedicated sidebar destination is not the selected surface.

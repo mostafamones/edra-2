@@ -4,7 +4,7 @@ import { searchRecord, stringifySearch } from '../../routes/-functions/search'
 import { collectResponseCookies, runWithRequestContext } from './request'
 
 const readMethods = new Set(['GET', 'HEAD'])
-const infrastructure = /^(?:\/api|\/_serverFn|\/_build)(?:\/|$)|^\/(?:favicon\.ico|robots\.txt|sitemap\.xml|(?:next|vercel|file|globe|window)\.svg)$/
+const infrastructure = /^(?:\/api|\/_serverFn|\/_build)(?:\/|$)|^\/(?:favicon\.ico|robots\.txt|sitemap\.xml|notifications-sw\.js|(?:next|vercel|file|globe|window)\.svg)$/
 function cookieKey(cookie: string) {
   const parts = cookie.split(';').map(part => part.trim()); const name = parts[0].split('=', 1)[0]
   const domain = parts.find(part => /^domain=/i.test(part))?.toLowerCase() ?? ''
