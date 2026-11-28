@@ -26,10 +26,13 @@ export function HomeView({ academyName, base, live, overview }: {
           <div className="min-w-0 xl:col-span-2">{data.attendance && <AttendanceTrend weeks={data.attendance} />}</div>
           <div className="flex min-w-0 flex-col gap-4">
             <HomeAlerts data={data} live={live.data ?? null} base={base} />
+            {data.watch && <StudentsToWatch students={data.watch} base={base} />}
           </div>
-          {data.assignments && <div className="min-w-0 xl:col-span-2"><AssignmentPerformance items={data.assignments} base={base} /></div>}
-          {data.watch && <StudentsToWatch students={data.watch} base={base} />}
-          {data.recent && <div className="min-w-0 xl:col-span-2"><RecentSessions sessions={data.recent} base={base} /></div>}
+        </div>
+        {/* auto-fit lets either card take the full row when the other is not reported */}
+        <div className="grid gap-4 xl:grid-cols-[repeat(auto-fit,minmax(0,1fr))]">
+          {data.assignments && <AssignmentPerformance items={data.assignments} base={base} />}
+          {data.recent && <RecentSessions sessions={data.recent} base={base} />}
         </div>
       </>}
     </QueryContent>

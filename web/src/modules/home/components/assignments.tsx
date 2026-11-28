@@ -30,7 +30,7 @@ export function AssignmentPerformance({ items, base }: { items: NonNullable<Over
       <BarChart data={series} accessibilityLayer margin={{ left: 4, right: 16, top: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <YAxis domain={[0, 100]} ticks={[0, 50, 100]} tickFormatter={value => `${value}%`} tickLine={false} axisLine={false} width={40} tick={{ fontSize: 11 }} />
-        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} interval={0} tick={{ fontSize: 11 }} />
+        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} minTickGap={8} tick={{ fontSize: 11 }} />
         <ChartTooltip cursor={{ fill: "var(--muted)", opacity: 0.5 }} content={({ active, payload }) => {
           const item = payload?.[0]?.payload as (typeof series)[number] | undefined;
           return active && item ? <div className="grid max-w-64 gap-0.5 rounded-lg border bg-background px-3 py-2 text-xs shadow-xl">
