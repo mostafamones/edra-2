@@ -8313,7 +8313,10 @@ export type Database = {
       }
       delete_academy: {
         Args: { p_academy_id: string; p_confirm_name: string }
-        Returns: undefined
+        Returns: {
+          bucket_id: string
+          name: string
+        }[]
       }
       delete_content_coupon_type: {
         Args: { p_academy_id: string; p_request_id: string; p_type_id: string }

@@ -66,6 +66,13 @@ begin
     'refused calls change nothing');
 end $$;
 
+insert into storage.objects (bucket_id, name) values
+  ('assignment-images', 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa/image'),
+  ('assignment-work', 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa/record/work'),
+  ('content-documents', 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa/unit/document'),
+  ('assignment-images', 'dededede-bbbb-4bbb-8bbb-bbbbbbbbbbbb/image'),
+  ('avatars', 'de111111-1111-4111-8111-111111111111/avatar.webp');
+
 select pg_temp.delete_and_check('dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'de111111-1111-4111-8111-111111111111');
 
 do $$ begin
@@ -74,6 +81,11 @@ do $$ begin
   perform pg_temp.check(exists (select 1 from public.academies where id = 'dededede-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
     and (select count(*) = 2 from public.academy_memberships where academy_id = 'dededede-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
     and exists (select 1 from public.academic_years where academy_id = 'dededede-bbbb-4bbb-8bbb-bbbbbbbbbbbb'), 'other academy untouched');
+  perform pg_temp.check(current_setting('test.deleted_files')::jsonb = jsonb_build_array(
+    jsonb_build_object('bucket_id', 'assignment-images', 'name', 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa/image'),
+    jsonb_build_object('bucket_id', 'assignment-work', 'name', 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa/record/work'),
+    jsonb_build_object('bucket_id', 'content-documents', 'name', 'dededede-aaaa-4aaa-8aaa-aaaaaaaaaaaa/unit/document')),
+    'only this academy''s uploads are returned; avatars and other academies are left');
   perform pg_temp.check((select count(*) = 3 from public.profiles where id::text like 'de%'), 'accounts kept');
 end $$;
 

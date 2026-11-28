@@ -12,7 +12,9 @@ declare
 begin
   perform set_config('request.jwt.claim.sub', p_owner::text, true);
   set local role authenticated;
-  perform public.delete_academy(p_academy, (select name from public.academies where id = p_academy));
+  -- The returned file list is kept in test.deleted_files for suites that check it.
+  perform set_config('test.deleted_files', (select coalesce(jsonb_agg(f order by f.bucket_id, f.name), '[]')::text
+    from public.delete_academy(p_academy, (select name from public.academies where id = p_academy)) f), true);
   reset role;
 
   for t in select c.oid::regclass as rel from pg_class c join pg_attribute a on a.attrelid = c.oid and a.attname = 'academy_id'

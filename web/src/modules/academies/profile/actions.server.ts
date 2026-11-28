@@ -1,4 +1,8 @@
 import "@tanstack/react-start/server-only";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
+
+import { publicEnv } from "@/lib/env/public";
+import type { Database } from "@/lib/supabase/database.types";
 
 
 import { createClient } from "../../../lib/supabase/server";
@@ -79,8 +83,17 @@ export async function deleteAcademy(academySlug: string, confirmName: string): P
     if (!auth?.claims) return { ok: false, code: "sessionExpired" };
     const academy = await resolveStaffAcademy(academySlug);
     if (!academy || academy.role !== "owner") return { ok: false, code: "forbidden" };
-    const { error } = await db.rpc("delete_academy", { p_academy_id: academy.id, p_confirm_name: confirmName });
-    if (!error) return { ok: true };
+    // Without the storage key the uploads could not be removed afterwards, so nothing is deleted.
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!key) {
+      console.error("Academy delete refused: SUPABASE_SERVICE_ROLE_KEY is not configured");
+      return { ok: false, code: "deleteFailed" };
+    }
+    const { data, error } = await db.rpc("delete_academy", { p_academy_id: academy.id, p_confirm_name: confirmName });
+    if (!error) {
+      await removeAcademyFiles(createServiceClient<Database>(publicEnv.supabaseUrl, key, { auth: { persistSession: false, autoRefreshToken: false } }), academy.id, data ?? []);
+      return { ok: true };
+    }
     if (error.message.includes("academy_name_mismatch")) return { ok: false, code: "nameMismatch" };
     if (error.message.includes("forbidden")) return { ok: false, code: "forbidden" };
     console.error("Academy delete failed", { code: error.code, message: error.message });
@@ -88,5 +101,25 @@ export async function deleteAcademy(academySlug: string, confirmName: string): P
   } catch (error) {
     console.error("Academy delete failed", error);
     return { ok: false, code: "deleteFailed" };
+  }
+}
+
+/**
+ * Removes the deleted academy's uploads after the database delete committed. Each batch is tried three times;
+ * whatever still fails is logged with its paths, since the database rows that listed them are already gone.
+ */
+async function removeAcademyFiles(storage: ReturnType<typeof createServiceClient<Database>>, academyId: string, files: { bucket_id: string; name: string }[]) {
+  for (const bucket of new Set(files.map((file) => file.bucket_id))) {
+    const paths = files.filter((file) => file.bucket_id === bucket).map((file) => file.name);
+    for (let start = 0; start < paths.length; start += 1000) {
+      const batch = paths.slice(start, start + 1000);
+      let failure: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const result = await storage.storage.from(bucket).remove(batch).catch((error: unknown) => ({ error }));
+        failure = result.error;
+        if (!failure) break;
+      }
+      if (failure) console.error("Deleted academy files were not removed", { academyId, bucket, paths: batch, failure });
+    }
   }
 }
