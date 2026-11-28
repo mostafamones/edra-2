@@ -97,7 +97,7 @@ export function CreateConcern({ scope, isCurrent, onCreated, onTitle }: { scope:
   </form>;
 
   const locked = pending || attempt !== null;
-  const participants = chosen.map(({ userId, name }) => ({ userId, name }));
+  const participants = chosen.map(({ userId, name, avatarUrl }) => ({ userId, name, avatarUrl }));
   return <div className="flex min-h-0 flex-1 flex-col">
     <div className="flex items-center gap-2 border-b px-4 pb-3">
       <AvatarGroup aria-label={chosen.map((person) => person.name ?? "Staff").join(", ")}>{chosen.slice(0, 6).map((person) => <Face key={person.userId} person={person} size="sm" />)}{chosen.length > 6 && <AvatarGroupCount className="size-6 text-xs">+{chosen.length - 6}</AvatarGroupCount>}</AvatarGroup>

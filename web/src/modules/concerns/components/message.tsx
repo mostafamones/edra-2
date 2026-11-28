@@ -93,7 +93,7 @@ export function ConcernMessageItem({ message, outgoing, first = true, readSeq, a
     <div className="flex min-w-0 flex-1 flex-col">
       {first && <div className="flex items-baseline gap-2"><span className="text-sm font-semibold break-words" dir="auto">{name}</span>{time}</div>}
       {editing && !settled && !deleted ? <form className="w-full" onSubmit={(event) => { event.preventDefault(); if (body.trim() || hasMedia) { setEditing(false); void run(() => commands.edit(message.id, { body: body.trim() ? body : null, mentions: body.trim() ? mentionIds(body, mentions) : [] }), undefined, () => setEditing(true)); } }}>
-        <ConcernMessageInput id={`edit-${message.id}`} label="Edit message" value={body} onChange={setBody} disabled={pending} participants={participants}
+        <ConcernMessageInput id={`edit-${message.id}`} label="Edit message" value={body} onChange={setBody} disabled={pending} participants={participants} avatarUrls={avatarUrls}
           onMention={(participant) => setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant])}>
           <div className="flex-1" />
           <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setEditing(false)}>Cancel</Button>

@@ -207,7 +207,7 @@ export function ConcernConversation({ scope, concernId, active, target, onDenied
     </div>
     {readError && reading && <div role="alert" className="flex items-center gap-2 px-4 text-xs"><span>Could not update read receipt</span><Button size="sm" variant="ghost" onClick={() => setReadRetry((value) => value + 1)}>Retry receipt</Button></div>}
     {decision && <ConcernLifecycleForm key={decision} mode={decision} detail={detail.data} lifecycle={lifecycle} onClose={() => setDeciding(null)} />}
-    {reading && !decision && !settled && !detail.isError && <ConcernComposer participants={participants} reply={reply} onReplyChange={(message) => setReplyId(message?.id ?? null)} onTyping={setTyping}
+    {reading && !decision && !settled && !detail.isError && <ConcernComposer participants={participants} avatarUrls={avatars.data} reply={reply} onReplyChange={(message) => setReplyId(message?.id ?? null)} onTyping={setTyping}
       onSend={(payload, preview) => {
         pinned.current = true;
         void deliver({ payload, failure: null, files: preview.files, message: outgoingMessage(payload, preview, concernId, scope.userId, participants.find((participant) => participant.userId === scope.userId)?.name ?? null) });

@@ -9,6 +9,7 @@ import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
 import { UndoRedo } from "@tiptap/extensions";
 import { EditorContent, useEditor } from "@tiptap/react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Command, CommandEmpty, CommandItem, CommandList } from "@/components/ui/command";
 import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
@@ -16,7 +17,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { CONCERN_BODY_MAX } from "../validation";
 import { splitMentions } from "./body";
 
-export type MentionChoice = { userId: string; name: string | null };
+export type MentionChoice = { userId: string; name: string | null; avatarPath?: string | null; avatarUrl?: string };
 const label = (choice: MentionChoice) => choice.name ?? "Staff";
 export const MENTION_CHIP = "rounded-md bg-primary/15 px-1 py-px font-medium text-primary";
 
@@ -84,10 +85,10 @@ function messageExtensions({ latest, anchor, setSuggest, setActive, pick }: Hand
  * line, and typing `@` (or the @ button) opens the participant list at the caret. `children`
  * render inline beside the @ button (send, attach…). The value stays plain text.
  */
-export function ConcernMessageInput({ id, label: ariaLabel, value, onChange, participants, onMention, onBlur, disabled, inputRef, children }: {
+export function ConcernMessageInput({ id, label: ariaLabel, value, onChange, participants, onMention, onBlur, disabled, inputRef, children, avatarUrls }: {
   id: string; label: string; value: string; onChange: (value: string) => void; participants: MentionChoice[];
   onMention: (choice: MentionChoice) => void; onBlur?: () => void; disabled?: boolean;
-  inputRef?: RefObject<HTMLElement | null>; children?: ReactNode;
+  inputRef?: RefObject<HTMLElement | null>; children?: ReactNode; avatarUrls?: Record<string, string>;
 }) {
   const [suggest, setSuggest] = useState<Suggest | null>(null);
   const [active, setActive] = useState(0);
@@ -147,12 +148,13 @@ export function ConcernMessageInput({ id, label: ariaLabel, value, onChange, par
         {children}
       </InputGroupAddon>
     </InputGroup>
-    <PopoverContent side="top" align="start" className="w-64 p-1" onOpenAutoFocus={(event) => event.preventDefault()} onCloseAutoFocus={(event) => event.preventDefault()}
+    <PopoverContent side="top" align="start" className="w-56 p-1" onOpenAutoFocus={(event) => event.preventDefault()} onCloseAutoFocus={(event) => event.preventDefault()}
       onInteractOutside={(event) => { if (editor?.view.dom.contains(event.target as Node)) event.preventDefault(); }}>
       <Command shouldFilter={false} value={suggest?.items[active]?.userId ?? ""} label="Participants">
         <CommandList><CommandEmpty>No matching participants</CommandEmpty>
-          {suggest?.items.map((choice) => <CommandItem key={choice.userId} value={choice.userId} onMouseDown={(event) => event.preventDefault()} onSelect={() => pick(choice)}>
-            <span className="truncate" dir="auto">{label(choice)}</span>
+          {suggest?.items.map((choice) => <CommandItem key={choice.userId} value={choice.userId} className="gap-2 px-1.5 py-1" onMouseDown={(event) => event.preventDefault()} onSelect={() => pick(choice)}>
+            <Avatar size="sm" aria-hidden="true"><AvatarImage src={choice.avatarUrl ?? avatarUrls?.[choice.avatarPath ?? ""]} alt="" /><AvatarFallback className="text-[10px]">{label(choice).split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</AvatarFallback></Avatar>
+            <span className="min-w-0 flex-1 truncate" dir="auto">{label(choice)}</span>
           </CommandItem>)}
         </CommandList>
       </Command>

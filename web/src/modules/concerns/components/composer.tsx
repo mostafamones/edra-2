@@ -13,9 +13,9 @@ import { releasePreviews, stageUploads, type ConcernUpload } from "./uploads";
 
 export type ConcernSendPayload = Parameters<ReturnType<typeof useConcernCommands>["send"]>[0];
 /** Hands each message to the conversation at once (it shows, uploads its files and delivers it) and clears for the next one. */
-export function ConcernComposer({ onSend, participants, reply, onReplyChange, onTyping }: {
+export function ConcernComposer({ onSend, participants, avatarUrls, reply, onReplyChange, onTyping }: {
   onSend: (payload: ConcernSendPayload, preview: { reply: ConcernMessage | null; files: ConcernUpload[] }) => void;
-  participants: ConcernParticipant[];
+  participants: ConcernParticipant[]; avatarUrls?: Record<string, string>;
   reply: ConcernMessage | null; onReplyChange: (message: ConcernMessage | null) => void; onTyping: (typing: boolean) => void;
 }) {
   const [body, setBody] = useState("");
@@ -48,7 +48,7 @@ export function ConcernComposer({ onSend, participants, reply, onReplyChange, on
       event.currentTarget.value = "";
       if (files.length) add(files.map((file) => ({ blob: file, name: file.name, kind: "file" as const })));
     }} />
-    <ConcernMessageInput id="concern-message" label="Message" inputRef={input} value={body} participants={participants}
+    <ConcernMessageInput id="concern-message" label="Message" inputRef={input} value={body} participants={participants} avatarUrls={avatarUrls}
       onChange={(text) => { setBody(text); onTyping(text.trim().length > 0); }}
       onMention={(participant) => setMentions((current) => [...current.filter((entry) => entry.userId !== participant.userId), participant])}
       onBlur={() => onTyping(false)}>
