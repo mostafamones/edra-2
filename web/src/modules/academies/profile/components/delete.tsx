@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLeaveDeletedAcademy, usePreviewStatus } from "@/modules/development";
 
 import { deleteAcademy } from "../actions";
 import type { AcademyProfile } from "../validation";
@@ -27,11 +28,17 @@ export function DeleteAcademy({ profile }: { profile: AcademyProfile }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const confirmed = typed === profile.name;
+  const preview = usePreviewStatus().data;
+  const leavePreview = useLeaveDeletedAcademy();
 
   async function confirm() {
     setBusy(true); setError("");
+    // Read before deleting: the preview status of a deleted academy may no longer load.
+    const before = preview;
     const result = await deleteAcademy(profile.slug, typed).catch(() => ({ ok: false as const, code: "deleteFailed" as const }));
     if (result.ok) {
+      // In Developer mode, move to the next generated academy or exit the preview.
+      if (await leavePreview(profile.slug, before)) return;
       // A full reload drops every cached query and membership for the deleted academy.
       window.location.assign("/app");
       return;

@@ -25,8 +25,9 @@ export function usePreviewAction() {
   const [pending, setPending] = useState(false);
   // A ref guards against a second action dispatched before the pending state re-renders.
   const busy = useRef(false);
-  const run = useCallback(async (action: PreviewAction, body: Record<string, unknown>) => {
-    if (busy.current) return;
+  /** Resolves true once the browser is leaving for the new identity. */
+  const run = useCallback(async (action: PreviewAction, body: Record<string, unknown>): Promise<boolean> => {
+    if (busy.current) return false;
     busy.current = true;
     setPending(true);
     const command = action === "switch" || action === "return"
@@ -35,13 +36,17 @@ export function usePreviewAction() {
     const result = await postPreview(action, command);
     if (result.ok) {
       await leaveForIdentity(result.destination);
-      return;
+      return true;
     }
     busy.current = false;
     setPending(false);
     toast.error(previewErrorMessage(result.error));
-    if (result.destination) await leaveForIdentity(result.destination);
-    else void queryClient.invalidateQueries({ queryKey: PREVIEW_STATUS_KEY });
+    if (result.destination) {
+      await leaveForIdentity(result.destination);
+      return true;
+    }
+    void queryClient.invalidateQueries({ queryKey: PREVIEW_STATUS_KEY });
+    return false;
   }, [queryClient]);
   return { pending, run };
 }
@@ -57,4 +62,21 @@ export function useViewAsStudent() {
       if (request) void run(request.action, request.body);
     };
   }, [status.data, pending, run]);
+}
+
+/**
+ * After the previewed academy is deleted: switch to the newest other registered academy as its Owner, or exit
+ * Developer mode when none is left. Resolves false when no preview of that academy is active or nothing worked,
+ * so the caller can fall back to its own navigation. Read the status before deleting: afterwards it may fail.
+ */
+export function useLeaveDeletedAcademy() {
+  const status = usePreviewStatus();
+  const { run } = usePreviewAction();
+  return useCallback(async (academySlug: string, preview = status.data) => {
+    if (!preview?.available || !preview.active || preview.run.academySlug !== academySlug) return false;
+    const next = (preview.academies ?? []).find((academy) => academy.id !== preview.run.id);
+    if (next && await run("switch", { runId: preview.run.id, targetRunId: next.id, logicalId: "account:staff:owner",
+      expectedRevision: preview.revision, returnTo: null })) return true;
+    return run("exit", { runId: preview.run.id });
+  }, [status.data, run]);
 }
